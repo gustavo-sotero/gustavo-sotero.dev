@@ -1,6 +1,5 @@
 services:
   app:
-    image: portifolio
     restart: always
     build:
       context: ./
