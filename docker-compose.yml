@@ -12,3 +12,12 @@ services:
       - /app/.next
     ports:
       - '3000:3000'
+  nginx:
+    image: nginx
+    restart: always
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - 80:80
+      - 443:443
