@@ -1,144 +1,103 @@
-import type { Language } from "@/components/language-provider"
+import type { Language } from '@/components/language-provider';
 
 export interface Project {
-  id: number
-  githubUrl: string | null
-  liveUrl: string | null
+  id: number;
+  githubUrl: string | null;
+  liveUrl: string | null;
   translations: {
     [key in Language]: {
-      title: string
-      description: string
-      impact: string
-      technologies: string[]
-    }
-  }
+      title: string;
+      description: string;
+      impact: string;
+      technologies: string[];
+    };
+  };
 }
 
 export const projectsData: Project[] = [
   {
     id: 1,
-    githubUrl: "https://github.com/gustavosotero/ecommerce-platform",
-    liveUrl: "https://ecommerce-platform-demo.vercel.app",
+    githubUrl: null,
+    liveUrl: 'https://t.me/NotzSMSBot',
     translations: {
       en: {
-        title: "E-commerce Platform",
+        title: 'Notz - SMS | Bot for Telegram',
         description:
-          "Developed a full-featured e-commerce platform with a microservices architecture using Node.js, Express, and MongoDB. Implemented secure payment processing, inventory management, and a responsive React frontend.",
-        impact: "Increased sales by 35% and reduced page load time by 40%.",
-        technologies: ["Node.js", "Express", "MongoDB", "React"],
+          'Developed a Telegram bot that allows users to generate temporary phone numbers to receive SMS, ideal for account verification and online services.',
+        impact: 'The bot currently has over 25,000 active users monthly.',
+        technologies: [
+          'Node.js',
+          'MongoDB',
+          'React',
+          'TypeScript',
+          'Docker',
+          'Git',
+          'PHP',
+          'PostgreSQL'
+        ]
       },
-      "pt-BR": {
-        title: "Plataforma de E-commerce",
+      'pt-BR': {
+        title: 'Notz - SMS | Bot para Telegram',
         description:
-          "Desenvolvi uma plataforma de e-commerce completa com arquitetura de microsserviços usando Node.js, Express e MongoDB. Implementei processamento seguro de pagamentos, gerenciamento de estoque e um frontend responsivo em React.",
-        impact: "Aumentou as vendas em 35% e reduziu o tempo de carregamento da página em 40%.",
-        technologies: ["Node.js", "Express", "MongoDB", "React"],
-      },
-    },
+          'Desenvolvi um bot para Telegram que permite gerar números de telefone temporários para receber SMS, ideal para verificação de contas e serviços online.',
+        impact:
+          'O bot conta atualmente com mais de 25.000 usuários ativos mensalmente.',
+        technologies: [
+          'Node.js',
+          'MongoDB',
+          'React',
+          'TypeScript',
+          'Docker',
+          'Git',
+          'PHP',
+          'PostgreSQL'
+        ]
+      }
+    }
   },
   {
     id: 2,
-    githubUrl: "https://github.com/gustavosotero/realtime-chat",
-    liveUrl: "https://realtime-chat-demo.vercel.app",
+    githubUrl: 'https://github.com/gustavo-sotero/anonshare',
+    liveUrl: 'https://anonshare.dev',
     translations: {
       en: {
-        title: "Real-time Chat Application",
+        title: 'AnonShare - Anonymous File Sharing',
         description:
-          "Built a scalable real-time chat application using Socket.io, Node.js, and React. Features include private messaging, group chats, file sharing, and end-to-end encryption.",
-        impact: "Supported 10,000+ concurrent users with minimal latency.",
-        technologies: ["Socket.io", "Node.js", "React", "Redis"],
+          'Developed an anonymous file sharing platform that allows users to upload and download files without registration, ensuring privacy and security.',
+        impact:
+          'Platform is receiving around 15,000 monthly visits and over 1,000 unique visits per month.',
+        technologies: [
+          'Next.js',
+          'Node.js',
+          'TypeScript',
+          'Docker',
+          'PostgreSQL',
+          'Prisma',
+          'Docker',
+          'GitHub Actions',
+          'Git',
+          'Cloudflare R2'
+        ]
       },
-      "pt-BR": {
-        title: "Aplicativo de Chat em Tempo Real",
+      'pt-BR': {
+        title: 'AnonShare - Compartilhamento de Arquivos Anônimos',
         description:
-          "Construí um aplicativo de chat em tempo real escalável usando Socket.io, Node.js e React. Os recursos incluem mensagens privadas, chats em grupo, compartilhamento de arquivos e criptografia de ponta a ponta.",
-        impact: "Suportou mais de 10.000 usuários simultâneos com latência mínima.",
-        technologies: ["Socket.io", "Node.js", "React", "Redis"],
-      },
-    },
-  },
-  {
-    id: 3,
-    githubUrl: null,
-    liveUrl: "https://cms-demo.vercel.app",
-    translations: {
-      en: {
-        title: "Content Management System",
-        description:
-          "Created a custom CMS with a headless architecture using NestJS and GraphQL. Implemented role-based access control, content versioning, and a Next.js frontend with SSR.",
-        impact: "Reduced content publishing time by 60% for a major media company.",
-        technologies: ["NestJS", "GraphQL", "Next.js", "PostgreSQL"],
-      },
-      "pt-BR": {
-        title: "Sistema de Gerenciamento de Conteúdo",
-        description:
-          "Criei um CMS personalizado com arquitetura headless usando NestJS e GraphQL. Implementei controle de acesso baseado em funções, versionamento de conteúdo e um frontend Next.js com SSR.",
-        impact: "Reduziu o tempo de publicação de conteúdo em 60% para uma grande empresa de mídia.",
-        technologies: ["NestJS", "GraphQL", "Next.js", "PostgreSQL"],
-      },
-    },
-  },
-  {
-    id: 4,
-    githubUrl: "https://github.com/gustavosotero/financial-dashboard",
-    liveUrl: "https://financial-dashboard-demo.vercel.app",
-    translations: {
-      en: {
-        title: "Financial Dashboard",
-        description:
-          "Developed a comprehensive financial dashboard for tracking investments, expenses, and financial goals. Used Django REST framework for the backend and Vue.js for the frontend.",
-        impact: "Helped users manage over $5M in assets with detailed analytics.",
-        technologies: ["Django", "REST API", "Vue.js", "Chart.js"],
-      },
-      "pt-BR": {
-        title: "Painel Financeiro",
-        description:
-          "Desenvolvi um painel financeiro abrangente para rastrear investimentos, despesas e metas financeiras. Usei Django REST framework para o backend e Vue.js para o frontend.",
-        impact: "Ajudou usuários a gerenciar mais de R$25M em ativos com análises detalhadas.",
-        technologies: ["Django", "REST API", "Vue.js", "Chart.js"],
-      },
-    },
-  },
-  {
-    id: 5,
-    githubUrl: null,
-    liveUrl: "https://healthcare-system-demo.vercel.app",
-    translations: {
-      en: {
-        title: "Healthcare Management System",
-        description:
-          "Built a secure healthcare management system for patient records, appointment scheduling, and billing. Used Java Spring Boot, PostgreSQL, and Angular with strict HIPAA compliance.",
-        impact: "Streamlined operations for a network of 5 clinics serving 20,000+ patients.",
-        technologies: ["Java", "Spring Boot", "PostgreSQL", "Angular"],
-      },
-      "pt-BR": {
-        title: "Sistema de Gestão de Saúde",
-        description:
-          "Construí um sistema seguro de gestão de saúde para registros de pacientes, agendamento de consultas e faturamento. Usei Java Spring Boot, PostgreSQL e Angular com estrita conformidade com normas de privacidade.",
-        impact: "Otimizou operações para uma rede de 5 clínicas atendendo mais de 20.000 pacientes.",
-        technologies: ["Java", "Spring Boot", "PostgreSQL", "Angular"],
-      },
-    },
-  },
-  {
-    id: 6,
-    githubUrl: "https://github.com/gustavosotero/devops-platform",
-    liveUrl: null,
-    translations: {
-      en: {
-        title: "DevOps Automation Platform",
-        description:
-          "Created a DevOps automation platform to streamline CI/CD pipelines, infrastructure provisioning, and monitoring. Used Python, Terraform, Docker, and Kubernetes.",
-        impact: "Reduced deployment time by 75% and infrastructure costs by 30%.",
-        technologies: ["Python", "Terraform", "Docker", "Kubernetes"],
-      },
-      "pt-BR": {
-        title: "Plataforma de Automação DevOps",
-        description:
-          "Criei uma plataforma de automação DevOps para otimizar pipelines de CI/CD, provisionamento de infraestrutura e monitoramento. Usei Python, Terraform, Docker e Kubernetes.",
-        impact: "Reduziu o tempo de implantação em 75% e os custos de infraestrutura em 30%.",
-        technologies: ["Python", "Terraform", "Docker", "Kubernetes"],
-      },
-    },
-  },
-]
+          'Desenvolvi uma plataforma de compartilhamento de arquivos anônimos que permite aos usuários fazer upload e download de arquivos sem necessidade de registro, garantindo privacidade e segurança.',
+        impact:
+          'Plataforma está recebendo cerca de 15.000 acessos mensais e mais de 1.000 acessos únicos por mês.',
+        technologies: [
+          'Next.js',
+          'Node.js',
+          'TypeScript',
+          'Docker',
+          'PostgreSQL',
+          'Prisma',
+          'Docker',
+          'GitHub Actions',
+          'Git',
+          'Cloudflare R2'
+        ]
+      }
+    }
+  }
+];

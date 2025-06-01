@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { BlogPost as BlogPostType } from '@/data/blog-posts';
 import { blogPosts } from '@/data/blog-posts';
+import { fetchMarkdownContent } from '@/lib/markdown-utils';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { enUS, ptBR } from 'date-fns/locale';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
@@ -19,6 +20,8 @@ export default function BlogPost() {
   const { language } = useLanguage();
   const [post, setPost] = useState<BlogPostType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [markdownContent, setMarkdownContent] = useState<string | null>(null);
+  const [contentLoading, setContentLoading] = useState(false);
 
   useEffect(() => {
     // Find the post with the matching slug
@@ -26,6 +29,34 @@ export default function BlogPost() {
     setPost(foundPost || null);
     setLoading(false);
   }, [params.slug]);
+
+  useEffect(() => {
+    async function loadMarkdownContent() {
+      if (!post || !language) return;
+
+      try {
+        setContentLoading(true);
+        const contentPath = post.translations[language].content;
+
+        // Se o conteúdo já é o markdown em si (não um caminho), use-o diretamente
+        if (contentPath.startsWith('#')) {
+          setMarkdownContent(contentPath);
+          return;
+        }
+
+        // Caso contrário, carregue o arquivo
+        const content = await fetchMarkdownContent(contentPath);
+        setMarkdownContent(content);
+      } catch (error) {
+        console.error('Erro ao carregar o conteúdo markdown:', error);
+        setMarkdownContent(null);
+      } finally {
+        setContentLoading(false);
+      }
+    }
+
+    loadMarkdownContent();
+  }, [post, language]);
 
   // Format date based on current language
   const formatDate = (dateString: string) => {
@@ -76,7 +107,23 @@ export default function BlogPost() {
       </div>
 
       <div className="prose prose-lg dark:prose-invert max-w-none">
-        <ReactMarkdown>{post.translations[language].content}</ReactMarkdown>
+        {contentLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-6 w-3/4" />
+          </div>
+        ) : markdownContent ? (
+          <ReactMarkdown>{markdownContent}</ReactMarkdown>
+        ) : (
+          <div className="text-center p-8">
+            <p className="text-muted-foreground">
+              Erro ao carregar o conteúdo. Por favor, tente novamente mais
+              tarde.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

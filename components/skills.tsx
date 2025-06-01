@@ -1,105 +1,80 @@
-"use client"
+'use client';
 
-import { useLanguage } from "@/components/language-provider"
-import { motion } from "framer-motion"
-import { useInView } from "framer-motion"
-import { useRef } from "react"
-import { Badge } from "@/components/ui/badge"
+import { useLanguage } from '@/components/language-provider';
+import { Badge } from '@/components/ui/badge';
+import { motion, useInView } from 'framer-motion';
+import { useRef } from 'react';
 
 export default function Skills() {
-  const { t } = useLanguage()
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, amount: 0.1 })
+  const { t } = useLanguage();
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.1 });
 
   const skillCategories = [
     {
-      name: t("skills.backEnd.title"),
+      name: t('skills.backEnd.title'),
       skills: [
-        "Node.js",
-        "Express",
-        "NestJS",
-        "TypeScript",
-        "Python",
-        "Django",
-        "Flask",
-        "Java",
-        "Spring Boot",
-        "C#",
-        ".NET Core",
-        "GraphQL",
-        "REST API",
-      ],
+        'Node.js',
+        'JavaScript',
+        'TypeScript',
+        'PHP',
+        'Laravel',
+        'Python',
+        'Django',
+        'Java',
+        'Spring Boot'
+      ]
     },
     {
-      name: t("skills.frontEnd.title"),
+      name: t('skills.frontEnd.title'),
       skills: [
-        "React",
-        "Next.js",
-        "Vue.js",
-        "Angular",
-        "JavaScript",
-        "TypeScript",
-        "HTML",
-        "CSS",
-        "Tailwind CSS",
-        "SASS",
-        "Redux",
-        "Zustand",
-      ],
+        'React',
+        'Next.js',
+        'Vue.js',
+        'JavaScript',
+        'TypeScript',
+        'HTML',
+        'CSS',
+        'Tailwind CSS'
+      ]
     },
     {
-      name: t("skills.devOps.title"),
-      skills: [
-        "Docker",
-        "Kubernetes",
-        "AWS",
-        "Azure",
-        "GCP",
-        "CI/CD",
-        "GitHub Actions",
-        "Jenkins",
-        "Terraform",
-        "Linux",
-        "Nginx",
-        "Apache",
-      ],
+      name: t('skills.devOps.title'),
+      skills: ['Docker', 'Google Cloud', 'Git', 'GitHub Actions']
     },
     {
-      name: t("skills.databases.title"),
+      name: t('skills.databases.title'),
       skills: [
-        "PostgreSQL",
-        "MySQL",
-        "MongoDB",
-        "Redis",
-        "Elasticsearch",
-        "DynamoDB",
-        "SQLite",
-        "Firebase",
-        "Supabase",
-        "SQL",
-        "NoSQL",
-      ],
-    },
-  ]
+        'PostgreSQL',
+        'MySQL',
+        'MongoDB',
+        'SQLite',
+        'Firebase',
+        'Supabase'
+      ]
+    }
+  ];
 
   const container = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
+        staggerChildren: 0.1
+      }
+    }
+  };
 
   const item = {
     hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-  }
+    show: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+  };
 
   return (
     <section id="skills" className="py-16 md:py-24" ref={ref}>
-      <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl mb-8">{t("skills.title")}</h2>
+      <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl mb-8">
+        {t('skills.title')}
+      </h2>
 
       <div className="space-y-8">
         {skillCategories.map((category, index) => (
@@ -108,7 +83,7 @@ export default function Skills() {
             <motion.div
               variants={container}
               initial="hidden"
-              animate={isInView ? "show" : "hidden"}
+              animate={isInView ? 'show' : 'hidden'}
               className="flex flex-wrap gap-2"
             >
               {category.skills.map((skill, skillIndex) => (
@@ -123,5 +98,5 @@ export default function Skills() {
         ))}
       </div>
     </section>
-  )
+  );
 }

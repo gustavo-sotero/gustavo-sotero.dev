@@ -1,15 +1,15 @@
-import type { Language } from "@/components/language-provider"
+import type { Language } from '@/components/language-provider';
 
 export interface EducationItem {
-  id: number
+  id: number;
   translations: {
     [key in Language]: {
-      title: string
-      institution: string
-      period: string
-      description: string
-    }
-  }
+      title: string;
+      institution: string;
+      period: string;
+      description: string;
+    };
+  };
 }
 
 export const educationData: EducationItem[] = [
@@ -17,37 +17,34 @@ export const educationData: EducationItem[] = [
     id: 1,
     translations: {
       en: {
-        title: "Master's in Computer Science",
-        institution: "Tech University",
-        period: "2014 - 2016",
-        description:
-          "Specialized in Distributed Systems and Cloud Computing. Thesis on scalable microservices architecture.",
+        title: 'Undergraduate in Analysis and Systems Development',
+        institution: 'Tiradentes University',
+        period: '2023 - 2025',
+        description: ''
       },
-      "pt-BR": {
-        title: "Mestrado em Ciência da Computação",
-        institution: "Universidade Tech",
-        period: "2014 - 2016",
-        description:
-          "Especializado em Sistemas Distribuídos e Computação em Nuvem. Tese sobre arquitetura escalável de microsserviços.",
-      },
-    },
+      'pt-BR': {
+        title: 'Graduando em Analise e Desenvolvimento de Sistemas',
+        institution: 'Universidade Tiradentes',
+        period: '2023 - 2025',
+        description: ''
+      }
+    }
   },
   {
     id: 2,
     translations: {
       en: {
-        title: "Bachelor's in Software Engineering",
-        institution: "State University",
-        period: "2010 - 2014",
-        description: "Graduated with honors. Focused on software development methodologies and database systems.",
+        title: 'Google Cloud Computing Foundations Certificate',
+        institution: 'Google Cloud Skills Boost',
+        period: '2025',
+        description: 'Workload: +50 hours'
       },
-      "pt-BR": {
-        title: "Bacharelado em Engenharia de Software",
-        institution: "Universidade Estadual",
-        period: "2010 - 2014",
-        description:
-          "Graduado com honras. Foco em metodologias de desenvolvimento de software e sistemas de banco de dados.",
-      },
-    },
-  },
-]
+      'pt-BR': {
+        title: 'Google Cloud Computing Foundations Certificate',
+        institution: 'Google Cloud Skills Boost',
+        period: '2025',
+        description: 'Carga horária: +50 horas'
+      }
+    }
+  }
+];

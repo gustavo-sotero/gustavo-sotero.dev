@@ -28,13 +28,13 @@ export const en = {
   about: {
     title: 'About Me',
     paragraph1:
-      "I'm a passionate Full-Stack Developer Back-End-Focused with extensive experience in building robust and scalable web applications. I specialize in creating efficient server-side architectures while maintaining a strong understanding of front-end technologies.",
+      "I'm a Full-Stack Developer with a focus on Back-End, passionate about creating practical, efficient, and secure solutions. I have experience with real-world projects ranging from scalable APIs to complete systems for companies, with a special focus on performance and solid architectural practices.",
     paragraph2:
-      "With a background in computer science and years of industry experience, I've worked on a variety of projects ranging from small business applications to large-scale enterprise systems. I'm constantly learning and adapting to new technologies to deliver the best solutions.",
+      "I'm currently studying Systems Analysis and Development and constantly expanding my portfolio with personal projects, such as file-sharing platforms, URL shorteners, Telegram bots, and custom authentication systems. I'm always looking to learn new stacks and step out of my comfort zone to grow as a professional.",
     paragraph3:
-      'I enjoy solving complex problems and collaborating with teams to create exceptional digital experiences that meet business objectives and user needs.',
+      'I value clarity, clean code, and delivering solutions that truly work for the end user. I love thinking about the structure behind systems and finding smart ways to solve complex problems with simplicity.',
     funFact:
-      "Fun fact: When I'm not coding, you can find me exploring hiking trails or experimenting with new cooking recipes!"
+      "Fun fact: When I'm not coding, you can find me playing video games, listening to music, or watching a movie or TV series."
   },
   projects: {
     title: 'Featured Projects',
