@@ -14,7 +14,7 @@ A performance impacta diretamente a experiência do usuário. Estudos mostram qu
 
 ```jsx
 const MeuComponente = React.memo(function MeuComponente(props) {
-	// Lógica do seu componente
+  // Lógica do seu componente
 });
 ```
 
@@ -26,14 +26,14 @@ Ao renderizar listas longas, use bibliotecas de virtualização como `react-wind
 import { FixedSizeList } from 'react-window';
 
 const MinhaLista = ({ itens }) => (
-	<FixedSizeList
-		height={500}
-		width={300}
-		itemCount={itens.length}
-		itemSize={50}
-	>
-		{({ index, style }) => <div style={style}>{itens[index]}</div>}
-	</FixedSizeList>
+  <FixedSizeList
+    height={500}
+    width={300}
+    itemCount={itens.length}
+    itemSize={50}
+  >
+    {({ index, style }) => <div style={style}>{itens[index]}</div>}
+  </FixedSizeList>
 );
 ```
 
@@ -47,11 +47,11 @@ import { lazy, Suspense } from 'react';
 const ComponenteLazy = lazy(() => import('./ComponenteLazy'));
 
 function MeuComponente() {
-	return (
-		<Suspense fallback={<div>Carregando...</div>}>
-			<ComponenteLazy />
-		</Suspense>
-	);
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <ComponenteLazy />
+    </Suspense>
+  );
 }
 ```
 
@@ -63,20 +63,20 @@ function MeuComponente() {
 import { useCallback, useMemo } from 'react';
 
 function MeuComponente({ dados, aoClicarItem }) {
-	// Memoriza função de callback
-	const handleClick = useCallback(
-		(item) => {
-			aoClicarItem(item.id);
-		},
-		[aoClicarItem]
-	);
+  // Memoriza função de callback
+  const handleClick = useCallback(
+    (item) => {
+      aoClicarItem(item.id);
+    },
+    [aoClicarItem]
+  );
 
-	// Memoriza valor computado
-	const dadosOrdenados = useMemo(() => {
-		return [...dados].sort((a, b) => a.nome.localeCompare(b.nome));
-	}, [dados]);
+  // Memoriza valor computado
+  const dadosOrdenados = useMemo(() => {
+    return [...dados].sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [dados]);
 
-	// Renderização do componente
+  // Renderização do componente
 }
 ```
 
@@ -86,11 +86,11 @@ Use formatos modernos de imagem como WebP, implemente carregamento lazy e dimens
 
 ```jsx
 <img
-	src="imagem.webp"
-	loading="lazy"
-	width="800"
-	height="600"
-	alt="Descrição"
+  src="imagem.webp"
+  loading="lazy"
+  width="800"
+  height="600"
+  alt="Descrição"
 />
 ```
 

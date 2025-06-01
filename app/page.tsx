@@ -10,24 +10,24 @@ import Contact from '@/components/contact';
 import Footer from '@/components/footer';
 
 export default function Home() {
-	return (
-		<div className="min-h-screen bg-background text-foreground">
-			<Header />
-			<div className="pt-16">
-				{' '}
-				{/* Espaço para o cabeçalho fixo */}
-				<main className="container mx-auto px-4 sm:px-6 lg:px-8">
-					<Hero />
-					<About />
-					<Projects />
-					<Skills />
-					<Experience />
-					<Education />
-					<Blog />
-					<Contact />
-				</main>
-				<Footer />
-			</div>
-		</div>
-	);
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Header />
+      <div className="pt-16">
+        {' '}
+        {/* Espaço para o cabeçalho fixo */}
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <Hero />
+          <About />
+          <Projects />
+          <Skills />
+          <Experience />
+          <Education />
+          <Blog />
+          <Contact />
+        </main>
+        <Footer />
+      </div>
+    </div>
+  );
 }

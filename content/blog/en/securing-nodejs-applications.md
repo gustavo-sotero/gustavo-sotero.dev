@@ -25,8 +25,8 @@ const https = require('https');
 const fs = require('fs');
 
 const options = {
-	key: fs.readFileSync('key.pem'),
-	cert: fs.readFileSync('cert.pem')
+  key: fs.readFileSync('key.pem'),
+  cert: fs.readFileSync('cert.pem')
 };
 
 https.createServer(options, app).listen(443);
@@ -41,13 +41,13 @@ const bcrypt = require('bcrypt');
 
 // Hashing a password
 async function hashPassword(password) {
-	const saltRounds = 10;
-	return await bcrypt.hash(password, saltRounds);
+  const saltRounds = 10;
+  return await bcrypt.hash(password, saltRounds);
 }
 
 // Verifying a password
 async function verifyPassword(password, hash) {
-	return await bcrypt.compare(password, hash);
+  return await bcrypt.compare(password, hash);
 }
 ```
 
@@ -58,7 +58,7 @@ Use parameterized queries or ORMs to prevent SQL injection. For NoSQL databases,
 ```javascript
 // Using parameterized queries with mysql2
 const [rows] = await connection.execute('SELECT * FROM users WHERE email = ?', [
-	email
+  email
 ]);
 
 // Using Mongoose (MongoDB ORM)
@@ -82,9 +82,9 @@ Protect against brute force attacks by implementing rate limiting.
 const rateLimit = require('express-rate-limit');
 
 const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 100, // limit each IP to 100 requests per windowMs
-	message: 'Too many requests from this IP, please try again later'
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later'
 });
 
 app.use('/api/', limiter);
@@ -98,16 +98,16 @@ Always validate and sanitize user input to prevent XSS and injection attacks.
 const { body, validationResult } = require('express-validator');
 
 app.post(
-	'/user',
-	body('email').isEmail().normalizeEmail(),
-	body('password').isLength({ min: 8 }),
-	(req, res) => {
-		const errors = validationResult(req);
-		if (!errors.isEmpty()) {
-			return res.status(400).json({ errors: errors.array() });
-		}
-		// Process request
-	}
+  '/user',
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 8 }),
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    // Process request
+  }
 );
 ```
 
@@ -122,7 +122,7 @@ const csrfProtection = csrf({ cookie: true });
 app.use(csrfProtection);
 
 app.get('/form', (req, res) => {
-	res.render('form', { csrfToken: req.csrfToken() });
+  res.render('form', { csrfToken: req.csrfToken() });
 });
 ```
 
@@ -147,8 +147,8 @@ Don't expose sensitive information in error messages. Use a custom error handler
 
 ```javascript
 app.use((err, req, res, next) => {
-	console.error(err.stack);
-	res.status(500).send('Something went wrong!');
+  console.error(err.stack);
+  res.status(500).send('Something went wrong!');
 });
 ```
 
@@ -160,10 +160,10 @@ Never hardcode sensitive information like API keys or database credentials. Use 
 require('dotenv').config();
 
 const dbConnection = {
-	host: process.env.DB_HOST,
-	user: process.env.DB_USER,
-	password: process.env.DB_PASSWORD,
-	database: process.env.DB_NAME
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME
 };
 ```
 

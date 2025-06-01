@@ -25,8 +25,8 @@ const https = require('https');
 const fs = require('fs');
 
 const options = {
-	key: fs.readFileSync('key.pem'),
-	cert: fs.readFileSync('cert.pem')
+  key: fs.readFileSync('key.pem'),
+  cert: fs.readFileSync('cert.pem')
 };
 
 https.createServer(options, app).listen(443);
@@ -41,13 +41,13 @@ const bcrypt = require('bcrypt');
 
 // Fazendo hash de uma senha
 async function hashSenha(senha) {
-	const saltRounds = 10;
-	return await bcrypt.hash(senha, saltRounds);
+  const saltRounds = 10;
+  return await bcrypt.hash(senha, saltRounds);
 }
 
 // Verificando uma senha
 async function verificarSenha(senha, hash) {
-	return await bcrypt.compare(senha, hash);
+  return await bcrypt.compare(senha, hash);
 }
 ```
 
@@ -58,8 +58,8 @@ Use consultas parametrizadas ou ORMs para prevenir injeção SQL. Para bancos de
 ```javascript
 // Usando consultas parametrizadas com mysql2
 const [rows] = await connection.execute(
-	'SELECT * FROM usuarios WHERE email = ?',
-	[email]
+  'SELECT * FROM usuarios WHERE email = ?',
+  [email]
 );
 
 // Usando Mongoose (ORM para MongoDB)
@@ -83,9 +83,9 @@ Proteja contra ataques de força bruta implementando limitação de taxa.
 const rateLimit = require('express-rate-limit');
 
 const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutos
-	max: 100, // limita cada IP a 100 requisições por windowMs
-	message: 'Muitas requisições deste IP, por favor tente novamente mais tarde'
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limita cada IP a 100 requisições por windowMs
+  message: 'Muitas requisições deste IP, por favor tente novamente mais tarde'
 });
 
 app.use('/api/', limiter);
@@ -99,16 +99,16 @@ Sempre valide e sanitize a entrada do usuário para prevenir ataques XSS e de in
 const { body, validationResult } = require('express-validator');
 
 app.post(
-	'/usuario',
-	body('email').isEmail().normalizeEmail(),
-	body('senha').isLength({ min: 8 }),
-	(req, res) => {
-		const errors = validationResult(req);
-		if (!errors.isEmpty()) {
-			return res.status(400).json({ errors: errors.array() });
-		}
-		// Processa a requisição
-	}
+  '/usuario',
+  body('email').isEmail().normalizeEmail(),
+  body('senha').isLength({ min: 8 }),
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    // Processa a requisição
+  }
 );
 ```
 
@@ -123,7 +123,7 @@ const csrfProtection = csrf({ cookie: true });
 app.use(csrfProtection);
 
 app.get('/formulario', (req, res) => {
-	res.render('formulario', { csrfToken: req.csrfToken() });
+  res.render('formulario', { csrfToken: req.csrfToken() });
 });
 ```
 
@@ -148,8 +148,8 @@ Não exponha informações sensíveis em mensagens de erro. Use um manipulador d
 
 ```javascript
 app.use((err, req, res, next) => {
-	console.error(err.stack);
-	res.status(500).send('Algo deu errado!');
+  console.error(err.stack);
+  res.status(500).send('Algo deu errado!');
 });
 ```
 
@@ -161,10 +161,10 @@ Nunca codifique informações sensíveis como chaves de API ou credenciais de ba
 require('dotenv').config();
 
 const dbConnection = {
-	host: process.env.DB_HOST,
-	user: process.env.DB_USER,
-	password: process.env.DB_PASSWORD,
-	database: process.env.DB_NAME
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME
 };
 ```
 
