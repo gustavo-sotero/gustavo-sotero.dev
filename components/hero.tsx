@@ -35,9 +35,9 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="min-h-[calc(100vh-4rem)] flex items-center relative"
+      className="min-h-[calc(100vh-4rem)] flex items-center relative pb-16 sm:pb-8 md:pb-0"
     >
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-16 items-center w-full py-8 md:py-0">
+      <div className="grid grid-cols-1 gap-12 md:grid-cols-2 md:gap-16 items-center w-full py-8 md:py-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -101,9 +101,9 @@ export default function Hero() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="flex justify-center"
+          className="flex justify-center mb-8 md:mb-0"
         >
-          <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-primary/20">
+          <div className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-primary/20">
             <Image
               src="/gustavo-sotero.png"
               alt="Gustavo Sotero"
@@ -116,7 +116,7 @@ export default function Hero() {
       </div>
 
       {/* Seta animada indicando scroll */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+      <div className="absolute bottom-4 sm:bottom-8 left-0 right-0 flex justify-center">
         <Link href="#about" aria-label={t('hero.scrollDown')}>
           <motion.div
             initial={{ opacity: 0, y: -10 }}
