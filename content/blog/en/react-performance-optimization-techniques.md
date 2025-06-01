@@ -14,7 +14,7 @@ Performance directly impacts user experience. Studies show that users abandon we
 
 ```jsx
 const MyComponent = React.memo(function MyComponent(props) {
-  // Your component logic
+	// Your component logic
 });
 ```
 
@@ -26,14 +26,14 @@ When rendering long lists, use virtualization libraries like `react-window` or `
 import { FixedSizeList } from 'react-window';
 
 const MyList = ({ items }) => (
-  <FixedSizeList
-    height={500}
-    width={300}
-    itemCount={items.length}
-    itemSize={50}
-  >
-    {({ index, style }) => <div style={style}>{items[index]}</div>}
-  </FixedSizeList>
+	<FixedSizeList
+		height={500}
+		width={300}
+		itemCount={items.length}
+		itemSize={50}
+	>
+		{({ index, style }) => <div style={style}>{items[index]}</div>}
+	</FixedSizeList>
 );
 ```
 
@@ -47,11 +47,11 @@ import { lazy, Suspense } from 'react';
 const LazyComponent = lazy(() => import('./LazyComponent'));
 
 function MyComponent() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <LazyComponent />
-    </Suspense>
-  );
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<LazyComponent />
+		</Suspense>
+	);
 }
 ```
 
@@ -63,20 +63,20 @@ function MyComponent() {
 import { useCallback, useMemo } from 'react';
 
 function MyComponent({ data, onItemClick }) {
-  // Memoize callback function
-  const handleClick = useCallback(
-    (item) => {
-      onItemClick(item.id);
-    },
-    [onItemClick]
-  );
+	// Memoize callback function
+	const handleClick = useCallback(
+		(item) => {
+			onItemClick(item.id);
+		},
+		[onItemClick]
+	);
 
-  // Memoize computed value
-  const sortedData = useMemo(() => {
-    return [...data].sort((a, b) => a.name.localeCompare(b.name));
-  }, [data]);
+	// Memoize computed value
+	const sortedData = useMemo(() => {
+		return [...data].sort((a, b) => a.name.localeCompare(b.name));
+	}, [data]);
 
-  // Component rendering
+	// Component rendering
 }
 ```
 
@@ -86,11 +86,11 @@ Use modern image formats like WebP, implement lazy loading, and properly size im
 
 ```jsx
 <img
-  src="image.webp"
-  loading="lazy"
-  width="800"
-  height="600"
-  alt="Description"
+	src="image.webp"
+	loading="lazy"
+	width="800"
+	height="600"
+	alt="Description"
 />
 ```
 

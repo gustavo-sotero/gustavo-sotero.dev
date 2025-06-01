@@ -3,130 +3,136 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 355 100% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 142 76% 36%;
-    --radius: 0.5rem;
-    --chart-1: 142 76% 36%;
-    --chart-2: 240 5.9% 10%;
-    --chart-3: 262 83.3% 57.8%;
-    --chart-4: 316 70% 50%;
-    --chart-5: 175 84.6% 39.2%;
-  }
+	:root {
+		--background: 0 0% 100%;
+		--foreground: 240 10% 3.9%;
+		--card: 0 0% 100%;
+		--card-foreground: 240 10% 3.9%;
+		--popover: 0 0% 100%;
+		--popover-foreground: 240 10% 3.9%;
+		--primary: 142 76% 36%;
+		--primary-foreground: 355 100% 100%;
+		--secondary: 240 4.8% 95.9%;
+		--secondary-foreground: 240 5.9% 10%;
+		--muted: 240 4.8% 95.9%;
+		--muted-foreground: 240 3.8% 46.1%;
+		--accent: 240 4.8% 95.9%;
+		--accent-foreground: 240 5.9% 10%;
+		--destructive: 0 84.2% 60.2%;
+		--destructive-foreground: 0 0% 98%;
+		--border: 240 5.9% 90%;
+		--input: 240 5.9% 90%;
+		--ring: 142 76% 36%;
+		--radius: 0.5rem;
+		--chart-1: 142 76% 36%;
+		--chart-2: 240 5.9% 10%;
+		--chart-3: 262 83.3% 57.8%;
+		--chart-4: 316 70% 50%;
+		--chart-5: 175 84.6% 39.2%;
+	}
 
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 142 70% 50%;
-    --primary-foreground: 144 80% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142 70% 50%;
-    --chart-1: 142 70% 50%;
-    --chart-2: 0 0% 98%;
-    --chart-3: 262 83.3% 57.8%;
-    --chart-4: 316 70% 50%;
-    --chart-5: 175 84.6% 39.2%;
-  }
+	.dark {
+		--background: 240 10% 3.9%;
+		--foreground: 0 0% 98%;
+		--card: 240 10% 3.9%;
+		--card-foreground: 0 0% 98%;
+		--popover: 240 10% 3.9%;
+		--popover-foreground: 0 0% 98%;
+		--primary: 142 70% 50%;
+		--primary-foreground: 144 80% 10%;
+		--secondary: 240 3.7% 15.9%;
+		--secondary-foreground: 0 0% 98%;
+		--muted: 240 3.7% 15.9%;
+		--muted-foreground: 240 5% 64.9%;
+		--accent: 240 3.7% 15.9%;
+		--accent-foreground: 0 0% 98%;
+		--destructive: 0 62.8% 30.6%;
+		--destructive-foreground: 0 0% 98%;
+		--border: 240 3.7% 15.9%;
+		--input: 240 3.7% 15.9%;
+		--ring: 142 70% 50%;
+		--chart-1: 142 70% 50%;
+		--chart-2: 0 0% 98%;
+		--chart-3: 262 83.3% 57.8%;
+		--chart-4: 316 70% 50%;
+		--chart-5: 175 84.6% 39.2%;
+	}
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+	* {
+		@apply border-border;
+	}
 
-  html {
-    scroll-behavior: smooth;
-  }
+	html {
+		scroll-behavior: smooth;
+	}
 
-  /* Adiciona transição suave para mudança de tema */
-  body {
-    @apply bg-background text-foreground;
-    transition: background-color 0.3s ease, color 0.3s ease;
-  }
+	/* Adiciona transição suave para mudança de tema */
+	body {
+		@apply bg-background text-foreground;
+		transition:
+			background-color 0.3s ease,
+			color 0.3s ease;
+	}
 
-  /* Adiciona transição para elementos comuns */
-  a,
-  button,
-  input,
-  textarea,
-  select,
-  .card,
-  .badge,
-  .btn,
-  .nav-item,
-  header,
-  footer,
-  section,
-  article,
-  aside,
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  p,
-  span,
-  div {
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-  }
+	/* Adiciona transição para elementos comuns */
+	a,
+	button,
+	input,
+	textarea,
+	select,
+	.card,
+	.badge,
+	.btn,
+	.nav-item,
+	header,
+	footer,
+	section,
+	article,
+	aside,
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6,
+	p,
+	span,
+	div {
+		transition:
+			background-color 0.3s ease,
+			color 0.3s ease,
+			border-color 0.3s ease,
+			box-shadow 0.3s ease;
+	}
 
-  /* Evita transição na primeira renderização */
-  .no-transition {
-    transition: none !important;
-  }
+	/* Evita transição na primeira renderização */
+	.no-transition {
+		transition: none !important;
+	}
 }
 
 /* Adiciona classe para desativar transições temporariamente */
 .disable-transitions * {
-  transition: none !important;
+	transition: none !important;
 }
 
 /* Theme toggle animation */
 @keyframes theme-fade-in {
-  from {
-    opacity: 0;
-    transform: scale(0.8) rotate(-10deg);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) rotate(0);
-  }
+	from {
+		opacity: 0;
+		transform: scale(0.8) rotate(-10deg);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1) rotate(0);
+	}
 }
 
 /* Mobile menu styles */
 .mobile-menu-open {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
+	overflow: hidden;
+	position: fixed;
+	width: 100%;
 }
