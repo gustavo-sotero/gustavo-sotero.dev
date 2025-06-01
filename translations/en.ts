@@ -91,7 +91,10 @@ export const en = {
       emailPlaceholder: 'your.email@example.com',
       message: 'Message',
       messagePlaceholder: 'Your message here...',
-      send: 'Send Message'
+      send: 'Send Message',
+      sending: 'Sending...',
+      successMessage: 'Message sent successfully! I will get back to you soon.',
+      errorMessage: 'Error sending message. Please try again later.'
     }
   },
   footer: {

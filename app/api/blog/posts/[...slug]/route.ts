@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     // Obter o caminho do arquivo a partir do slug
-    const { slug } = await params; // 'a', 'b', or 'c'
+    const { slug } = await params;
 
     const filePath = path.join(process.cwd(), 'content', slug);
 

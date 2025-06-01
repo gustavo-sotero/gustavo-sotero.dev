@@ -92,7 +92,12 @@ export const ptBR = {
       emailPlaceholder: 'seu.email@exemplo.com',
       message: 'Mensagem',
       messagePlaceholder: 'Sua mensagem aqui...',
-      send: 'Enviar Mensagem'
+      send: 'Enviar Mensagem',
+      sending: 'Enviando...',
+      successMessage:
+        'Mensagem enviada com sucesso! Entrarei em contato em breve.',
+      errorMessage:
+        'Erro ao enviar mensagem. Por favor, tente novamente mais tarde.'
     }
   },
   footer: {
