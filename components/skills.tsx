@@ -29,8 +29,9 @@ export default function Skills() {
       name: t('skills.frontEnd.title'),
       skills: [
         'React',
-        'Next.js',
-        'Vue.js',
+        'Next.JS',
+        'Vue',
+        'Nuxt',
         'JavaScript',
         'TypeScript',
         'HTML',
@@ -40,7 +41,13 @@ export default function Skills() {
     },
     {
       name: t('skills.devOps.title'),
-      skills: ['Docker', 'Google Cloud', 'Git', 'GitHub Actions']
+      skills: [
+        'Google Cloud',
+        'Docker',
+        'Docker Compose',
+        'Git',
+        'GitHub Actions'
+      ]
     },
     {
       name: t('skills.databases.title'),

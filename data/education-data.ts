@@ -17,16 +17,16 @@ export const educationData: EducationItem[] = [
     id: 1,
     translations: {
       en: {
-        title: 'Undergraduate in Analysis and Systems Development',
-        institution: 'Tiradentes University',
-        period: '2023 - 2025',
-        description: ''
+        title: 'Undergraduate in Software Engineering',
+        institution: 'Cruzeiro do Sul University',
+        period: '2025 - 2029',
+        description: 'Expected graduation: 2029'
       },
       'pt-BR': {
-        title: 'Graduando em Analise e Desenvolvimento de Sistemas',
-        institution: 'Universidade Tiradentes',
-        period: '2023 - 2025',
-        description: ''
+        title: 'Graduando em Engenharia de Software',
+        institution: 'Universidade Cruzeiro do Sul',
+        period: '2025 - 2029',
+        description: 'Conclusão prevista: 2029'
       }
     }
   },
