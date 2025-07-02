@@ -4,13 +4,13 @@ import path from 'path';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: { slug: string[] } }
 ) {
   try {
     // Obter o caminho do arquivo a partir do slug
-    const { slug } = await params;
+    const { slug } = params;
 
-    const filePath = path.join(process.cwd(), 'content', slug);
+    const filePath = path.join(process.cwd(), 'content', ...slug);
 
     // Verificar se o arquivo existe
     if (!fs.existsSync(filePath)) {

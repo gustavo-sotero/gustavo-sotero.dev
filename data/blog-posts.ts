@@ -20,73 +20,71 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
   {
     id: 1,
-    slug: 'microservices-architecture-best-practices',
-    date: '2023-12-15',
-    readingTime: 8,
+    slug: 'how-to-start-a-career-in-tech',
+    date: '2025-07-01',
+    readingTime: 5,
     translations: {
       en: {
-        title:
-          'Microservices Architecture: Best Practices for Scalable Applications',
+        title: 'How to Start a Career in Tech',
         excerpt:
-          'Learn the key principles and best practices for designing and implementing microservices architecture that scales effectively.',
-        content:
-          '/content/blog/en/microservices-architecture-best-practices.md',
-        tags: ['Microservices', 'Architecture', 'Scalability', 'Backend']
+          'A guide for aspiring developers to navigate their journey into the tech industry.',
+        content: '/content/blog/en/how-to-start-a-career-in-tech.md',
+        tags: ['Career', 'Development', 'Junior']
       },
       'pt-BR': {
-        title:
-          'Arquitetura de Microsserviços: Melhores Práticas para Aplicações Escaláveis',
+        title: 'Como Iniciar uma Carreira em Tecnologia',
         excerpt:
-          'Aprenda os princípios fundamentais e as melhores práticas para projetar e implementar uma arquitetura de microsserviços que escala efetivamente.',
+          'Um guia para desenvolvedores aspirantes navegarem em sua jornada na indústria de tecnologia.',
         content:
-          '/content/blog/pt-br/microservices-architecture-best-practices.md',
-        tags: ['Microsserviços', 'Arquitetura', 'Escalabilidade', 'Backend']
+          '/content/blog/pt-br/como-iniciar-uma-carreira-em-tecnologia.md',
+        tags: ['Carreira', 'Desenvolvimento', 'Júnior']
       }
     }
   },
   {
     id: 2,
-    slug: 'react-performance-optimization-techniques',
-    date: '2023-11-20',
-    readingTime: 6,
+    slug: '5-tips-for-your-first-job-interview',
+    date: '2025-06-25',
+    readingTime: 3,
     translations: {
       en: {
-        title: 'React Performance Optimization Techniques',
+        title: '5 Tips for Your First Job Interview',
         excerpt:
-          'Discover practical techniques to optimize your React applications for better performance and user experience.',
-        content:
-          '/content/blog/en/react-performance-optimization-techniques.md',
-        tags: ['React', 'Performance', 'JavaScript', 'Frontend']
+          'Five tips to help you prepare and succeed in your first technical interview.',
+        content: '/content/blog/en/5-tips-for-your-first-job-interview.md',
+        tags: ['Career', 'Interview', 'Junior']
       },
       'pt-BR': {
-        title: 'Técnicas de Otimização de Performance em React',
+        title: '5 Dicas para Sua Primeira Entrevista de Emprego',
         excerpt:
-          'Descubra técnicas práticas para otimizar suas aplicações React para melhor performance e experiência do usuário.',
+          'Cinco dicas para ajudá-lo a se preparar e ter sucesso em sua primeira entrevista técnica.',
         content:
-          '/content/blog/pt-br/react-performance-optimization-techniques.md',
-        tags: ['React', 'Performance', 'JavaScript', 'Frontend']
+          '/content/blog/pt-br/5-dicas-para-sua-primeira-entrevista-de-emprego.md',
+        tags: ['Carreira', 'Entrevista', 'Júnior']
       }
     }
   },
   {
     id: 3,
-    slug: 'securing-nodejs-applications',
-    date: '2023-10-05',
-    readingTime: 7,
+    slug: 'a-junior-developers-guide-to-git-and-github',
+    date: '2025-06-18',
+    readingTime: 4,
     translations: {
       en: {
-        title: 'Securing Node.js Applications: A Comprehensive Guide',
+        title: "A Junior Developer's Guide to Git and GitHub",
         excerpt:
-          'Learn essential security practices to protect your Node.js applications from common vulnerabilities and attacks.',
-        content: '/content/blog/en/securing-nodejs-applications.md',
-        tags: ['Node.js', 'Security', 'JavaScript', 'Backend']
+          'A guide covering the basic concepts of Git and GitHub to get you started.',
+        content:
+          '/content/blog/en/a-junior-developers-guide-to-git-and-github.md',
+        tags: ['Git', 'GitHub', 'Development', 'Junior']
       },
       'pt-BR': {
-        title: 'Protegendo Aplicações Node.js: Um Guia Abrangente',
+        title: 'Um Guia de Git e GitHub para Desenvolvedores Júniores',
         excerpt:
-          'Aprenda práticas essenciais de segurança para proteger suas aplicações Node.js contra vulnerabilidades e ataques comuns.',
-        content: '/content/blog/pt-br/securing-nodejs-applications.md',
-        tags: ['Node.js', 'Segurança', 'JavaScript', 'Backend']
+          'Um guia cobrindo os conceitos básicos de Git e GitHub para você começar.',
+        content:
+          '/content/blog/pt-br/um-guia-de-git-e-github-para-desenvolvedores-juniores.md',
+        tags: ['Git', 'GitHub', 'Desenvolvimento', 'Júnior']
       }
     }
   }
