@@ -38,7 +38,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY package.json package-lock.json* ./
 
 # Instala apenas dependências de produção
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev
 
 # Copia os arquivos necessários do builder
 COPY --from=builder /app/public ./public
@@ -48,8 +48,7 @@ RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
 # Copia os arquivos de build com as permissões corretas
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/ ./.next
 
 # Muda para o usuário não-root
 USER nextjs
@@ -57,4 +56,4 @@ USER nextjs
 EXPOSE 3000
 
 # Comando para iniciar a aplicação
-CMD ["node", "server.js"]
+CMD ["node", ".next/standalone/server.js"]
