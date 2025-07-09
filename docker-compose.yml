@@ -3,11 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-        - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-    ports:
-      - '3000:3000'
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
