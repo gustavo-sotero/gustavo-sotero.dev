@@ -105,7 +105,7 @@ export default function Hero() {
         >
           <div className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-4 border-primary/20">
             <Image
-              src="/gustavo-sotero.webp"
+              src="/images/gustavo-sotero.webp"
               alt="Gustavo Sotero"
               fill
               className="object-cover"
