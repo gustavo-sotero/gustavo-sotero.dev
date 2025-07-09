@@ -54,5 +54,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Muda para o usuário não-root
 USER nextjs
 
+EXPOSE 3000
+
 # Comando para iniciar a aplicação
 CMD ["node", "server.js"]
