@@ -56,4 +56,4 @@ USER nextjs
 EXPOSE 3000
 
 # Comando para iniciar a aplicação
-CMD ["node", ".next/standalone/server.js"]
+CMD ["npm", "start"]
