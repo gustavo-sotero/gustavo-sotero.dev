@@ -4,11 +4,11 @@ import path from 'path';
 
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string[] } }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
   try {
     // Obter o caminho do arquivo a partir do slug
-    const { slug } = params;
+    const { slug } = await params;
 
     const filePath = path.join(process.cwd(), 'content', ...slug);
 
