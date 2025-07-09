@@ -20,6 +20,12 @@ COPY . .
 # Desabilita telemetria do Next.js
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# Variáveis de ambiente para o build (se necessário)
+ARG TELEGRAM_BOT_TOKEN
+ARG TELEGRAM_CHAT_ID
+ENV TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+ENV TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID
+
 # Executa o build da aplicação
 RUN npm run build
 
@@ -29,6 +35,16 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+
+# Variáveis de ambiente para runtime
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# Variáveis de ambiente da aplicação
+ARG TELEGRAM_BOT_TOKEN
+ARG TELEGRAM_CHAT_ID
+ENV TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+ENV TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID
 
 # Cria usuário não-root para segurança
 RUN addgroup --system --gid 1001 nodejs
@@ -56,9 +72,6 @@ USER nextjs
 
 # Expõe a porta 3000
 EXPOSE 3000
-
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
 
 # Comando para iniciar a aplicação
 CMD ["node", "server.js"]

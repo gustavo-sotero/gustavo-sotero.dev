@@ -1,0 +1,21 @@
+# docker-compose.override.yml
+# Este arquivo é carregado automaticamente junto com docker-compose.yml
+# Use para configurações específicas de desenvolvimento
+
+services:
+  app:
+    # Habilita hot reload para desenvolvimento
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+    # Adiciona debugging
+    stdin_open: true
+    tty: true
+    # Expõe portas adicionais se necessário
+    ports:
+      - '3000:3000'
+      # Adicione outras portas se necessário (ex: debugger)
+      # - '9229:9229'

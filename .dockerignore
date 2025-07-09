@@ -17,6 +17,15 @@ build/
 .env*.local
 .env.development*
 .env.test*
+.env
+
+# Documentação
+ENVIRONMENT.md
+DEPLOY-DOKPLOY.md
+
+# Scripts de build
+build-docker.sh
+build-docker.bat
 
 # Logs
 *.log
