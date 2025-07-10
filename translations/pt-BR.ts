@@ -30,11 +30,11 @@ export const ptBR = {
     paragraph1:
       'Sou um Desenvolvedor Full-Stack com ênfase em Back-End, apaixonado por criar soluções práticas, eficientes e seguras. Tenho experiência com projetos reais que envolvem desde APIs escaláveis até sistemas completos para empresas, com foco especial em desempenho e boas práticas de arquitetura.',
     paragraph2:
-      'Atualmente curso Análise e Desenvolvimento de Sistemas e estou constantemente expandindo meu portfólio com projetos próprios, como plataformas de compartilhamento de arquivos, encurtadores de URL, bots para Telegram e sistemas de autenticação personalizados. Busco sempre aprender novas stacks e sair da zona de conforto para evoluir como profissional.',
+      'Atualmente curso Engenharia de Software e estou constantemente expandindo meu portfólio com projetos próprios, como plataformas de compartilhamento de arquivos, encurtador de URL, bots para Telegram. Busco sempre evoluir como profissional.',
     paragraph3:
       'Valorizo a clareza, o código limpo e a entrega de soluções que realmente funcionem para o usuário final. Adoro pensar na estrutura por trás dos sistemas e encontrar formas inteligentes de resolver problemas complexos com simplicidade.',
     funFact:
-      'Curiosidade: Quando não estou codando, você pode me encontrar jogando videogame, ouvindo música ou assistindo algum filme ou série.'
+      'Curiosidade: Quando não estou `codando`, você pode me encontrar jogando videogame, ouvindo música ou assistindo algum filme ou série.'
   },
   projects: {
     title: 'Projetos em Destaque',

@@ -30,11 +30,11 @@ export const en = {
     paragraph1:
       "I'm a Full-Stack Developer with a focus on Back-End, passionate about creating practical, efficient, and secure solutions. I have experience with real-world projects ranging from scalable APIs to complete systems for companies, with a special focus on performance and solid architectural practices.",
     paragraph2:
-      "I'm currently studying Systems Analysis and Development and constantly expanding my portfolio with personal projects, such as file-sharing platforms, URL shorteners, Telegram bots, and custom authentication systems. I'm always looking to learn new stacks and step out of my comfort zone to grow as a professional.",
+      "I'm currently studying Software Engineering and constantly expanding my portfolio with personal projects, such as file-sharing platforms, URL shorteners, Telegram bots. I'm always looking to grow as a professional.",
     paragraph3:
       'I value clarity, clean code, and delivering solutions that truly work for the end user. I love thinking about the structure behind systems and finding smart ways to solve complex problems with simplicity.',
     funFact:
-      "Fun fact: When I'm not coding, you can find me playing video games, listening to music, or watching a movie or TV series."
+      "Fun fact: When I'm not `coding`, you can find me playing video games, listening to music, or watching a movie or TV series."
   },
   projects: {
     title: 'Featured Projects',
