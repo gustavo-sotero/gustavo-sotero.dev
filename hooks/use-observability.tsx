@@ -1,6 +1,26 @@
-import { logPerformance, logUserEvent } from '@/lib/logger';
+'use client';
+
 import { useEffect } from 'react';
 import type { Metric } from 'web-vitals';
+
+// Helper function to send metrics to the server
+function sendMetric(type: string, data: Record<string, unknown>) {
+  fetch('/api/metrics', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      type,
+      data: {
+        ...data,
+        timestamp: new Date().toISOString()
+      }
+    })
+  }).catch(() => {
+    // Falha silenciosa para não afetar a experiência do usuário
+  });
+}
 
 // Hook para medir performance de componentes
 export function usePerformanceMetrics(componentName: string) {
@@ -8,12 +28,19 @@ export function usePerformanceMetrics(componentName: string) {
     const startTime = performance.now();
 
     // Log quando o componente monta
-    logUserEvent('component_mount', { component: componentName });
+    sendMetric('user_event', {
+      event: 'component_mount',
+      component: componentName
+    });
 
     return () => {
       // Log quando o componente desmonta e calcula tempo de vida
       const lifetime = performance.now() - startTime;
-      logPerformance(`${componentName}_lifetime`, lifetime);
+      sendMetric('performance', {
+        metric: `${componentName}_lifetime`,
+        value: lifetime,
+        unit: 'ms'
+      });
     };
   }, [componentName]);
 }
@@ -25,23 +52,43 @@ export function useWebVitals() {
     if (typeof window !== 'undefined') {
       import('web-vitals').then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
         onCLS((metric: Metric) => {
-          logPerformance('CLS', metric.value, 'score');
+          sendMetric('performance', {
+            metric: 'CLS',
+            value: metric.value,
+            unit: 'score'
+          });
         });
 
         onINP((metric: Metric) => {
-          logPerformance('INP', metric.value, 'ms');
+          sendMetric('performance', {
+            metric: 'INP',
+            value: metric.value,
+            unit: 'ms'
+          });
         });
 
         onFCP((metric: Metric) => {
-          logPerformance('FCP', metric.value, 'ms');
+          sendMetric('performance', {
+            metric: 'FCP',
+            value: metric.value,
+            unit: 'ms'
+          });
         });
 
         onLCP((metric: Metric) => {
-          logPerformance('LCP', metric.value, 'ms');
+          sendMetric('performance', {
+            metric: 'LCP',
+            value: metric.value,
+            unit: 'ms'
+          });
         });
 
         onTTFB((metric: Metric) => {
-          logPerformance('TTFB', metric.value, 'ms');
+          sendMetric('performance', {
+            metric: 'TTFB',
+            value: metric.value,
+            unit: 'ms'
+          });
         });
       });
     }
@@ -54,7 +101,8 @@ export function useUserInteractionTracking() {
     const trackClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (target) {
-        logUserEvent('click', {
+        sendMetric('user_event', {
+          event: 'click',
           element: target.tagName.toLowerCase(),
           id: target.id || undefined,
           className: target.className || undefined,
@@ -71,7 +119,10 @@ export function useUserInteractionTracking() {
 
       if (scrollPercentage % 25 === 0) {
         // Log a cada 25% do scroll
-        logUserEvent('scroll', { percentage: scrollPercentage });
+        sendMetric('user_event', {
+          event: 'scroll',
+          percentage: scrollPercentage
+        });
       }
     };
 

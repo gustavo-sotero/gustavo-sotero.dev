@@ -1,4 +1,5 @@
 import pino from 'pino';
+import 'server-only';
 
 // Configuração do logger
 const isProduction = process.env.NODE_ENV === 'production';
