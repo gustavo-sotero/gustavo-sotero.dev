@@ -4,29 +4,33 @@ import 'server-only';
 // Configuração do logger
 const isProduction = process.env.NODE_ENV === 'production';
 
-export const logger = pino({
-  level: isProduction ? 'info' : 'debug',
-  ...(isProduction
-    ? {
-        // Em produção, usa formato JSON estruturado
-        formatters: {
-          level: (label) => {
-            return { level: label };
-          }
+// Criar logger de forma segura para evitar problemas com workers em Next.js
+const createLogger = () => {
+  // Em produção, usa formato JSON estruturado
+  if (isProduction) {
+    return pino({
+      level: 'info',
+      formatters: {
+        level: (label) => {
+          return { level: label };
         }
       }
-    : {
-        // Em desenvolvimento, usa formato legível
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
-            ignore: 'pid,hostname'
-          }
-        }
-      })
-});
+    });
+  }
+
+  // Em desenvolvimento, usa pino básico (sem pino-pretty que usa workers)
+  // O pino-pretty com transport usa workers que podem causar erros em Next.js
+  return pino({
+    level: 'debug',
+    formatters: {
+      level: (label) => {
+        return { level: label };
+      }
+    }
+  });
+};
+
+export const logger = createLogger();
 
 // Funções de conveniência
 export const logInfo = (message: string, data?: Record<string, unknown>) => {
