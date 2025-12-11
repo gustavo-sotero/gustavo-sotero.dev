@@ -1,3 +1,4 @@
+import { AnalyticsProvider } from '@/components/analytics-provider';
 import { LanguageProvider } from '@/components/language-provider';
 import { ThemeProvider } from '@/components/theme-provider';
 import { en } from '@/translations/en';
@@ -40,9 +41,9 @@ export async function generateMetadata(): Promise<{
 
 export default async function RootLayout({
   children
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   const lang = await getPreferredLanguage();
 
   return (
@@ -57,7 +58,9 @@ export default async function RootLayout({
           storageKey="theme-preference"
         >
           {/* LanguageProvider will initialize on client and may update based on localStorage */}
-          <LanguageProvider>{children}</LanguageProvider>
+          <LanguageProvider>
+            <AnalyticsProvider>{children}</AnalyticsProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
