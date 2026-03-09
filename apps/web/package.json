@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "predev": "node -e \"const fs=require('fs');try{fs.rmSync('.next/dev/lock')}catch(e){}\"",
-    "dev": "next dev -p 3001",
-    "build": "next build",
-    "start": "next start",
+    "dev": "bun --bun next dev -p 3001",
+    "build": "bun --bun next build",
+    "build:local": "bun run --env-file ../../.env build",
+    "start": "bun --bun next start",
     "test": "vitest run",
     "test:watch": "vitest"
   },
