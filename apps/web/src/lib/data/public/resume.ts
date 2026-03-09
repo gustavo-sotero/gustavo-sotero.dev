@@ -1,0 +1,84 @@
+import 'server-only';
+import type { Education, Experience, Project, Tag } from '@portfolio/shared';
+import { cacheLife, cacheTag } from 'next/cache';
+import { apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
+import { logServerError } from '@/lib/server-logger';
+import {
+  TAG_EDUCATION_LIST,
+  TAG_EXPERIENCE_LIST,
+  TAG_PROJECTS_LIST,
+  TAG_TAGS_LIST,
+} from './cache-tags';
+
+export interface ResumeDataPayload {
+  experience: Experience[];
+  education: Education[];
+  tags: Tag[];
+  projects: Project[];
+}
+
+export type ResumeLoaderResult =
+  | { state: 'ok'; data: ResumeDataPayload }
+  | { state: 'degraded'; data: ResumeDataPayload };
+
+const EMPTY_RESUME_DATA: ResumeDataPayload = {
+  experience: [],
+  education: [],
+  tags: [],
+  projects: [],
+};
+
+/** All data needed to build the resume view-model, fetched in parallel. */
+export async function getResumeData(): Promise<ResumeLoaderResult> {
+  'use cache';
+  cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
+  cacheTag(TAG_EXPERIENCE_LIST, TAG_EDUCATION_LIST, TAG_TAGS_LIST, TAG_PROJECTS_LIST);
+
+  let degraded = false;
+
+  const [experienceRes, educationRes, tags, projectsRes] = await Promise.all([
+    apiServerGetPaginated<Experience>('/experience?status=published&perPage=20').catch((err) => {
+      degraded = true;
+      logServerError('data:resume', 'Failed to fetch experience', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return { data: [] as Experience[] };
+    }),
+    apiServerGetPaginated<Education>('/education?status=published&perPage=20').catch((err) => {
+      degraded = true;
+      logServerError('data:resume', 'Failed to fetch education', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return { data: [] as Education[] };
+    }),
+    apiServerGet<Tag[]>('/tags').catch((err) => {
+      degraded = true;
+      logServerError('data:resume', 'Failed to fetch tags', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return [] as Tag[];
+    }),
+    apiServerGetPaginated<Project>('/projects?status=published&featured=true&perPage=20').catch(
+      (err) => {
+        degraded = true;
+        logServerError('data:resume', 'Failed to fetch projects', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return { data: [] as Project[] };
+      }
+    ),
+  ]);
+
+  const data: ResumeDataPayload = {
+    experience: experienceRes.data,
+    education: educationRes.data,
+    tags: Array.isArray(tags) ? tags : [],
+    projects: projectsRes.data,
+  };
+
+  if (degraded) {
+    return { state: 'degraded', data: { ...EMPTY_RESUME_DATA, ...data } };
+  }
+
+  return { state: 'ok', data };
+}

@@ -1,0 +1,169 @@
+/**
+ * Admin routes for tags management.
+ *
+ * Routes:
+ *  GET    /admin/tags      - List all tags
+ *  POST   /admin/tags      - Create a tag
+ *  PATCH  /admin/tags/:id  - Update tag (name, category, isHighlighted)
+ *  DELETE /admin/tags/:id  - Delete tag (hard delete; CASCADE clears pivots)
+ *
+ * Note: `iconKey` is always auto-assigned by the system (icon resolver).
+ * Clients must NOT send `iconKey` in request bodies — it is ignored if present.
+ */
+
+import { createTagSchema, tagQuerySchema, updateTagSchema } from '@portfolio/shared/schemas/tags';
+import { Hono } from 'hono';
+import { parseBodyResult } from '../../lib/requestBody';
+import { errorResponse, successResponse } from '../../lib/response';
+import {
+  createTagService,
+  deleteTagService,
+  listTags,
+  updateTagService,
+} from '../../services/tags.service';
+import type { AppEnv } from '../../types/index';
+
+const adminTagsRouter = new Hono<AppEnv>();
+
+/**
+ * GET /admin/tags
+ * List all tags (admin view — not restricted to tags in use).
+ */
+adminTagsRouter.get('/', async (c) => {
+  const queryParsed = tagQuerySchema.safeParse({
+    category: c.req.query('category'),
+  });
+
+  if (!queryParsed.success) {
+    const details = queryParsed.error.issues.map((i) => ({
+      field: i.path.join('.'),
+      message: i.message,
+    }));
+    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
+  }
+
+  const result = await listTags(queryParsed.data, false);
+  return successResponse(c, result.data);
+});
+
+/**
+ * POST /admin/tags
+ * Create a new tag. Returns 201 with the created resource.
+ */
+adminTagsRouter.post('/', async (c) => {
+  const bodyResult = await parseBodyResult(c);
+  if (!bodyResult.ok) {
+    return errorResponse(
+      c,
+      400,
+      'VALIDATION_ERROR',
+      bodyResult.error.message,
+      bodyResult.error.details
+    );
+  }
+
+  const parsed = createTagSchema.safeParse(bodyResult.data);
+
+  if (!parsed.success) {
+    const details = parsed.error.issues.map((i) => ({
+      field: i.path.join('.'),
+      message: i.message,
+    }));
+    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
+  }
+
+  try {
+    const tag = await createTagService(parsed.data);
+    return successResponse(c, tag, 201);
+  } catch (err) {
+    const message = (err as Error).message;
+    if (message.startsWith('HIGHLIGHT_LIMIT:')) {
+      return errorResponse(
+        c,
+        409,
+        'CONFLICT',
+        'M\u00e1ximo de 2 tags destacadas por categoria. Remova um destaque existente antes de adicionar outro.'
+      );
+    }
+    if (message.toLowerCase().includes('conflict') || message.toLowerCase().includes('unique')) {
+      return errorResponse(c, 409, 'CONFLICT', 'A tag with this name already exists');
+    }
+    throw err;
+  }
+});
+
+/**
+ * PATCH /admin/tags/:id
+ * Update tag name, category, or isHighlighted.
+ * iconKey is always recalculated server-side from final name + category — not accepted from client.
+ */
+adminTagsRouter.patch('/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) {
+    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid tag ID');
+  }
+
+  const bodyResult = await parseBodyResult(c);
+  if (!bodyResult.ok) {
+    return errorResponse(
+      c,
+      400,
+      'VALIDATION_ERROR',
+      bodyResult.error.message,
+      bodyResult.error.details
+    );
+  }
+
+  const parsed = updateTagSchema.safeParse(bodyResult.data);
+
+  if (!parsed.success) {
+    const details = parsed.error.issues.map((i) => ({
+      field: i.path.join('.'),
+      message: i.message,
+    }));
+    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
+  }
+
+  try {
+    const updated = await updateTagService(id, parsed.data);
+    if (!updated) {
+      return errorResponse(c, 404, 'NOT_FOUND', 'Tag not found');
+    }
+    return successResponse(c, updated);
+  } catch (err) {
+    const message = (err as Error).message;
+    if (message.startsWith('HIGHLIGHT_LIMIT:')) {
+      return errorResponse(
+        c,
+        409,
+        'CONFLICT',
+        'M\u00e1ximo de 2 tags destacadas por categoria. Remova um destaque existente antes de adicionar outro.'
+      );
+    }
+    if (message.toLowerCase().includes('conflict') || message.toLowerCase().includes('unique')) {
+      return errorResponse(c, 409, 'CONFLICT', 'A tag with this name already exists');
+    }
+    throw err;
+  }
+});
+
+/**
+ * DELETE /admin/tags/:id
+ * Hard-delete a tag. FK CASCADE removes pivot rows automatically.
+ * Returns 204 No Content.
+ */
+adminTagsRouter.delete('/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) {
+    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid tag ID');
+  }
+
+  const result = await deleteTagService(id);
+  if (!result) {
+    return errorResponse(c, 404, 'NOT_FOUND', 'Tag not found');
+  }
+
+  return c.body(null, 204);
+});
+
+export { adminTagsRouter };

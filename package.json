@@ -1,0 +1,50 @@
+{
+  "name": "portifolio",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "predev": "bun run scripts/kill-ports.ts",
+    "dev": "concurrently -n \"api,worker,web\" -c \"blue.bold,yellow.bold,magenta.bold\" --kill-others-on-fail \"bun run dev:api\" \"bun run dev:worker\" \"bun run dev:web\"",
+    "dev:api": "bun --env-file .env --watch apps/api/src/index.ts",
+    "dev:worker": "bun --env-file .env --watch apps/worker/src/index.ts",
+    "dev:web": "bun run --env-file .env --filter @portfolio/web dev",
+    "db:migrate": "cd apps/api && bun run src/db/migrate.ts",
+    "db:seed": "cd apps/api && bun run src/db/seed.ts",
+    "db:backfill:comments": "cd apps/api && bun run src/db/backfill-comment-rendered-content.ts",
+    "db:studio": "cd apps/api && bunx drizzle-kit studio",
+    "db:generate": "cd apps/api && bunx drizzle-kit generate",
+    "test:services": "docker compose -f docker-compose.test.yml up -d",
+    "lint": "bunx biome ci .",
+    "fix": "biome check . --write",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "type-check": "bunx tsc --noEmit -p apps/api/tsconfig.json; bunx tsc --noEmit -p apps/worker/tsconfig.json; bunx tsc --noEmit -p apps/web/tsconfig.json",
+    "test": "bun run --filter @portfolio/api test && bun run --filter @portfolio/worker test && bun run --filter @portfolio/web test && bun run --filter @portfolio/shared test",
+    "build": "cd apps/api && bun run build && cd ../web && bun run build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.5",
+    "@types/bun": "^1.3.10",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "esbuild": "^0.27.3",
+    "minimatch": "^10.2.4",
+    "rollup": "^4.59.0"
+  },
+  "overrides": {
+    "@hono/node-server": "^1.19.10",
+    "dompurify": "^3.3.2",
+    "esbuild": "^0.27.3",
+    "express-rate-limit": "^8.3.0",
+    "hono": "^4.12.5",
+    "minimatch": "^10.2.4",
+    "rollup": "^4.59.0"
+  }
+}

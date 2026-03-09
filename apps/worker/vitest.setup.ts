@@ -1,0 +1,12 @@
+process.env.DATABASE_URL ??= 'postgresql://user:pass@localhost:5432/test';
+process.env.REDIS_URL ??= 'redis://localhost:6379';
+process.env.S3_ENDPOINT ??= 'http://localhost:9000';
+process.env.S3_BUCKET ??= 'test-bucket';
+process.env.S3_ACCESS_KEY ??= 'test-access-key';
+process.env.S3_SECRET_KEY ??= 'test-secret-key';
+process.env.S3_REGION ??= 'auto';
+process.env.S3_PUBLIC_DOMAIN ??= 'cdn.example.test';
+process.env.TELEGRAM_BOT_TOKEN ??= 'test-bot-token';
+process.env.TELEGRAM_CHAT_ID ??= 'test-chat-id';
+process.env.IP_HASH_SALT ??= '1234567890abcdef';
+process.env.NODE_ENV ??= 'test';

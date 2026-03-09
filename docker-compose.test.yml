@@ -1,0 +1,35 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: portfolio_postgres_test
+    environment:
+      POSTGRES_DB: portfolio_test
+      POSTGRES_USER: ${POSTGRES_USER:-portfolio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-portfolio_secret}
+    ports:
+      - '5433:5432'
+    # Ephemeral — no persistent volume
+    networks:
+      - portfolio-test-net
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-portfolio}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: portfolio_redis_test
+    ports:
+      - '6380:6379'
+    networks:
+      - portfolio-test-net
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  portfolio-test-net:
+    driver: bridge

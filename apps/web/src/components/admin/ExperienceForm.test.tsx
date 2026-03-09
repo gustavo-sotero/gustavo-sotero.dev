@@ -1,0 +1,118 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ExperienceForm } from './ExperienceForm';
+
+const pushMock = vi.fn();
+const mutateAsyncMock = vi.fn();
+let onTagCreatedCb:
+  | ((tag: {
+      id: number;
+      name: string;
+      slug: string;
+      category: string;
+      iconKey: string | null;
+    }) => void)
+  | undefined;
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: pushMock,
+  }),
+}));
+
+vi.mock('@/hooks/use-admin-queries', () => ({
+  generateSlug: () => 'software-engineer-acme',
+  useAdminTags: () => ({
+    data: [
+      {
+        id: 1,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        iconKey: 'si:SiTypescript',
+      },
+    ],
+    isLoading: false,
+  }),
+  useCreateExperience: () => ({
+    mutateAsync: mutateAsyncMock,
+    isPending: false,
+  }),
+  useUpdateExperience: () => ({
+    mutateAsync: mutateAsyncMock,
+    isPending: false,
+  }),
+}));
+
+vi.mock('./CreateTagDialogForm', () => ({
+  CreateTagDialogForm: ({
+    open,
+    onClose,
+    onTagCreated,
+  }: {
+    open: boolean;
+    onClose: () => void;
+    onTagCreated?: (tag: {
+      id: number;
+      name: string;
+      slug: string;
+      category: string;
+      iconKey: string | null;
+    }) => void;
+  }) => {
+    onTagCreatedCb = onTagCreated;
+    if (!open) return null;
+    return (
+      <div data-testid="create-tag-dialog">
+        <button type="button" onClick={onClose}>
+          Fechar dialog
+        </button>
+      </div>
+    );
+  },
+}));
+
+vi.mock('./CoverMediaField', () => ({
+  CoverMediaField: () => <div data-testid="cover-media-field" />,
+}));
+
+describe('ExperienceForm', () => {
+  beforeEach(() => {
+    mutateAsyncMock.mockReset();
+    pushMock.mockReset();
+    onTagCreatedCb = undefined;
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('opens create-tag dialog when Criar tag button is clicked', () => {
+    render(<ExperienceForm mode="create" />);
+
+    expect(screen.queryByTestId('create-tag-dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/Criar tag/i));
+
+    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
+  });
+
+  it('auto-closes dialog when a new tag is created', async () => {
+    render(<ExperienceForm mode="create" />);
+
+    fireEvent.click(screen.getByText(/Criar tag/i));
+    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
+
+    onTagCreatedCb?.({
+      id: 99,
+      name: 'Bun',
+      slug: 'bun',
+      category: 'tool',
+      iconKey: 'si:SiBun',
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('create-tag-dialog')).not.toBeInTheDocument();
+    });
+  });
+});

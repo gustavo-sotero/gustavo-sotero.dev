@@ -1,0 +1,26 @@
+{
+  "name": "@portfolio/worker",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --env-file ../../.env --watch src/index.ts",
+    "start": "bun --env-file ../../.env run src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "@logtape/file": "^2.0.2",
+    "@logtape/logtape": "^2.0.2",
+    "@portfolio/shared": "workspace:*",
+    "bullmq": "^5.69.3",
+    "drizzle-orm": "^0.45.1",
+    "ioredis": "^5.9.3",
+    "postgres": "^3.4.8",
+    "sharp": "^0.34.5",
+    "zod": "^4.3.6"
+  }
+}

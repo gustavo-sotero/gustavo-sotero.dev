@@ -1,0 +1,199 @@
+'use client';
+
+import type { Tag, TagCategory } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE, getExperienceLabel } from '@portfolio/shared';
+import { Star } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
+import Link from 'next/link';
+import { AnimatedGradientText } from '@/components/ui/animated-gradient-text';
+import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
+import { Button } from '@/components/ui/button';
+import { Marquee } from '@/components/ui/marquee';
+import type { ResumeViewModel } from '@/lib/resume/mapper';
+import { HeroResumeDownloadButton } from './HeroResumeDownloadButton';
+import { HeroTerminal } from './HeroTerminal';
+
+const FALLBACK_STACK = ['TypeScript', 'Bun', 'Next.js', 'PostgreSQL', 'Docker'];
+const CATEGORY_ORDER: TagCategory[] = [
+  'language',
+  'framework',
+  'tool',
+  'db',
+  'cloud',
+  'infra',
+  'other',
+];
+
+interface StackBadge {
+  name: string;
+  isHighlighted: boolean;
+}
+
+function pickStackBadges(tags: Tag[], count = 5): StackBadge[] {
+  return [...tags]
+    .sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category))
+    .slice(0, count)
+    .map((t) => ({ name: t.name, isHighlighted: !!t.isHighlighted }));
+}
+
+interface HeroSectionProps {
+  tags?: Tag[];
+  resume: ResumeViewModel;
+}
+
+export function HeroSection({ tags = [], resume }: HeroSectionProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const experienceLabel = getExperienceLabel();
+  const stack: StackBadge[] =
+    tags.length > 0
+      ? pickStackBadges(tags)
+      : FALLBACK_STACK.map((name) => ({ name, isHighlighted: false }));
+  const terminalStack = stack.map((t) => (t.isHighlighted ? `${t.name} ★` : t.name));
+  return (
+    <section className="relative overflow-hidden min-h-[88vh] flex items-center">
+      {/* Background effects */}
+      <div className="absolute inset-0 -z-10">
+        {/* Animated grid pattern (replaces inline CSS grid) */}
+        <AnimatedGridPattern
+          numSquares={prefersReducedMotion ? 0 : 30}
+          maxOpacity={0.04}
+          duration={3}
+          repeatDelay={1}
+          className="mask-[radial-gradient(600px_circle_at_center,white,transparent)] stroke-emerald-500/20 fill-emerald-500/5"
+        />
+        {/* Radial glow */}
+        <div className="absolute top-0 left-1/4 w-150 h-150 rounded-full bg-emerald-500/6 blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-100 h-100 rounded-full bg-cyan-500/4 blur-[100px]" />
+      </div>
+
+      <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-16 md:py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left: Text content */}
+          <motion.div
+            className="flex flex-col gap-6 order-1"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+          >
+            {/* Availability indicator */}
+            <div className="flex items-center gap-2.5 self-start">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              </span>
+              <span className="text-sm text-emerald-400 font-medium">
+                {DEVELOPER_PUBLIC_PROFILE.availability}
+              </span>
+            </div>
+
+            {/* Headline */}
+            <div className="space-y-2">
+              <p className="text-sm font-mono text-zinc-400 tracking-wide">
+                {DEVELOPER_PUBLIC_PROFILE.hero.greeting}
+              </p>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
+                <span className="text-zinc-100">{DEVELOPER_PUBLIC_PROFILE.name}</span>
+              </h1>
+              <p className="text-2xl md:text-3xl font-semibold">
+                <AnimatedGradientText
+                  colorFrom="#34d399"
+                  colorTo="#22d3ee"
+                  speed={1.5}
+                  className="text-2xl md:text-3xl font-semibold"
+                >
+                  {DEVELOPER_PUBLIC_PROFILE.role}
+                </AnimatedGradientText>
+              </p>
+              <p className="text-lg md:text-xl text-zinc-400 leading-relaxed max-w-md">
+                {DEVELOPER_PUBLIC_PROFILE.hero.focus}
+              </p>
+            </div>
+
+            {/* Bio — experienceLabel acts as a credibility opener, bio follows as a self-contained statement */}
+            <p className="text-zinc-400 leading-relaxed max-w-lg">
+              <span className="text-emerald-400 font-medium">
+                {experienceLabel} de experiência.
+              </span>{' '}
+              {DEVELOPER_PUBLIC_PROFILE.bio}
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-wrap gap-3 pt-2">
+              {/* Currículo PDF — most prominent CTA */}
+              <HeroResumeDownloadButton resume={resume} />
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="bg-zinc-800/50 border-zinc-700 text-zinc-200 hover:bg-zinc-700/60 hover:border-zinc-600 hover:text-zinc-100 transition-colors"
+              >
+                <Link href="/projects">Ver Projetos</Link>
+              </Button>
+              <Link
+                href="/blog"
+                className="inline-flex h-11 items-center px-2 text-sm font-medium text-zinc-400 underline underline-offset-4 transition-colors hover:text-zinc-200"
+              >
+                Ler Blog
+              </Link>
+            </div>
+
+            {/* Tech stack mini badges — Marquee with reduced-motion fallback */}
+            {prefersReducedMotion ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {stack.map(({ name, isHighlighted }) => (
+                  <span
+                    key={name}
+                    className="inline-flex items-center gap-1 text-xs font-mono bg-zinc-900/80 border px-2 py-0.5 rounded"
+                    style={
+                      isHighlighted
+                        ? { borderColor: 'rgb(52 211 153 / 0.4)', color: '#6ee7b7' }
+                        : { borderColor: 'rgb(39 39 42)', color: '#a1a1aa' }
+                    }
+                  >
+                    {name}
+                    {isHighlighted && (
+                      <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <Marquee
+                pauseOnHover
+                repeat={4}
+                className="pt-1 [--duration:20s] [--gap:0.5rem] overflow-hidden max-w-lg"
+              >
+                {stack.map(({ name, isHighlighted }) => (
+                  <span
+                    key={name}
+                    className="inline-flex items-center gap-1 text-xs font-mono bg-zinc-900/80 border px-2 py-0.5 rounded mx-1 shrink-0"
+                    style={
+                      isHighlighted
+                        ? { borderColor: 'rgb(52 211 153 / 0.4)', color: '#6ee7b7' }
+                        : { borderColor: 'rgb(39 39 42)', color: '#a1a1aa' }
+                    }
+                  >
+                    {name}
+                    {isHighlighted && (
+                      <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
+                    )}
+                  </span>
+                ))}
+              </Marquee>
+            )}
+          </motion.div>
+
+          {/* Right: Terminal */}
+          <motion.div
+            className="relative order-2 flex justify-center lg:justify-end"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
+          >
+            <HeroTerminal stack={terminalStack} />
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
