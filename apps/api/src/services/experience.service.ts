@@ -13,6 +13,7 @@ import type {
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidatePattern } from '../lib/cache';
+import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { ExperienceFilters } from '../repositories/experience.repo';
 import {
@@ -20,7 +21,6 @@ import {
   findExperienceById,
   findExperienceBySlug,
   findManyExperience,
-  flattenExperienceTags,
   softDeleteExperience,
   updateExperience,
 } from '../repositories/experience.repo';
@@ -43,16 +43,15 @@ async function experienceSlugTaken(slug: string, excludeId?: number): Promise<bo
     .from(experience)
     .where(eq(experience.slug, slug))
     .limit(1);
-  if (rows.length === 0) return false;
-  const found = rows.at(0);
-  if (found === undefined) return false;
-  if (excludeId !== undefined) return found.id !== excludeId;
-  return true;
+  return resolveSlugTaken(rows, excludeId);
 }
 
 // ── Date consistency validation ───────────────────────────────────────────────
 
-function validateDates(startDate: string, endDate?: string | null, _isCurrent?: boolean): void {
+function validateDates(startDate: string, endDate?: string | null, isCurrent?: boolean): void {
+  if (!isCurrent && !endDate) {
+    throw new Error('VALIDATION_ERROR: endDate is required when isCurrent is false');
+  }
   if (endDate && startDate && endDate < startDate) {
     throw new Error('VALIDATION_ERROR: endDate must be on or after startDate');
   }
@@ -69,13 +68,13 @@ export type { ExperienceFilters };
 export async function listExperience(filters: ExperienceFilters, adminMode = false) {
   if (adminMode) {
     const result = await findManyExperience(filters, true);
-    return { ...result, data: result.data.map(flattenExperienceTags) };
+    return { ...result, data: result.data.map(flattenPivotTags) };
   }
 
   const key = `experience:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}`;
   return cached(key, LIST_TTL, async () => {
     const result = await findManyExperience(filters, false);
-    return { ...result, data: result.data.map(flattenExperienceTags) };
+    return { ...result, data: result.data.map(flattenPivotTags) };
   });
 }
 
@@ -86,14 +85,14 @@ export async function getExperienceBySlug(slug: string, adminMode = false) {
   if (adminMode) {
     const entry = await findExperienceBySlug(slug, true);
     if (!entry) return null;
-    return flattenExperienceTags(entry);
+    return flattenPivotTags(entry);
   }
 
   const key = `experience:slug:${slug}`;
   return cached(key, DETAIL_TTL, async () => {
     const entry = await findExperienceBySlug(slug, false);
     if (!entry) return null;
-    return flattenExperienceTags(entry);
+    return flattenPivotTags(entry);
   });
 }
 
@@ -103,7 +102,7 @@ export async function getExperienceBySlug(slug: string, adminMode = false) {
 export async function getExperienceById(id: number) {
   const entry = await findExperienceById(id);
   if (!entry) return null;
-  return flattenExperienceTags(entry);
+  return flattenPivotTags(entry);
 }
 
 /**
@@ -152,7 +151,7 @@ export async function createExperienceService(data: CreateExperienceInput) {
 
   // Return with tags populated
   const full = await findExperienceById(entry.id);
-  return full ? flattenExperienceTags(full) : flattenExperienceTags({ ...entry, tags: [] });
+  return full ? flattenPivotTags(full) : flattenPivotTags({ ...entry, tags: [] });
 }
 
 /**
@@ -212,7 +211,7 @@ export async function updateExperienceService(id: number, data: UpdateExperience
 
   // Return with refreshed tags
   const full = await findExperienceById(id);
-  return full ? flattenExperienceTags(full) : flattenExperienceTags({ ...updated, tags: [] });
+  return full ? flattenPivotTags(full) : flattenPivotTags({ ...updated, tags: [] });
 }
 
 /**

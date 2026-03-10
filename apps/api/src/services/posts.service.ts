@@ -13,6 +13,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidatePattern } from '../lib/cache';
 import { renderMarkdown } from '../lib/markdown';
+import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { cancelScheduledPostPublish } from '../lib/queues';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import { findApprovedCommentsByPostId } from '../repositories/comments.repo';
@@ -30,33 +31,11 @@ import { syncPostTagsInTx } from '../repositories/tags.repo';
 const LIST_TTL = 300; // 5 minutes
 const DETAIL_TTL = 3600; // 1 hour
 
-// ── Tag serialization ────────────────────────────────────────────────────────
-
-/**
- * Drizzle returns pivot objects `{ postId, tagId, tag: Tag }` for many-to-many
- * relations. Flatten them to a direct `Tag[]` so the JSON response conforms to
- * the shared `Post` type.
- */
-function flattenPostTags<T extends { tags?: Array<{ tag: unknown }> }>(item: T) {
-  return {
-    ...item,
-    tags: (item.tags ?? []).map((pivot) => pivot.tag),
-  };
-}
-
 // ── Slug uniqueness check ─────────────────────────────────────────────────────
 
-/**
- * Check whether a slug is already taken by any post (including soft-deleted),
- * optionally excluding a specific post ID.
- */
 async function postSlugTaken(slug: string, excludeId?: number): Promise<boolean> {
   const rows = await db.select({ id: posts.id }).from(posts).where(eq(posts.slug, slug)).limit(1);
-  if (rows.length === 0) return false;
-  const found = rows.at(0);
-  if (found === undefined) return false;
-  if (excludeId !== undefined) return found.id !== excludeId;
-  return true;
+  return resolveSlugTaken(rows, excludeId);
 }
 
 // ── Service methods ───────────────────────────────────────────────────────────
@@ -75,13 +54,13 @@ export interface PostListFilters {
 export async function listPosts(filters: PostListFilters, adminMode = false) {
   if (adminMode) {
     const result = await findManyPosts(filters, true);
-    return { ...result, data: result.data.map(flattenPostTags) };
+    return { ...result, data: result.data.map(flattenPivotTags) };
   }
 
   const key = `posts:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}`;
   return cached(key, LIST_TTL, async () => {
     const result = await findManyPosts(filters, false);
-    return { ...result, data: result.data.map(flattenPostTags) };
+    return { ...result, data: result.data.map(flattenPivotTags) };
   });
 }
 
@@ -94,7 +73,7 @@ export async function getPostBySlug(slug: string, adminMode = false) {
   if (adminMode) {
     const post = await findPostBySlug(slug, true);
     if (!post) return null;
-    return flattenPostTags(post);
+    return flattenPivotTags(post);
   }
 
   const key = `posts:slug:${slug}`;
@@ -103,7 +82,7 @@ export async function getPostBySlug(slug: string, adminMode = false) {
     if (!post) return null;
 
     const comments = await findApprovedCommentsByPostId(post.id);
-    return { ...flattenPostTags(post), comments };
+    return { ...flattenPivotTags(post), comments };
   });
 }
 

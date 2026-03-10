@@ -2,6 +2,7 @@ import { experience } from '@portfolio/shared/db/schema';
 import { and, count, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import { db } from '../config/db';
 import { buildPaginationMeta, parsePagination } from '../lib/pagination';
+import { flattenPivotTags } from '../lib/pivotHelpers';
 import type { DbOrTx } from './tags.repo';
 
 export interface ExperienceFilters {
@@ -11,15 +12,12 @@ export interface ExperienceFilters {
 }
 
 /**
- * Drizzle relational queries return pivot objects `{ experienceId, tagId, tag: Tag }[]`.
- * Flatten them to `Tag[]` so the JSON response conforms to the shared `Experience` type.
+ * Re-export from lib/pivotHelpers for backward compatibility.
+ * Prefer importing `flattenPivotTags` directly from `../lib/pivotHelpers` in new code.
+ *
+ * @deprecated Use `flattenPivotTags` from `../lib/pivotHelpers` directly.
  */
-export function flattenExperienceTags<T extends { tags?: Array<{ tag: unknown }> }>(item: T) {
-  return {
-    ...item,
-    tags: (item.tags ?? []).map((pivot) => pivot.tag),
-  };
-}
+export const flattenExperienceTags = flattenPivotTags;
 
 /**
  * Deterministic ordering:

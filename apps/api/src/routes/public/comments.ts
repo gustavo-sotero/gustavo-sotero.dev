@@ -98,6 +98,15 @@ commentsRouter.post('/', commentsRateLimit, async (c) => {
   const ipHash = await hashIp(ip, env.IP_HASH_SALT);
   const renderedContent = await renderCommentMarkdown(payload.content);
 
+  // Reserve the anti-spam cooldown BEFORE inserting so that:
+  // a) a repeated submission during the cooldown window is blocked even if the
+  //    first insert is in-flight; and
+  // b) if the insert below fails we still have the cooldown in place (prevents
+  //    rapid re-submission on transient DB errors).
+  // Failing to set the cooldown is non-fatal — we log a warning but do not block
+  // the comment, because the per-IP rate limiter already provides a safety net.
+  await setCommentEmailCooldown(payload.authorEmail, 300);
+
   await db.insert(commentsTable).values({
     postId: payload.postId,
     parentCommentId: payload.parentCommentId ?? null,
@@ -109,8 +118,6 @@ commentsRouter.post('/', commentsRateLimit, async (c) => {
     status: 'pending',
     ipHash,
   });
-
-  await setCommentEmailCooldown(payload.authorEmail, 300);
 
   // Fire-and-forget: notify admin via Telegram — do not await so enqueue latency
   // never blocks the 201 response. Failures are handled inside the job queue.

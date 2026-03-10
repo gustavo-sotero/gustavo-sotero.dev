@@ -1,4 +1,4 @@
-import type { PaginationMeta } from '@shared/types/api';
+import type { PaginationMeta } from '@portfolio/shared/types/api';
 import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
 import { errorResponse, paginatedResponse, successResponse } from './response';

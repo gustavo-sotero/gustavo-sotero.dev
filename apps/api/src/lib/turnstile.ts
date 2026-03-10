@@ -4,8 +4,8 @@
  * Validates a Turnstile token against the Cloudflare siteverify API.
  * Returns true if the challenge was solved by a real user, false otherwise.
  *
- * In test environments (NODE_ENV=test), validation is always skipped and
- * returns true so that automated tests can run without a real token.
+ * Tests that exercise routes using Turnstile must mock this module explicitly:
+ *   vi.mock('../../lib/turnstile', () => ({ validateTurnstile: vi.fn().mockResolvedValue(true) }))
  */
 
 import { env } from '../config/env';
@@ -48,12 +48,6 @@ export async function validateTurnstile(
   ip: string,
   context: TurnstileValidationContext = {}
 ): Promise<boolean> {
-  // Skip real validation in test environment
-  if (env.NODE_ENV === 'test') {
-    logger.debug('Turnstile validation skipped in test environment');
-    return true;
-  }
-
   try {
     const res = await fetch(SITEVERIFY_URL, {
       method: 'POST',

@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidatePattern } from '../lib/cache';
 import { renderMarkdown } from '../lib/markdown';
+import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import {
   createProject,
@@ -27,37 +28,15 @@ import { syncProjectTagsInTx } from '../repositories/tags.repo';
 const LIST_TTL = 300; // 5 minutes
 const DETAIL_TTL = 3600; // 1 hour
 
-// ── Tag serialization ────────────────────────────────────────────────────────
-
-/**
- * Drizzle returns pivot objects `{ projectId, tagId, tag: Tag }` for many-to-many
- * relations. Flatten them to a direct `Tag[]` so the JSON response conforms to
- * the shared `Project` type.
- */
-function flattenProjectTags<T extends { tags?: Array<{ tag: unknown }> }>(item: T) {
-  return {
-    ...item,
-    tags: (item.tags ?? []).map((pivot) => pivot.tag),
-  };
-}
-
 // ── Slug uniqueness check ─────────────────────────────────────────────────────
 
-/**
- * Check whether a slug is already taken by any project (including soft-deleted),
- * optionally excluding a specific project ID.
- */
 async function projectSlugTaken(slug: string, excludeId?: number): Promise<boolean> {
   const rows = await db
     .select({ id: projects.id })
     .from(projects)
     .where(eq(projects.slug, slug))
     .limit(1);
-  if (rows.length === 0) return false;
-  const found = rows.at(0);
-  if (found === undefined) return false;
-  if (excludeId !== undefined) return found.id !== excludeId;
-  return true;
+  return resolveSlugTaken(rows, excludeId);
 }
 
 // ── Service methods ───────────────────────────────────────────────────────────
@@ -78,13 +57,13 @@ export interface ProjectListFilters {
 export async function listProjects(filters: ProjectListFilters, adminMode = false) {
   if (adminMode) {
     const result = await findManyProjects(filters, true);
-    return { ...result, data: result.data.map(flattenProjectTags) };
+    return { ...result, data: result.data.map(flattenPivotTags) };
   }
 
   const key = `projects:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}:featured=${String(filters.featured ?? false)}:featuredFirst=${String(filters.featuredFirst ?? false)}`;
   return cached(key, LIST_TTL, async () => {
     const result = await findManyProjects(filters, false);
-    return { ...result, data: result.data.map(flattenProjectTags) };
+    return { ...result, data: result.data.map(flattenPivotTags) };
   });
 }
 
@@ -96,14 +75,14 @@ export async function getProjectBySlug(slug: string, adminMode = false) {
   if (adminMode) {
     const project = await findProjectBySlug(slug, true);
     if (!project) return null;
-    return flattenProjectTags(project);
+    return flattenPivotTags(project);
   }
 
   const key = `projects:slug:${slug}`;
   return cached(key, DETAIL_TTL, async () => {
     const project = await findProjectBySlug(slug, false);
     if (!project) return null;
-    return flattenProjectTags(project);
+    return flattenPivotTags(project);
   });
 }
 

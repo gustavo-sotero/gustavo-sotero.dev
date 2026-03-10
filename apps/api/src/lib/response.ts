@@ -1,5 +1,5 @@
-import type { ErrorCode } from '@shared/constants/errorCodes';
-import type { PaginationMeta } from '@shared/types/api';
+import type { ErrorCode } from '@portfolio/shared/constants/errorCodes';
+import type { PaginationMeta } from '@portfolio/shared/types/api';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 

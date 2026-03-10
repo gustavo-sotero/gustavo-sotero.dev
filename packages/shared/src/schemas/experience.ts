@@ -45,7 +45,7 @@ export const createExperienceSchema = experienceBaseShape
   .refine(
     (data) => {
       if (!data.isCurrent && !data.endDate) {
-        return true; // allow null end date for non-current (open-ended)
+        return false;
       }
       return true;
     },

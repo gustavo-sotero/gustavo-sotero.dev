@@ -13,6 +13,7 @@ import type {
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidatePattern } from '../lib/cache';
+import { resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { EducationFilters } from '../repositories/education.repo';
 import {
@@ -37,11 +38,7 @@ async function educationSlugTaken(slug: string, excludeId?: number): Promise<boo
     .from(education)
     .where(eq(education.slug, slug))
     .limit(1);
-  if (rows.length === 0) return false;
-  const found = rows.at(0);
-  if (found === undefined) return false;
-  if (excludeId !== undefined) return found.id !== excludeId;
-  return true;
+  return resolveSlugTaken(rows, excludeId);
 }
 
 // ── Date consistency validation ───────────────────────────────────────────────

@@ -46,35 +46,7 @@ const envSchema = z.object({
   ADMIN_DISPLAY_NAME: z.string().min(1).max(100).default('Admin'),
 });
 
-function isTestRuntime(): boolean {
-  return process.argv.some((arg) => arg.toLowerCase().includes('test'));
-}
-
-function getTestFallbackEnv(): Record<string, string> {
-  return {
-    DATABASE_URL: 'https://example.com/db',
-    REDIS_URL: 'https://example.com/redis',
-    JWT_SECRET: '12345678901234567890123456789012',
-    GITHUB_CLIENT_ID: 'test-client-id',
-    GITHUB_CLIENT_SECRET: 'test-client-secret',
-    GITHUB_CALLBACK_URL: 'https://example.com/auth/github/callback',
-    ADMIN_GITHUB_ID: '12345',
-    S3_ENDPOINT: 'https://example.com/s3',
-    S3_BUCKET: 'test-bucket',
-    S3_ACCESS_KEY: 'test-access-key',
-    S3_SECRET_KEY: 'test-secret-key',
-    S3_PUBLIC_DOMAIN: 'cdn.example.com',
-    TELEGRAM_BOT_TOKEN: 'test-bot-token',
-    TELEGRAM_CHAT_ID: 'test-chat-id',
-    TURNSTILE_SECRET: 'test-turnstile-secret',
-    ALLOWED_ORIGIN: 'https://example.com',
-    API_PUBLIC_URL: 'https://api.example.com',
-    IP_HASH_SALT: '1234567890123456',
-  };
-}
-
-const rawEnv = isTestRuntime() ? { ...getTestFallbackEnv(), ...process.env } : process.env;
-const parsed = envSchema.safeParse(rawEnv);
+const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   console.error('❌ Invalid environment variables:');

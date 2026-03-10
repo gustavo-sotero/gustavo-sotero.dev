@@ -97,23 +97,51 @@ export async function cached<T>(
  * Redis in production environments with many keys.
  *
  * @param pattern - Glob pattern, e.g. `posts:*`
+/**
+ * Delete all Redis keys matching a glob pattern.
+ *
+ * Uses SCAN (paginated, non-blocking) instead of KEYS to avoid blocking
+ * Redis in production environments with many keys.
+ *
+ * This is a best-effort operation: if Redis is unavailable the error is logged
+ * as a warning and the function resolves without throwing. Callers should not
+ * treat cache invalidation failures as write failures — the mutation is already
+ * committed and stale data will be served until the TTL expires.
+ *
+ * @param pattern - Glob pattern, e.g. `posts:*`
  */
 export async function invalidatePattern(pattern: string): Promise<void> {
-  let cursor = '0';
+  try {
+    let cursor = '0';
 
-  do {
-    const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-    cursor = nextCursor;
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
 
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
-  } while (cursor !== '0');
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } while (cursor !== '0');
+  } catch (err) {
+    logger.warn('Cache invalidation failed — stale data may be served until TTL', {
+      pattern,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 /**
  * Delete a single Redis key.
+ *
+ * Best-effort: logs a warning on failure instead of throwing.
  */
 export async function invalidateKey(key: string): Promise<void> {
-  await redis.del(key);
+  try {
+    await redis.del(key);
+  } catch (err) {
+    logger.warn('Cache key deletion failed', {
+      key,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 }

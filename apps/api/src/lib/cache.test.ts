@@ -132,4 +132,13 @@ describe('cache utilities', () => {
     expect(scanMock).toHaveBeenCalledWith('0', 'MATCH', 'empty:*', 'COUNT', 100);
     expect(delMock).not.toHaveBeenCalled();
   });
+
+  it('invalidatePattern resolves without throwing when Redis SCAN fails', async () => {
+    // Simulates a Redis unavailability scenario: the write is already committed
+    // and cache invalidation is best-effort — callers must not receive an error.
+    scanMock.mockRejectedValueOnce(new Error('Redis connection refused'));
+
+    await expect(invalidatePattern('posts:*')).resolves.toBeUndefined();
+    expect(delMock).not.toHaveBeenCalled();
+  });
 });

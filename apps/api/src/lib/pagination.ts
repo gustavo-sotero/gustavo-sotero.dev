@@ -1,4 +1,4 @@
-import type { PaginationMeta } from '@shared/types/api';
+import type { PaginationMeta } from '@portfolio/shared/types/api';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 20;
