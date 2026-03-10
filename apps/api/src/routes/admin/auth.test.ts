@@ -163,7 +163,7 @@ describe('auth routes', () => {
     expect(redisMock.set).toHaveBeenCalledTimes(1);
   });
 
-  it('POST /github/start returns 503 when Redis is unavailable', async () => {
+  it('POST /github/start falls back to local state store when Redis is unavailable', async () => {
     redisMock.set.mockRejectedValueOnce(new Error('redis down'));
 
     const app = new Hono();
@@ -172,16 +172,51 @@ describe('auth routes', () => {
     const response = await app.request('/auth/github/start', {
       method: 'POST',
     });
-    const body = await response.json();
+    const body = (await response.json()) as OAuthStartResponse;
 
-    expect(response.status).toBe(503);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Authentication service unavailable',
-      },
-    });
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(typeof body.data.authUrl).toBe('string');
+  });
+
+  it('GET /github/callback consumes local fallback state when Redis is unavailable', async () => {
+    redisMock.set.mockRejectedValueOnce(new Error('redis down'));
+    redisMock.getdel.mockRejectedValueOnce(new Error('redis down'));
+    signMock.mockResolvedValueOnce('signed-jwt-token');
+
+    const startApp = new Hono();
+    startApp.route('/auth', authRouter);
+    const startRes = await startApp.request('/auth/github/start', { method: 'POST' });
+    const startBody = (await startRes.json()) as OAuthStartResponse;
+
+    const authUrl = new URL(startBody.data.authUrl);
+    const state = authUrl.searchParams.get('state');
+    expect(state).toBeTruthy();
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'github-access-token' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 12345, login: 'admin-user' }),
+      });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const callbackApp = new Hono();
+    callbackApp.route('/auth', authRouter);
+
+    const callbackRes = await callbackApp.request(
+      `/auth/github/callback?code=code-123&state=${state}`,
+      {
+        redirect: 'manual',
+      }
+    );
+
+    expect(callbackRes.status).toBe(302);
+    expect(callbackRes.headers.get('location')).toBe('http://localhost:3001/admin');
   });
 
   it('GET /github/callback returns 400 when code or state is missing', async () => {
@@ -241,7 +276,7 @@ describe('auth routes', () => {
     expect(redisMock.eval).toHaveBeenCalledTimes(1);
   });
 
-  it('GET /github/callback returns 503 when Redis state lookup fails', async () => {
+  it('GET /github/callback returns 403 when state is unavailable after Redis failure', async () => {
     redisMock.getdel.mockRejectedValueOnce(new Error('redis down'));
 
     const app = new Hono();
@@ -250,17 +285,17 @@ describe('auth routes', () => {
     const response = await app.request('/auth/github/callback?code=code-123&state=state-123');
     const body = await response.json();
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(403);
     expect(body).toEqual({
       success: false,
       error: {
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Authentication service unavailable',
+        code: 'FORBIDDEN',
+        message: 'Invalid or expired state',
       },
     });
   });
 
-  it('GET /github/callback returns 503 when Redis state consume fails', async () => {
+  it('GET /github/callback returns 403 when Redis consume fails and no local fallback exists', async () => {
     redisMock.getdel.mockRejectedValueOnce(new Error('redis down'));
 
     const app = new Hono();
@@ -269,12 +304,12 @@ describe('auth routes', () => {
     const response = await app.request('/auth/github/callback?code=code-123&state=state-123');
     const body = await response.json();
 
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(403);
     expect(body).toEqual({
       success: false,
       error: {
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Authentication service unavailable',
+        code: 'FORBIDDEN',
+        message: 'Invalid or expired state',
       },
     });
   });

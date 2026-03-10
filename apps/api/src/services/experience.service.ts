@@ -12,7 +12,7 @@ import type {
 } from '@portfolio/shared/schemas/experience';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
-import { cached, invalidatePattern } from '../lib/cache';
+import { cached, invalidateGroup } from '../lib/cache';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { ExperienceFilters } from '../repositories/experience.repo';
@@ -147,7 +147,7 @@ export async function createExperienceService(data: CreateExperienceInput) {
     return row;
   });
 
-  await invalidatePattern('experience:*');
+  await invalidateGroup('experienceContent');
 
   // Return with tags populated
   const full = await findExperienceById(entry.id);
@@ -207,7 +207,7 @@ export async function updateExperienceService(id: number, data: UpdateExperience
 
   if (!updated) return null;
 
-  await invalidatePattern('experience:*');
+  await invalidateGroup('experienceContent');
 
   // Return with refreshed tags
   const full = await findExperienceById(id);
@@ -220,7 +220,7 @@ export async function updateExperienceService(id: number, data: UpdateExperience
 export async function softDeleteExperienceService(id: number) {
   const result = await softDeleteExperience(id);
   if (result) {
-    await invalidatePattern('experience:*');
+    await invalidateGroup('experienceContent');
   }
   return result;
 }

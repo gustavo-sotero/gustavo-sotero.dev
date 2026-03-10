@@ -7,6 +7,13 @@
  */
 
 /**
+ * Flatten a pivot array `{ tag: T }[]` to `T[]`.
+ */
+export function flattenPivotTagArray<TTag>(pivots?: Array<{ tag: TTag }>): TTag[] {
+  return (pivots ?? []).map((pivot) => pivot.tag);
+}
+
+/**
  * Flatten Drizzle pivot objects `{ tag: T }` to a direct `T[]`.
  *
  * Drizzle returns pivot rows for many-to-many relations as `{ postId, tagId, tag: Tag }`.
@@ -20,7 +27,7 @@
 export function flattenPivotTags<T extends { tags?: Array<{ tag: unknown }> }>(item: T) {
   return {
     ...item,
-    tags: (item.tags ?? []).map((pivot) => pivot.tag),
+    tags: flattenPivotTagArray(item.tags),
   };
 }
 

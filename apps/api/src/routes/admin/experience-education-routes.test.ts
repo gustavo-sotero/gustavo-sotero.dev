@@ -168,6 +168,23 @@ describe('admin experience routes', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('POST /admin/experience returns 400 when isCurrent=false and endDate is missing', async () => {
+    const app = new Hono();
+    app.route('/admin/experience', adminExperienceRouter);
+
+    const res = await app.request('/admin/experience', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validExperienceBody, isCurrent: false, endDate: undefined }),
+    });
+
+    const body = (await res.json()) as { success: boolean; error: { code: string } };
+
+    expect(res.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   it('POST /admin/experience passes tagIds to service', async () => {
     createExperienceServiceMock.mockResolvedValueOnce({
       id: 1,

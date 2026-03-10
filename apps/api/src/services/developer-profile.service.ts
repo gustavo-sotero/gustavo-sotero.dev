@@ -12,6 +12,7 @@
 
 import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 import { cached } from '../lib/cache';
+import { flattenPivotTagArray } from '../lib/pivotHelpers';
 import { getPageviewCount } from '../repositories/analytics.repo';
 import { findManyEducation } from '../repositories/education.repo';
 import { findManyExperience } from '../repositories/experience.repo';
@@ -166,14 +167,6 @@ function mapTag(raw: {
   };
 }
 
-/**
- * Drizzle many-to-many returns pivot objects `{ postId, tagId, tag: Tag }`.
- * Extract the nested tag and map to TagDTO.
- */
-function flattenPivotTags(pivots: Array<{ tag: Parameters<typeof mapTag>[0] }>): TagDTO[] {
-  return pivots.map((p) => mapTag(p.tag));
-}
-
 /** Build the stack groups from a flat list of tags. */
 function buildStack(
   tags: Array<{ id: number; name: string; slug: string; category: string; iconKey: string | null }>
@@ -269,7 +262,9 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
     publishedAt: toIso(p.publishedAt),
     createdAt: toIsoRequired(p.createdAt),
     updatedAt: toIsoRequired(p.updatedAt),
-    tags: flattenPivotTags((p.tags ?? []) as Array<{ tag: Parameters<typeof mapTag>[0] }>),
+    tags: flattenPivotTagArray((p.tags ?? []) as Array<{ tag: Parameters<typeof mapTag>[0] }>).map(
+      mapTag
+    ),
   }));
 
   // ── Projects ───────────────────────────────────────────────────────────────
@@ -284,7 +279,9 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
     liveUrl: pr.liveUrl ?? null,
     createdAt: toIsoRequired(pr.createdAt),
     updatedAt: toIsoRequired(pr.updatedAt),
-    tags: flattenPivotTags((pr.tags ?? []) as Array<{ tag: Parameters<typeof mapTag>[0] }>),
+    tags: flattenPivotTagArray((pr.tags ?? []) as Array<{ tag: Parameters<typeof mapTag>[0] }>).map(
+      mapTag
+    ),
   }));
 
   // ── Metrics ────────────────────────────────────────────────────────────────

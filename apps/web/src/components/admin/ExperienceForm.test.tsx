@@ -115,4 +115,24 @@ describe('ExperienceForm', () => {
       expect(screen.queryByTestId('create-tag-dialog')).not.toBeInTheDocument();
     });
   });
+
+  it('blocks submit when isCurrent=false and endDate is missing', async () => {
+    render(<ExperienceForm mode="create" />);
+
+    fireEvent.change(screen.getByLabelText(/Cargo/i), { target: { value: 'Backend Engineer' } });
+    fireEvent.change(screen.getByLabelText(/Empresa/i), { target: { value: 'Acme' } });
+    fireEvent.change(screen.getByLabelText(/Descrição/i), {
+      target: { value: 'Responsável por APIs e filas.' },
+    });
+    fireEvent.change(screen.getByLabelText(/Data de início/i), {
+      target: { value: '2024-01-01' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar experiência/i }));
+
+    await waitFor(() => {
+      expect(mutateAsyncMock).not.toHaveBeenCalled();
+      expect(screen.getByText(/endDate is required when isCurrent is false/i)).toBeInTheDocument();
+    });
+  });
 });

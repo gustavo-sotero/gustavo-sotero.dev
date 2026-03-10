@@ -14,10 +14,35 @@ import { redis } from '../config/redis';
 
 const logger = getLogger('cache');
 
+export const CACHE_INVALIDATION_GROUPS = {
+  postsContent: ['posts:*', 'tags:*', 'feed:*', 'sitemap:*'],
+  projectsContent: ['projects:*', 'tags:*', 'feed:*', 'sitemap:*'],
+  tagsContent: ['tags:*', 'posts:*', 'projects:*'],
+  postTagsSync: ['posts:*', 'tags:*'],
+  projectTagsSync: ['projects:*', 'tags:*'],
+  commentsModeration: ['posts:slug:*'],
+  experienceContent: ['experience:*'],
+  educationContent: ['education:*'],
+} as const;
+
+export type CacheInvalidationGroup = keyof typeof CACHE_INVALIDATION_GROUPS;
+
 /** TTL for the anti-stampede lock key (seconds). Must exceed the slowest fetcher. */
 const LOCK_TTL_SECONDS = 30;
 /** How long a waiting request sleeps before retrying the cache after a lock miss (ms). */
 const LOCK_RETRY_DELAY_MS = 75;
+
+async function deleteKeyBestEffort(key: string, stage: string): Promise<void> {
+  try {
+    await redis.del(key);
+  } catch (err) {
+    logger.warn('Cache key deletion failed', {
+      key,
+      stage,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
 
 /**
  * Read-through cache with corrupt-entry guard and anti-stampede lock.
@@ -47,7 +72,7 @@ export async function cached<T>(
     } catch {
       // Corrupted cache entry — evict so the next request re-populates it.
       logger.warn('Cache entry corrupted, evicting', { key, stage: 'initial-hit' });
-      await redis.del(key).catch(() => {});
+      await deleteKeyBestEffort(key, 'initial-hit-evict');
       // Fall through to fetcher
     }
   } else {
@@ -70,7 +95,7 @@ export async function cached<T>(
         return JSON.parse(retryHit) as T;
       } catch {
         logger.warn('Cache retry entry corrupted, evicting', { key, stage: 'retry-hit' });
-        await redis.del(key).catch(() => {});
+        await deleteKeyBestEffort(key, 'retry-hit-evict');
       }
     }
     // Still missing — fall through to fetcher (avoids indefinite stall)
@@ -85,7 +110,7 @@ export async function cached<T>(
     return data;
   } finally {
     if (lockAcquired) {
-      await redis.del(lockKey).catch(() => {});
+      await deleteKeyBestEffort(lockKey, 'lock-release');
     }
   }
 }
@@ -97,12 +122,6 @@ export async function cached<T>(
  * Redis in production environments with many keys.
  *
  * @param pattern - Glob pattern, e.g. `posts:*`
-/**
- * Delete all Redis keys matching a glob pattern.
- *
- * Uses SCAN (paginated, non-blocking) instead of KEYS to avoid blocking
- * Redis in production environments with many keys.
- *
  * This is a best-effort operation: if Redis is unavailable the error is logged
  * as a warning and the function resolves without throwing. Callers should not
  * treat cache invalidation failures as write failures — the mutation is already
@@ -128,6 +147,14 @@ export async function invalidatePattern(pattern: string): Promise<void> {
       error: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+/**
+ * Invalidate a predefined cache group in best-effort mode.
+ */
+export async function invalidateGroup(group: CacheInvalidationGroup): Promise<void> {
+  const patterns = CACHE_INVALIDATION_GROUPS[group];
+  await Promise.all(patterns.map((pattern) => invalidatePattern(pattern)));
 }
 
 /**

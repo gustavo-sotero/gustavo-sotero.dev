@@ -8,7 +8,7 @@
 
 import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
 import type { CreateTagSchemaInput, UpdateTagSchemaInput } from '@portfolio/shared/schemas/tags';
-import { cached, invalidatePattern } from '../lib/cache';
+import { cached, invalidateGroup, invalidatePattern } from '../lib/cache';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import {
   countHighlightedByCategory,
@@ -145,11 +145,7 @@ export async function updateTagService(id: number, data: UpdateTagSchemaInput) {
   const updated = await updateTag(id, patch);
 
   // Invalidate tag cache and also any content that may reference this tag
-  await Promise.all([
-    invalidatePattern('tags:*'),
-    invalidatePattern('posts:*'),
-    invalidatePattern('projects:*'),
-  ]);
+  await invalidateGroup('tagsContent');
 
   return updated;
 }
@@ -165,11 +161,7 @@ export async function deleteTagService(id: number) {
   const result = await deleteTag(id);
   if (!result) return null;
 
-  await Promise.all([
-    invalidatePattern('tags:*'),
-    invalidatePattern('posts:*'),
-    invalidatePattern('projects:*'),
-  ]);
+  await invalidateGroup('tagsContent');
 
   return result;
 }
@@ -189,9 +181,9 @@ export async function syncTags(
 ): Promise<void> {
   if (entityType === 'post') {
     await syncPostTags(entityId, tagIds);
-    await Promise.all([invalidatePattern('posts:*'), invalidatePattern('tags:*')]);
+    await invalidateGroup('postTagsSync');
   } else {
     await syncProjectTags(entityId, tagIds);
-    await Promise.all([invalidatePattern('projects:*'), invalidatePattern('tags:*')]);
+    await invalidateGroup('projectTagsSync');
   }
 }

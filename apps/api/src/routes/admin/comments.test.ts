@@ -66,6 +66,9 @@ vi.mock('../../lib/markdownComment', () => ({
 
 vi.mock('../../lib/cache', () => ({
   invalidatePattern: invalidatePatternMock,
+  invalidateGroup: vi.fn(async () => {
+    await invalidatePatternMock('posts:slug:*');
+  }),
 }));
 
 vi.mock('../../lib/pagination', () => ({

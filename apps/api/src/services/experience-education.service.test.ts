@@ -65,6 +65,14 @@ vi.mock('../config/db', () => ({
 vi.mock('../lib/cache', () => ({
   cached: vi.fn((_key: string, _ttl: number, fetcher: () => unknown) => fetcher()),
   invalidatePattern: invalidatePatternMock,
+  invalidateGroup: vi.fn(async (group: string) => {
+    if (group === 'experienceContent') {
+      await invalidatePatternMock('experience:*');
+    }
+    if (group === 'educationContent') {
+      await invalidatePatternMock('education:*');
+    }
+  }),
 }));
 
 vi.mock('../lib/slug', () => ({
@@ -279,6 +287,20 @@ describe('experience service', () => {
       ).rejects.toThrow('VALIDATION_ERROR');
     });
 
+    it('throws VALIDATION_ERROR when isCurrent=false and endDate is missing', async () => {
+      await expect(
+        createExperienceService({
+          role: 'Engineer',
+          company: 'Co',
+          description: 'Desc.',
+          startDate: '2023-01-01',
+          isCurrent: false,
+          status: 'draft',
+          order: 0,
+        })
+      ).rejects.toThrow('VALIDATION_ERROR');
+    });
+
     it('invalidates experience cache after successful create', async () => {
       ensureUniqueSlugMock.mockResolvedValueOnce('engineer-corp');
       createExperienceMock.mockResolvedValueOnce(baseExperience);
@@ -396,6 +418,18 @@ describe('experience service', () => {
       });
 
       await expect(updateExperienceService(1, { endDate: '2022-01-01' })).rejects.toThrow(
+        'VALIDATION_ERROR'
+      );
+    });
+
+    it('throws VALIDATION_ERROR when merged state is non-current without endDate', async () => {
+      findExperienceByIdMock.mockResolvedValueOnce({
+        ...baseExperience,
+        endDate: null,
+        isCurrent: true,
+      });
+
+      await expect(updateExperienceService(1, { isCurrent: false })).rejects.toThrow(
         'VALIDATION_ERROR'
       );
     });

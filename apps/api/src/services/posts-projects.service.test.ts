@@ -51,6 +51,7 @@ vi.mock('../config/db', () => ({
 vi.mock('../lib/cache', () => ({
   cached: vi.fn((_key: string, _ttl: number, fetcher: () => unknown) => fetcher()),
   invalidatePattern: vi.fn(),
+  invalidateGroup: vi.fn(async () => undefined),
 }));
 
 vi.mock('../lib/markdown', () => ({

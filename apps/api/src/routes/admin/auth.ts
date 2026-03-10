@@ -14,6 +14,12 @@ const logger = getLogger('auth');
 
 type OutboundFailureType = 'timeout' | 'aborted' | 'network' | 'unknown';
 
+interface LocalOauthStateEntry {
+  expiresAt: number;
+}
+
+const localOauthStateStore = new Map<string, LocalOauthStateEntry>();
+
 const CONSUME_STATE_LUA = `
 local v = redis.call('GET', KEYS[1])
 if v then
@@ -30,6 +36,31 @@ function classifyOutboundFailure(err: unknown): OutboundFailureType {
   return 'unknown';
 }
 
+function pruneLocalOauthStateStore(): void {
+  const now = Date.now();
+  for (const [key, entry] of localOauthStateStore.entries()) {
+    if (entry.expiresAt < now) {
+      localOauthStateStore.delete(key);
+    }
+  }
+}
+
+function setLocalOauthState(state: string, ttlSeconds: number): void {
+  // Best-effort periodic prune to keep memory bounded.
+  if (Math.random() < 0.01) pruneLocalOauthStateStore();
+  localOauthStateStore.set(state, { expiresAt: Date.now() + ttlSeconds * 1000 });
+}
+
+function consumeLocalOauthState(state: string): string | null {
+  const entry = localOauthStateStore.get(state);
+  if (!entry) return null;
+  localOauthStateStore.delete(state);
+  if (entry.expiresAt < Date.now()) {
+    return null;
+  }
+  return '1';
+}
+
 /**
  * Atomically consume an OAuth state token from Redis.
  *
@@ -40,18 +71,31 @@ async function consumeOauthState(state: string): Promise<string | null> {
   const key = `oauth:state:${state}`;
 
   try {
-    return await redis.getdel(key);
+    const consumed = await redis.getdel(key);
+    if (typeof consumed === 'string') return consumed;
+    return consumeLocalOauthState(state);
   } catch (err) {
     const message = err instanceof Error ? err.message.toLowerCase() : '';
     const getDelUnsupported = message.includes('unknown command') && message.includes('getdel');
 
-    if (!getDelUnsupported) {
-      throw err;
+    if (getDelUnsupported) {
+      logger.warn('Redis GETDEL unavailable, using Lua fallback for OAuth state consume');
+      try {
+        const consumed = await redis.eval(CONSUME_STATE_LUA, 1, key);
+        if (typeof consumed === 'string') return consumed;
+        return consumeLocalOauthState(state);
+      } catch (luaErr) {
+        logger.warn('OAuth state Lua fallback failed, trying local fallback', {
+          error: luaErr instanceof Error ? luaErr.message : String(luaErr),
+        });
+        return consumeLocalOauthState(state);
+      }
     }
 
-    logger.warn('Redis GETDEL unavailable, using Lua fallback for OAuth state consume');
-    const consumed = await redis.eval(CONSUME_STATE_LUA, 1, key);
-    return typeof consumed === 'string' ? consumed : null;
+    logger.warn('OAuth state Redis consume failed, trying local fallback', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return consumeLocalOauthState(state);
   }
 }
 
@@ -77,10 +121,11 @@ authRouter.post('/github/start', authRateLimit, async (c) => {
   try {
     await redis.set(`oauth:state:${state}`, '1', 'EX', 600);
   } catch (err) {
-    logger.error('Failed to persist OAuth state in Redis', {
+    setLocalOauthState(state, 600);
+    logger.warn('Redis unavailable for OAuth state, using local fallback (single-instance)', {
       error: (err as Error).message,
+      localStateCount: localOauthStateStore.size,
     });
-    return errorResponse(c, 503, 'SERVICE_UNAVAILABLE', 'Authentication service unavailable');
   }
 
   const params = new URLSearchParams({
@@ -114,15 +159,7 @@ authRouter.get('/github/callback', async (c) => {
 
   // Atomically read + delete state — GETDEL prevents TOCTOU race between
   // concurrent callback requests using the same state token (single-use guarantee).
-  let storedState: string | null;
-  try {
-    storedState = await consumeOauthState(state);
-  } catch (err) {
-    logger.error('Failed to read/consume OAuth state from Redis', {
-      error: (err as Error).message,
-    });
-    return errorResponse(c, 503, 'SERVICE_UNAVAILABLE', 'Authentication service unavailable');
-  }
+  const storedState = await consumeOauthState(state);
 
   if (!storedState) {
     logger.warn('OAuth callback with invalid or expired state', {

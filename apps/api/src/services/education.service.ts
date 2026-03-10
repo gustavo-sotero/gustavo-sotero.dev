@@ -12,7 +12,7 @@ import type {
 } from '@portfolio/shared/schemas/education';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
-import { cached, invalidatePattern } from '../lib/cache';
+import { cached, invalidateGroup } from '../lib/cache';
 import { resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { EducationFilters } from '../repositories/education.repo';
@@ -118,7 +118,7 @@ export async function createEducationService(data: CreateEducationInput) {
     throw new Error('Failed to create education — database returned no row');
   }
 
-  await invalidatePattern('education:*');
+  await invalidateGroup('educationContent');
 
   return entry;
 }
@@ -161,7 +161,7 @@ export async function updateEducationService(id: number, data: UpdateEducationIn
   });
 
   if (updated) {
-    await invalidatePattern('education:*');
+    await invalidateGroup('educationContent');
   }
 
   return updated;
@@ -173,7 +173,7 @@ export async function updateEducationService(id: number, data: UpdateEducationIn
 export async function softDeleteEducationService(id: number) {
   const result = await softDeleteEducation(id);
   if (result) {
-    await invalidatePattern('education:*');
+    await invalidateGroup('educationContent');
   }
   return result;
 }

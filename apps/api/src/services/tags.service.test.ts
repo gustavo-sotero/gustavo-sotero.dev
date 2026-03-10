@@ -33,6 +33,21 @@ const {
 vi.mock('../lib/cache', () => ({
   cached: cachedMock,
   invalidatePattern: invalidatePatternMock,
+  invalidateGroup: vi.fn(async (group: string) => {
+    if (group === 'tagsContent') {
+      await invalidatePatternMock('tags:*');
+      await invalidatePatternMock('posts:*');
+      await invalidatePatternMock('projects:*');
+    }
+    if (group === 'postTagsSync') {
+      await invalidatePatternMock('posts:*');
+      await invalidatePatternMock('tags:*');
+    }
+    if (group === 'projectTagsSync') {
+      await invalidatePatternMock('projects:*');
+      await invalidatePatternMock('tags:*');
+    }
+  }),
 }));
 
 vi.mock('../repositories/tags.repo', () => ({

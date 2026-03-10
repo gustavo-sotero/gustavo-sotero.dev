@@ -11,7 +11,7 @@ import { outbox, posts } from '@portfolio/shared/db/schema';
 import type { CreatePostInput, UpdatePostInput } from '@portfolio/shared/schemas/posts';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../config/db';
-import { cached, invalidatePattern } from '../lib/cache';
+import { cached, invalidateGroup } from '../lib/cache';
 import { renderMarkdown } from '../lib/markdown';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { cancelScheduledPostPublish } from '../lib/queues';
@@ -144,12 +144,7 @@ export async function createPostService(data: CreatePostInput) {
   });
 
   // 6. Invalidate cache
-  await Promise.all([
-    invalidatePattern('posts:*'),
-    invalidatePattern('tags:*'),
-    invalidatePattern('feed:*'),
-    invalidatePattern('sitemap:*'),
-  ]);
+  await invalidateGroup('postsContent');
 
   return post;
 }
@@ -252,12 +247,7 @@ export async function updatePostService(id: number, data: UpdatePostInput) {
   }
 
   // 10. Invalidate cache
-  await Promise.all([
-    invalidatePattern('posts:*'),
-    invalidatePattern('tags:*'),
-    invalidatePattern('feed:*'),
-    invalidatePattern('sitemap:*'),
-  ]);
+  await invalidateGroup('postsContent');
 
   return updated;
 }
@@ -283,11 +273,6 @@ export async function softDeletePostService(id: number) {
     await cancelScheduledPostPublish(id);
   }
 
-  await Promise.all([
-    invalidatePattern('posts:*'),
-    invalidatePattern('tags:*'),
-    invalidatePattern('feed:*'),
-    invalidatePattern('sitemap:*'),
-  ]);
+  await invalidateGroup('postsContent');
   return result;
 }

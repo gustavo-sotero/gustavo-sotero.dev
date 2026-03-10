@@ -19,10 +19,6 @@
 
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
-
-    "paths": {
-      "@shared/*": ["./packages/shared/src/*"]
-    }
+    "noPropertyAccessFromIndexSignature": false
   }
 }

@@ -25,7 +25,7 @@ import { and, asc, count, eq, isNotNull, isNull, type SQL } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from '../../config/db';
 import { env } from '../../config/env';
-import { invalidatePattern } from '../../lib/cache';
+import { invalidateGroup } from '../../lib/cache';
 import { renderCommentMarkdown } from '../../lib/markdownComment';
 import { buildPaginationMeta, parsePagination } from '../../lib/pagination';
 import { parseBodyOrEmpty, parseBodyResult } from '../../lib/requestBody';
@@ -197,7 +197,7 @@ adminCommentsRouter.post('/reply', async (c) => {
     })
     .returning();
 
-  await invalidatePattern('posts:slug:*');
+  await invalidateGroup('commentsModeration');
 
   return successResponse(c, newComment, 201);
 });
@@ -243,7 +243,7 @@ adminCommentsRouter.patch('/:id/status', async (c) => {
 
   if (parsed.data.status === 'approved' || comment.status === 'approved') {
     // Invalidate post cache whenever approved comments change
-    await invalidatePattern('posts:slug:*');
+    await invalidateGroup('commentsModeration');
   }
 
   return successResponse(c, updated);
@@ -296,7 +296,7 @@ adminCommentsRouter.patch('/:id/content', async (c) => {
   );
 
   if (comment.status === 'approved') {
-    await invalidatePattern('posts:slug:*');
+    await invalidateGroup('commentsModeration');
   }
 
   return successResponse(c, updated);
@@ -332,7 +332,7 @@ adminCommentsRouter.delete('/:id', async (c) => {
   const deleted = await softDeleteComment(id, adminId, parsed.data.reason);
 
   if (comment.status === 'approved') {
-    await invalidatePattern('posts:slug:*');
+    await invalidateGroup('commentsModeration');
   }
 
   return successResponse(c, deleted);
@@ -357,7 +357,7 @@ adminCommentsRouter.post('/:id/approve', async (c) => {
   }
 
   const updated = await updateCommentStatus(id, 'approved', adminId);
-  await invalidatePattern('posts:slug:*');
+  await invalidateGroup('commentsModeration');
 
   return successResponse(c, updated);
 });
@@ -381,7 +381,7 @@ adminCommentsRouter.post('/:id/reject', async (c) => {
   const updated = await updateCommentStatus(id, 'rejected', adminId);
 
   if (comment.status === 'approved') {
-    await invalidatePattern('posts:slug:*');
+    await invalidateGroup('commentsModeration');
   }
 
   return successResponse(c, updated);

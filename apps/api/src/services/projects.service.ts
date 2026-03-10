@@ -10,7 +10,7 @@ import { projects } from '@portfolio/shared/db/schema';
 import type { CreateProjectInput, UpdateProjectInput } from '@portfolio/shared/schemas/projects';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
-import { cached, invalidatePattern } from '../lib/cache';
+import { cached, invalidateGroup } from '../lib/cache';
 import { renderMarkdown } from '../lib/markdown';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
@@ -132,12 +132,7 @@ export async function createProjectService(data: CreateProjectInput) {
   });
 
   // 5. Invalidate cache
-  await Promise.all([
-    invalidatePattern('projects:*'),
-    invalidatePattern('tags:*'),
-    invalidatePattern('feed:*'),
-    invalidatePattern('sitemap:*'),
-  ]);
+  await invalidateGroup('projectsContent');
 
   return project;
 }
@@ -202,12 +197,7 @@ export async function updateProjectService(id: number, data: UpdateProjectInput)
   if (!updated) return null;
 
   // 6. Invalidate cache
-  await Promise.all([
-    invalidatePattern('projects:*'),
-    invalidatePattern('tags:*'),
-    invalidatePattern('feed:*'),
-    invalidatePattern('sitemap:*'),
-  ]);
+  await invalidateGroup('projectsContent');
 
   return updated;
 }
@@ -220,11 +210,6 @@ export async function softDeleteProjectService(id: number) {
   const result = await softDeleteProject(id);
   if (!result) return null;
 
-  await Promise.all([
-    invalidatePattern('projects:*'),
-    invalidatePattern('tags:*'),
-    invalidatePattern('feed:*'),
-    invalidatePattern('sitemap:*'),
-  ]);
+  await invalidateGroup('projectsContent');
   return result;
 }

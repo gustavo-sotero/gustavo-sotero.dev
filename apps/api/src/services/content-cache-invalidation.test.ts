@@ -42,6 +42,20 @@ vi.mock('../config/db', () => ({
 vi.mock('../lib/cache', () => ({
   cached: vi.fn((_key: string, _ttl: number, fetcher: () => unknown) => fetcher()),
   invalidatePattern: invalidatePatternMock,
+  invalidateGroup: vi.fn(async (group: string) => {
+    if (group === 'postsContent') {
+      await invalidatePatternMock('posts:*');
+      await invalidatePatternMock('tags:*');
+      await invalidatePatternMock('feed:*');
+      await invalidatePatternMock('sitemap:*');
+    }
+    if (group === 'projectsContent') {
+      await invalidatePatternMock('projects:*');
+      await invalidatePatternMock('tags:*');
+      await invalidatePatternMock('feed:*');
+      await invalidatePatternMock('sitemap:*');
+    }
+  }),
 }));
 
 vi.mock('../lib/markdown', () => ({
