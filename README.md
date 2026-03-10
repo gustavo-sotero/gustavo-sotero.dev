@@ -132,6 +132,25 @@ bun run dev:web      # Web on http://localhost:3001
 
 > Legacy repair step: for existing databases, run `bun run db:backfill:comments` **before** `bun run db:migrate`. The migration now fails fast when `comments.rendered_content` is still null.
 
+### Web Env Contract (Build vs Runtime)
+
+For `apps/web`, environment variables are split between build-time and runtime concerns:
+
+- Build-time (`docker/web.Dockerfile` ARG/ENV):
+  - `NEXT_PUBLIC_API_URL`
+  - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+  - `NEXT_PUBLIC_S3_PUBLIC_DOMAIN`
+- Runtime (`docker-compose.yml` web service `environment`):
+  - `REVALIDATE_SECRET`
+  - `API_INTERNAL_URL` (recommended in Docker: `http://api:3000`)
+
+Server-side API calls resolve base URL with deterministic precedence:
+
+1. `API_INTERNAL_URL` (internal network, preferred)
+2. `NEXT_PUBLIC_API_URL` (public fallback)
+
+If neither is valid, the server-side fetch layer fails with an explicit configuration error.
+
 ---
 
 ## API Health Endpoints

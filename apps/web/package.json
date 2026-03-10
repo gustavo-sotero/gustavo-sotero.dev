@@ -3,10 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "predev": "node -e \"const fs=require('fs');try{fs.rmSync('.next/dev/lock')}catch(e){}\"",
     "dev": "bun --bun next dev -p 3001",
-    "build": "bun --bun next build",
-    "build:local": "bun run --env-file ../../.env build",
+    "build": "NODE_ENV=production bun run --env-file ../../.env --bun next build",
     "start": "bun --bun next start",
     "test": "vitest run",
     "test:watch": "vitest"

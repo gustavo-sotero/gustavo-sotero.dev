@@ -4,11 +4,12 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { JsonLdScript } from '@/components/shared/JsonLdScript';
+import { PublicPageUnavailable } from '@/components/shared/PublicPageUnavailable';
 import { TechIcon } from '@/components/shared/TechIcon';
 import { TrustedHtml } from '@/components/shared/TrustedHtml';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getPublicProject, getPublishedProjectSlugs } from '@/lib/data/public/projects';
+import { getPublicProjectDetail } from '@/lib/data/public/projects';
 import { env } from '@/lib/env';
 import { cn } from '@/lib/utils';
 
@@ -16,15 +17,19 @@ interface ProjectDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  const slugs = await getPublishedProjectSlugs();
-  return slugs.map((slug) => ({ slug }));
-}
-
 export async function generateMetadata({ params }: ProjectDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const project = await getPublicProject(slug);
-  if (!project) return { title: 'Projeto não encontrado' };
+  const result = await getPublicProjectDetail(slug);
+
+  if (result.state === 'not-found') return { title: 'Projeto não encontrado' };
+  if (result.state === 'degraded') {
+    return {
+      title: 'Projeto temporariamente indisponível',
+      description: 'O conteúdo não pôde ser carregado no momento.',
+    };
+  }
+
+  const project = result.data;
 
   return {
     title: project.title,
@@ -46,9 +51,22 @@ export async function generateMetadata({ params }: ProjectDetailPageProps): Prom
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { slug } = await params;
-  const project = await getPublicProject(slug);
+  const result = await getPublicProjectDetail(slug);
 
-  if (!project) notFound();
+  if (result.state === 'not-found') notFound();
+
+  if (result.state === 'degraded') {
+    return (
+      <PublicPageUnavailable
+        title="Projeto temporariamente indisponível"
+        description="A API pública não respondeu a tempo. Tente novamente em alguns instantes."
+        backHref="/projects"
+        backLabel="Voltar para projetos"
+      />
+    );
+  }
+
+  const project = result.data;
 
   const tags = [...((project as typeof project & { tags?: Tag[] }).tags ?? [])].sort(
     (a, b) => Number(b.isHighlighted) - Number(a.isHighlighted)

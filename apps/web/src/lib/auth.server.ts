@@ -1,5 +1,6 @@
 import 'server-only';
 import { cookies } from 'next/headers';
+import { resolveServerApiBaseUrl } from '@/lib/api-base-url.server';
 
 /**
  * Validate the admin session server-side before rendering protected chrome.
@@ -16,12 +17,12 @@ export async function validateAdminSession(): Promise<boolean> {
 
   if (!token?.value) return false;
 
-  const baseUrl = (process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL)?.replace(
-    /\/+$/,
-    ''
-  );
-
-  if (!baseUrl) return false;
+  let baseUrl: string;
+  try {
+    baseUrl = resolveServerApiBaseUrl();
+  } catch {
+    return false;
+  }
 
   try {
     const res = await fetch(`${baseUrl}/auth/session`, {

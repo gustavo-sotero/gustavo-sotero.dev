@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { validateAdminSession } from '@/lib/auth.server';
@@ -14,6 +15,11 @@ import { validateAdminSession } from '@/lib/auth.server';
  *     for every subsequent data request within the shell.
  */
 export default async function ProtectedAdminLayout({ children }: { children: ReactNode }) {
+  // connection() opts this layout into dynamic (request-connected) rendering,
+  // which is the Cache Components-compatible alternative to `dynamic = 'force-dynamic'`.
+  // Admin routes must never be statically prerendered — they depend on cookies.
+  await connection();
+
   const isValid = await validateAdminSession();
 
   if (!isValid) {

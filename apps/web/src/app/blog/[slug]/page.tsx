@@ -6,11 +6,12 @@ import { notFound } from 'next/navigation';
 import { CommentsSection } from '@/components/blog/CommentsSection';
 import { JsonLdScript } from '@/components/shared/JsonLdScript';
 import { MermaidRenderer } from '@/components/shared/MermaidRenderer';
+import { PublicPageUnavailable } from '@/components/shared/PublicPageUnavailable';
 import { TechIcon } from '@/components/shared/TechIcon';
 import { TrustedHtml } from '@/components/shared/TrustedHtml';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { getPublicPost, getPublishedPostSlugs } from '@/lib/data/public/posts';
+import { getPublicPostDetail } from '@/lib/data/public/posts';
 import { env } from '@/lib/env';
 import { cn, formatDateBR } from '@/lib/utils';
 
@@ -18,15 +19,19 @@ interface BlogDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  const slugs = await getPublishedPostSlugs();
-  return slugs.map((slug) => ({ slug }));
-}
-
 export async function generateMetadata({ params }: BlogDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPublicPost(slug);
-  if (!post) return { title: 'Post não encontrado' };
+  const result = await getPublicPostDetail(slug);
+
+  if (result.state === 'not-found') return { title: 'Post não encontrado' };
+  if (result.state === 'degraded') {
+    return {
+      title: 'Post temporariamente indisponível',
+      description: 'O conteúdo não pôde ser carregado no momento.',
+    };
+  }
+
+  const post = result.data;
 
   return {
     title: post.title,
@@ -58,9 +63,22 @@ function readingTime(content?: string | null): string {
 
 export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
   const { slug } = await params;
-  const post = await getPublicPost(slug);
+  const result = await getPublicPostDetail(slug);
 
-  if (!post) notFound();
+  if (result.state === 'not-found') notFound();
+
+  if (result.state === 'degraded') {
+    return (
+      <PublicPageUnavailable
+        title="Post temporariamente indisponível"
+        description="A API pública não respondeu a tempo. Tente novamente em alguns instantes."
+        backHref="/blog"
+        backLabel="Voltar para o blog"
+      />
+    );
+  }
+
+  const post = result.data;
 
   const tags = [...(post.tags ?? [])].sort(
     (a, b) => Number(b.isHighlighted) - Number(a.isHighlighted)

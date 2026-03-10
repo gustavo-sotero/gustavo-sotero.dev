@@ -1,9 +1,22 @@
 import 'server-only';
-import type { PaginatedResponse, Project } from '@portfolio/shared';
+import type { PaginationMeta, Project } from '@portfolio/shared';
 import { cacheLife, cacheTag } from 'next/cache';
 import { ApiNotFoundError, apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';
 import { TAG_PROJECTS_LIST, tagProjectDetail } from './cache-tags';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/**
+ * Result for project listing requests.
+ *
+ * - `ok`       — request succeeded with items.
+ * - `empty`    — request succeeded but backend returned no items.
+ * - `degraded` — API was unreachable; render a visible unavailable state.
+ */
+export type ProjectsListResult =
+  | { state: 'ok' | 'empty'; data: Project[]; meta: PaginationMeta }
+  | { state: 'degraded' };
 
 // ─── List ─────────────────────────────────────────────────────────────────────
 
@@ -17,7 +30,7 @@ export interface ProjectsListParams {
 
 export async function getPublicProjects(
   params: ProjectsListParams = {}
-): Promise<PaginatedResponse<Project>> {
+): Promise<ProjectsListResult> {
   'use cache';
   cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
   cacheTag(TAG_PROJECTS_LIST);
@@ -29,59 +42,43 @@ export async function getPublicProjects(
   if (params.featuredFirst !== undefined) qs.set('featuredFirst', String(params.featuredFirst));
 
   try {
-    return await apiServerGetPaginated<Project>(`/projects?${qs}`);
+    const res = await apiServerGetPaginated<Project>(`/projects?${qs}`);
+    return {
+      state: res.data.length > 0 ? 'ok' : 'empty',
+      data: res.data,
+      meta: res.meta,
+    };
   } catch (err) {
     logServerError('data:projects', 'Failed to fetch public projects list', {
       params: String(JSON.stringify(params)),
       error: err instanceof Error ? err.message : String(err),
     });
-    throw err;
+    return { state: 'degraded' };
   }
 }
 
 // ─── Detail ───────────────────────────────────────────────────────────────────
 
-export async function getPublicProject(slug: string): Promise<Project | null> {
+export type ProjectDetailResult =
+  | { state: 'ok'; data: Project }
+  | { state: 'not-found' }
+  | { state: 'degraded' };
+
+export async function getPublicProjectDetail(slug: string): Promise<ProjectDetailResult> {
   'use cache';
   cacheLife({ stale: 3600, revalidate: 3600, expire: 86400 });
   cacheTag(TAG_PROJECTS_LIST, tagProjectDetail(slug));
 
   try {
-    return await apiServerGet<Project>(`/projects/${slug}`);
+    return { state: 'ok', data: await apiServerGet<Project>(`/projects/${slug}`) };
   } catch (err) {
-    if (err instanceof ApiNotFoundError) return null;
-    throw err;
-  }
-}
+    if (err instanceof ApiNotFoundError) return { state: 'not-found' };
 
-// ─── SSG slugs ────────────────────────────────────────────────────────────────
-
-export async function getPublishedProjectSlugs(): Promise<string[]> {
-  'use cache';
-  cacheLife({ stale: 3600, revalidate: 3600, expire: 86400 });
-  cacheTag(TAG_PROJECTS_LIST);
-
-  try {
-    const perPage = 100;
-    const slugs: string[] = [];
-    let page = 1;
-    let totalPages = 1;
-
-    while (page <= totalPages) {
-      const res = await apiServerGetPaginated<{ slug: string }>(
-        `/projects?perPage=${perPage}&page=${page}`
-      );
-      slugs.push(...res.data.map((project) => project.slug));
-
-      totalPages = Math.max(1, res.meta?.totalPages ?? 1);
-      page += 1;
-    }
-
-    return slugs;
-  } catch (err) {
-    logServerError('data:projects', 'Failed to fetch published project slugs for SSG', {
+    logServerError('data:projects', 'Failed to fetch public project detail', {
+      slug,
       error: err instanceof Error ? err.message : String(err),
     });
-    throw err;
+
+    return { state: 'degraded' };
   }
 }

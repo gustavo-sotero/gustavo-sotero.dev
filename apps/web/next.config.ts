@@ -1,25 +1,16 @@
 import type { NextConfig } from 'next';
+import { env } from './src/lib/env';
 
 function getS3RemotePattern() {
-  const rawDomain = process.env.NEXT_PUBLIC_S3_PUBLIC_DOMAIN;
+  const parsed = new URL(env.NEXT_PUBLIC_S3_PUBLIC_DOMAIN);
+  const basePath = parsed.pathname.replace(/\/$/, '');
 
-  if (!rawDomain) {
-    return null;
-  }
-
-  try {
-    const parsed = new URL(rawDomain);
-    const basePath = parsed.pathname.replace(/\/$/, '');
-
-    return {
-      protocol: parsed.protocol.replace(':', '') as 'http' | 'https',
-      hostname: parsed.hostname,
-      ...(parsed.port ? { port: parsed.port } : {}),
-      pathname: `${basePath || ''}/**`,
-    };
-  } catch {
-    return null;
-  }
+  return {
+    protocol: parsed.protocol.replace(':', '') as 'http' | 'https',
+    hostname: parsed.hostname,
+    ...(parsed.port ? { port: parsed.port } : {}),
+    pathname: `${basePath || ''}/**`,
+  };
 }
 
 const s3RemotePattern = getS3RemotePattern();
@@ -33,7 +24,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@react-pdf/renderer'],
   images: {
     remotePatterns: [
-      ...(s3RemotePattern ? [s3RemotePattern] : []),
+      s3RemotePattern,
       {
         protocol: 'http',
         hostname: 'localhost',

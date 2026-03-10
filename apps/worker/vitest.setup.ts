@@ -9,4 +9,4 @@ process.env.S3_PUBLIC_DOMAIN ??= 'cdn.example.test';
 process.env.TELEGRAM_BOT_TOKEN ??= 'test-bot-token';
 process.env.TELEGRAM_CHAT_ID ??= 'test-chat-id';
 process.env.IP_HASH_SALT ??= '1234567890abcdef';
-process.env.NODE_ENV ??= 'test';
+process.env.NODE_ENV = 'test';

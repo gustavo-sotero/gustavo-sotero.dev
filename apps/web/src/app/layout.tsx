@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { JetBrains_Mono, Sora } from 'next/font/google';
+import { Suspense } from 'react';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { SITE_METADATA } from '@/lib/constants';
@@ -65,7 +66,12 @@ export default function RootLayout({
           >
             Ir para o conteúdo principal
           </a>
-          <Header />
+          {/* Header wrapped in Suspense: NavLinks uses usePathname() which is
+              a dynamic API in Cache Components mode. Suspense allows the build
+              to prerender the page shell while deferring path-dependent rendering. */}
+          <Suspense fallback={null}>
+            <Header />
+          </Suspense>
           <main id="main-content" className="flex-1">
             {children}
           </main>

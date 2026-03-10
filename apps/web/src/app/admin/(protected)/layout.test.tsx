@@ -11,6 +11,10 @@ vi.mock('next/navigation', () => ({
   redirect: redirectMock,
 }));
 
+vi.mock('next/server', () => ({
+  connection: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/lib/auth.server', () => ({
   validateAdminSession: validateAdminSessionMock,
 }));

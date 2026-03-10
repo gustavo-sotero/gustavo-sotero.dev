@@ -3,7 +3,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url(),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1),
-  NEXT_PUBLIC_S3_PUBLIC_DOMAIN: z.string().min(1),
+  NEXT_PUBLIC_S3_PUBLIC_DOMAIN: z.string().url(),
 });
 
 const parsed = envSchema.safeParse({

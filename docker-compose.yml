@@ -73,11 +73,17 @@ services:
     build:
       context: .
       dockerfile: docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+        NEXT_PUBLIC_S3_PUBLIC_DOMAIN: ${NEXT_PUBLIC_S3_PUBLIC_DOMAIN}
     container_name: portfolio_web
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3001
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
+      API_INTERNAL_URL: http://api:3000
     depends_on:
       - api
     networks:

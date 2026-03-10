@@ -50,19 +50,30 @@ function BlogPageFallback() {
   );
 }
 
-interface BlogContentProps {
+export interface BlogContentProps {
   currentPage: number;
   tag?: string;
 }
 
-async function BlogContent({ currentPage, tag }: BlogContentProps) {
-  const [postsData, tagsResult] = await Promise.all([
+export async function BlogContent({ currentPage, tag }: BlogContentProps) {
+  const [postsResult, tagsResult] = await Promise.all([
     getPublicPosts({ page: currentPage, tag }),
     getHomeTags(),
   ]);
 
-  const posts = postsData.data;
-  const meta = postsData.meta;
+  if (postsResult.state === 'degraded') {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+        <p className="text-zinc-500 font-mono text-sm">
+          {'// serviço temporariamente indisponível'}
+        </p>
+        <p className="text-zinc-600 text-sm">Tente novamente em alguns instantes.</p>
+      </div>
+    );
+  }
+
+  const posts = postsResult.data;
+  const meta = postsResult.meta;
   const tags = tagsResult.state !== 'degraded' ? tagsResult.data : [];
 
   return (

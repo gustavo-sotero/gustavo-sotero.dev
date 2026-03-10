@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockApiServerGetPaginated = vi.fn();
+const mockApiServerGet = vi.fn();
+
+class MockApiNotFoundError extends Error {
+  constructor(path: string) {
+    super(`Not found: ${path}`);
+    this.name = 'ApiNotFoundError';
+  }
+}
 
 vi.mock('next/cache', () => ({
   cacheLife: vi.fn(),
@@ -9,68 +17,87 @@ vi.mock('next/cache', () => ({
 
 vi.mock('@/lib/api.server', () => ({
   apiServerGetPaginated: (...args: unknown[]) => mockApiServerGetPaginated(...args),
-  apiServerGet: vi.fn(),
+  apiServerGet: (...args: unknown[]) => mockApiServerGet(...args),
+  ApiNotFoundError: MockApiNotFoundError,
 }));
 
-const { getPublishedProjectSlugs } = await import('./projects');
-const { getPublicProjects } = await import('./projects');
+const { getPublicProjectDetail, getPublicProjects } = await import('./projects');
 
 describe('getPublicProjects', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('returns public projects listing from API', async () => {
-    const payload = {
+  it('returns ok state when API responds with projects', async () => {
+    const meta = { page: 1, perPage: 9, total: 1, totalPages: 1 };
+    mockApiServerGetPaginated.mockResolvedValueOnce({
       success: true,
       data: [{ slug: 'project-1' }],
-      meta: { page: 1, perPage: 9, total: 1, totalPages: 1 },
-    };
-
-    mockApiServerGetPaginated.mockResolvedValueOnce(payload);
+      meta,
+    });
 
     const result = await getPublicProjects();
 
-    expect(result).toEqual(payload);
+    expect(result.state).toBe('ok');
+    expect((result as Extract<typeof result, { data: unknown }>).data).toEqual([
+      { slug: 'project-1' },
+    ]);
+    expect((result as Extract<typeof result, { data: unknown }>).meta).toEqual(meta);
     expect(mockApiServerGetPaginated).toHaveBeenCalledWith('/projects?perPage=9');
   });
 
-  it('propagates fetch errors instead of returning synthetic empty success', async () => {
+  it('returns empty state when API responds with no projects', async () => {
+    const meta = { page: 1, perPage: 9, total: 0, totalPages: 0 };
+    mockApiServerGetPaginated.mockResolvedValueOnce({
+      success: true,
+      data: [],
+      meta,
+    });
+
+    const result = await getPublicProjects();
+
+    expect(result.state).toBe('empty');
+    expect((result as Extract<typeof result, { data: unknown }>).data).toEqual([]);
+  });
+
+  it('returns degraded state when API is unavailable — build must not fail', async () => {
     mockApiServerGetPaginated.mockRejectedValueOnce(new Error('api unavailable'));
 
-    await expect(getPublicProjects()).rejects.toThrow('api unavailable');
+    const result = await getPublicProjects();
+
+    expect(result.state).toBe('degraded');
+    expect(result).not.toHaveProperty('data');
   });
 });
 
-describe('getPublishedProjectSlugs', () => {
+describe('getPublicProjectDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('fetches all paginated project slugs', async () => {
-    mockApiServerGetPaginated
-      .mockResolvedValueOnce({
-        success: true,
-        data: [{ slug: 'project-1' }, { slug: 'project-2' }],
-        meta: { page: 1, perPage: 100, total: 3, totalPages: 2 },
-      })
-      .mockResolvedValueOnce({
-        success: true,
-        data: [{ slug: 'project-3' }],
-        meta: { page: 2, perPage: 100, total: 3, totalPages: 2 },
-      });
+  it('returns ok state when API responds with a project', async () => {
+    const project = { slug: 'project-1', title: 'Project 1' };
+    mockApiServerGet.mockResolvedValueOnce(project);
 
-    const slugs = await getPublishedProjectSlugs();
+    const result = await getPublicProjectDetail('project-1');
 
-    expect(slugs).toEqual(['project-1', 'project-2', 'project-3']);
-    expect(mockApiServerGetPaginated).toHaveBeenCalledTimes(2);
-    expect(mockApiServerGetPaginated).toHaveBeenNthCalledWith(1, '/projects?perPage=100&page=1');
-    expect(mockApiServerGetPaginated).toHaveBeenNthCalledWith(2, '/projects?perPage=100&page=2');
+    expect(result).toEqual({ state: 'ok', data: project });
+    expect(mockApiServerGet).toHaveBeenCalledWith('/projects/project-1');
   });
 
-  it('throws when request fails', async () => {
-    mockApiServerGetPaginated.mockRejectedValueOnce(new Error('network failure'));
+  it('returns not-found when API responds with 404', async () => {
+    mockApiServerGet.mockRejectedValueOnce(new MockApiNotFoundError('/projects/missing'));
 
-    await expect(getPublishedProjectSlugs()).rejects.toThrow('network failure');
+    const result = await getPublicProjectDetail('missing');
+
+    expect(result).toEqual({ state: 'not-found' });
+  });
+
+  it('returns degraded when API is unavailable', async () => {
+    mockApiServerGet.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+    const result = await getPublicProjectDetail('project-1');
+
+    expect(result).toEqual({ state: 'degraded' });
   });
 });

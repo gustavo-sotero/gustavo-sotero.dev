@@ -1,5 +1,6 @@
 import 'server-only';
 import type { ApiResponse, PaginatedResponse } from '@portfolio/shared';
+import { resolveServerApiBaseUrl } from '@/lib/api-base-url.server';
 
 /** Thrown when the API responds with HTTP 404. */
 export class ApiNotFoundError extends Error {
@@ -7,20 +8,6 @@ export class ApiNotFoundError extends Error {
     super(`Not found: ${path}`);
     this.name = 'ApiNotFoundError';
   }
-}
-
-/**
- * Server-only transport layer for public API calls.
- * Uses API_INTERNAL_URL when available (direct container network),
- * falling back to NEXT_PUBLIC_API_URL.
- */
-function getBaseUrl(): string {
-  const internal = process.env.API_INTERNAL_URL;
-  if (internal) return internal.replace(/\/$/, '');
-
-  const pub = process.env.NEXT_PUBLIC_API_URL;
-  if (!pub) throw new Error('API_INTERNAL_URL or NEXT_PUBLIC_API_URL must be set');
-  return pub.replace(/\/$/, '');
 }
 
 async function parseResponse<T>(res: Response, path: string): Promise<T> {
@@ -44,7 +31,7 @@ async function parseResponse<T>(res: Response, path: string): Promise<T> {
  * Throws `ApiNotFoundError` on 404.
  */
 export async function apiServerGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${getBaseUrl()}${path}`;
+  const url = `${resolveServerApiBaseUrl()}${path}`;
   const res = await fetch(url, { ...init, method: 'GET' });
   const payload = await parseResponse<ApiResponse<T>>(res, path);
   return payload.data;
@@ -59,7 +46,7 @@ export async function apiServerGetPaginated<T>(
   path: string,
   init?: RequestInit
 ): Promise<PaginatedResponse<T>> {
-  const url = `${getBaseUrl()}${path}`;
+  const url = `${resolveServerApiBaseUrl()}${path}`;
   const res = await fetch(url, { ...init, method: 'GET' });
   return parseResponse<PaginatedResponse<T>>(res, path);
 }

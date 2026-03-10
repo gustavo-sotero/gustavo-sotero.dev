@@ -114,22 +114,33 @@ function SortToggle({ currentSort, tag }: SortToggleProps) {
 
 // ─── Main content ─────────────────────────────────────────────────────────────
 
-interface ProjectsContentProps {
+export interface ProjectsContentProps {
   currentPage: number;
   tag?: string;
   sort: SortMode;
 }
 
-async function ProjectsContent({ currentPage, tag, sort }: ProjectsContentProps) {
+export async function ProjectsContent({ currentPage, tag, sort }: ProjectsContentProps) {
   const featuredFirst = sort === 'relevancia';
 
-  const [projectsData, tagsResult] = await Promise.all([
+  const [projectsResult, tagsResult] = await Promise.all([
     getPublicProjects({ page: currentPage, tag, featuredFirst }),
     getHomeTags(),
   ]);
 
-  const projects = projectsData.data;
-  const meta = projectsData.meta;
+  if (projectsResult.state === 'degraded') {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+        <p className="text-zinc-500 font-mono text-sm">
+          {'// serviço temporariamente indisponível'}
+        </p>
+        <p className="text-zinc-600 text-sm">Tente novamente em alguns instantes.</p>
+      </div>
+    );
+  }
+
+  const projects = projectsResult.data;
+  const meta = projectsResult.meta;
   const tags = tagsResult.state !== 'degraded' ? tagsResult.data : [];
 
   return (
