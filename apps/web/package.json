@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "bun --bun next dev -p 3001",
+    "dev": "bun next dev -p 3001",
     "build": "NODE_ENV=production bun run --env-file ../../.env --bun next build",
     "start": "bun --bun next start",
     "test": "vitest run",
