@@ -128,6 +128,9 @@ bun run dev:web      # Web on http://localhost:3001
 | `bun run test`          | Run all workspace tests                     |
 | `bun run test:services` | Start isolated test infrastructure          |
 
+> Use `bun run test`, not `bun test`.
+> This monorepo relies on per-workspace Vitest configuration such as `jsdom`, setup files, and module aliases. Running Bun's native test runner directly produces misleading failures like `document is not defined` and unresolved `server-only` imports.
+
 > Migration convention: always generate migrations with `bun run db:generate` from the repository root.
 
 > Legacy repair step: for existing databases, run `bun run db:backfill:comments` **before** `bun run db:migrate`. The migration now fails fast when `comments.rendered_content` is still null.
