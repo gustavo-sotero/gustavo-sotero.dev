@@ -7,6 +7,7 @@ const {
   eqMock,
   existsMock,
   isNullMock,
+  lteMock,
   neMock,
   orMock,
   sqlMock,
@@ -21,6 +22,7 @@ const {
   eqMock: vi.fn((...args: unknown[]) => ({ _op: 'eq', args })),
   existsMock: vi.fn((subq: unknown) => ({ _op: 'exists', subq })),
   isNullMock: vi.fn((field: unknown) => ({ _op: 'isNull', field })),
+  lteMock: vi.fn((...args: unknown[]) => ({ _op: 'lte', args })),
   neMock: vi.fn((...args: unknown[]) => ({ _op: 'ne', args })),
   orMock: vi.fn((...args: unknown[]) => ({ _op: 'or', args })),
   sqlMock: vi.fn((strings: TemplateStringsArray, ...values: unknown[]) =>
@@ -30,7 +32,12 @@ const {
     }, '')
   ),
   tagsTable: { id: 'tags.id', category: 'tags.category', name: 'tags.name' },
-  postsTable: { id: 'posts.id', status: 'posts.status', deletedAt: 'posts.deletedAt' },
+  postsTable: {
+    id: 'posts.id',
+    status: 'posts.status',
+    deletedAt: 'posts.deletedAt',
+    publishedAt: 'posts.publishedAt',
+  },
   projectsTable: {
     id: 'projects.id',
     status: 'projects.status',
@@ -60,6 +67,7 @@ vi.mock('drizzle-orm', () => ({
   eq: eqMock,
   exists: existsMock,
   isNull: isNullMock,
+  lte: lteMock,
   ne: neMock,
   or: orMock,
   sql: sqlMock,
@@ -174,5 +182,16 @@ describe('tags repository public usage — EXISTS approach', () => {
     expect(result.meta.total).toBe(0);
     // Unlike the old approach, there is no early-return path — the query always runs
     expect(existsMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('applies publishedAt temporal guard inside the posts EXISTS subquery', async () => {
+    // This test locks the invariant that tags from future-dated scheduled posts
+    // are not exposed publicly before the post crosses its publishedAt threshold.
+    setupPublicQuery(0, []);
+
+    await findManyTags({}, true);
+
+    // lte(posts.publishedAt, sql`now()`) must be included in the posts subquery
+    expect(lteMock).toHaveBeenCalledWith(postsTable.publishedAt, expect.anything());
   });
 });

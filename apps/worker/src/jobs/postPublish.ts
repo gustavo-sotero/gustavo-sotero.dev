@@ -118,6 +118,10 @@ export async function processPostPublish(job: Job<PostPublishJobData>): Promise<
     slug: updated.slug,
   });
 
+  // Non-transactional best-effort cache invalidation. The DB commit above is
+  // the authoritative success boundary — invalidation failure does not revert
+  // the publish and must not fail the job (would trigger BullMQ retry with an
+  // already-committed state). Stale cache entries expire at their TTL.
   await Promise.all([
     invalidatePattern('posts:*'),
     invalidatePattern('tags:*'),

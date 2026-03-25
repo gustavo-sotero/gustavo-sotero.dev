@@ -161,9 +161,9 @@ describe('PostForm', () => {
     });
   });
 
-  it('renders existing tags as selectable badges', () => {
+  it('renders existing tags as native checkboxes', () => {
     render(<PostForm mode="create" />);
-    expect(screen.getByText('TypeScript')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'TypeScript' })).toBeInTheDocument();
   });
 
   // Scheduling feature tests

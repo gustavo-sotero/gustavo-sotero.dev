@@ -77,6 +77,9 @@ All admin routes are prefixed with `/admin`. Detail GETs use `:slug`; PATCH/DELE
 
 ### Local Setup
 
+The root `.env` file is the single local source of truth for `bun run dev`, `bun run db:*`, API, worker, and web commands.
+Keep local secrets in that root file and avoid duplicating them into per-app `.env` files.
+
 ```bash
 # 1. Install dependencies
 bun install
@@ -95,10 +98,19 @@ bun run db:migrate
 bun run db:seed
 ```
 
+Windows PowerShell equivalents:
+
+```powershell
+Copy-Item .env.example .env
+docker compose -f docker-compose.dev.yml up -d
+bun run db:migrate
+bun run db:seed
+```
+
 ### Development Servers
 
 ```bash
-# Start all (infra + api + worker + web)
+# Start all app processes (requires Docker infra running separately via docker-compose.dev.yml)
 bun run dev
 
 # Start individually
@@ -113,7 +125,7 @@ bun run dev:web      # Web on http://localhost:3001
 
 | Script                  | Description                                 |
 | ----------------------- | ------------------------------------------- |
-| `bun run dev`           | Start Docker services + all workspaces      |
+| `bun run dev`           | Start all app processes (api + worker + web) |
 | `bun run dev:api`       | API in watch mode                           |
 | `bun run dev:worker`    | Worker in watch mode                        |
 | `bun run dev:web`       | Next.js dev server                          |
@@ -133,7 +145,14 @@ bun run dev:web      # Web on http://localhost:3001
 
 > Migration convention: always generate migrations with `bun run db:generate` from the repository root.
 
+> Drizzle config reads `DATABASE_URL` from the current environment. The root `bun run db:*` scripts already load the same root `.env` contract used by local development.
+
 > Legacy repair step: for existing databases, run `bun run db:backfill:comments` **before** `bun run db:migrate`. The migration now fails fast when `comments.rendered_content` is still null.
+
+### Optional Local Flags
+
+- `RATE_LIMIT_LOCAL_FALLBACK=true` keeps rate limiting available in local development when Redis is temporarily unavailable by using a single-process in-memory fallback.
+- Set `RATE_LIMIT_LOCAL_FALLBACK=false` if you want Redis failure to return `503 SERVICE_UNAVAILABLE` instead of falling back locally.
 
 ### Web Env Contract (Build vs Runtime)
 

@@ -406,4 +406,36 @@ describe('public comments route', () => {
     });
     expect(insertValuesMock).toHaveBeenCalledOnce();
   });
+
+  it('returns 404 when post is scheduled with a future publishedAt (temporal guard)', async () => {
+    // The WHERE condition now includes lte(posts.publishedAt, now()), so a post
+    // whose publishedAt is in the future returns no rows, resulting in 404.
+    // We simulate this by configuring the db mock to return an empty array,
+    // which is what the database would return for a future-dated post.
+    mockSelectResult([]);
+
+    const app = new Hono();
+    app.route('/comments', commentsRouter);
+
+    const response = await app.request('/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postId: 42,
+        authorName: 'Tester',
+        authorEmail: 'tester@example.com',
+        content: 'Comentário em post futuro',
+        turnstileToken: 'token',
+      }),
+    });
+
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toEqual({
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Post not found' },
+    });
+    expect(insertValuesMock).not.toHaveBeenCalled();
+  });
 });

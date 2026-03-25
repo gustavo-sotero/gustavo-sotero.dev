@@ -4,6 +4,14 @@ import { db } from '../config/db';
 import { buildPaginationMeta, parsePagination } from '../lib/pagination';
 import type { DbOrTx } from './tags.repo';
 
+export function publicPostVisibilityClauses(postTable: typeof posts = posts): SQL[] {
+  return [
+    eq(postTable.status, 'published'),
+    isNull(postTable.deletedAt),
+    lte(postTable.publishedAt, sql`now()`),
+  ];
+}
+
 export interface PostFilters {
   status?: 'draft' | 'published' | 'scheduled';
   tag?: string;
@@ -24,11 +32,7 @@ export async function findManyPosts(filters: PostFilters, adminMode = false) {
   const conditions: SQL[] = [];
 
   if (!adminMode) {
-    conditions.push(eq(posts.status, 'published'));
-    conditions.push(isNull(posts.deletedAt));
-    // Defensive temporal guard: never expose posts whose publishedAt is in the future
-    // (e.g. an admin manually set publishedAt to a future timestamp).
-    conditions.push(lte(posts.publishedAt, sql`now()`));
+    conditions.push(...publicPostVisibilityClauses());
   } else {
     conditions.push(isNull(posts.deletedAt));
     if (filters.status) {
@@ -76,10 +80,7 @@ export async function findPostBySlug(slug: string, adminMode = false) {
   if (adminMode) {
     conditions.push(isNull(posts.deletedAt));
   } else {
-    conditions.push(isNull(posts.deletedAt));
-    conditions.push(eq(posts.status, 'published'));
-    // Defensive temporal guard: never expose posts whose publishedAt is in the future.
-    conditions.push(lte(posts.publishedAt, sql`now()`));
+    conditions.push(...publicPostVisibilityClauses());
   }
 
   const row = await db.query.posts.findFirst({

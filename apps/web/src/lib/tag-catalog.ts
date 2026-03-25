@@ -8,6 +8,7 @@
 import type { TagCategory } from '@portfolio/shared';
 import {
   ICON_CATALOG,
+  type IconCatalogEntry,
   normalizeTagName,
   resolveCatalogEntry,
 } from '@portfolio/shared/lib/iconResolver';
@@ -49,22 +50,16 @@ export const CATEGORY_COLORS: Record<TagCategoryValue, string> = {
 
 /**
  * A tag suggestion displayed in the admin create/edit form.
- * Shape is identical to `IconCatalogEntry` from the shared resolver.
+ * Structurally identical to `IconCatalogEntry` — re-exported as a named alias
+ * so admin UI code does not couple directly to the shared resolver's internals.
  */
-export interface PredefinedTagSuggestion {
-  name: string;
-  category: TagCategoryValue;
-  /** Resolved icon key — always non-empty (specific or category fallback) */
-  iconKey: string;
-  /** Alternative spellings used for search/filtering */
-  aliases?: string[];
-}
+export type PredefinedTagSuggestion = IconCatalogEntry;
 
 /**
  * The canonical tag catalog, sourced from the shared icon resolver.
  * Single source of truth — no duplication with the backend catalog.
  */
-export const TAG_CATALOG: PredefinedTagSuggestion[] = ICON_CATALOG as PredefinedTagSuggestion[];
+export const TAG_CATALOG: readonly PredefinedTagSuggestion[] = ICON_CATALOG;
 
 /**
  * Returns all predefined suggestions for the given category.
@@ -82,9 +77,9 @@ export function getSuggestionsByCategory(
  * If query is empty, returns all provided suggestions.
  */
 export function searchSuggestions(
-  suggestions: PredefinedTagSuggestion[],
+  suggestions: readonly PredefinedTagSuggestion[],
   query: string
-): PredefinedTagSuggestion[] {
+): readonly PredefinedTagSuggestion[] {
   const normalizedQuery = normalizeTagName(query);
   if (!normalizedQuery) return suggestions;
 
@@ -121,7 +116,5 @@ export function searchAllSuggestions(query: string, limit = 10): PredefinedTagSu
  * whether a tag is mapped.
  */
 export function findCatalogEntryByName(name: string): PredefinedTagSuggestion | null {
-  const entry = resolveCatalogEntry(name);
-  if (!entry) return null;
-  return entry as unknown as PredefinedTagSuggestion;
+  return resolveCatalogEntry(name);
 }

@@ -2,16 +2,12 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Experience, Tag } from '@portfolio/shared';
-import {
-  createExperienceSchema,
-  type UpdateExperienceInput,
-  updateExperienceSchema,
-} from '@portfolio/shared';
-import { Plus, Sparkles } from 'lucide-react';
+import { type CreateExperienceInput, createExperienceSchema } from '@portfolio/shared';
+import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import type { Resolver } from 'react-hook-form';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import type { z } from 'zod';
 import {
   generateSlug,
   useAdminTags,
@@ -19,7 +15,6 @@ import {
   useUpdateExperience,
 } from '@/hooks/use-admin-queries';
 import { cn } from '@/lib/utils';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -28,10 +23,28 @@ import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
 import { CreateTagDialogForm } from './CreateTagDialogForm';
+import { TagCheckboxGroup } from './TagCheckboxGroup';
 
 interface ExperienceFormProps {
   mode: 'create' | 'edit';
   experience?: Experience;
+}
+
+type ExperienceFormValues = z.input<typeof createExperienceSchema>;
+
+function toExperiencePayload(values: ExperienceFormValues): CreateExperienceInput {
+  return {
+    ...values,
+    isCurrent: values.isCurrent ?? false,
+    order: values.order ?? 0,
+    status: values.status ?? 'draft',
+    location: values.location || undefined,
+    employmentType: values.employmentType || undefined,
+    endDate: values.endDate || undefined,
+    logoUrl: values.logoUrl || undefined,
+    credentialUrl: values.credentialUrl || undefined,
+    slug: values.slug || undefined,
+  };
 }
 
 export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
@@ -46,12 +59,11 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
     register,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<UpdateExperienceInput>({
-    resolver: zodResolver(
-      mode === 'create' ? createExperienceSchema : updateExperienceSchema
-    ) as Resolver<UpdateExperienceInput>,
+  } = useForm<ExperienceFormValues>({
+    resolver: zodResolver(createExperienceSchema),
     defaultValues: {
       role: experience?.role ?? '',
       company: experience?.company ?? '',
@@ -70,21 +82,44 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
     },
   });
 
-  const role = watch('role');
+  const roleField = register('role');
+  const companyField = register('company');
+
+  function buildExperienceSlug(nextRole: string, nextCompany: string) {
+    const slugSource = [nextRole, nextCompany]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join('-');
+    return slugSource ? generateSlug(slugSource) : '';
+  }
+
+  function syncAutoSlug(nextRole: string, nextCompany: string) {
+    if (!autoSlug) {
+      return;
+    }
+
+    setValue('slug', buildExperienceSlug(nextRole, nextCompany), { shouldValidate: false });
+  }
+
+  function toggleAutoSlug() {
+    setAutoSlug((current) => {
+      const next = !current;
+
+      if (next) {
+        syncAutoSlug(getValues('role') ?? '', getValues('company') ?? '');
+      }
+
+      return next;
+    });
+  }
+
   const isCurrent = watch('isCurrent');
   const selectedTagIds = watch('tagIds') ?? [];
 
-  useEffect(() => {
-    if (autoSlug && role) {
-      const company = watch('company') ?? '';
-      setValue('slug', generateSlug(`${role}-${company}`), { shouldValidate: false });
-    }
-  }, [role, autoSlug, setValue, watch]);
-
-  function toggleTag(tag: Tag) {
+  function toggleTag(tagId: number) {
     const current = selectedTagIds ?? [];
-    const exists = current.includes(tag.id);
-    setValue('tagIds', exists ? current.filter((id) => id !== tag.id) : [...current, tag.id]);
+    const exists = current.includes(tagId);
+    setValue('tagIds', exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
   }
 
   function handleTagCreated(tag: Tag) {
@@ -95,20 +130,12 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
     setCreateTagOpen(false);
   }
 
-  async function onSubmit(data: UpdateExperienceInput) {
-    const payload = {
-      ...data,
-      location: data.location || undefined,
-      employmentType: data.employmentType || undefined,
-      endDate: data.endDate || undefined,
-      logoUrl: data.logoUrl || undefined,
-      credentialUrl: data.credentialUrl || undefined,
-      slug: data.slug || undefined,
-    };
+  async function onSubmit(values: ExperienceFormValues) {
+    const payload = toExperiencePayload(values);
 
     try {
       if (mode === 'create') {
-        await createMutation.mutateAsync(payload as never);
+        await createMutation.mutateAsync(payload);
         router.push('/admin/experience');
       } else if (experience) {
         await updateMutation.mutateAsync(payload);
@@ -130,7 +157,11 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
         </Label>
         <Input
           id="role"
-          {...register('role')}
+          {...roleField}
+          onChange={(event) => {
+            roleField.onChange(event);
+            syncAutoSlug(event.target.value, getValues('company') ?? '');
+          }}
           placeholder="Software Engineer"
           className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
@@ -144,7 +175,11 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
         </Label>
         <Input
           id="company"
-          {...register('company')}
+          {...companyField}
+          onChange={(event) => {
+            companyField.onChange(event);
+            syncAutoSlug(getValues('role') ?? '', event.target.value);
+          }}
           placeholder="Empresa Ltda"
           className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
@@ -160,7 +195,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
           {mode === 'create' && (
             <button
               type="button"
-              onClick={() => setAutoSlug((v) => !v)}
+              onClick={toggleAutoSlug}
               className={cn(
                 'text-xs flex items-center gap-1 px-2 py-0.5 rounded transition-colors',
                 autoSlug
@@ -339,39 +374,13 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
 
       {/* Tags */}
       {!tagsLoading && allTags.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-zinc-300 text-sm">Tecnologias</Label>
-            <button
-              type="button"
-              onClick={() => setCreateTagOpen(true)}
-              className="flex items-center gap-1 text-xs text-zinc-500 hover:text-emerald-400 transition-colors"
-            >
-              <Plus className="h-3 w-3" />
-              Criar tag
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {allTags.map((tag) => {
-              const selected = (selectedTagIds ?? []).includes(tag.id);
-              return (
-                <Badge
-                  key={tag.id}
-                  onClick={() => toggleTag(tag)}
-                  variant={selected ? 'default' : 'secondary'}
-                  className={cn(
-                    'cursor-pointer transition-colors text-xs px-2.5',
-                    selected
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                      : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
-                  )}
-                >
-                  {tag.name}
-                </Badge>
-              );
-            })}
-          </div>
-        </div>
+        <TagCheckboxGroup
+          label="Tecnologias"
+          tags={allTags}
+          selectedIds={selectedTagIds}
+          onToggle={toggleTag}
+          onCreateTag={() => setCreateTagOpen(true)}
+        />
       )}
 
       {/* Actions */}

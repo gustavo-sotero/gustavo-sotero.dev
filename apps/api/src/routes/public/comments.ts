@@ -1,6 +1,6 @@
 import { comments as commentsTable, posts } from '@portfolio/shared/db/schema';
 import { createCommentSchema } from '@portfolio/shared/schemas/comments';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from '../../config/db';
 import { env } from '../../config/env';
@@ -17,6 +17,7 @@ import {
   setCommentEmailCooldown,
 } from '../../middleware/rateLimit';
 import { findCommentById } from '../../repositories/comments.repo';
+import { publicPostVisibilityClauses } from '../../repositories/posts.repo';
 import type { AppEnv } from '../../types/index';
 
 const commentsRouter = new Hono<AppEnv>();
@@ -67,9 +68,7 @@ commentsRouter.post('/', commentsRateLimit, async (c) => {
   const [post] = await db
     .select({ id: posts.id, title: posts.title })
     .from(posts)
-    .where(
-      and(eq(posts.id, payload.postId), eq(posts.status, 'published'), isNull(posts.deletedAt))
-    )
+    .where(and(eq(posts.id, payload.postId), ...publicPostVisibilityClauses()))
     .limit(1);
 
   if (!post) {

@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Project, Tag } from '@portfolio/shared';
 import { type CreateProjectInput, createProjectSchema } from '@portfolio/shared';
-import { Plus, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { Resolver } from 'react-hook-form';
@@ -15,7 +15,6 @@ import {
   useUpdateProject,
 } from '@/hooks/use-admin-queries';
 import { cn } from '@/lib/utils';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -25,6 +24,7 @@ import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
 import { CreateTagDialogForm } from './CreateTagDialogForm';
 import { MarkdownEditor } from './MarkdownEditor';
+import { TagCheckboxGroup } from './TagCheckboxGroup';
 
 interface ProjectFormProps {
   mode: 'create' | 'edit';
@@ -73,10 +73,10 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
     }
   }, [title, autoSlug, setValue]);
 
-  function toggleTag(tag: Tag) {
+  function toggleTag(tagId: number) {
     const current = selectedTagIds ?? [];
-    const exists = current.includes(tag.id);
-    setValue('tagIds', exists ? current.filter((id) => id !== tag.id) : [...current, tag.id]);
+    const exists = current.includes(tagId);
+    setValue('tagIds', exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
   }
 
   function handleTagCreated(tag: Tag) {
@@ -279,39 +279,13 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
 
       {/* Tags */}
       {!tagsLoading && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-zinc-300 text-sm">Tags</Label>
-            <button
-              type="button"
-              onClick={() => setCreateTagOpen(true)}
-              className="flex items-center gap-1 text-xs text-zinc-500 hover:text-emerald-400 transition-colors"
-            >
-              <Plus className="h-3 w-3" />
-              Criar tag
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {allTags.map((tag) => {
-              const selected = (selectedTagIds ?? []).includes(tag.id);
-              return (
-                <Badge
-                  key={tag.id}
-                  onClick={() => toggleTag(tag)}
-                  variant={selected ? 'default' : 'secondary'}
-                  className={cn(
-                    'cursor-pointer transition-colors text-xs px-2.5',
-                    selected
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                      : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200'
-                  )}
-                >
-                  {tag.name}
-                </Badge>
-              );
-            })}
-          </div>
-        </div>
+        <TagCheckboxGroup
+          label="Tags"
+          tags={allTags}
+          selectedIds={selectedTagIds}
+          onToggle={toggleTag}
+          onCreateTag={() => setCreateTagOpen(true)}
+        />
       )}
 
       {/* Actions */}

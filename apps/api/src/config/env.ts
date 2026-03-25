@@ -40,6 +40,10 @@ const envSchema = z.object({
   // Security
   IP_HASH_SALT: z.string().min(16, 'IP_HASH_SALT must be at least 16 characters'),
   BODY_SIZE_LIMIT: z.coerce.number().default(1_048_576), // 1MB
+  RATE_LIMIT_LOCAL_FALLBACK: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 
   // Admin profile
   /** Display name used for admin-authored replies in the public comment thread. */

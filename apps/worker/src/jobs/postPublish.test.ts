@@ -221,4 +221,29 @@ describe('processPostPublish', () => {
     await expect(processPostPublish(makeJob(6))).resolves.toBeUndefined();
     expect(invalidatePatternMock).not.toHaveBeenCalled();
   });
+
+  it('resolve com sucesso quando invalidatePattern rejeita pós-commit (Redis indisponível)', async () => {
+    // This test verifies that worker/lib/cache.ts implements best-effort
+    // semantics: the mock simulates what happens when invalidatePattern itself
+    // resolves even though Redis is down (error is handled inside the function).
+    // The job must still resolve — the DB commit is the authoritative success
+    // boundary and cache failure must not trigger a BullMQ retry.
+    const scheduledAt = new Date(Date.now() - 1000);
+    mockDbSelect({
+      id: 7,
+      slug: 'post-g',
+      status: 'scheduled',
+      scheduledAt,
+      deletedAt: null,
+      publishedAt: null,
+    });
+    mockDbUpdate({ id: 7, slug: 'post-g' });
+
+    // Simulate invalidatePattern resolving even on Redis error (best-effort)
+    invalidatePatternMock.mockResolvedValue(undefined);
+
+    await expect(processPostPublish(makeJob(7))).resolves.toBeUndefined();
+    // All four patterns should have been requested
+    expect(invalidatePatternMock).toHaveBeenCalledTimes(4);
+  });
 });

@@ -2,6 +2,16 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExperienceForm } from './ExperienceForm';
 
+const { generateSlugMock } = vi.hoisted(() => ({
+  generateSlugMock: vi.fn((value: string) =>
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  ),
+}));
+
 const pushMock = vi.fn();
 const mutateAsyncMock = vi.fn();
 let onTagCreatedCb:
@@ -21,7 +31,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/hooks/use-admin-queries', () => ({
-  generateSlug: () => 'software-engineer-acme',
+  generateSlug: generateSlugMock,
   useAdminTags: () => ({
     data: [
       {
@@ -80,6 +90,7 @@ describe('ExperienceForm', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
     pushMock.mockReset();
+    generateSlugMock.mockClear();
     onTagCreatedCb = undefined;
   });
 
@@ -114,6 +125,39 @@ describe('ExperienceForm', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('create-tag-dialog')).not.toBeInTheDocument();
     });
+  });
+
+  it('renders tags as native checkboxes and toggles selection', () => {
+    render(<ExperienceForm mode="create" />);
+
+    const checkbox = screen.getByRole('checkbox', { name: 'TypeScript' });
+    expect(checkbox).not.toBeChecked();
+
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+  });
+
+  it('updates slug from role and company while auto slug is enabled', () => {
+    render(<ExperienceForm mode="create" />);
+
+    fireEvent.change(screen.getByLabelText(/Cargo/i), { target: { value: 'Backend Engineer' } });
+    fireEvent.change(screen.getByLabelText(/Empresa/i), { target: { value: 'Acme' } });
+
+    expect(screen.getByLabelText('Slug')).toHaveValue('backend-engineer-acme');
+    expect(generateSlugMock).toHaveBeenLastCalledWith('Backend Engineer-Acme');
+  });
+
+  it('preserves manual slug edits after auto slug is disabled', () => {
+    render(<ExperienceForm mode="create" />);
+
+    fireEvent.change(screen.getByLabelText(/Cargo/i), { target: { value: 'Backend Engineer' } });
+    fireEvent.change(screen.getByLabelText(/Empresa/i), { target: { value: 'Acme' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Auto-gerado/i }));
+    fireEvent.change(screen.getByLabelText('Slug'), { target: { value: 'slug-manual' } });
+    fireEvent.change(screen.getByLabelText(/Empresa/i), { target: { value: 'Globex' } });
+
+    expect(screen.getByLabelText('Slug')).toHaveValue('slug-manual');
   });
 
   it('blocks submit when isCurrent=false and endDate is missing', async () => {

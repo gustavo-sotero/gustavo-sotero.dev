@@ -159,8 +159,8 @@ describe('ProjectForm', () => {
     });
   });
 
-  it('renders existing tags as selectable badges', () => {
+  it('renders existing tags as native checkboxes', () => {
     render(<ProjectForm mode="create" />);
-    expect(screen.getByText('Docker')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Docker' })).toBeInTheDocument();
   });
 });

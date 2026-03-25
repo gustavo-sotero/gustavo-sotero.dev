@@ -14,6 +14,7 @@ import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import { db } from '../config/db';
 import { buildPaginationMeta, parsePagination } from '../lib/pagination';
+import { publicPostVisibilityClauses } from './posts.repo';
 
 /**
  * Database-or-transaction type — accepts both the global Drizzle `db` instance
@@ -83,9 +84,7 @@ export async function findManyTags(filters: TagFilters = {}, publicOnly = false)
           .select({ one: sql<number>`1` })
           .from(postTags)
           .innerJoin(posts, eq(postTags.postId, posts.id))
-          .where(
-            and(eq(postTags.tagId, tags.id), eq(posts.status, 'published'), isNull(posts.deletedAt))
-          )
+          .where(and(eq(postTags.tagId, tags.id), ...publicPostVisibilityClauses(posts)))
       ),
       exists(
         db

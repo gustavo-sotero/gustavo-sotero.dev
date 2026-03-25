@@ -2,17 +2,10 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { connectionMock, getHomeTagsMock, getResumeDataMock, buildResumeViewModelMock } = vi.hoisted(
-  () => ({
-    connectionMock: vi.fn().mockResolvedValue(undefined),
-    getHomeTagsMock: vi.fn(),
-    getResumeDataMock: vi.fn(),
-    buildResumeViewModelMock: vi.fn(),
-  })
-);
-
-vi.mock('next/server', () => ({
-  connection: connectionMock,
+const { getHomeTagsMock, getResumeDataMock, buildResumeViewModelMock } = vi.hoisted(() => ({
+  getHomeTagsMock: vi.fn(),
+  getResumeDataMock: vi.fn(),
+  buildResumeViewModelMock: vi.fn(),
 }));
 
 vi.mock('@/lib/data/public/home', () => ({

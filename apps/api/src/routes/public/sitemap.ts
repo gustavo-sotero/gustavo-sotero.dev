@@ -7,11 +7,12 @@
  */
 
 import { posts, projects } from '@portfolio/shared/db/schema';
-import { and, eq, isNull, lte, sql } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from '../../config/db';
 import { env } from '../../config/env';
 import { cached } from '../../lib/cache';
+import { publicPostVisibilityClauses } from '../../repositories/posts.repo';
 import type { AppEnv } from '../../types/index';
 
 const sitemapRouter = new Hono<AppEnv>();
@@ -48,14 +49,7 @@ sitemapRouter.get('/sitemap.xml', async (c) => {
       db
         .select({ slug: posts.slug, updatedAt: posts.updatedAt })
         .from(posts)
-        // Defensive temporal guard: exclude posts with a future publishedAt.
-        .where(
-          and(
-            eq(posts.status, 'published'),
-            isNull(posts.deletedAt),
-            lte(posts.publishedAt, sql`now()`)
-          )
-        ),
+        .where(and(...publicPostVisibilityClauses())),
       db
         .select({ slug: projects.slug, updatedAt: projects.updatedAt })
         .from(projects)

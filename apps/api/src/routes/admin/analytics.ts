@@ -7,7 +7,7 @@
  */
 
 import { comments, posts, projects } from '@portfolio/shared/db/schema';
-import { count as drizzleCount, eq } from 'drizzle-orm';
+import { and, count as drizzleCount, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../config/db';
@@ -91,12 +91,14 @@ adminAnalyticsRouter.get('/summary', async (c) => {
         db
           .select({ total: drizzleCount() })
           .from(posts)
-          .where(eq(posts.status, 'published'))
+          // Exclude soft-deleted posts so the dashboard reflects the actual
+          // lifecycle state of content (matches what public visitors see).
+          .where(and(eq(posts.status, 'published'), isNull(posts.deletedAt)))
           .then(([r]) => r?.total ?? 0),
         db
           .select({ total: drizzleCount() })
           .from(projects)
-          .where(eq(projects.status, 'published'))
+          .where(and(eq(projects.status, 'published'), isNull(projects.deletedAt)))
           .then(([r]) => r?.total ?? 0),
         db
           .select({ total: drizzleCount() })

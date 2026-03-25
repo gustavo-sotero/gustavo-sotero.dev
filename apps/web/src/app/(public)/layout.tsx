@@ -5,8 +5,8 @@ import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { SITE_METADATA } from '@/lib/constants';
 import { env } from '@/lib/env';
-import './globals.css';
-import { Providers } from './providers';
+import '../globals.css';
+import { Providers } from '../providers';
 
 const sora = Sora({
   variable: '--font-sora',
@@ -48,13 +48,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default function PublicLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="dark" suppressHydrationWarning={true} data-lt-installed="true">
+    // suppressHydrationWarning is required because next-themes injects the
+    // resolved theme class ('dark'/'light') on the server via defaultTheme="dark".
+    // The brief mismatch before hydration is intentional and safe for this attribute.
+    <html lang="pt-BR" className="dark" suppressHydrationWarning>
       <body
         className={`${sora.variable} ${jetbrainsMono.variable} font-sans antialiased flex flex-col min-h-screen`}
       >

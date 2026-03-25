@@ -2,16 +2,12 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Education } from '@portfolio/shared';
-import {
-  createEducationSchema,
-  type UpdateEducationInput,
-  updateEducationSchema,
-} from '@portfolio/shared';
+import { type CreateEducationInput, createEducationSchema } from '@portfolio/shared';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import type { Resolver } from 'react-hook-form';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import type { z } from 'zod';
 import { generateSlug, useCreateEducation, useUpdateEducation } from '@/hooks/use-admin-queries';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
@@ -27,6 +23,26 @@ interface EducationFormProps {
   education?: Education;
 }
 
+type EducationFormValues = z.input<typeof createEducationSchema>;
+
+function toEducationPayload(values: EducationFormValues): CreateEducationInput {
+  return {
+    ...values,
+    isCurrent: values.isCurrent ?? false,
+    order: values.order ?? 0,
+    status: values.status ?? 'draft',
+    location: values.location || undefined,
+    educationType: values.educationType || undefined,
+    description: values.description || undefined,
+    startDate: values.startDate || undefined,
+    endDate: values.endDate || undefined,
+    credentialId: values.credentialId || undefined,
+    credentialUrl: values.credentialUrl || undefined,
+    logoUrl: values.logoUrl || undefined,
+    slug: values.slug || undefined,
+  };
+}
+
 export function EducationForm({ mode, education }: EducationFormProps) {
   const router = useRouter();
   const createMutation = useCreateEducation();
@@ -37,12 +53,11 @@ export function EducationForm({ mode, education }: EducationFormProps) {
     register,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<UpdateEducationInput>({
-    resolver: zodResolver(
-      mode === 'create' ? createEducationSchema : updateEducationSchema
-    ) as Resolver<UpdateEducationInput>,
+  } = useForm<EducationFormValues>({
+    resolver: zodResolver(createEducationSchema),
     defaultValues: {
       title: education?.title ?? '',
       institution: education?.institution ?? '',
@@ -62,33 +77,45 @@ export function EducationForm({ mode, education }: EducationFormProps) {
     },
   });
 
-  const title = watch('title');
+  const titleField = register('title');
+  const institutionField = register('institution');
+
+  function buildEducationSlug(nextTitle: string, nextInstitution: string) {
+    const slugSource = [nextTitle, nextInstitution]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join('-');
+    return slugSource ? generateSlug(slugSource) : '';
+  }
+
+  function syncAutoSlug(nextTitle: string, nextInstitution: string) {
+    if (!autoSlug) {
+      return;
+    }
+
+    setValue('slug', buildEducationSlug(nextTitle, nextInstitution), { shouldValidate: false });
+  }
+
+  function toggleAutoSlug() {
+    setAutoSlug((current) => {
+      const next = !current;
+
+      if (next) {
+        syncAutoSlug(getValues('title') ?? '', getValues('institution') ?? '');
+      }
+
+      return next;
+    });
+  }
+
   const isCurrent = watch('isCurrent');
 
-  useEffect(() => {
-    if (autoSlug && title) {
-      const institution = watch('institution') ?? '';
-      setValue('slug', generateSlug(`${title}-${institution}`), { shouldValidate: false });
-    }
-  }, [title, autoSlug, setValue, watch]);
-
-  async function onSubmit(data: UpdateEducationInput) {
-    const payload = {
-      ...data,
-      location: data.location || undefined,
-      educationType: data.educationType || undefined,
-      description: data.description || undefined,
-      startDate: data.startDate || undefined,
-      endDate: data.endDate || undefined,
-      credentialId: data.credentialId || undefined,
-      credentialUrl: data.credentialUrl || undefined,
-      logoUrl: data.logoUrl || undefined,
-      slug: data.slug || undefined,
-    };
+  async function onSubmit(values: EducationFormValues) {
+    const payload = toEducationPayload(values);
 
     try {
       if (mode === 'create') {
-        await createMutation.mutateAsync(payload as never);
+        await createMutation.mutateAsync(payload);
         router.push('/admin/education');
       } else if (education) {
         await updateMutation.mutateAsync(payload);
@@ -110,7 +137,11 @@ export function EducationForm({ mode, education }: EducationFormProps) {
         </Label>
         <Input
           id="title"
-          {...register('title')}
+          {...titleField}
+          onChange={(event) => {
+            titleField.onChange(event);
+            syncAutoSlug(event.target.value, getValues('institution') ?? '');
+          }}
           placeholder="Ciência da Computação"
           className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
@@ -124,7 +155,11 @@ export function EducationForm({ mode, education }: EducationFormProps) {
         </Label>
         <Input
           id="institution"
-          {...register('institution')}
+          {...institutionField}
+          onChange={(event) => {
+            institutionField.onChange(event);
+            syncAutoSlug(getValues('title') ?? '', event.target.value);
+          }}
           placeholder="Universidade XYZ"
           className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
@@ -142,7 +177,7 @@ export function EducationForm({ mode, education }: EducationFormProps) {
           {mode === 'create' && (
             <button
               type="button"
-              onClick={() => setAutoSlug((v) => !v)}
+              onClick={toggleAutoSlug}
               className={cn(
                 'text-xs flex items-center gap-1 px-2 py-0.5 rounded transition-colors',
                 autoSlug

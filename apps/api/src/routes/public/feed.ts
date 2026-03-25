@@ -7,11 +7,12 @@
  */
 
 import { posts } from '@portfolio/shared/db/schema';
-import { and, desc, eq, isNull, lte, sql } from 'drizzle-orm';
+import { and, desc } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from '../../config/db';
 import { env } from '../../config/env';
 import { cached } from '../../lib/cache';
+import { publicPostVisibilityClauses } from '../../repositories/posts.repo';
 import type { AppEnv } from '../../types/index';
 
 const feedRouter = new Hono<AppEnv>();
@@ -53,15 +54,7 @@ feedRouter.get('/feed.xml', async (c) => {
         updatedAt: posts.updatedAt,
       })
       .from(posts)
-      // Defensive temporal guard: never serve posts with a future publishedAt
-      // (e.g. an admin manually set publishedAt ahead of time).
-      .where(
-        and(
-          eq(posts.status, 'published'),
-          isNull(posts.deletedAt),
-          lte(posts.publishedAt, sql`now()`)
-        )
-      )
+      .where(and(...publicPostVisibilityClauses()))
       .orderBy(desc(posts.publishedAt))
       .limit(FEED_MAX_ITEMS);
 

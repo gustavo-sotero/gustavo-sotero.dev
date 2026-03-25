@@ -1,4 +1,3 @@
-import { connection } from 'next/server';
 import { SectionUnavailable } from '@/components/shared/SectionUnavailable';
 import { getHomeTags } from '@/lib/data/public/home';
 import { getResumeData } from '@/lib/data/public/resume';
@@ -12,7 +11,6 @@ import { HeroSection } from '../HeroSection';
  * Falls back to empty tags (Hero shows FALLBACK_STACK) if the API is unavailable.
  */
 export async function HeroSectionWrapper() {
-  await connection();
   const [tagsResult, resumeResult] = await Promise.all([getHomeTags(), getResumeData()]);
   const tags = tagsResult.state !== 'degraded' ? tagsResult.data : [];
   const resume = buildResumeViewModel({ ...resumeResult.data, now: new Date() });

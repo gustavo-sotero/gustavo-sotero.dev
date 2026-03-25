@@ -1,4 +1,5 @@
 import type { Context, MiddlewareHandler, Next } from 'hono';
+import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { redis } from '../config/redis';
 import { sha256 } from '../lib/hash';
@@ -34,7 +35,7 @@ const localFallbackStore = new Map<string, LocalBucket>();
 let localFallbackActive = false;
 
 function isLocalFallbackEnabled(): boolean {
-  return process.env.RATE_LIMIT_LOCAL_FALLBACK !== 'false';
+  return env.RATE_LIMIT_LOCAL_FALLBACK;
 }
 
 function pruneLocalStore(): void {
