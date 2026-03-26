@@ -19,6 +19,16 @@ RUN bun install --frozen-lockfile
 FROM oven/bun:slim AS runtime
 WORKDIR /app
 
+# Preserve the Bun workspace manifest/lockfile context used to materialize
+# dependencies inside node_modules/.bun during the install stage.
+COPY package.json bun.lock ./
+
+# Copy workspace manifests required for workspace package resolution.
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/shared/package.json ./packages/shared/
+
 # Copy installed node_modules
 COPY --from=deps /app/node_modules ./node_modules
 
