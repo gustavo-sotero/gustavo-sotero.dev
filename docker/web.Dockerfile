@@ -26,6 +26,10 @@ RUN bun install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
+# Keep the public directory materialized in the image even when the repo
+# has no checked-in public assets yet.
+RUN mkdir -p /app/apps/web/public
+
 ENV NODE_ENV=production
 RUN cd apps/web && bun run build
 

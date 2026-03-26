@@ -4,7 +4,8 @@ WORKDIR /app
 
 # Install libvips and build tools needed by sharp
 USER root
-RUN apt-get update && apt-get install -y \
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
   libvips-dev \
   build-essential \
   python3 \
@@ -29,7 +30,8 @@ WORKDIR /app
 
 # Install libvips runtime dependency for sharp
 USER root
-RUN apt-get update && apt-get install -y libvips && rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends libvips && rm -rf /var/lib/apt/lists/*
 
 # Copy installed node_modules
 COPY --from=deps /app/node_modules ./node_modules
