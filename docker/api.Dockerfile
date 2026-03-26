@@ -40,6 +40,7 @@ COPY drizzle ./drizzle
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
+ENV HOSTNAME=0.0.0.0
 EXPOSE 3000
 
 CMD ["bun", "run", "apps/api/src/index.ts"]
