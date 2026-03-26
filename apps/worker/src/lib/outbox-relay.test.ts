@@ -9,12 +9,18 @@ const {
   dbUpdateSetWhereMock,
   imageQueueAddMock,
   postPublishQueueAddMock,
+  loggerInfoMock,
+  loggerWarnMock,
+  loggerErrorMock,
 } = vi.hoisted(() => ({
   dbSelectMock: vi.fn(),
   dbUpdateSetMock: vi.fn(),
   dbUpdateSetWhereMock: vi.fn(),
   imageQueueAddMock: vi.fn(),
   postPublishQueueAddMock: vi.fn(),
+  loggerInfoMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
 }));
 
 vi.mock('../config/db', () => ({
@@ -28,10 +34,10 @@ vi.mock('../config/db', () => ({
 
 vi.mock('../config/logger', () => ({
   getLogger: () => ({
-    info: vi.fn(),
+    info: loggerInfoMock,
     debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
+    warn: loggerWarnMock,
+    error: loggerErrorMock,
   }),
 }));
 
@@ -84,11 +90,16 @@ function makeQueues() {
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-import { OUTBOX_MAX_ATTEMPTS, processOutboxEvents } from './outbox-relay';
+import {
+  OUTBOX_MAX_ATTEMPTS,
+  processOutboxEvents,
+  resetOutboxRelayStateForTests,
+} from './outbox-relay';
 
 describe('processOutboxEvents', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetOutboxRelayStateForTests();
 
     // Default: select returns empty list
     dbSelectMock.mockReturnValue({
@@ -233,6 +244,70 @@ describe('processOutboxEvents', () => {
     // Must not throw — relay logs and returns gracefully
     await expect(processOutboxEvents(imageQueue, postPublishQueue)).resolves.toBeUndefined();
     expect(imageQueueAddMock).not.toHaveBeenCalled();
+  });
+
+  it('warns once and suppresses repeated logs while outbox schema is unavailable', async () => {
+    const missingOutboxError = Object.assign(new Error('relation "outbox" does not exist'), {
+      code: '42P01',
+    });
+
+    dbSelectMock.mockReturnValue({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn().mockRejectedValue(missingOutboxError),
+          })),
+        })),
+      })),
+    });
+
+    const { imageQueue, postPublishQueue } = makeQueues();
+
+    await processOutboxEvents(imageQueue, postPublishQueue);
+    await processOutboxEvents(imageQueue, postPublishQueue);
+
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1);
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      'Outbox relay: outbox schema unavailable; waiting for migrations to complete',
+      expect.objectContaining({ error: 'relation "outbox" does not exist' })
+    );
+    expect(loggerErrorMock).not.toHaveBeenCalled();
+  });
+
+  it('logs relay recovery once the outbox schema becomes available again', async () => {
+    const missingOutboxError = Object.assign(new Error('relation "outbox" does not exist'), {
+      code: '42P01',
+    });
+
+    dbSelectMock
+      .mockReturnValueOnce({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            orderBy: vi.fn(() => ({
+              limit: vi.fn().mockRejectedValue(missingOutboxError),
+            })),
+          })),
+        })),
+      })
+      .mockReturnValueOnce({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            orderBy: vi.fn(() => ({
+              limit: vi.fn().mockResolvedValue([]),
+            })),
+          })),
+        })),
+      });
+
+    const { imageQueue, postPublishQueue } = makeQueues();
+
+    await processOutboxEvents(imageQueue, postPublishQueue);
+    await processOutboxEvents(imageQueue, postPublishQueue);
+
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1);
+    expect(loggerInfoMock).toHaveBeenCalledWith(
+      'Outbox relay: outbox schema detected; resuming relay processing'
+    );
   });
 
   it('does nothing when there are no pending events', async () => {

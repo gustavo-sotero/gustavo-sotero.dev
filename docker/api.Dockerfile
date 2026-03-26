@@ -36,6 +36,7 @@ COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_module
 
 # Copy source files (TS run directly — no bundle)
 COPY tsconfig.base.json ./
+COPY drizzle ./drizzle
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 

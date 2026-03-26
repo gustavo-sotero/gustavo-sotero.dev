@@ -14,8 +14,29 @@ import { db } from '../config/db';
 import { getLogger } from '../config/logger';
 
 const logger = getLogger('lib', 'outbox-relay');
+let outboxSchemaMissing = false;
 
 export const OUTBOX_MAX_ATTEMPTS = 5;
+
+function isMissingOutboxSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const candidate = error as { code?: string; message?: string };
+
+  if (candidate.code === '42P01' || candidate.code === '42704') {
+    return true;
+  }
+
+  return /(?:relation|table|type)\s+['"]?(?:public\.)?(?:outbox|outbox_status)['"]?\s+does not exist/i.test(
+    candidate.message ?? ''
+  );
+}
+
+export function resetOutboxRelayStateForTests(): void {
+  outboxSchemaMissing = false;
+}
 
 export async function processOutboxEvents(
   imageQueue: Queue,
@@ -31,10 +52,26 @@ export async function processOutboxEvents(
       .orderBy(asc(outbox.createdAt))
       .limit(20);
   } catch (err) {
+    if (isMissingOutboxSchemaError(err)) {
+      if (!outboxSchemaMissing) {
+        outboxSchemaMissing = true;
+        logger.warn('Outbox relay: outbox schema unavailable; waiting for migrations to complete', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+
+      return;
+    }
+
     logger.error('Outbox relay: failed to query pending events', {
       error: err instanceof Error ? err.message : String(err),
     });
     return;
+  }
+
+  if (outboxSchemaMissing) {
+    outboxSchemaMissing = false;
+    logger.info('Outbox relay: outbox schema detected; resuming relay processing');
   }
 
   for (const event of events) {

@@ -36,6 +36,8 @@ services:
       context: .
       dockerfile: docker/worker.Dockerfile
     restart: unless-stopped
+    depends_on:
+      - api
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
