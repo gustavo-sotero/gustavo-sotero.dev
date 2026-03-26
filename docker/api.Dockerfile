@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM oven/bun:1 AS deps
+FROM oven/bun:slim AS deps
 WORKDIR /app
 
 # Copy root workspace files
@@ -16,7 +16,7 @@ COPY packages/shared/package.json ./packages/shared/
 RUN bun install --frozen-lockfile
 
 # Stage 2: Runtime
-FROM oven/bun:1-slim AS runtime
+FROM oven/bun:slim AS runtime
 WORKDIR /app
 
 # Copy installed node_modules

@@ -1,0 +1,14 @@
+.git
+.github
+.next
+.turbo
+node_modules
+apps/*/node_modules
+apps/*/.next
+apps/*/logs
+dist
+coverage
+*.log
+*.tsbuildinfo
+.tmp-*
+Dockerfile*

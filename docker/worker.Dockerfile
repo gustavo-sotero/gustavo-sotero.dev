@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies (with native build tools for sharp)
-FROM oven/bun:1 AS deps
+FROM oven/bun:slim AS deps
 WORKDIR /app
 
 # Install libvips and build tools needed by sharp
@@ -24,7 +24,7 @@ COPY packages/shared/package.json ./packages/shared/
 RUN bun install --frozen-lockfile
 
 # Stage 2: Runtime
-FROM oven/bun:1 AS runtime
+FROM oven/bun:slim AS runtime
 WORKDIR /app
 
 # Install libvips runtime dependency for sharp
