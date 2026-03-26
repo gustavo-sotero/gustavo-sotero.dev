@@ -31,6 +31,8 @@ COPY packages/shared/package.json ./packages/shared/
 
 # Copy installed node_modules
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 # Copy source files (TS run directly — no bundle)
 COPY tsconfig.base.json ./
