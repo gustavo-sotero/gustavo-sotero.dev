@@ -26,6 +26,7 @@ import type { Context } from 'hono';
 import type { ZodError, ZodSchema } from 'zod';
 import type { AppEnv } from '../types/index';
 import type { BodyParseResult } from './requestBody';
+import { parseBodyResult } from './requestBody';
 import { errorResponse } from './response';
 
 // ── Zod issue mapping ─────────────────────────────────────────────────────────
@@ -150,4 +151,25 @@ export function validateOptionalBody<T>(
       mapZodIssues(parsed.error)
     ),
   };
+}
+
+// ── Combined parse + validate ─────────────────────────────────────────────────
+
+/**
+ * Parses the request body and validates it against a Zod schema in one step.
+ * Equivalent to calling `parseBodyResult(c)` then `validateBody(c, schema, result)`.
+ *
+ * @example
+ * ```ts
+ * const bv = await parseAndValidateBody(c, myBodySchema);
+ * if (!bv.ok) return bv.response;
+ * // bv.data is typed as z.infer<typeof myBodySchema>
+ * ```
+ */
+export async function parseAndValidateBody<T>(
+  c: Context<AppEnv>,
+  schema: ZodSchema<T>
+): Promise<ValidationResult<T>> {
+  const bodyResult = await parseBodyResult(c);
+  return validateBody(c, schema, bodyResult);
 }

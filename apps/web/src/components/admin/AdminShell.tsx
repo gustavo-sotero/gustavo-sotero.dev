@@ -18,7 +18,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useLogout } from '@/hooks/use-admin-queries';
+import { useLogout } from '@/hooks/admin/use-admin-auth';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';

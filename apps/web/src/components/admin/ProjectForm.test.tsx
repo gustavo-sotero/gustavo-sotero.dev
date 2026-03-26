@@ -28,30 +28,28 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-admin-queries', () => ({
-  generateSlug: () => 'projeto-de-teste',
+vi.mock('@portfolio/shared', async () => {
+  const actual = await vi.importActual<typeof import('@portfolio/shared')>('@portfolio/shared');
+  return {
+    ...actual,
+    generateSlug: () => 'projeto-de-teste',
+  };
+});
+
+vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useAdminTags: () => ({
     data: [{ id: 1, name: 'Docker', slug: 'docker', category: 'tool', iconKey: 'si:SiDocker' }],
     isLoading: false,
   }),
+}));
+
+vi.mock('@/hooks/admin/use-admin-projects', () => ({
   useCreateProject: () => ({
     mutateAsync: mutateAsyncMock,
     isPending: false,
   }),
   useUpdateProject: () => ({
     mutateAsync: mutateAsyncMock,
-    isPending: false,
-  }),
-  useCreateTag: () => ({
-    mutateAsync: vi.fn().mockResolvedValue({
-      data: {
-        id: 88,
-        name: 'Kubernetes',
-        slug: 'kubernetes',
-        category: 'infra',
-        iconKey: 'si:SiKubernetes',
-      },
-    }),
     isPending: false,
   }),
 }));

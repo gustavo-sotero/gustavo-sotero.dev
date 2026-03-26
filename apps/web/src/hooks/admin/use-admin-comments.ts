@@ -1,7 +1,7 @@
 'use client';
 
 import type { AdminComment, CommentStatus, PaginatedResponse } from '@portfolio/shared';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryKey, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiFetch, apiGetPaginated, apiPatch, apiPost } from '@/lib/api';
 import { adminKeys } from './query-keys';
@@ -12,6 +12,86 @@ interface CommentsQueryParams {
   status?: CommentStatus;
   deleted?: boolean;
   postId?: number;
+}
+
+type CommentsSnapshot = Array<[QueryKey, PaginatedResponse<AdminComment> | undefined]>;
+
+async function snapshotComments(qc: ReturnType<typeof useQueryClient>) {
+  await qc.cancelQueries({ queryKey: ['admin', 'comments'] });
+  return qc.getQueriesData<PaginatedResponse<AdminComment>>({
+    queryKey: ['admin', 'comments'],
+  });
+}
+
+function restoreComments(
+  qc: ReturnType<typeof useQueryClient>,
+  snapshots: CommentsSnapshot | undefined
+) {
+  if (!snapshots) return;
+  for (const [key, data] of snapshots) {
+    qc.setQueryData(key, data);
+  }
+}
+
+function updateComments(
+  qc: ReturnType<typeof useQueryClient>,
+  updater: (comment: AdminComment) => AdminComment | null
+) {
+  const snapshots = qc.getQueriesData<PaginatedResponse<AdminComment>>({
+    queryKey: ['admin', 'comments'],
+  });
+
+  for (const [key, data] of snapshots) {
+    if (!data) continue;
+
+    const nextComments = data.data
+      .map(updater)
+      .filter((comment): comment is AdminComment => comment !== null);
+
+    qc.setQueryData<PaginatedResponse<AdminComment>>(key, {
+      ...data,
+      data: nextComments,
+      meta: {
+        ...data.meta,
+        total:
+          nextComments.length <= data.data.length
+            ? data.meta.total - (data.data.length - nextComments.length)
+            : data.meta.total,
+      },
+    });
+  }
+
+  return snapshots;
+}
+
+function useCommentStatusMutation(options: {
+  mutationFn: (id: string) => Promise<unknown>;
+  nextStatus: CommentStatus;
+  successMessage: string;
+  errorMessage: string;
+}) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: options.mutationFn,
+    onMutate: async (id: string) => {
+      const snapshots = await snapshotComments(qc);
+      updateComments(qc, (comment) =>
+        comment.id === id ? { ...comment, status: options.nextStatus } : comment
+      );
+      return { snapshots };
+    },
+    onError: (_err, _id, context) => {
+      restoreComments(qc, context?.snapshots);
+      toast.error(options.errorMessage);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'comments'] });
+    },
+    onSuccess: () => {
+      toast.success(options.successMessage);
+    },
+  });
 }
 
 export function useAdminComments(params: CommentsQueryParams = {}) {
@@ -35,31 +115,15 @@ export function useAdminComments(params: CommentsQueryParams = {}) {
 export function useAdminUpdateCommentStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: CommentStatus; reason?: string }) =>
-      apiPatch<AdminComment>(`/admin/comments/${id}/status`, {
-        status,
-        reason: undefined,
-      }),
+    mutationFn: ({ id, status }: { id: string; status: CommentStatus }) =>
+      apiPatch<AdminComment>(`/admin/comments/${id}/status`, { status }),
     onMutate: async ({ id, status }) => {
-      await qc.cancelQueries({ queryKey: ['admin', 'comments'] });
-      const snapshots = qc.getQueriesData<PaginatedResponse<AdminComment>>({
-        queryKey: ['admin', 'comments'],
-      });
-      for (const [key, data] of snapshots) {
-        if (!data) continue;
-        qc.setQueryData<PaginatedResponse<AdminComment>>(key, {
-          ...data,
-          data: data?.data.map((c) => (c.id === id ? { ...c, status } : c)),
-        });
-      }
+      const snapshots = await snapshotComments(qc);
+      updateComments(qc, (comment) => (comment.id === id ? { ...comment, status } : comment));
       return { snapshots };
     },
     onError: (_err, _vars, context) => {
-      if (context?.snapshots) {
-        for (const [key, data] of context.snapshots) {
-          qc.setQueryData(key, data);
-        }
-      }
+      restoreComments(qc, context?.snapshots);
       toast.error('Erro ao atualizar status do comentário.');
     },
     onSettled: () => {
@@ -78,73 +142,21 @@ export function useAdminUpdateCommentStatus() {
 
 /** Convenience alias for approving a comment (legacy path still works too). */
 export function useApproveComment() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiPost<void>(`/admin/comments/${id}/approve`, {}),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: ['admin', 'comments'] });
-      const snapshots = qc.getQueriesData<PaginatedResponse<AdminComment>>({
-        queryKey: ['admin', 'comments'],
-      });
-      for (const [key, data] of snapshots) {
-        if (!data) continue;
-        qc.setQueryData<PaginatedResponse<AdminComment>>(key, {
-          ...data,
-          data: data?.data.map((c) => (c.id === id ? { ...c, status: 'approved' as const } : c)),
-        });
-      }
-      return { snapshots };
-    },
-    onError: (_err, _id, context) => {
-      if (context?.snapshots) {
-        for (const [key, data] of context.snapshots) {
-          qc.setQueryData(key, data);
-        }
-      }
-      toast.error('Erro ao aprovar comentário.');
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'comments'] });
-    },
-    onSuccess: () => {
-      toast.success('Comentário aprovado.');
-    },
+  return useCommentStatusMutation({
+    mutationFn: (id) => apiPost<void>(`/admin/comments/${id}/approve`, {}),
+    nextStatus: 'approved',
+    successMessage: 'Comentário aprovado.',
+    errorMessage: 'Erro ao aprovar comentário.',
   });
 }
 
 /** Convenience alias for rejecting a comment (legacy path still works too). */
 export function useRejectComment() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiPost<void>(`/admin/comments/${id}/reject`, {}),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: ['admin', 'comments'] });
-      const snapshots = qc.getQueriesData<PaginatedResponse<AdminComment>>({
-        queryKey: ['admin', 'comments'],
-      });
-      for (const [key, data] of snapshots) {
-        if (!data) continue;
-        qc.setQueryData<PaginatedResponse<AdminComment>>(key, {
-          ...data,
-          data: data?.data.map((c) => (c.id === id ? { ...c, status: 'rejected' as const } : c)),
-        });
-      }
-      return { snapshots };
-    },
-    onError: (_err, _id, context) => {
-      if (context?.snapshots) {
-        for (const [key, data] of context.snapshots) {
-          qc.setQueryData(key, data);
-        }
-      }
-      toast.error('Erro ao rejeitar comentário.');
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'comments'] });
-    },
-    onSuccess: () => {
-      toast.success('Comentário rejeitado.');
-    },
+  return useCommentStatusMutation({
+    mutationFn: (id) => apiPost<void>(`/admin/comments/${id}/reject`, {}),
+    nextStatus: 'rejected',
+    successMessage: 'Comentário rejeitado.',
+    errorMessage: 'Erro ao rejeitar comentário.',
   });
 }
 
@@ -186,26 +198,12 @@ export function useAdminDeleteComment() {
         body: reason ? JSON.stringify({ reason }) : undefined,
       }),
     onMutate: async ({ id }) => {
-      await qc.cancelQueries({ queryKey: ['admin', 'comments'] });
-      const snapshots = qc.getQueriesData<PaginatedResponse<AdminComment>>({
-        queryKey: ['admin', 'comments'],
-      });
-      for (const [key, data] of snapshots) {
-        if (!data) continue;
-        qc.setQueryData<PaginatedResponse<AdminComment>>(key, {
-          ...data,
-          data: data?.data.filter((c) => c.id !== id),
-          meta: { ...data.meta, total: Math.max(0, data.meta.total - 1) },
-        });
-      }
+      const snapshots = await snapshotComments(qc);
+      updateComments(qc, (comment) => (comment.id === id ? null : comment));
       return { snapshots };
     },
     onError: (_err, _vars, context) => {
-      if (context?.snapshots) {
-        for (const [key, data] of context.snapshots) {
-          qc.setQueryData(key, data);
-        }
-      }
+      restoreComments(qc, context?.snapshots);
       toast.error('Erro ao excluir comentário.');
     },
     onSettled: () => {

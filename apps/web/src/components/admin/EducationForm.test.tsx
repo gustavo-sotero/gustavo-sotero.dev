@@ -21,8 +21,15 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-admin-queries', () => ({
-  generateSlug: generateSlugMock,
+vi.mock('@portfolio/shared', async () => {
+  const actual = await vi.importActual<typeof import('@portfolio/shared')>('@portfolio/shared');
+  return {
+    ...actual,
+    generateSlug: generateSlugMock,
+  };
+});
+
+vi.mock('@/hooks/admin/use-admin-education', () => ({
   useCreateEducation: () => ({
     mutateAsync: mutateAsyncMock,
     isPending: false,

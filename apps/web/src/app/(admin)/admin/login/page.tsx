@@ -3,7 +3,7 @@
 import { Github, Loader2, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useStartGithubOAuth } from '@/hooks/use-admin-queries';
+import { useStartGithubOAuth } from '@/hooks/admin/use-admin-auth';
 
 export default function AdminLoginPage() {
   const [error, setError] = useState<string | null>(null);

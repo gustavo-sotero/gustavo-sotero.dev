@@ -18,9 +18,8 @@ import {
   updatePostSchema,
 } from '@portfolio/shared/schemas/posts';
 import { Hono } from 'hono';
-import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
-import { validateBody, validateQuery } from '../../lib/validate';
+import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
   createPostService,
   getPostBySlug,
@@ -54,8 +53,7 @@ adminPostsRouter.get('/', async (c) => {
  * Create a new post. Returns 201 with the created resource.
  */
 adminPostsRouter.post('/', async (c) => {
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, createPostSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, createPostSchema);
   if (!bv.ok) return bv.response;
 
   try {
@@ -95,8 +93,7 @@ adminPostsRouter.patch('/:id', async (c) => {
     return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid post ID');
   }
 
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, updatePostSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, updatePostSchema);
   if (!bv.ok) return bv.response;
 
   try {

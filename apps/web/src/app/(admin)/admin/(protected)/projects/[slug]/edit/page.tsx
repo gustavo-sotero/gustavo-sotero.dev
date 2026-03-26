@@ -6,7 +6,7 @@ import { use } from 'react';
 import { ProjectForm } from '@/components/admin/ProjectForm';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminProject } from '@/hooks/use-admin-queries';
+import { useAdminProject } from '@/hooks/admin/use-admin-projects';
 
 interface Props {
   params: Promise<{ slug: string }>;

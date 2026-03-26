@@ -15,9 +15,8 @@ import {
   updateEducationSchema,
 } from '@portfolio/shared/schemas/education';
 import { Hono } from 'hono';
-import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
-import { validateBody, validateQuery } from '../../lib/validate';
+import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
   createEducationService,
   getEducationBySlug,
@@ -50,8 +49,7 @@ adminEducationRouter.get('/', async (c) => {
  * Create a new education entry. Returns 201 with the created resource.
  */
 adminEducationRouter.post('/', async (c) => {
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, createEducationSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, createEducationSchema);
   if (!bv.ok) return bv.response;
 
   try {
@@ -94,8 +92,7 @@ adminEducationRouter.patch('/:id', async (c) => {
     return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid education ID');
   }
 
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, updateEducationSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, updateEducationSchema);
   if (!bv.ok) return bv.response;
 
   try {

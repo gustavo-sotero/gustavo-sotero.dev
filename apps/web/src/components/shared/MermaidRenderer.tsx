@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { logClientError } from '@/lib/client-logger';
 
 interface MermaidRendererProps {
@@ -25,11 +25,17 @@ async function loadMermaid() {
  *
  * Backend generates <div class="mermaid" data-content="<base64>"> placeholders;
  * this component decodes them and calls mermaid.run() client-side.
+ *
+ * On load or render failure, a visible fallback notice is shown below the content
+ * so the reader knows diagrams could not be rendered rather than seeing silent gaps.
  */
 export function MermaidRenderer({ html }: MermaidRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [renderError, setRenderError] = useState(false);
 
   useEffect(() => {
+    setRenderError(false);
+
     if (!html.trim()) return;
 
     const container = containerRef.current;
@@ -70,17 +76,21 @@ export function MermaidRenderer({ html }: MermaidRendererProps) {
         });
 
         mermaid.run({ nodes: Array.from(nodes) }).catch((err: unknown) => {
+          if (cancelled) return;
           logClientError('MermaidRenderer', 'Failed to render mermaid diagram', {
             error: err instanceof Error ? err.message : String(err),
             nodeCount: nodes.length,
           });
+          setRenderError(true);
         });
       })
       .catch((err: unknown) => {
+        if (cancelled) return;
         logClientError('MermaidRenderer', 'Failed to load mermaid library', {
           error: err instanceof Error ? err.message : String(err),
           nodeCount: nodes.length,
         });
+        setRenderError(true);
       });
 
     return () => {
@@ -89,11 +99,21 @@ export function MermaidRenderer({ html }: MermaidRendererProps) {
   }, [html]);
 
   return (
-    <div
-      ref={containerRef}
-      className="prose prose-zinc dark:prose-invert max-w-none prose-portfolio"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted backend boundary for sanitized markdown HTML with client-side mermaid hydration
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        className="prose prose-zinc dark:prose-invert max-w-none prose-portfolio"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted backend boundary for sanitized markdown HTML with client-side mermaid hydration
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {renderError && (
+        <div
+          role="alert"
+          className="mt-2 rounded-md border border-amber-900/50 bg-amber-950/20 px-4 py-3 text-sm text-amber-400"
+        >
+          Alguns diagramas não puderam ser renderizados. O conteúdo bruto está exibido acima.
+        </div>
+      )}
+    </>
   );
 }

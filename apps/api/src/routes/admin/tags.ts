@@ -13,9 +13,8 @@
 
 import { createTagSchema, tagQuerySchema, updateTagSchema } from '@portfolio/shared/schemas/tags';
 import { Hono } from 'hono';
-import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
-import { validateBody, validateQuery } from '../../lib/validate';
+import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
   createTagService,
   deleteTagService,
@@ -45,8 +44,7 @@ adminTagsRouter.get('/', async (c) => {
  * Create a new tag. Returns 201 with the created resource.
  */
 adminTagsRouter.post('/', async (c) => {
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, createTagSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, createTagSchema);
   if (!bv.ok) return bv.response;
 
   try {
@@ -80,8 +78,7 @@ adminTagsRouter.patch('/:id', async (c) => {
     return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid tag ID');
   }
 
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, updateTagSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, updateTagSchema);
   if (!bv.ok) return bv.response;
 
   try {

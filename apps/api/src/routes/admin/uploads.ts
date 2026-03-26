@@ -11,9 +11,8 @@
 
 import { presignRequestSchema } from '@portfolio/shared/schemas/uploads';
 import { Hono } from 'hono';
-import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
-import { validateBody } from '../../lib/validate';
+import { parseAndValidateBody } from '../../lib/validate';
 import { confirmUpload, generatePresignedUrl, getUploadById } from '../../services/uploads.service';
 import type { AppEnv } from '../../types/index';
 
@@ -62,8 +61,7 @@ adminUploadsRouter.get('/:id', async (c) => {
  *  - filename: required
  */
 adminUploadsRouter.post('/presign', async (c) => {
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, presignRequestSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, presignRequestSchema);
   if (!bv.ok) return bv.response;
 
   try {

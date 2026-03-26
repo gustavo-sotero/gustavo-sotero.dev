@@ -15,9 +15,8 @@ import {
   updateExperienceSchema,
 } from '@portfolio/shared/schemas/experience';
 import { Hono } from 'hono';
-import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
-import { validateBody, validateQuery } from '../../lib/validate';
+import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
   createExperienceService,
   getExperienceBySlug,
@@ -50,8 +49,7 @@ adminExperienceRouter.get('/', async (c) => {
  * Create a new experience entry. Returns 201 with the created resource.
  */
 adminExperienceRouter.post('/', async (c) => {
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, createExperienceSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, createExperienceSchema);
   if (!bv.ok) return bv.response;
 
   try {
@@ -94,8 +92,7 @@ adminExperienceRouter.patch('/:id', async (c) => {
     return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid experience ID');
   }
 
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, updateExperienceSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, updateExperienceSchema);
   if (!bv.ok) return bv.response;
 
   try {

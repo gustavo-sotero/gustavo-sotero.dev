@@ -23,7 +23,7 @@ vi.mock('@portfolio/shared', () => ({
   },
 }));
 
-import { apiFetch, apiFetchVoid } from './api';
+import { apiFetch, apiFetchPaginated, apiFetchVoid } from './api';
 
 function makeResponse(
   status: number,
@@ -188,5 +188,71 @@ describe('apiFetchVoid', () => {
     await apiFetchVoid('/admin/posts/1', { method: 'DELETE' });
 
     expect(capturedHeaders['X-CSRF-Token']).toBe('delete-csrf');
+  });
+});
+
+describe('apiFetchPaginated', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns the parsed paginated JSON body on success', async () => {
+    const paginatedPayload = {
+      success: true,
+      data: [{ id: 1, title: 'Post A' }],
+      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(makeResponse(200, paginatedPayload));
+
+    const result = await apiFetchPaginated<{ id: number; title: string }>('/posts');
+
+    expect(result).toEqual(paginatedPayload);
+    expect(result.data).toHaveLength(1);
+    expect(result.meta.totalPages).toBe(1);
+  });
+
+  it('throws a normalized ApiError for a non-ok response', async () => {
+    const errorPayload = {
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Not authenticated' },
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(makeResponse(401, errorPayload));
+
+    await expect(apiFetchPaginated('/admin/posts')).rejects.toMatchObject({
+      success: false,
+      error: { code: 'UNAUTHORIZED' },
+    });
+  });
+
+  it('builds the full URL from NEXT_PUBLIC_API_URL + path', async () => {
+    let capturedUrl = '';
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(async (url) => {
+      capturedUrl = String(url);
+      return makeResponse(200, {
+        success: true,
+        data: [],
+        meta: { page: 1, perPage: 20, total: 0, totalPages: 0 },
+      });
+    });
+
+    await apiFetchPaginated('/posts?page=2&perPage=10');
+
+    expect(capturedUrl).toBe('https://api.example.com/posts?page=2&perPage=10');
+  });
+
+  it('includes credentials: include', async () => {
+    let capturedInit: RequestInit | undefined;
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(async (_url, init) => {
+      capturedInit = init;
+      return makeResponse(200, {
+        success: true,
+        data: [],
+        meta: { page: 1, perPage: 20, total: 0, totalPages: 0 },
+      });
+    });
+
+    await apiFetchPaginated('/posts');
+
+    expect(capturedInit?.credentials).toBe('include');
   });
 });

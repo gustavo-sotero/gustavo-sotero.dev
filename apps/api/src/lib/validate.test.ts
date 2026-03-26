@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import type { AppEnv } from '../types/index';
 import type { BodyParseResult } from './requestBody';
-import { mapZodIssues, validateBody, validateOptionalBody, validateQuery } from './validate';
+import {
+  mapZodIssues,
+  parseAndValidateBody,
+  validateBody,
+  validateOptionalBody,
+  validateQuery,
+} from './validate';
 
 // ── mapZodIssues ──────────────────────────────────────────────────────────────
 
@@ -250,5 +256,60 @@ describe('validateOptionalBody', () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as OkBody;
     expect(body.ok).toBe(true);
+  });
+});
+
+// ── parseAndValidateBody ──────────────────────────────────────────────────────
+
+const parseAndValidateSchema = z.object({
+  name: z.string().min(1),
+  age: z.number().int().positive(),
+});
+
+function makeParseAndValidateApp(schema: z.ZodSchema) {
+  const app = new Hono<AppEnv>();
+  app.post('/resource', async (c) => {
+    const bv = await parseAndValidateBody(c, schema);
+    if (!bv.ok) return bv.response;
+    return c.json({ ok: true, data: bv.data });
+  });
+  return app;
+}
+
+describe('parseAndValidateBody', () => {
+  it('returns ok=true with validated data when body and schema are valid', async () => {
+    const app = makeParseAndValidateApp(parseAndValidateSchema);
+    const response = await app.request('/resource', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Alice', age: 30 }),
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ ok: true, data: { name: 'Alice', age: 30 } });
+  });
+
+  it('returns 400 VALIDATION_ERROR when schema validation fails', async () => {
+    const app = makeParseAndValidateApp(parseAndValidateSchema);
+    const response = await app.request('/resource', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '', age: 30 }),
+    });
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as ErrBody;
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.details?.[0]).toMatchObject({ field: 'name' });
+  });
+
+  it('returns 400 VALIDATION_ERROR when no body is provided', async () => {
+    const app = makeParseAndValidateApp(parseAndValidateSchema);
+    // POST with no body and no Content-Type — triggers parse failure
+    const response = await app.request('/resource', { method: 'POST' });
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as ErrBody;
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 });

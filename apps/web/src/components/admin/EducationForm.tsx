@@ -1,14 +1,19 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { Education } from '@portfolio/shared';
-import { type CreateEducationInput, createEducationSchema } from '@portfolio/shared';
+import {
+  type CreateEducationInput,
+  createEducationSchema,
+  type Education,
+  generateSlug,
+} from '@portfolio/shared';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import type { Control, UseFormRegister, UseFormSetValue } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
-import { generateSlug, useCreateEducation, useUpdateEducation } from '@/hooks/use-admin-queries';
+import { useCreateEducation, useUpdateEducation } from '@/hooks/admin/use-admin-education';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -43,6 +48,77 @@ function toEducationPayload(values: EducationFormValues): CreateEducationInput {
   };
 }
 
+function EducationTimelineFields({
+  control,
+  register,
+  setValue,
+  endDateError,
+}: {
+  control: Control<EducationFormValues>;
+  register: UseFormRegister<EducationFormValues>;
+  setValue: UseFormSetValue<EducationFormValues>;
+  endDateError: string | undefined;
+}) {
+  const isCurrent = useWatch({ control, name: 'isCurrent' }) ?? false;
+
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="startDate" className="text-zinc-300 text-sm">
+            Data de início
+          </Label>
+          <Input
+            id="startDate"
+            type="date"
+            {...register('startDate', { setValueAs: (value) => value || undefined })}
+            className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="endDate" className="text-zinc-300 text-sm">
+            Data de conclusão
+          </Label>
+          <Input
+            id="endDate"
+            type="date"
+            {...register('endDate', { setValueAs: (value) => value || undefined })}
+            disabled={isCurrent}
+            className={cn(
+              'bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60',
+              isCurrent && 'opacity-40 cursor-not-allowed'
+            )}
+          />
+          {endDateError && <p className="text-xs text-red-400">{endDateError}</p>}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Controller
+          name="isCurrent"
+          control={control}
+          render={({ field }) => (
+            <Switch
+              id="isCurrent"
+              checked={field.value ?? false}
+              onCheckedChange={(value) => {
+                field.onChange(value);
+                if (value) {
+                  setValue('endDate', undefined, { shouldValidate: true, shouldDirty: true });
+                }
+              }}
+              className="data-[state=checked]:bg-emerald-500"
+            />
+          )}
+        />
+        <Label htmlFor="isCurrent" className="text-zinc-300 text-sm cursor-pointer">
+          Em andamento
+        </Label>
+      </div>
+    </>
+  );
+}
+
 export function EducationForm({ mode, education }: EducationFormProps) {
   const router = useRouter();
   const createMutation = useCreateEducation();
@@ -52,7 +128,7 @@ export function EducationForm({ mode, education }: EducationFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     getValues,
     setValue,
     formState: { errors, isSubmitting },
@@ -107,8 +183,6 @@ export function EducationForm({ mode, education }: EducationFormProps) {
       return next;
     });
   }
-
-  const isCurrent = watch('isCurrent');
 
   async function onSubmit(values: EducationFormValues) {
     const payload = toEducationPayload(values);
@@ -243,55 +317,19 @@ export function EducationForm({ mode, education }: EducationFormProps) {
         </div>
       </div>
 
-      {/* Dates */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="startDate" className="text-zinc-300 text-sm">
-            Data de início
-          </Label>
-          <Input
-            id="startDate"
-            type="date"
-            {...register('startDate', { setValueAs: (v) => v || undefined })}
-            className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
-          />
-          {errors.startDate && (
-            <p className="text-xs text-red-400">{String(errors.startDate.message)}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="endDate" className="text-zinc-300 text-sm">
-            Data de conclusão
-          </Label>
-          <Input
-            id="endDate"
-            type="date"
-            {...register('endDate', { setValueAs: (v) => v || undefined })}
-            disabled={isCurrent}
-            className={cn(
-              'bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60',
-              isCurrent && 'opacity-40 cursor-not-allowed'
-            )}
-          />
-          {errors.endDate && (
-            <p className="text-xs text-red-400">{String(errors.endDate.message)}</p>
-          )}
-        </div>
-      </div>
+      {/* Dates + isCurrent */}
+      <EducationTimelineFields
+        control={control}
+        register={register}
+        setValue={setValue}
+        endDateError={errors.endDate ? String(errors.endDate.message) : undefined}
+      />
+      {errors.startDate && (
+        <p className="text-xs text-red-400">{String(errors.startDate.message)}</p>
+      )}
 
-      {/* isCurrent + Workload + Order + Status */}
+      {/* Workload + Order + Status */}
       <div className="flex flex-wrap items-end gap-6">
-        <div className="flex items-center gap-3">
-          <Switch
-            id="isCurrent"
-            checked={isCurrent ?? false}
-            onCheckedChange={(v) => setValue('isCurrent', v)}
-            className="data-[state=checked]:bg-emerald-500"
-          />
-          <Label htmlFor="isCurrent" className="text-zinc-300 text-sm cursor-pointer">
-            Em andamento
-          </Label>
-        </div>
         <div className="space-y-2">
           <Label htmlFor="workloadHours" className="text-zinc-300 text-sm">
             Carga horária (h)
@@ -366,17 +404,23 @@ export function EducationForm({ mode, education }: EducationFormProps) {
       </div>
 
       {/* Logo media — unified upload + preview field */}
-      <CoverMediaField
-        label="Logo da instituição"
-        value={watch('logoUrl') ?? ''}
-        onChange={(url) =>
-          setValue('logoUrl', url, {
-            shouldValidate: true,
-            shouldDirty: true,
-            shouldTouch: true,
-          })
-        }
-        error={errors.logoUrl?.message}
+      <Controller
+        name="logoUrl"
+        control={control}
+        render={({ field }) => (
+          <CoverMediaField
+            label="Logo da instituição"
+            value={field.value ?? ''}
+            onChange={(url) =>
+              setValue('logoUrl', url, {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+            }
+            error={errors.logoUrl?.message}
+          />
+        )}
       />
 
       {/* Actions */}

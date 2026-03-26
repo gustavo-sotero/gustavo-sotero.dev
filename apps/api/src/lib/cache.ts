@@ -121,6 +121,13 @@ export async function cached<T>(
  * Uses SCAN (paginated, non-blocking) instead of KEYS to avoid blocking
  * Redis in production environments with many keys.
  *
+ * **Scale note:** SCAN + DEL is safe and non-blocking for the current dataset
+ * size (expected < tens of thousands of cache keys). If key count grows to the
+ * point where SCAN latency becomes measurable (e.g. > 100 ms per invalidation),
+ * consider migrating to a namespace versioning strategy: store a generation
+ * counter per cache group in Redis and embed it in all cache keys, then
+ * invalidate by incrementing the counter rather than scanning and deleting.
+ *
  * @param pattern - Glob pattern, e.g. `posts:*`
  * This is a best-effort operation: if Redis is unavailable the error is logged
  * as a warning and the function resolves without throwing. Callers should not

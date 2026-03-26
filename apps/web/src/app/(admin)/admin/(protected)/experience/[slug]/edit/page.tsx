@@ -6,7 +6,7 @@ import { use } from 'react';
 import { ExperienceForm } from '@/components/admin/ExperienceForm';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminExperienceItem } from '@/hooks/use-admin-queries';
+import { useAdminExperienceItem } from '@/hooks/admin/use-admin-experience';
 
 interface Props {
   params: Promise<{ slug: string }>;

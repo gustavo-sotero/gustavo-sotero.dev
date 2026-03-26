@@ -1,19 +1,21 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { Experience, Tag } from '@portfolio/shared';
-import { type CreateExperienceInput, createExperienceSchema } from '@portfolio/shared';
+import {
+  type CreateExperienceInput,
+  createExperienceSchema,
+  type Experience,
+  generateSlug,
+  type Tag,
+} from '@portfolio/shared';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import type { Control, UseFormRegister, UseFormSetValue } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
-import {
-  generateSlug,
-  useAdminTags,
-  useCreateExperience,
-  useUpdateExperience,
-} from '@/hooks/use-admin-queries';
+import { useCreateExperience, useUpdateExperience } from '@/hooks/admin/use-admin-experience';
+import { useAdminTags } from '@/hooks/admin/use-admin-tags';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -47,6 +49,79 @@ function toExperiencePayload(values: ExperienceFormValues): CreateExperienceInpu
   };
 }
 
+function ExperienceDateAndCurrentFields({
+  control,
+  register,
+  setValue,
+  endDateError,
+}: {
+  control: Control<ExperienceFormValues>;
+  register: UseFormRegister<ExperienceFormValues>;
+  setValue: UseFormSetValue<ExperienceFormValues>;
+  endDateError: string | undefined;
+}) {
+  const isCurrent = useWatch({ control, name: 'isCurrent' }) ?? false;
+
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="startDate" className="text-zinc-300 text-sm">
+            Data de início <span className="text-red-400">*</span>
+          </Label>
+          <Input
+            id="startDate"
+            type="date"
+            {...register('startDate')}
+            className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="endDate" className="text-zinc-300 text-sm">
+            Data de fim
+          </Label>
+          <Input
+            id="endDate"
+            type="date"
+            {...register('endDate', { setValueAs: (value) => value || undefined })}
+            disabled={isCurrent}
+            className={cn(
+              'bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60',
+              isCurrent && 'opacity-40 cursor-not-allowed'
+            )}
+          />
+          {endDateError && <p className="text-xs text-red-400">{endDateError}</p>}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-6">
+        <div className="flex items-center gap-3">
+          <Controller
+            name="isCurrent"
+            control={control}
+            render={({ field }) => (
+              <Switch
+                id="isCurrent"
+                checked={field.value ?? false}
+                onCheckedChange={(value) => {
+                  field.onChange(value);
+                  if (value) {
+                    setValue('endDate', undefined, { shouldValidate: true, shouldDirty: true });
+                  }
+                }}
+                className="data-[state=checked]:bg-emerald-500"
+              />
+            )}
+          />
+          <Label htmlFor="isCurrent" className="text-zinc-300 text-sm cursor-pointer">
+            Emprego atual
+          </Label>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
   const router = useRouter();
   const createMutation = useCreateExperience();
@@ -58,7 +133,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     getValues,
     setValue,
     formState: { errors, isSubmitting },
@@ -113,17 +188,8 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
     });
   }
 
-  const isCurrent = watch('isCurrent');
-  const selectedTagIds = watch('tagIds') ?? [];
-
-  function toggleTag(tagId: number) {
-    const current = selectedTagIds ?? [];
-    const exists = current.includes(tagId);
-    setValue('tagIds', exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
-  }
-
   function handleTagCreated(tag: Tag) {
-    const current = selectedTagIds ?? [];
+    const current = getValues('tagIds') ?? [];
     if (!current.includes(tag.id)) {
       setValue('tagIds', [...current, tag.id]);
     }
@@ -264,55 +330,19 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
         </div>
       </div>
 
-      {/* Dates */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="startDate" className="text-zinc-300 text-sm">
-            Data de início <span className="text-red-400">*</span>
-          </Label>
-          <Input
-            id="startDate"
-            type="date"
-            {...register('startDate')}
-            className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
-          />
-          {errors.startDate && (
-            <p className="text-xs text-red-400">{String(errors.startDate.message)}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="endDate" className="text-zinc-300 text-sm">
-            Data de fim
-          </Label>
-          <Input
-            id="endDate"
-            type="date"
-            {...register('endDate', { setValueAs: (v) => v || undefined })}
-            disabled={isCurrent}
-            className={cn(
-              'bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60',
-              isCurrent && 'opacity-40 cursor-not-allowed'
-            )}
-          />
-          {errors.endDate && (
-            <p className="text-xs text-red-400">{String(errors.endDate.message)}</p>
-          )}
-        </div>
-      </div>
+      {/* Dates + isCurrent */}
+      <ExperienceDateAndCurrentFields
+        control={control}
+        register={register}
+        setValue={setValue}
+        endDateError={errors.endDate ? String(errors.endDate.message) : undefined}
+      />
+      {errors.startDate && (
+        <p className="text-xs text-red-400">{String(errors.startDate.message)}</p>
+      )}
 
-      {/* isCurrent + Order + Status */}
+      {/* Order + Status */}
       <div className="flex flex-wrap items-end gap-6">
-        <div className="flex items-center gap-3">
-          <Switch
-            id="isCurrent"
-            checked={isCurrent ?? false}
-            onCheckedChange={(v) => setValue('isCurrent', v)}
-            className="data-[state=checked]:bg-emerald-500"
-          />
-          <Label htmlFor="isCurrent" className="text-zinc-300 text-sm cursor-pointer">
-            Emprego atual
-          </Label>
-        </div>
         <div className="space-y-2">
           <Label className="text-zinc-300 text-sm">Ordem</Label>
           <Input
@@ -346,17 +376,23 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
       </div>
 
       {/* Logo media — unified upload + preview field */}
-      <CoverMediaField
-        label="Logo da empresa"
-        value={watch('logoUrl') ?? ''}
-        onChange={(url) =>
-          setValue('logoUrl', url, {
-            shouldValidate: true,
-            shouldDirty: true,
-            shouldTouch: true,
-          })
-        }
-        error={errors.logoUrl?.message}
+      <Controller
+        name="logoUrl"
+        control={control}
+        render={({ field }) => (
+          <CoverMediaField
+            label="Logo da empresa"
+            value={field.value ?? ''}
+            onChange={(url) =>
+              setValue('logoUrl', url, {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+            }
+            error={errors.logoUrl?.message}
+          />
+        )}
       />
 
       {/* Credential URL */}
@@ -374,12 +410,22 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
 
       {/* Tags */}
       {!tagsLoading && allTags.length > 0 && (
-        <TagCheckboxGroup
-          label="Tecnologias"
-          tags={allTags}
-          selectedIds={selectedTagIds}
-          onToggle={toggleTag}
-          onCreateTag={() => setCreateTagOpen(true)}
+        <Controller
+          name="tagIds"
+          control={control}
+          render={({ field }) => (
+            <TagCheckboxGroup
+              label="Tecnologias"
+              tags={allTags}
+              selectedIds={field.value ?? []}
+              onToggle={(tagId) => {
+                const current = field.value ?? [];
+                const exists = current.includes(tagId);
+                field.onChange(exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
+              }}
+              onCreateTag={() => setCreateTagOpen(true)}
+            />
+          )}
         />
       )}
 

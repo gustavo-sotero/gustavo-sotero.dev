@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { Tag, TagCategory } from '@portfolio/shared';
+import { generateSlug, type Tag, type TagCategory } from '@portfolio/shared';
 import { Check, Info, Loader2, Star } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { generateSlug, useAdminTags, useCreateTag } from '@/hooks/use-admin-queries';
+import { useAdminTags, useCreateTag } from '@/hooks/admin/use-admin-tags';
 import {
   ALL_TAG_CATEGORIES,
   CATEGORY_LABELS,

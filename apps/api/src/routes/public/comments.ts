@@ -7,10 +7,9 @@ import { env } from '../../config/env';
 import { hashIp } from '../../lib/hash';
 import { renderCommentMarkdown } from '../../lib/markdownComment';
 import { enqueueTelegramNotification } from '../../lib/queues';
-import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
 import { validateTurnstile } from '../../lib/turnstile';
-import { validateBody } from '../../lib/validate';
+import { parseAndValidateBody } from '../../lib/validate';
 import {
   createRateLimit,
   getClientIp,
@@ -30,8 +29,7 @@ const commentsRateLimit = createRateLimit({
 });
 
 commentsRouter.post('/', commentsRateLimit, async (c) => {
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, createCommentSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, createCommentSchema);
   if (!bv.ok) return bv.response;
 
   const payload = bv.data;

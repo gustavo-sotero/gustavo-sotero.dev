@@ -28,9 +28,9 @@ import { env } from '../../config/env';
 import { invalidateGroup } from '../../lib/cache';
 import { renderCommentMarkdown } from '../../lib/markdownComment';
 import { buildPaginationMeta, parsePagination } from '../../lib/pagination';
-import { parseBodyOrEmpty, parseBodyResult } from '../../lib/requestBody';
+import { parseBodyOrEmpty } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
-import { validateBody, validateOptionalBody, validateQuery } from '../../lib/validate';
+import { parseAndValidateBody, validateOptionalBody, validateQuery } from '../../lib/validate';
 import {
   findCommentById,
   softDeleteComment,
@@ -124,8 +124,7 @@ adminCommentsRouter.get('/', async (c) => {
  * Automatically approved — no moderation round-trip needed.
  */
 adminCommentsRouter.post('/reply', async (c) => {
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, adminReplyCommentSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, adminReplyCommentSchema);
   if (!bv.ok) return bv.response;
 
   const adminId = c.get('adminId') as string;
@@ -187,8 +186,7 @@ adminCommentsRouter.patch('/:id/status', async (c) => {
   const { id } = c.req.param();
   const adminId = c.get('adminId') as string;
 
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, adminUpdateCommentStatusSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, adminUpdateCommentStatusSchema);
   if (!bv.ok) return bv.response;
 
   const comment = await findCommentById(id);
@@ -217,8 +215,7 @@ adminCommentsRouter.patch('/:id/content', async (c) => {
   const { id } = c.req.param();
   const adminId = c.get('adminId') as string;
 
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, adminUpdateCommentContentSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, adminUpdateCommentContentSchema);
   if (!bv.ok) return bv.response;
 
   const comment = await findCommentById(id);

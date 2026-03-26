@@ -7,7 +7,7 @@ import { TopPostsChart } from '@/components/admin/AnalyticsChart';
 import { MetricCard } from '@/components/admin/MetricCard';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAnalyticsSummary, useAnalyticsTopPosts } from '@/hooks/use-admin-queries';
+import { useAnalyticsSummary, useAnalyticsTopPosts } from '@/hooks/admin/use-admin-analytics';
 
 function defaultDateRange() {
   const to = new Date();

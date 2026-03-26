@@ -3,8 +3,8 @@
 import { AlertTriangle, CheckCircle2, RefreshCw, ServerCrash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { DlqQueue } from '@/hooks/use-admin-queries';
-import { useDlq } from '@/hooks/use-admin-queries';
+import type { DlqQueue } from '@/hooks/admin/use-admin-dlq';
+import { useDlq } from '@/hooks/admin/use-admin-dlq';
 
 const QUEUE_LABELS: Record<string, string> = {
   'telegram-notifications-dlq': 'Notificações Telegram',

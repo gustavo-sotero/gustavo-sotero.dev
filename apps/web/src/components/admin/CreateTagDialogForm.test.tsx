@@ -12,8 +12,15 @@ let adminTagsMock: Array<{
   createdAt: string;
 }> = [];
 
-vi.mock('@/hooks/use-admin-queries', () => ({
-  generateSlug: (name: string) => name.toLowerCase().replace(/\s+/g, '-'),
+vi.mock('@portfolio/shared', async () => {
+  const actual = await vi.importActual<typeof import('@portfolio/shared')>('@portfolio/shared');
+  return {
+    ...actual,
+    generateSlug: (name: string) => name.toLowerCase().replace(/\s+/g, '-'),
+  };
+});
+
+vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useCreateTag: () => ({
     mutateAsync: mutateAsyncMock,
     isPending: false,

@@ -46,23 +46,22 @@ vi.mock('next/navigation', () => ({
 }));
 
 // ─── Import AFTER mocks ───────────────────────────────────────────────────────
+const { useCreatePost, useUpdatePost, useDeletePost } = await import('./admin/use-admin-posts');
+
+const { useCreateProject, useUpdateProject, useDeleteProject } = await import(
+  './admin/use-admin-projects'
+);
+
+const { useCreateTag, useUpdateTag, useDeleteTag } = await import('./admin/use-admin-tags');
+
 const {
-  useCreatePost,
-  useUpdatePost,
-  useDeletePost,
-  useCreateProject,
-  useUpdateProject,
-  useDeleteProject,
-  useCreateTag,
-  useUpdateTag,
-  useDeleteTag,
   useAdminUpdateCommentStatus,
   useApproveComment,
   useRejectComment,
   useAdminReplyComment,
   useAdminEditCommentContent,
   useAdminDeleteComment,
-} = await import('./use-admin-queries');
+} = await import('./admin/use-admin-comments');
 
 const {
   postMutationTags,

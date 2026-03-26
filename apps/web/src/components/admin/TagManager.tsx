@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { TagCategory, Tag as TagType } from '@portfolio/shared';
+import { generateSlug, type TagCategory, type Tag as TagType } from '@portfolio/shared';
 import { Check, Loader2, Pencil, Plus, Star, Tag, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { generateSlug, useAdminTags, useDeleteTag, useUpdateTag } from '@/hooks/use-admin-queries';
+import { useAdminTags, useDeleteTag, useUpdateTag } from '@/hooks/admin/use-admin-tags';
 import {
   ALL_TAG_CATEGORIES,
   CATEGORY_COLORS,

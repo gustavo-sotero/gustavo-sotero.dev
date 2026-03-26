@@ -1,19 +1,21 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { Post, Tag } from '@portfolio/shared';
-import { type CreatePostInput, createPostSchema } from '@portfolio/shared';
+import {
+  type CreatePostInput,
+  createPostSchema,
+  generateSlug,
+  type Post,
+  type Tag,
+} from '@portfolio/shared';
 import { CalendarClock, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import type { Control, FieldError, UseFormSetValue } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
-import {
-  generateSlug,
-  useAdminTags,
-  useCreatePost,
-  useUpdatePost,
-} from '@/hooks/use-admin-queries';
+import { useCreatePost, useUpdatePost } from '@/hooks/admin/use-admin-posts';
+import { useAdminTags } from '@/hooks/admin/use-admin-tags';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -28,6 +30,66 @@ import { TagCheckboxGroup } from './TagCheckboxGroup';
 // Use the Zod INPUT type (pre-transform) for the form's internal state.
 // The resolver returns the OUTPUT type (Post transforms) to `onSubmit`.
 type PostFormValues = z.input<typeof createPostSchema>;
+
+/**
+ * Convert a UTC ISO string to a datetime-local compatible string
+ * (local timezone, slice 0–16: "YYYY-MM-DDTHH:MM").
+ */
+function toDatetimeLocal(utcIso: string | undefined): string {
+  if (!utcIso) return '';
+  try {
+    const d = new Date(utcIso);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+  } catch {
+    return '';
+  }
+}
+
+function ScheduledAtSection({
+  control,
+  setValue,
+  error,
+}: {
+  // biome-ignore lint/suspicious/noExplicitAny: RHF zodResolver widens TContext to `unknown`; `any` lets the prop accept both
+  control: Control<PostFormValues, any, any>;
+  setValue: UseFormSetValue<PostFormValues>;
+  error: FieldError | undefined;
+}) {
+  const status = useWatch({ control, name: 'status' });
+  const scheduledAt = useWatch({ control, name: 'scheduledAt' });
+
+  if (status !== 'scheduled') return null;
+
+  function handleScheduledAtChange(localValue: string) {
+    if (localValue) {
+      setValue('scheduledAt', new Date(localValue).toISOString(), { shouldValidate: true });
+    } else {
+      setValue('scheduledAt', undefined, { shouldValidate: true });
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="scheduledAt" className="text-zinc-300 text-sm flex items-center gap-1.5">
+        <CalendarClock className="h-3.5 w-3.5 text-amber-400" />
+        Data e hora de publicação
+        <span className="text-zinc-500 text-xs ml-1">(horário local)</span>
+      </Label>
+      <Input
+        id="scheduledAt"
+        type="datetime-local"
+        value={toDatetimeLocal(scheduledAt)}
+        onChange={(e) => handleScheduledAtChange(e.target.value)}
+        min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+        className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60 w-fit"
+      />
+      {!scheduledAt && (
+        <p className="text-xs text-amber-400">Selecione uma data e hora futura para agendar</p>
+      )}
+      {error && <p className="text-xs text-red-400">{error.message as string}</p>}
+    </div>
+  );
+}
 
 function toPostPayload(values: CreatePostInput): CreatePostInput {
   return {
@@ -55,7 +117,7 @@ export function PostForm({ mode, post }: PostFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     getValues,
     setValue,
     formState: { errors, isSubmitting },
@@ -76,37 +138,6 @@ export function PostForm({ mode, post }: PostFormProps) {
 
   const titleField = register('title');
 
-  const content = watch('content');
-  const selectedTagIds = watch('tagIds') ?? [];
-  const watchedStatus = watch('status');
-  const watchedScheduledAt = watch('scheduledAt');
-
-  /**
-   * Convert a UTC ISO string (from RHF form state) to a datetime-local compatible
-   * string (local timezone, slice 0–16: "YYYY-MM-DDTHH:MM").
-   */
-  function toDatetimeLocal(utcIso: string | undefined): string {
-    if (!utcIso) return '';
-    try {
-      const d = new Date(utcIso);
-      return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-    } catch {
-      return '';
-    }
-  }
-
-  /**
-   * Handle datetime-local input change: convert local time → UTC ISO and
-   * store in RHF form so Zod can validate + transform it.
-   */
-  function handleScheduledAtChange(localValue: string) {
-    if (localValue) {
-      setValue('scheduledAt', new Date(localValue).toISOString(), { shouldValidate: true });
-    } else {
-      setValue('scheduledAt', undefined, { shouldValidate: true });
-    }
-  }
-
   function syncAutoSlug(nextTitle: string) {
     if (!autoSlug) return;
     setValue('slug', generateSlug(nextTitle), { shouldValidate: false });
@@ -122,14 +153,8 @@ export function PostForm({ mode, post }: PostFormProps) {
     });
   }
 
-  function toggleTag(tagId: number) {
-    const current = selectedTagIds ?? [];
-    const exists = current.includes(tagId);
-    setValue('tagIds', exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
-  }
-
   function handleTagCreated(tag: Tag) {
-    const current = selectedTagIds ?? [];
+    const current = getValues('tagIds') ?? [];
     if (!current.includes(tag.id)) {
       setValue('tagIds', [...current, tag.id]);
     }
@@ -217,7 +242,13 @@ export function PostForm({ mode, post }: PostFormProps) {
         <Label className="text-zinc-300 text-sm">
           Conteúdo <span className="text-red-400">*</span>
         </Label>
-        <MarkdownEditor value={content} onChange={(v) => setValue('content', v)} minHeight={400} />
+        <Controller
+          name="content"
+          control={control}
+          render={({ field }) => (
+            <MarkdownEditor value={field.value} onChange={field.onChange} minHeight={400} />
+          )}
+        />
         {errors.content && <p className="text-xs text-red-400">{errors.content.message}</p>}
       </div>
 
@@ -238,17 +269,23 @@ export function PostForm({ mode, post }: PostFormProps) {
       </div>
 
       {/* Cover media — unified upload + preview field */}
-      <CoverMediaField
-        label="Capa"
-        value={watch('coverUrl') ?? ''}
-        onChange={(url) =>
-          setValue('coverUrl', url, {
-            shouldValidate: true,
-            shouldDirty: true,
-            shouldTouch: true,
-          })
-        }
-        error={errors.coverUrl?.message}
+      <Controller
+        name="coverUrl"
+        control={control}
+        render={({ field }) => (
+          <CoverMediaField
+            label="Capa"
+            value={field.value ?? ''}
+            onChange={(url) =>
+              setValue('coverUrl', url, {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+            }
+            error={errors.coverUrl?.message}
+          />
+        )}
       />
 
       {/* Status */}
@@ -285,38 +322,26 @@ export function PostForm({ mode, post }: PostFormProps) {
       </div>
 
       {/* Scheduled At — shown only when status = 'scheduled' */}
-      {watchedStatus === 'scheduled' && (
-        <div className="space-y-2">
-          <Label htmlFor="scheduledAt" className="text-zinc-300 text-sm flex items-center gap-1.5">
-            <CalendarClock className="h-3.5 w-3.5 text-amber-400" />
-            Data e hora de publicação
-            <span className="text-zinc-500 text-xs ml-1">(horário local)</span>
-          </Label>
-          <Input
-            id="scheduledAt"
-            type="datetime-local"
-            value={toDatetimeLocal(watchedScheduledAt)}
-            onChange={(e) => handleScheduledAtChange(e.target.value)}
-            min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-            className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60 w-fit"
-          />
-          {watchedStatus === 'scheduled' && !watchedScheduledAt && (
-            <p className="text-xs text-amber-400">Selecione uma data e hora futura para agendar</p>
-          )}
-          {errors.scheduledAt && (
-            <p className="text-xs text-red-400">{errors.scheduledAt.message as string}</p>
-          )}
-        </div>
-      )}
+      <ScheduledAtSection control={control} setValue={setValue} error={errors.scheduledAt} />
 
       {/* Tags */}
       {!tagsLoading && (
-        <TagCheckboxGroup
-          label="Tags"
-          tags={allTags}
-          selectedIds={selectedTagIds}
-          onToggle={toggleTag}
-          onCreateTag={() => setCreateTagOpen(true)}
+        <Controller
+          name="tagIds"
+          control={control}
+          render={({ field }) => (
+            <TagCheckboxGroup
+              label="Tags"
+              tags={allTags}
+              selectedIds={field.value ?? []}
+              onToggle={(tagId) => {
+                const current = field.value ?? [];
+                const exists = current.includes(tagId);
+                field.onChange(exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
+              }}
+              onCreateTag={() => setCreateTagOpen(true)}
+            />
+          )}
         />
       )}
 

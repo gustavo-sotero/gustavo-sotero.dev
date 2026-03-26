@@ -20,8 +20,15 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-admin-queries', () => ({
-  generateSlug: () => 'post-de-teste',
+vi.mock('@portfolio/shared', async () => {
+  const actual = await vi.importActual<typeof import('@portfolio/shared')>('@portfolio/shared');
+  return {
+    ...actual,
+    generateSlug: () => 'post-de-teste',
+  };
+});
+
+vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useAdminTags: () => ({
     data: [
       {
@@ -34,18 +41,15 @@ vi.mock('@/hooks/use-admin-queries', () => ({
     ],
     isLoading: false,
   }),
+}));
+
+vi.mock('@/hooks/admin/use-admin-posts', () => ({
   useCreatePost: () => ({
     mutateAsync: mutateAsyncMock,
     isPending: false,
   }),
   useUpdatePost: () => ({
     mutateAsync: mutateAsyncMock,
-    isPending: false,
-  }),
-  useCreateTag: () => ({
-    mutateAsync: vi.fn().mockResolvedValue({
-      data: { id: 99, name: 'New Tag', slug: 'new-tag', category: 'tool', iconKey: null },
-    }),
     isPending: false,
   }),
 }));

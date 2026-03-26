@@ -1,8 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { Project, Tag } from '@portfolio/shared';
-import { type CreateProjectInput, createProjectSchema } from '@portfolio/shared';
+import {
+  type CreateProjectInput,
+  createProjectSchema,
+  generateSlug,
+  type Project,
+  type Tag,
+} from '@portfolio/shared';
 import type { z } from 'zod';
 
 type ProjectFormValues = z.input<typeof createProjectSchema>;
@@ -22,13 +27,9 @@ function toProjectPayload(values: CreateProjectInput): CreateProjectInput {
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import {
-  generateSlug,
-  useAdminTags,
-  useCreateProject,
-  useUpdateProject,
-} from '@/hooks/use-admin-queries';
+import { Controller, useForm } from 'react-hook-form';
+import { useCreateProject, useUpdateProject } from '@/hooks/admin/use-admin-projects';
+import { useAdminTags } from '@/hooks/admin/use-admin-tags';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -57,7 +58,7 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     getValues,
     setValue,
     formState: { errors, isSubmitting },
@@ -80,10 +81,6 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
 
   const titleField = register('title');
 
-  const content = watch('content') ?? '';
-  const selectedTagIds = watch('tagIds') ?? [];
-  const featured = watch('featured');
-
   function syncAutoSlug(nextTitle: string) {
     if (!autoSlug) return;
     setValue('slug', generateSlug(nextTitle), { shouldValidate: false });
@@ -99,14 +96,8 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
     });
   }
 
-  function toggleTag(tagId: number) {
-    const current = selectedTagIds ?? [];
-    const exists = current.includes(tagId);
-    setValue('tagIds', exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
-  }
-
   function handleTagCreated(tag: Tag) {
-    const current = selectedTagIds ?? [];
+    const current = getValues('tagIds') ?? [];
     if (!current.includes(tag.id)) {
       setValue('tagIds', [...current, tag.id]);
     }
@@ -207,21 +198,33 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
       {/* Content */}
       <div className="space-y-2">
         <Label className="text-zinc-300 text-sm">Conteúdo</Label>
-        <MarkdownEditor value={content} onChange={(v) => setValue('content', v)} minHeight={300} />
+        <Controller
+          name="content"
+          control={control}
+          render={({ field }) => (
+            <MarkdownEditor value={field.value ?? ''} onChange={field.onChange} minHeight={300} />
+          )}
+        />
       </div>
 
       {/* Cover media — unified upload + preview field */}
-      <CoverMediaField
-        label="Capa"
-        value={watch('coverUrl') ?? ''}
-        onChange={(url) =>
-          setValue('coverUrl', url, {
-            shouldValidate: true,
-            shouldDirty: true,
-            shouldTouch: true,
-          })
-        }
-        error={errors.coverUrl?.message}
+      <Controller
+        name="coverUrl"
+        control={control}
+        render={({ field }) => (
+          <CoverMediaField
+            label="Capa"
+            value={field.value ?? ''}
+            onChange={(url) =>
+              setValue('coverUrl', url, {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+            }
+            error={errors.coverUrl?.message}
+          />
+        )}
       />
 
       {/* Repository + Live URL */}
@@ -289,11 +292,17 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
         </div>
 
         <div className="flex items-center gap-3 pb-0.5">
-          <Switch
-            id="featured"
-            checked={featured ?? false}
-            onCheckedChange={(v) => setValue('featured', v)}
-            className="data-[state=checked]:bg-emerald-500"
+          <Controller
+            name="featured"
+            control={control}
+            render={({ field }) => (
+              <Switch
+                id="featured"
+                checked={field.value ?? false}
+                onCheckedChange={field.onChange}
+                className="data-[state=checked]:bg-emerald-500"
+              />
+            )}
           />
           <Label htmlFor="featured" className="text-zinc-300 text-sm cursor-pointer">
             Projeto em destaque
@@ -303,12 +312,22 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
 
       {/* Tags */}
       {!tagsLoading && (
-        <TagCheckboxGroup
-          label="Tags"
-          tags={allTags}
-          selectedIds={selectedTagIds}
-          onToggle={toggleTag}
-          onCreateTag={() => setCreateTagOpen(true)}
+        <Controller
+          name="tagIds"
+          control={control}
+          render={({ field }) => (
+            <TagCheckboxGroup
+              label="Tags"
+              tags={allTags}
+              selectedIds={field.value ?? []}
+              onToggle={(tagId) => {
+                const current = field.value ?? [];
+                const exists = current.includes(tagId);
+                field.onChange(exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
+              }}
+              onCreateTag={() => setCreateTagOpen(true)}
+            />
+          )}
         />
       )}
 

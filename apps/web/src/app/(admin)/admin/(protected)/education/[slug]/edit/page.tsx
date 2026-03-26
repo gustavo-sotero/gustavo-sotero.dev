@@ -6,7 +6,7 @@ import { use } from 'react';
 import { EducationForm } from '@/components/admin/EducationForm';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminEducationItem } from '@/hooks/use-admin-queries';
+import { useAdminEducationItem } from '@/hooks/admin/use-admin-education';
 
 interface Props {
   params: Promise<{ slug: string }>;

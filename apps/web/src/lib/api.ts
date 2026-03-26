@@ -66,10 +66,15 @@ function handleUnauthorized(path: string, status: number): void {
   window.location.replace('/admin/login');
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<ApiResponse<T> | undefined> {
+/**
+ * Internal single-path HTTP executor shared by all public API helpers.
+ *
+ * Handles: URL construction, method normalisation, Content-Type, CSRF header
+ * injection for mutating methods, credentials, and error normalisation.
+ * Throws a normalised `ApiError` on any non-2xx response so callers can rely
+ * on a consistent error shape.
+ */
+async function performRequest(path: string, options: RequestInit = {}): Promise<Response> {
   const url = `${env.NEXT_PUBLIC_API_URL}${path}`;
   const method = options.method?.toUpperCase() ?? 'GET';
   const headers: Record<string, string> = {
@@ -94,6 +99,15 @@ export async function apiFetch<T>(
     const payload = await res.json().catch(() => null);
     throw normalizeApiError(payload, res.statusText);
   }
+
+  return res;
+}
+
+export async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<ApiResponse<T> | undefined> {
+  const res = await performRequest(path, options);
 
   if (res.status === 204) {
     return undefined;
@@ -107,31 +121,7 @@ export async function apiFetch<T>(
  * Use this for DELETE endpoints that return no payload.
  */
 export async function apiFetchVoid(path: string, options: RequestInit = {}): Promise<void> {
-  const url = `${env.NEXT_PUBLIC_API_URL}${path}`;
-  const method = options.method?.toUpperCase() ?? 'DELETE';
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-
-  if (['POST', 'PATCH', 'DELETE'].includes(method)) {
-    const csrf = getCsrfToken();
-    if (csrf) headers['X-CSRF-Token'] = csrf;
-  }
-
-  const res = await fetch(url, {
-    ...options,
-    method,
-    headers,
-    credentials: 'include',
-  });
-
-  if (!res.ok) {
-    handleUnauthorized(path, res.status);
-    const payload = await res.json().catch(() => null);
-    throw normalizeApiError(payload, res.statusText);
-  }
-
+  await performRequest(path, { method: 'DELETE', ...options });
   // Intentionally ignore body — caller expects no data (204 No Content)
 }
 
@@ -139,21 +129,7 @@ export async function apiFetchPaginated<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<PaginatedResponse<T>> {
-  const url = `${env.NEXT_PUBLIC_API_URL}${path}`;
-  const method = options.method?.toUpperCase() ?? 'GET';
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-
-  const res = await fetch(url, { ...options, method, headers, credentials: 'include' });
-
-  if (!res.ok) {
-    handleUnauthorized(path, res.status);
-    const payload = await res.json().catch(() => null);
-    throw normalizeApiError(payload, res.statusText);
-  }
-
+  const res = await performRequest(path, options);
   return res.json();
 }
 

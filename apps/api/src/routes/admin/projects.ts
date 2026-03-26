@@ -15,9 +15,8 @@ import {
   updateProjectSchema,
 } from '@portfolio/shared/schemas/projects';
 import { Hono } from 'hono';
-import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
-import { validateBody, validateQuery } from '../../lib/validate';
+import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
   createProjectService,
   getProjectBySlug,
@@ -52,8 +51,7 @@ adminProjectsRouter.get('/', async (c) => {
  * Create a new project. Returns 201 with the created resource.
  */
 adminProjectsRouter.post('/', async (c) => {
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, createProjectSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, createProjectSchema);
   if (!bv.ok) return bv.response;
 
   try {
@@ -93,8 +91,7 @@ adminProjectsRouter.patch('/:id', async (c) => {
     return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid project ID');
   }
 
-  const bodyResult = await parseBodyResult(c);
-  const bv = validateBody(c, updateProjectSchema, bodyResult);
+  const bv = await parseAndValidateBody(c, updateProjectSchema);
   if (!bv.ok) return bv.response;
 
   try {

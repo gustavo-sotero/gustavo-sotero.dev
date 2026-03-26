@@ -156,6 +156,8 @@ bun run dev:web      # Web on http://localhost:3001
   - **Not safe for replicated/horizontally-scaled deployments**: each API replica maintains its own in-memory counter, so a client can bypass the global limit by distributing requests across replicas. Set to `false` in any production topology where more than one API process runs.
 - Set `RATE_LIMIT_LOCAL_FALLBACK=false` if you want Redis failure to return `503 SERVICE_UNAVAILABLE` instead, which is the correct choice for multi-replica production.
 
+- **OAuth state store:** when Redis is unavailable during the GitHub OAuth flow, state tokens fall back to a **process-local in-memory store**. This is safe only for **single-instance deployments**; in a multi-replica topology each replica maintains its own local state, so an OAuth callback routed to a different replica than the one that generated the state token will fail with an invalid-state error. The current `docker-compose.yml` runs a single API container, making this safe by default.
+
 ### Web Env Contract (Build vs Runtime)
 
 For `apps/web`, environment variables are split between build-time and runtime concerns:

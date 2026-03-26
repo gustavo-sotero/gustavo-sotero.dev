@@ -30,8 +30,15 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@/hooks/use-admin-queries', () => ({
-  generateSlug: generateSlugMock,
+vi.mock('@portfolio/shared', async () => {
+  const actual = await vi.importActual<typeof import('@portfolio/shared')>('@portfolio/shared');
+  return {
+    ...actual,
+    generateSlug: generateSlugMock,
+  };
+});
+
+vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useAdminTags: () => ({
     data: [
       {
@@ -44,6 +51,9 @@ vi.mock('@/hooks/use-admin-queries', () => ({
     ],
     isLoading: false,
   }),
+}));
+
+vi.mock('@/hooks/admin/use-admin-experience', () => ({
   useCreateExperience: () => ({
     mutateAsync: mutateAsyncMock,
     isPending: false,
