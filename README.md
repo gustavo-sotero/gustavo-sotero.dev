@@ -145,7 +145,7 @@ bun run dev:web      # Web on http://localhost:3001
 
 > Migration convention: always generate migrations with `bun run db:generate` from the repository root.
 
-> Drizzle config reads `DATABASE_URL` from the current environment. The root `bun run db:*` scripts already load the same root `.env` contract used by local development.
+> Drizzle config loads the repository root `.env` on its own before reading `DATABASE_URL`. That keeps `bun run db:generate`, `bun run db:studio`, and direct `apps/api` Drizzle commands consistent with the same root env contract used by local development.
 
 > Legacy repair step: for existing databases, run `bun run db:backfill:comments` **before** `bun run db:migrate`. The migration now fails fast when `comments.rendered_content` is still null.
 

@@ -9,8 +9,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "echo 'No build step — Bun runs TS directly'",
+    "db:generate": "bunx drizzle-kit generate",
     "db:seed": "bun --env-file ../../.env run src/db/seed.ts",
-    "db:migrate": "bun --env-file ../../.env run src/db/migrate.ts"
+    "db:migrate": "bun --env-file ../../.env run src/db/migrate.ts",
+    "db:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.3",
@@ -43,6 +45,7 @@
     "@types/hast": "^3.0.4",
     "@types/mdast": "^4.0.4",
     "@types/unist": "^3.0.3",
+    "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.10",
     "hast": "^1.0.0",
     "hast-util-sanitize": "^5.0.2",
