@@ -8,6 +8,7 @@ COPY tsconfig.base.json ./
 
 # Copy workspace manifests
 COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
 COPY apps/worker/package.json ./apps/worker/
 COPY packages/shared/package.json ./packages/shared/
 
