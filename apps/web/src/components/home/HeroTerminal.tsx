@@ -3,6 +3,7 @@
 import { DEVELOPER_PUBLIC_PROFILE, getExperienceLabel } from '@portfolio/shared';
 import { useMemo } from 'react';
 import { AnimatedSpan, Terminal, TypingAnimation } from '@/components/ui/terminal';
+import { env } from '@/lib/env';
 
 const FALLBACK_STACK = ['TypeScript', 'Bun', 'Hono', 'Next.js', 'PostgreSQL'];
 
@@ -212,7 +213,7 @@ export function HeroTerminal({ stack = FALLBACK_STACK }: HeroTerminalProps) {
       <Terminal className="max-h-none max-w-full w-full bg-zinc-900/90 border-zinc-800 shadow-2xl shadow-zinc-950/80">
         {/* 1. curl command — types out char by char */}
         <TypingAnimation duration={28} as="div" className="font-mono text-sm text-zinc-300">
-          {'$ curl -X GET https://api.gustavo-sotero.dev/developer/profile'}
+          {`$ curl -X GET ${env.NEXT_PUBLIC_API_URL}/developer/profile`}
         </TypingAnimation>
 
         {/* 2. Status label */}

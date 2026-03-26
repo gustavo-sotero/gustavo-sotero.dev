@@ -25,9 +25,9 @@ vi.mock('@/components/admin/AdminShell', () => ({
   ),
 }));
 
-import ProtectedAdminLayout from './layout';
+import { ProtectedAdminGate } from './layout';
 
-describe('ProtectedAdminLayout', () => {
+describe('ProtectedAdminGate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -37,7 +37,7 @@ describe('ProtectedAdminLayout', () => {
 
     // redirect() in Next.js throws an internal NEXT_REDIRECT error;
     // the mock just records the call and returns undefined
-    await ProtectedAdminLayout({ children: <div /> });
+    await ProtectedAdminGate({ children: <div /> });
 
     expect(validateAdminSessionMock).toHaveBeenCalledOnce();
     expect(redirectMock).toHaveBeenCalledWith('/admin/login');
@@ -46,7 +46,7 @@ describe('ProtectedAdminLayout', () => {
   it('renders AdminShell with children when session is valid', async () => {
     validateAdminSessionMock.mockResolvedValue(true);
 
-    const element = await ProtectedAdminLayout({
+    const element = await ProtectedAdminGate({
       children: <span data-testid="child-content">page content</span>,
     });
 

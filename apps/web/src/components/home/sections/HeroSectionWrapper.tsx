@@ -1,7 +1,6 @@
 import { SectionUnavailable } from '@/components/shared/SectionUnavailable';
 import { getHomeTags } from '@/lib/data/public/home';
 import { getResumeData } from '@/lib/data/public/resume';
-import { buildResumeViewModel } from '@/lib/resume/mapper';
 import { HeroSection } from '../HeroSection';
 
 /**
@@ -13,12 +12,11 @@ import { HeroSection } from '../HeroSection';
 export async function HeroSectionWrapper() {
   const [tagsResult, resumeResult] = await Promise.all([getHomeTags(), getResumeData()]);
   const tags = tagsResult.state !== 'degraded' ? tagsResult.data : [];
-  const resume = buildResumeViewModel({ ...resumeResult.data, now: new Date() });
   const isDegraded = tagsResult.state === 'degraded' || resumeResult.state === 'degraded';
 
   return (
     <>
-      <HeroSection tags={tags} resume={resume} />
+      <HeroSection tags={tags} resumeData={resumeResult.data} />
       {isDegraded ? (
         <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 -mt-6">
           <SectionUnavailable />

@@ -1,15 +1,18 @@
 'use client';
 
+import { SiGithub, SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons';
 import type { Tag, TagCategory } from '@portfolio/shared';
 import { DEVELOPER_PUBLIC_PROFILE, getExperienceLabel } from '@portfolio/shared';
-import { Star } from 'lucide-react';
+import { Linkedin, Mail, Star } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
 import { AnimatedGradientText } from '@/components/ui/animated-gradient-text';
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
 import { Button } from '@/components/ui/button';
 import { Marquee } from '@/components/ui/marquee';
-import type { ResumeViewModel } from '@/lib/resume/mapper';
+import { SOCIAL_LINKS } from '@/lib/constants';
+import type { ResumeDataPayload } from '@/lib/data/public/resume';
+import { buildResumeViewModel } from '@/lib/resume/mapper';
 import { HeroResumeDownloadButton } from './HeroResumeDownloadButton';
 import { HeroTerminal } from './HeroTerminal';
 
@@ -38,12 +41,13 @@ function pickStackBadges(tags: Tag[], count = 5): StackBadge[] {
 
 interface HeroSectionProps {
   tags?: Tag[];
-  resume: ResumeViewModel;
+  resumeData: ResumeDataPayload;
 }
 
-export function HeroSection({ tags = [], resume }: HeroSectionProps) {
+export function HeroSection({ tags = [], resumeData }: HeroSectionProps) {
   const prefersReducedMotion = useReducedMotion();
   const experienceLabel = getExperienceLabel();
+  const resume = buildResumeViewModel({ ...resumeData, now: new Date() });
   const stack: StackBadge[] =
     tags.length > 0
       ? pickStackBadges(tags)
@@ -181,6 +185,53 @@ export function HeroSection({ tags = [], resume }: HeroSectionProps) {
                 ))}
               </Marquee>
             )}
+
+            {/* Social links */}
+            <div className="flex items-center gap-1 sm:gap-0.5 -ml-2">
+              <a
+                href={SOCIAL_LINKS.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub"
+                className="inline-flex items-center justify-center w-11 h-11 sm:w-9 sm:h-9 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
+              >
+                <SiGithub className="h-5 w-5 sm:h-4 sm:w-4" />
+              </a>
+              <a
+                href={SOCIAL_LINKS.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn"
+                className="inline-flex items-center justify-center w-11 h-11 sm:w-9 sm:h-9 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
+              >
+                <Linkedin className="h-5 w-5 sm:h-4 sm:w-4" />
+              </a>
+              <a
+                href={SOCIAL_LINKS.telegram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Telegram"
+                className="inline-flex items-center justify-center w-11 h-11 sm:w-9 sm:h-9 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
+              >
+                <SiTelegram className="h-5 w-5 sm:h-4 sm:w-4" />
+              </a>
+              <a
+                href={SOCIAL_LINKS.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp"
+                className="inline-flex items-center justify-center w-11 h-11 sm:w-9 sm:h-9 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
+              >
+                <SiWhatsapp className="h-5 w-5 sm:h-4 sm:w-4" />
+              </a>
+              <a
+                href={SOCIAL_LINKS.email}
+                aria-label="E-mail"
+                className="inline-flex items-center justify-center w-11 h-11 sm:w-9 sm:h-9 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
+              >
+                <Mail className="h-5 w-5 sm:h-4 sm:w-4" />
+              </a>
+            </div>
           </motion.div>
 
           {/* Right: Terminal */}

@@ -2,10 +2,9 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getHomeTagsMock, getResumeDataMock, buildResumeViewModelMock } = vi.hoisted(() => ({
+const { getHomeTagsMock, getResumeDataMock } = vi.hoisted(() => ({
   getHomeTagsMock: vi.fn(),
   getResumeDataMock: vi.fn(),
-  buildResumeViewModelMock: vi.fn(),
 }));
 
 vi.mock('@/lib/data/public/home', () => ({
@@ -14,10 +13,6 @@ vi.mock('@/lib/data/public/home', () => ({
 
 vi.mock('@/lib/data/public/resume', () => ({
   getResumeData: getResumeDataMock,
-}));
-
-vi.mock('@/lib/resume/mapper', () => ({
-  buildResumeViewModel: buildResumeViewModelMock,
 }));
 
 vi.mock('../HeroSection', () => ({
@@ -34,7 +29,6 @@ async function renderServerComponent(elementPromise: Promise<React.ReactNode>) {
 describe('HeroSectionWrapper', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    buildResumeViewModelMock.mockReturnValue({});
   });
 
   it('shows a visible degraded-state notice when any dependency fails', async () => {
