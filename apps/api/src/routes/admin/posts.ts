@@ -20,6 +20,7 @@ import {
 import { Hono } from 'hono';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateBody, validateQuery } from '../../lib/validate';
 import {
   createPostService,
   getPostBySlug,
@@ -36,22 +37,15 @@ const adminPostsRouter = new Hono<AppEnv>();
  * List all posts (including drafts) with optional status/tag filters and pagination.
  */
 adminPostsRouter.get('/', async (c) => {
-  const queryParsed = postQuerySchema.safeParse({
+  const qv = validateQuery(c, postQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
     tag: c.req.query('tag'),
     status: c.req.query('status'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listPosts(queryParsed.data, true);
+  const result = await listPosts(qv.data, true);
   return paginatedResponse(c, result.data, result.meta);
 });
 
@@ -61,28 +55,11 @@ adminPostsRouter.get('/', async (c) => {
  */
 adminPostsRouter.post('/', async (c) => {
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = createPostSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, createPostSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const post = await createPostService(parsed.data);
+    const post = await createPostService(bv.data);
     return successResponse(c, post, 201);
   } catch (err) {
     const message = (err as Error).message;
@@ -119,28 +96,11 @@ adminPostsRouter.patch('/:id', async (c) => {
   }
 
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = updatePostSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, updatePostSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const updated = await updatePostService(id, parsed.data);
+    const updated = await updatePostService(id, bv.data);
     if (!updated) {
       return errorResponse(c, 404, 'NOT_FOUND', 'Post not found');
     }

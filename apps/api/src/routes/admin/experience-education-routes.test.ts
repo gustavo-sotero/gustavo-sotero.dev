@@ -151,7 +151,7 @@ describe('admin experience routes', () => {
     expect(body.success).toBe(true);
   });
 
-  it('POST /admin/experience returns 400 for missing required fields', async () => {
+  it('POST /admin/experience returns 400 with field-level details for missing required fields', async () => {
     const app = new Hono();
     app.route('/admin/experience', adminExperienceRouter);
 
@@ -161,11 +161,23 @@ describe('admin experience routes', () => {
       body: JSON.stringify({ role: 'Only role' }), // missing company, description, startDate
     });
 
-    const body = (await res.json()) as { success: boolean; error: { code: string } };
+    const body = (await res.json()) as {
+      success: boolean;
+      error: {
+        code: string;
+        message: string;
+        details: Array<{ field?: string; message: string }>;
+      };
+    };
 
     expect(res.status).toBe(400);
     expect(body.success).toBe(false);
     expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.message).toBe('Validation failed');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    // Zod reports each missing required field separately
+    expect(body.error.details.some((d) => d.field === 'company')).toBe(true);
+    expect(body.error.details.some((d) => d.field === 'startDate')).toBe(true);
   });
 
   it('POST /admin/experience returns 400 when isCurrent=false and endDate is missing', async () => {
@@ -226,7 +238,10 @@ describe('admin experience routes', () => {
     expect(body.error.code).toBe('CONFLICT');
   });
 
-  it('POST /admin/experience returns 400 on date validation error from service', async () => {
+  it('POST /admin/experience returns 400 with exact message for service-thrown date validation', async () => {
+    // Service-level validation (cross-field date ordering) is translated into a
+    // scalar 400 VALIDATION_ERROR without a details array — the message itself
+    // carries the diagnostic.
     createExperienceServiceMock.mockRejectedValueOnce(
       new Error('VALIDATION_ERROR: endDate must be on or after startDate')
     );
@@ -234,15 +249,25 @@ describe('admin experience routes', () => {
     const app = new Hono();
     app.route('/admin/experience', adminExperienceRouter);
 
+    // Body passes Zod schema validation (endDate is after startDate) so the
+    // schema refine doesn't fire — the service mock throws instead.
     const res = await app.request('/admin/experience', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...validExperienceBody, isCurrent: false, endDate: '2021-01-01' }),
+      body: JSON.stringify({ ...validExperienceBody, isCurrent: false, endDate: '2023-01-01' }),
     });
 
+    const body = (await res.json()) as {
+      success: boolean;
+      error: { code: string; message: string };
+    };
+
     expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: { code: string } };
+    expect(body.success).toBe(false);
     expect(body.error.code).toBe('VALIDATION_ERROR');
+    // Service-thrown errors carry the diagnostic message directly (no details array)
+    expect(body.error.message).toBe('endDate must be on or after startDate');
+    expect(body.error).not.toHaveProperty('details');
   });
 
   // PATCH ───────────────────────────────────────────────────────────────────────
@@ -389,7 +414,7 @@ describe('admin education routes', () => {
     expect(body.success).toBe(true);
   });
 
-  it('POST /admin/education returns 400 for missing required fields', async () => {
+  it('POST /admin/education returns 400 with field-level details for missing required fields', async () => {
     const app = new Hono();
     app.route('/admin/education', adminEducationRouter);
 
@@ -399,11 +424,21 @@ describe('admin education routes', () => {
       body: JSON.stringify({ title: 'Only title' }), // missing institution
     });
 
-    const body = (await res.json()) as { success: boolean; error: { code: string } };
+    const body = (await res.json()) as {
+      success: boolean;
+      error: {
+        code: string;
+        message: string;
+        details: Array<{ field?: string; message: string }>;
+      };
+    };
 
     expect(res.status).toBe(400);
     expect(body.success).toBe(false);
     expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.message).toBe('Validation failed');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details.some((d) => d.field === 'institution')).toBe(true);
   });
 
   it('POST /admin/education returns 409 on slug conflict', async () => {

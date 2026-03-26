@@ -4,6 +4,7 @@ import { enqueueTelegramNotification } from '../../lib/queues';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
 import { validateTurnstile } from '../../lib/turnstile';
+import { validateBody } from '../../lib/validate';
 import { createRateLimit, getClientIp } from '../../middleware/rateLimit';
 import { createContact } from '../../repositories/contacts.repo';
 import type { AppEnv } from '../../types/index';
@@ -41,17 +42,10 @@ contactRouter.post('/', contactRateLimit, async (c) => {
     return successResponse(c, { message: 'Message received' }, 201);
   }
 
-  const parsed = createContactSchema.safeParse(body);
+  const bv = validateBody(c, createContactSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((issue) => ({
-      field: issue.path.join('.'),
-      message: issue.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
-
-  const payload = parsed.data;
+  const payload = bv.data;
 
   // Validate Turnstile token
   const ip = getClientIp(c);

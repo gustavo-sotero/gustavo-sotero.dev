@@ -30,6 +30,7 @@ import { renderCommentMarkdown } from '../../lib/markdownComment';
 import { buildPaginationMeta, parsePagination } from '../../lib/pagination';
 import { parseBodyOrEmpty, parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateBody, validateOptionalBody, validateQuery } from '../../lib/validate';
 import {
   findCommentById,
   softDeleteComment,
@@ -45,23 +46,16 @@ const adminCommentsRouter = new Hono<AppEnv>();
  * Paginated list. Accepts ?status=pending|approved|rejected, ?deleted=true, ?postId=N.
  */
 adminCommentsRouter.get('/', async (c) => {
-  const queryParsed = adminCommentQuerySchema.safeParse({
+  const qv = validateQuery(c, adminCommentQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
     status: c.req.query('status'),
     deleted: c.req.query('deleted'),
     postId: c.req.query('postId'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const { page: pageRaw, perPage: perPageRaw, status, deleted, postId } = queryParsed.data;
+  const { page: pageRaw, perPage: perPageRaw, status, deleted, postId } = qv.data;
   const { page, perPage, offset, limit } = parsePagination({
     page: pageRaw,
     perPage: perPageRaw,
@@ -131,28 +125,11 @@ adminCommentsRouter.get('/', async (c) => {
  */
 adminCommentsRouter.post('/reply', async (c) => {
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = adminReplyCommentSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, adminReplyCommentSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   const adminId = c.get('adminId') as string;
-  const payload = parsed.data;
+  const payload = bv.data;
 
   // Verify parent exists and belongs to the stated post
   const parent = await findCommentById(payload.parentCommentId);
@@ -211,25 +188,8 @@ adminCommentsRouter.patch('/:id/status', async (c) => {
   const adminId = c.get('adminId') as string;
 
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = adminUpdateCommentStatusSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, adminUpdateCommentStatusSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   const comment = await findCommentById(id);
   if (!comment) {
@@ -239,9 +199,9 @@ adminCommentsRouter.patch('/:id/status', async (c) => {
     return errorResponse(c, 409, 'CONFLICT', 'Cannot change status of a deleted comment');
   }
 
-  const updated = await updateCommentStatus(id, parsed.data.status, adminId);
+  const updated = await updateCommentStatus(id, bv.data.status, adminId);
 
-  if (parsed.data.status === 'approved' || comment.status === 'approved') {
+  if (bv.data.status === 'approved' || comment.status === 'approved') {
     // Invalidate post cache whenever approved comments change
     await invalidateGroup('commentsModeration');
   }
@@ -258,25 +218,8 @@ adminCommentsRouter.patch('/:id/content', async (c) => {
   const adminId = c.get('adminId') as string;
 
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = adminUpdateCommentContentSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, adminUpdateCommentContentSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   const comment = await findCommentById(id);
   if (!comment) {
@@ -286,13 +229,13 @@ adminCommentsRouter.patch('/:id/content', async (c) => {
     return errorResponse(c, 409, 'CONFLICT', 'Cannot edit a deleted comment');
   }
 
-  const renderedContent = await renderCommentMarkdown(parsed.data.content);
+  const renderedContent = await renderCommentMarkdown(bv.data.content);
   const updated = await updateCommentContent(
     id,
-    parsed.data.content,
+    bv.data.content,
     renderedContent,
     adminId,
-    parsed.data.reason
+    bv.data.reason
   );
 
   if (comment.status === 'approved') {
@@ -311,15 +254,8 @@ adminCommentsRouter.delete('/:id', async (c) => {
   const adminId = c.get('adminId') as string;
 
   const body = await parseBodyOrEmpty(c);
-  const parsed = adminSoftDeleteCommentSchema.safeParse(body);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateOptionalBody(c, adminSoftDeleteCommentSchema, body);
+  if (!bv.ok) return bv.response;
 
   const comment = await findCommentById(id);
   if (!comment) {
@@ -329,7 +265,7 @@ adminCommentsRouter.delete('/:id', async (c) => {
     return errorResponse(c, 409, 'CONFLICT', 'Comment is already deleted');
   }
 
-  const deleted = await softDeleteComment(id, adminId, parsed.data.reason);
+  const deleted = await softDeleteComment(id, adminId, bv.data.reason);
 
   if (comment.status === 'approved') {
     await invalidateGroup('commentsModeration');

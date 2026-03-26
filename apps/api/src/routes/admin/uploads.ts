@@ -13,6 +13,7 @@ import { presignRequestSchema } from '@portfolio/shared/schemas/uploads';
 import { Hono } from 'hono';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
+import { validateBody } from '../../lib/validate';
 import { confirmUpload, generatePresignedUrl, getUploadById } from '../../services/uploads.service';
 import type { AppEnv } from '../../types/index';
 
@@ -62,28 +63,11 @@ adminUploadsRouter.get('/:id', async (c) => {
  */
 adminUploadsRouter.post('/presign', async (c) => {
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = presignRequestSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, presignRequestSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const result = await generatePresignedUrl(parsed.data);
+    const result = await generatePresignedUrl(bv.data);
     return successResponse(c, result, 201);
   } catch (err) {
     const error = err as Error & { code?: string };

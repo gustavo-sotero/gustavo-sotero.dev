@@ -69,7 +69,7 @@ describe('admin analytics routes', () => {
     );
   });
 
-  it('GET /summary returns 400 for invalid date format', async () => {
+  it('GET /summary returns 400 for invalid date format with field-level details', async () => {
     const app = buildApp();
     const response = await app.request('/admin/analytics/summary?from=03-01-2026');
     const body = (await response.json()) as {
@@ -85,6 +85,9 @@ describe('admin analytics routes', () => {
     expect(body.success).toBe(false);
     expect(body.error.code).toBe('VALIDATION_ERROR');
     expect(body.error.message).toBe('Invalid query parameters');
+    // validateQuery produces field-level details for each failing field
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details?.some((d) => d.field === 'from')).toBe(true);
     expect(cachedMock).not.toHaveBeenCalled();
   });
 

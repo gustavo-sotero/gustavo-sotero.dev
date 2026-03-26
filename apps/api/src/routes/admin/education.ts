@@ -17,6 +17,7 @@ import {
 import { Hono } from 'hono';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateBody, validateQuery } from '../../lib/validate';
 import {
   createEducationService,
   getEducationBySlug,
@@ -33,21 +34,14 @@ const adminEducationRouter = new Hono<AppEnv>();
  * List all education entries (including drafts), with optional status filter.
  */
 adminEducationRouter.get('/', async (c) => {
-  const queryParsed = adminEducationQuerySchema.safeParse({
+  const qv = validateQuery(c, adminEducationQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
     status: c.req.query('status'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listEducation(queryParsed.data, true);
+  const result = await listEducation(qv.data, true);
   return paginatedResponse(c, result.data, result.meta);
 });
 
@@ -57,28 +51,11 @@ adminEducationRouter.get('/', async (c) => {
  */
 adminEducationRouter.post('/', async (c) => {
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = createEducationSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, createEducationSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const entry = await createEducationService(parsed.data);
+    const entry = await createEducationService(bv.data);
     return successResponse(c, entry, 201);
   } catch (err) {
     const message = (err as Error).message;
@@ -118,28 +95,11 @@ adminEducationRouter.patch('/:id', async (c) => {
   }
 
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = updateEducationSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, updateEducationSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const updated = await updateEducationService(id, parsed.data);
+    const updated = await updateEducationService(id, bv.data);
     if (!updated) {
       return errorResponse(c, 404, 'NOT_FOUND', 'Education entry not found');
     }

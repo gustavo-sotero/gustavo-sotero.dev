@@ -9,6 +9,7 @@
 import { experienceQuerySchema } from '@portfolio/shared/schemas/experience';
 import { Hono } from 'hono';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateQuery } from '../../lib/validate';
 import { getExperienceBySlug, listExperience } from '../../services/experience.service';
 import type { AppEnv } from '../../types/index';
 
@@ -19,20 +20,13 @@ const publicExperienceRouter = new Hono<AppEnv>();
  * Returns paginated published experience entries.
  */
 publicExperienceRouter.get('/', async (c) => {
-  const queryParsed = experienceQuerySchema.safeParse({
+  const qv = validateQuery(c, experienceQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listExperience(queryParsed.data, false);
+  const result = await listExperience(qv.data, false);
   return paginatedResponse(c, result.data, result.meta);
 });
 

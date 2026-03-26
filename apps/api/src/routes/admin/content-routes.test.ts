@@ -82,7 +82,7 @@ describe('admin content routes', () => {
     expect(listPostsMock).toHaveBeenCalledWith({ page: 1, perPage: 20, status: 'draft' }, true);
   });
 
-  it('POST /admin/posts returns 409 on conflict', async () => {
+  it('POST /admin/posts returns 409 on conflict with error envelope', async () => {
     createPostServiceMock.mockRejectedValueOnce(new Error('CONFLICT: Slug already taken'));
 
     const app = new Hono();
@@ -98,10 +98,48 @@ describe('admin content routes', () => {
       }),
     });
 
+    const body = (await response.json()) as {
+      success: boolean;
+      error: { code: string; message: string };
+    };
+
     expect(response.status).toBe(409);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('CONFLICT');
   });
 
-  it('PATCH /admin/posts/:id returns 400 for invalid id', async () => {
+  it('POST /admin/posts returns 400 with field-level validation details for missing required fields', async () => {
+    const app = new Hono();
+    app.route('/admin/posts', adminPostsRouter);
+
+    // Sending an empty body — validateBody should produce a VALIDATION_ERROR
+    // with field-level details for each missing required field.
+    const response = await app.request('/admin/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    const body = (await response.json()) as {
+      success: boolean;
+      error: {
+        code: string;
+        message: string;
+        details: Array<{ field?: string; message: string }>;
+      };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.message).toBe('Validation failed');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    // At least one detail entry must have a `field` key for a missing required field
+    expect(body.error.details.some((d) => typeof d.field === 'string')).toBe(true);
+    expect(body.error.details.some((d) => d.field === 'title')).toBe(true);
+  });
+
+  it('PATCH /admin/posts/:id returns 400 for invalid id with error envelope', async () => {
     const app = new Hono();
     app.route('/admin/posts', adminPostsRouter);
 
@@ -111,7 +149,15 @@ describe('admin content routes', () => {
       body: JSON.stringify({ title: 'Novo' }),
     });
 
+    const body = (await response.json()) as {
+      success: boolean;
+      error: { code: string; message: string };
+    };
+
     expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.message).toBe('Invalid post ID');
   });
 
   it('DELETE /admin/posts/:id returns 404 when post is missing', async () => {
@@ -138,7 +184,7 @@ describe('admin content routes', () => {
     expect(listProjectsMock).toHaveBeenCalledWith({ featured: true, page: 1, perPage: 20 }, true);
   });
 
-  it('POST /admin/projects returns 409 on conflict', async () => {
+  it('POST /admin/projects returns 409 on conflict with error envelope', async () => {
     createProjectServiceMock.mockRejectedValueOnce(new Error('CONFLICT: Slug already taken'));
 
     const app = new Hono();
@@ -154,7 +200,42 @@ describe('admin content routes', () => {
       }),
     });
 
+    const body = (await response.json()) as {
+      success: boolean;
+      error: { code: string; message: string };
+    };
+
     expect(response.status).toBe(409);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('CONFLICT');
+  });
+
+  it('POST /admin/projects returns 400 with field-level validation details for missing required fields', async () => {
+    const app = new Hono();
+    app.route('/admin/projects', adminProjectsRouter);
+
+    const response = await app.request('/admin/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    const body = (await response.json()) as {
+      success: boolean;
+      error: {
+        code: string;
+        message: string;
+        details: Array<{ field?: string; message: string }>;
+      };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.message).toBe('Validation failed');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details.some((d) => typeof d.field === 'string')).toBe(true);
+    expect(body.error.details.some((d) => d.field === 'title')).toBe(true);
   });
 
   it('DELETE /admin/projects/:id returns 404 when project is missing', async () => {
@@ -273,5 +354,32 @@ describe('admin content routes', () => {
     });
 
     expect(response.status).toBe(404);
+  });
+
+  it('POST /admin/tags returns 400 with field-level validation details for missing name', async () => {
+    const app = new Hono();
+    app.route('/admin/tags', adminTagsRouter);
+
+    const response = await app.request('/admin/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: 'language' }), // missing required `name`
+    });
+
+    const body = (await response.json()) as {
+      success: boolean;
+      error: {
+        code: string;
+        message: string;
+        details: Array<{ field?: string; message: string }>;
+      };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.message).toBe('Validation failed');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details.some((d) => d.field === 'name')).toBe(true);
   });
 });

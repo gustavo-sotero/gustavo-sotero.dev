@@ -3,6 +3,7 @@ import { HTTPException } from 'hono/http-exception';
 import { ZodError } from 'zod';
 import { getLogger } from '../config/logger';
 import { errorResponse } from '../lib/response';
+import { mapZodIssues } from '../lib/validate';
 import type { AppEnv } from '../types/index';
 
 const logger = getLogger('errors');
@@ -94,12 +95,7 @@ export function globalErrorHandler(err: Error, c: Context<AppEnv>): Response {
       issues: err.issues,
     });
 
-    const details = err.issues.map((issue) => ({
-      field: issue.path.join('.'),
-      message: issue.message,
-    }));
-
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
+    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', mapZodIssues(err));
   }
 
   // ── Hono HTTP exceptions ────────────────────────────────────────────────────

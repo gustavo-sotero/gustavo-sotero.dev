@@ -225,8 +225,8 @@ describe('PostForm', () => {
       expect(mutateAsyncMock).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'scheduled',
-          // scheduledAt must be present and match ISO 8601 format
-          scheduledAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
+          // scheduledAt is a Date object after zodResolver transforms the ISO string
+          scheduledAt: expect.any(Date),
         })
       );
     });
@@ -250,6 +250,82 @@ describe('PostForm', () => {
       expect(mutateAsyncMock).toHaveBeenCalledWith(
         expect.not.objectContaining({ scheduledAt: expect.anything() })
       );
+    });
+  });
+
+  it('auto-generates slug from title change in create mode', async () => {
+    render(<PostForm mode="create" />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Meu Post de Teste' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /Slug/i })).toHaveValue('post-de-teste');
+    });
+  });
+
+  it('does not update slug when auto-slug is disabled', async () => {
+    render(<PostForm mode="create" />);
+
+    // Disable auto-slug (button text is 'Auto-gerado' when active)
+    fireEvent.click(screen.getByText('Auto-gerado'));
+
+    // Manually set a custom slug
+    const slugInput = screen.getByRole('textbox', { name: /Slug/i });
+    fireEvent.change(slugInput, { target: { value: 'meu-slug-customizado' } });
+
+    // Change the title
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Título Diferente' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /Slug/i })).toHaveValue('meu-slug-customizado');
+    });
+  });
+
+  it('re-enables auto-slug and syncs slug from current title', async () => {
+    render(<PostForm mode="create" />);
+
+    // Type a title first while auto-slug is on
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Primeiro Título' },
+    });
+
+    // Disable auto-slug
+    fireEvent.click(screen.getByText('Auto-gerado'));
+
+    // Re-enable auto-slug (button text is now 'Gerar auto')
+    fireEvent.click(screen.getByText('Gerar auto'));
+
+    await waitFor(() => {
+      // After re-enabling, toggleAutoSlug() calls syncAutoSlug with current title value
+      expect(screen.getByRole('textbox', { name: /Slug/i })).toHaveValue('post-de-teste');
+    });
+  });
+
+  it('submit payload omits empty optional fields', async () => {
+    mutateAsyncMock.mockResolvedValueOnce({ data: {} });
+
+    render(<PostForm mode="create" />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Post Simples' },
+    });
+    fireEvent.change(screen.getByLabelText('Conteúdo Markdown'), {
+      target: { value: 'Conteúdo do post.' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar post/i }));
+
+    await waitFor(() => {
+      const payload = mutateAsyncMock.mock.calls[0]?.[0];
+      expect(payload).toBeDefined();
+      // coverUrl empty string is coerced to undefined by toPostPayload
+      expect(payload.coverUrl).toBeUndefined();
+      // excerpt empty string is coerced to undefined
+      expect(payload.excerpt).toBeUndefined();
     });
   });
 });

@@ -9,6 +9,7 @@
 import { postQuerySchema } from '@portfolio/shared/schemas/posts';
 import { Hono } from 'hono';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateQuery } from '../../lib/validate';
 import { getPostBySlug, listPosts } from '../../services/posts.service';
 import type { AppEnv } from '../../types/index';
 
@@ -20,23 +21,16 @@ const publicPostsRouter = new Hono<AppEnv>();
  * Results are cached by page/perPage/tag (TTL 5 min).
  */
 publicPostsRouter.get('/', async (c) => {
-  const queryParsed = postQuerySchema.safeParse({
+  const qv = validateQuery(c, postQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
     tag: c.req.query('tag'),
     // status is not exposed on public routes — always "published"
   });
-
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
+  if (!qv.ok) return qv.response;
 
   // Force public mode: only published, no status filter
-  const result = await listPosts(queryParsed.data, false);
+  const result = await listPosts(qv.data, false);
   return paginatedResponse(c, result.data, result.meta);
 });
 

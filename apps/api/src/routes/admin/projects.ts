@@ -17,6 +17,7 @@ import {
 import { Hono } from 'hono';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateBody, validateQuery } from '../../lib/validate';
 import {
   createProjectService,
   getProjectBySlug,
@@ -33,23 +34,16 @@ const adminProjectsRouter = new Hono<AppEnv>();
  * List all projects (including drafts) with optional filters and pagination.
  */
 adminProjectsRouter.get('/', async (c) => {
-  const queryParsed = adminProjectQuerySchema.safeParse({
+  const qv = validateQuery(c, adminProjectQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
     tag: c.req.query('tag'),
     status: c.req.query('status'),
     featured: c.req.query('featured'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listProjects(queryParsed.data, true);
+  const result = await listProjects(qv.data, true);
   return paginatedResponse(c, result.data, result.meta);
 });
 
@@ -59,28 +53,11 @@ adminProjectsRouter.get('/', async (c) => {
  */
 adminProjectsRouter.post('/', async (c) => {
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = createProjectSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, createProjectSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const project = await createProjectService(parsed.data);
+    const project = await createProjectService(bv.data);
     return successResponse(c, project, 201);
   } catch (err) {
     const message = (err as Error).message;
@@ -117,28 +94,11 @@ adminProjectsRouter.patch('/:id', async (c) => {
   }
 
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = updateProjectSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, updateProjectSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const updated = await updateProjectService(id, parsed.data);
+    const updated = await updateProjectService(id, bv.data);
     if (!updated) {
       return errorResponse(c, 404, 'NOT_FOUND', 'Project not found');
     }

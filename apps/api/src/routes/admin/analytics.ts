@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { db } from '../../config/db';
 import { cached } from '../../lib/cache';
 import { errorResponse, successResponse } from '../../lib/response';
+import { validateQuery } from '../../lib/validate';
 import { getPageviewCount, getTopPaths } from '../../repositories/analytics.repo';
 import type { AppEnv } from '../../types/index';
 
@@ -33,13 +34,6 @@ const topPostsQuerySchema = summaryQuerySchema.extend({
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
-function mapZodIssuesToDetails(error: z.ZodError): Array<{ field?: string; message: string }> {
-  return error.issues.map((issue) => ({
-    field: issue.path.join('.'),
-    message: issue.message,
-  }));
-}
-
 /**
  * Normalize a Date to a YYYY-MM-DD string for stable cache keys.
  * Millisecond-precision ISO strings would produce near-cache-miss for every
@@ -58,23 +52,14 @@ adminAnalyticsRouter.get('/summary', async (c) => {
   const now = new Date();
   const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const parsed = summaryQuerySchema.safeParse({
+  const qv = validateQuery(c, summaryQuerySchema, {
     from: c.req.query('from'),
     to: c.req.query('to'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!parsed.success) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      'Invalid query parameters',
-      mapZodIssuesToDetails(parsed.error)
-    );
-  }
-
-  const from = parsed.data.from ?? defaultFrom;
-  const to = parsed.data.to ?? now;
+  const from = qv.data.from ?? defaultFrom;
+  const to = qv.data.to ?? now;
 
   if (from > to) {
     return errorResponse(c, 400, 'VALIDATION_ERROR', '"from" must be before "to"');
@@ -130,25 +115,16 @@ adminAnalyticsRouter.get('/top-posts', async (c) => {
   const now = new Date();
   const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const parsed = topPostsQuerySchema.safeParse({
+  const qv = validateQuery(c, topPostsQuerySchema, {
     from: c.req.query('from'),
     to: c.req.query('to'),
     limit: c.req.query('limit'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!parsed.success) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      'Invalid query parameters',
-      mapZodIssuesToDetails(parsed.error)
-    );
-  }
-
-  const from = parsed.data.from ?? defaultFrom;
-  const to = parsed.data.to ?? now;
-  const limit = parsed.data.limit ?? 10;
+  const from = qv.data.from ?? defaultFrom;
+  const to = qv.data.to ?? now;
+  const limit = qv.data.limit ?? 10;
 
   if (from > to) {
     return errorResponse(c, 400, 'VALIDATION_ERROR', '"from" must be before "to"');

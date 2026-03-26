@@ -3,10 +3,25 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Project, Tag } from '@portfolio/shared';
 import { type CreateProjectInput, createProjectSchema } from '@portfolio/shared';
+import type { z } from 'zod';
+
+type ProjectFormValues = z.input<typeof createProjectSchema>;
+
+function toProjectPayload(values: CreateProjectInput): CreateProjectInput {
+  return {
+    ...values,
+    coverUrl: values.coverUrl || undefined,
+    description: values.description || undefined,
+    content: values.content || undefined,
+    slug: values.slug || undefined,
+    repositoryUrl: values.repositoryUrl || undefined,
+    liveUrl: values.liveUrl || undefined,
+  };
+}
+
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import type { Resolver } from 'react-hook-form';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   generateSlug,
@@ -43,10 +58,11 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
     register,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<CreateProjectInput>({
-    resolver: zodResolver(createProjectSchema) as Resolver<CreateProjectInput>,
+  } = useForm<ProjectFormValues, unknown, CreateProjectInput>({
+    resolver: zodResolver(createProjectSchema),
     defaultValues: {
       title: project?.title ?? '',
       slug: project?.slug ?? '',
@@ -62,16 +78,26 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
     },
   });
 
-  const title = watch('title');
+  const titleField = register('title');
+
   const content = watch('content') ?? '';
   const selectedTagIds = watch('tagIds') ?? [];
   const featured = watch('featured');
 
-  useEffect(() => {
-    if (autoSlug) {
-      setValue('slug', generateSlug(title), { shouldValidate: false });
-    }
-  }, [title, autoSlug, setValue]);
+  function syncAutoSlug(nextTitle: string) {
+    if (!autoSlug) return;
+    setValue('slug', generateSlug(nextTitle), { shouldValidate: false });
+  }
+
+  function toggleAutoSlug() {
+    setAutoSlug((current) => {
+      const next = !current;
+      if (next) {
+        syncAutoSlug(getValues('title') ?? '');
+      }
+      return next;
+    });
+  }
 
   function toggleTag(tagId: number) {
     const current = selectedTagIds ?? [];
@@ -87,16 +113,8 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
     setCreateTagOpen(false);
   }
 
-  async function onSubmit(data: CreateProjectInput) {
-    const payload = {
-      ...data,
-      coverUrl: data.coverUrl || undefined,
-      description: data.description || undefined,
-      content: data.content || undefined,
-      slug: data.slug || undefined,
-      repositoryUrl: data.repositoryUrl || undefined,
-      liveUrl: data.liveUrl || undefined,
-    };
+  async function onSubmit(values: CreateProjectInput) {
+    const payload = toProjectPayload(values);
 
     try {
       if (mode === 'create') {
@@ -107,6 +125,8 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
         router.push('/admin/projects');
       }
     } catch {
+      // Mutation errors are displayed via toast (in mutation hook).
+      // This catch prevents unhandled promise rejection if the hook re-throws.
       return;
     }
   }
@@ -122,7 +142,11 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
         </Label>
         <Input
           id="title"
-          {...register('title')}
+          {...titleField}
+          onChange={(e) => {
+            titleField.onChange(e);
+            syncAutoSlug(e.target.value);
+          }}
           placeholder="Título do projeto"
           className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
@@ -138,7 +162,7 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
           {mode === 'create' && (
             <button
               type="button"
-              onClick={() => setAutoSlug((v) => !v)}
+              onClick={toggleAutoSlug}
               className={cn(
                 'text-xs flex items-center gap-1 px-2 py-0.5 rounded transition-colors',
                 autoSlug

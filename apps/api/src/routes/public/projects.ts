@@ -9,6 +9,7 @@
 import { projectQuerySchema } from '@portfolio/shared/schemas/projects';
 import { Hono } from 'hono';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateQuery } from '../../lib/validate';
 import { getProjectBySlug, listProjects } from '../../services/projects.service';
 import type { AppEnv } from '../../types/index';
 
@@ -20,23 +21,16 @@ const publicProjectsRouter = new Hono<AppEnv>();
  * Results are cached (TTL 5 min).
  */
 publicProjectsRouter.get('/', async (c) => {
-  const queryParsed = projectQuerySchema.safeParse({
+  const qv = validateQuery(c, projectQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
     tag: c.req.query('tag'),
     featured: c.req.query('featured'),
     featuredFirst: c.req.query('featuredFirst'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listProjects(queryParsed.data, false);
+  const result = await listProjects(qv.data, false);
   return paginatedResponse(c, result.data, result.meta);
 });
 

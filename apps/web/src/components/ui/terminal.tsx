@@ -48,7 +48,7 @@ export const AnimatedSpan = ({
     if (sequence.activeIndex === itemIndex) {
       setHasStarted(true);
     }
-  }, [sequence?.activeIndex, sequence?.sequenceStarted, hasStarted, itemIndex]);
+  }, [sequence, hasStarted, itemIndex]);
 
   const shouldAnimate = sequence ? hasStarted : startOnView ? isInView : true;
 
@@ -112,6 +112,14 @@ export const TypingAnimation = ({
   const sequence = useSequence();
   const itemIndex = useItemIndex();
 
+  // These refs capture the latest sequence/itemIndex for use inside the
+  // typing interval without making the typing animation reactive to
+  // sequence state changes (which would restart the animation mid-type).
+  const sequenceRef = useRef(sequence);
+  const itemIndexRef = useRef(itemIndex);
+  sequenceRef.current = sequence;
+  itemIndexRef.current = itemIndex;
+
   useEffect(() => {
     if (sequence && itemIndex !== null) {
       if (!sequence.sequenceStarted) return;
@@ -131,15 +139,7 @@ export const TypingAnimation = ({
 
     const startTimeout = setTimeout(() => setStarted(true), delay);
     return () => clearTimeout(startTimeout);
-  }, [
-    delay,
-    startOnView,
-    isInView,
-    started,
-    sequence?.activeIndex,
-    sequence?.sequenceStarted,
-    itemIndex,
-  ]);
+  }, [delay, startOnView, isInView, started, sequence, itemIndex]);
 
   useEffect(() => {
     if (!started) return;
@@ -151,8 +151,10 @@ export const TypingAnimation = ({
         i++;
       } else {
         clearInterval(typingEffect);
-        if (sequence && itemIndex !== null) {
-          sequence.completeItem(itemIndex);
+        const seq = sequenceRef.current;
+        const idx = itemIndexRef.current;
+        if (seq && idx !== null) {
+          seq.completeItem(idx);
         }
       }
     }, duration);

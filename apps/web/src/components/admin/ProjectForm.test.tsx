@@ -163,4 +163,74 @@ describe('ProjectForm', () => {
     render(<ProjectForm mode="create" />);
     expect(screen.getByRole('checkbox', { name: 'Docker' })).toBeInTheDocument();
   });
+
+  it('auto-generates slug from title change in create mode', async () => {
+    render(<ProjectForm mode="create" />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Projeto de Teste' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /Slug/i })).toHaveValue('projeto-de-teste');
+    });
+  });
+
+  it('does not update slug when auto-slug is disabled', async () => {
+    render(<ProjectForm mode="create" />);
+
+    // Disable auto-slug (button text is 'Auto-gerado' when active)
+    fireEvent.click(screen.getByText('Auto-gerado'));
+
+    // Manually set a custom slug
+    const slugInput = screen.getByRole('textbox', { name: /Slug/i });
+    fireEvent.change(slugInput, { target: { value: 'meu-projeto-customizado' } });
+
+    // Change the title
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Outro Título' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /Slug/i })).toHaveValue('meu-projeto-customizado');
+    });
+  });
+
+  it('re-enables auto-slug and syncs slug from current title', async () => {
+    render(<ProjectForm mode="create" />);
+
+    // Type a title first
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Meu Projeto' },
+    });
+
+    // Disable then re-enable auto-slug
+    fireEvent.click(screen.getByText('Auto-gerado'));
+    fireEvent.click(screen.getByText('Gerar auto'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /Slug/i })).toHaveValue('projeto-de-teste');
+    });
+  });
+
+  it('submit payload omits empty optional fields', async () => {
+    mutateAsyncMock.mockResolvedValueOnce({ data: {} });
+
+    render(<ProjectForm mode="create" />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Projeto Simples' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar projeto/i }));
+
+    await waitFor(() => {
+      const payload = mutateAsyncMock.mock.calls[0]?.[0];
+      expect(payload).toBeDefined();
+      // Empty string coverUrl/repositoryUrl/liveUrl are coerced to undefined
+      expect(payload.coverUrl).toBeUndefined();
+      expect(payload.repositoryUrl).toBeUndefined();
+      expect(payload.liveUrl).toBeUndefined();
+    });
+  });
 });

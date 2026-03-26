@@ -15,6 +15,7 @@ import { createTagSchema, tagQuerySchema, updateTagSchema } from '@portfolio/sha
 import { Hono } from 'hono';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
+import { validateBody, validateQuery } from '../../lib/validate';
 import {
   createTagService,
   deleteTagService,
@@ -30,19 +31,12 @@ const adminTagsRouter = new Hono<AppEnv>();
  * List all tags (admin view — not restricted to tags in use).
  */
 adminTagsRouter.get('/', async (c) => {
-  const queryParsed = tagQuerySchema.safeParse({
+  const qv = validateQuery(c, tagQuerySchema, {
     category: c.req.query('category'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listTags(queryParsed.data, false);
+  const result = await listTags(qv.data, false);
   return successResponse(c, result.data);
 });
 
@@ -52,28 +46,11 @@ adminTagsRouter.get('/', async (c) => {
  */
 adminTagsRouter.post('/', async (c) => {
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = createTagSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, createTagSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const tag = await createTagService(parsed.data);
+    const tag = await createTagService(bv.data);
     return successResponse(c, tag, 201);
   } catch (err) {
     const message = (err as Error).message;
@@ -104,28 +81,11 @@ adminTagsRouter.patch('/:id', async (c) => {
   }
 
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = updateTagSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, updateTagSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const updated = await updateTagService(id, parsed.data);
+    const updated = await updateTagService(id, bv.data);
     if (!updated) {
       return errorResponse(c, 404, 'NOT_FOUND', 'Tag not found');
     }

@@ -17,6 +17,7 @@ import {
 import { Hono } from 'hono';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateBody, validateQuery } from '../../lib/validate';
 import {
   createExperienceService,
   getExperienceBySlug,
@@ -33,21 +34,14 @@ const adminExperienceRouter = new Hono<AppEnv>();
  * List all experience entries (including drafts), with optional status filter.
  */
 adminExperienceRouter.get('/', async (c) => {
-  const queryParsed = adminExperienceQuerySchema.safeParse({
+  const qv = validateQuery(c, adminExperienceQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
     status: c.req.query('status'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listExperience(queryParsed.data, true);
+  const result = await listExperience(qv.data, true);
   return paginatedResponse(c, result.data, result.meta);
 });
 
@@ -57,28 +51,11 @@ adminExperienceRouter.get('/', async (c) => {
  */
 adminExperienceRouter.post('/', async (c) => {
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = createExperienceSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, createExperienceSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const entry = await createExperienceService(parsed.data);
+    const entry = await createExperienceService(bv.data);
     return successResponse(c, entry, 201);
   } catch (err) {
     const message = (err as Error).message;
@@ -118,28 +95,11 @@ adminExperienceRouter.patch('/:id', async (c) => {
   }
 
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
-
-  const parsed = updateExperienceSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
+  const bv = validateBody(c, updateExperienceSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
   try {
-    const updated = await updateExperienceService(id, parsed.data);
+    const updated = await updateExperienceService(id, bv.data);
     if (!updated) {
       return errorResponse(c, 404, 'NOT_FOUND', 'Experience entry not found');
     }

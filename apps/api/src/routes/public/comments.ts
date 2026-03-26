@@ -10,6 +10,7 @@ import { enqueueTelegramNotification } from '../../lib/queues';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
 import { validateTurnstile } from '../../lib/turnstile';
+import { validateBody } from '../../lib/validate';
 import {
   createRateLimit,
   getClientIp,
@@ -30,27 +31,10 @@ const commentsRateLimit = createRateLimit({
 
 commentsRouter.post('/', commentsRateLimit, async (c) => {
   const bodyResult = await parseBodyResult(c);
-  if (!bodyResult.ok) {
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      bodyResult.error.message,
-      bodyResult.error.details
-    );
-  }
+  const bv = validateBody(c, createCommentSchema, bodyResult);
+  if (!bv.ok) return bv.response;
 
-  const parsed = createCommentSchema.safeParse(bodyResult.data);
-
-  if (!parsed.success) {
-    const details = parsed.error.issues.map((issue) => ({
-      field: issue.path.join('.'),
-      message: issue.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', details);
-  }
-
-  const payload = parsed.data;
+  const payload = bv.data;
 
   // Validate Turnstile token before any further processing
   const ip = getClientIp(c);

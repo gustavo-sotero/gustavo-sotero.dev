@@ -151,8 +151,10 @@ bun run dev:web      # Web on http://localhost:3001
 
 ### Optional Local Flags
 
-- `RATE_LIMIT_LOCAL_FALLBACK=true` keeps rate limiting available in local development when Redis is temporarily unavailable by using a single-process in-memory fallback.
-- Set `RATE_LIMIT_LOCAL_FALLBACK=false` if you want Redis failure to return `503 SERVICE_UNAVAILABLE` instead of falling back locally.
+- `RATE_LIMIT_LOCAL_FALLBACK=true` keeps rate limiting available when Redis is temporarily unavailable by using a **single-process in-memory fallback**.
+  - Safe on a **single-instance** deployment (one API container/process): the fallback state is consistent within that process.
+  - **Not safe for replicated/horizontally-scaled deployments**: each API replica maintains its own in-memory counter, so a client can bypass the global limit by distributing requests across replicas. Set to `false` in any production topology where more than one API process runs.
+- Set `RATE_LIMIT_LOCAL_FALLBACK=false` if you want Redis failure to return `503 SERVICE_UNAVAILABLE` instead, which is the correct choice for multi-replica production.
 
 ### Web Env Contract (Build vs Runtime)
 

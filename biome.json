@@ -44,7 +44,15 @@
       }
     },
     {
-      "includes": ["apps/web/src/components/ui/**"],
+      "includes": [
+        "apps/web/src/components/ui/breadcrumb.tsx",
+        "apps/web/src/components/ui/button-group.tsx",
+        "apps/web/src/components/ui/carousel.tsx",
+        "apps/web/src/components/ui/field.tsx",
+        "apps/web/src/components/ui/input-group.tsx",
+        "apps/web/src/components/ui/input-otp.tsx",
+        "apps/web/src/components/ui/item.tsx"
+      ],
       "linter": {
         "rules": {
           "a11y": {
@@ -53,12 +61,20 @@
             "useKeyWithClickEvents": "off",
             "useAriaPropsForRole": "off",
             "noRedundantRoles": "off"
-          },
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/web/src/components/ui/marquee.tsx",
+        "apps/web/src/components/ui/slider.tsx",
+        "apps/web/src/components/ui/terminal.tsx"
+      ],
+      "linter": {
+        "rules": {
           "suspicious": {
             "noArrayIndexKey": "off"
-          },
-          "correctness": {
-            "useExhaustiveDependencies": "off"
           }
         }
       }
@@ -78,7 +94,8 @@
       "!**/tmp",
       "!**/uploads",
       "!**/modules",
-      "!**/apps/web/next-env.d.ts"
+      "!**/apps/web/next-env.d.ts",
+      "!biome.temp.json"
     ]
   }
 }

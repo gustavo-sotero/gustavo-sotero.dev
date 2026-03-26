@@ -10,7 +10,8 @@
 
 import { tagQuerySchema } from '@portfolio/shared/schemas/tags';
 import { Hono } from 'hono';
-import { errorResponse, successResponse } from '../../lib/response';
+import { successResponse } from '../../lib/response';
+import { validateQuery } from '../../lib/validate';
 import { listTags } from '../../services/tags.service';
 import type { AppEnv } from '../../types/index';
 
@@ -23,19 +24,12 @@ const publicTagsRouter = new Hono<AppEnv>();
  * Cached for 5 minutes.
  */
 publicTagsRouter.get('/', async (c) => {
-  const queryParsed = tagQuerySchema.safeParse({
+  const qv = validateQuery(c, tagQuerySchema, {
     category: c.req.query('category'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listTags(queryParsed.data, true);
+  const result = await listTags(qv.data, true);
   return successResponse(c, result.data);
 });
 

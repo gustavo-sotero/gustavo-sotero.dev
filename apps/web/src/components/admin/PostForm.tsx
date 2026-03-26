@@ -2,11 +2,10 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Post, Tag } from '@portfolio/shared';
-import { createPostSchema } from '@portfolio/shared';
+import { type CreatePostInput, createPostSchema } from '@portfolio/shared';
 import { CalendarClock, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import type { Resolver } from 'react-hook-form';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import {
@@ -30,6 +29,15 @@ import { TagCheckboxGroup } from './TagCheckboxGroup';
 // The resolver returns the OUTPUT type (Post transforms) to `onSubmit`.
 type PostFormValues = z.input<typeof createPostSchema>;
 
+function toPostPayload(values: CreatePostInput): CreatePostInput {
+  return {
+    ...values,
+    coverUrl: values.coverUrl || undefined,
+    excerpt: values.excerpt || undefined,
+    slug: values.slug || undefined,
+  };
+}
+
 interface PostFormProps {
   mode: 'create' | 'edit';
   post?: Post;
@@ -48,10 +56,11 @@ export function PostForm({ mode, post }: PostFormProps) {
     register,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<PostFormValues>({
-    resolver: zodResolver(createPostSchema) as Resolver<PostFormValues>,
+  } = useForm<PostFormValues, unknown, CreatePostInput>({
+    resolver: zodResolver(createPostSchema),
     defaultValues: {
       title: post?.title ?? '',
       slug: post?.slug ?? '',
@@ -65,7 +74,8 @@ export function PostForm({ mode, post }: PostFormProps) {
     },
   });
 
-  const title = watch('title');
+  const titleField = register('title');
+
   const content = watch('content');
   const selectedTagIds = watch('tagIds') ?? [];
   const watchedStatus = watch('status');
@@ -97,12 +107,20 @@ export function PostForm({ mode, post }: PostFormProps) {
     }
   }
 
-  // Auto-generate slug from title (only in create mode or when user hasn't manually set it)
-  useEffect(() => {
-    if (autoSlug) {
-      setValue('slug', generateSlug(title), { shouldValidate: false });
-    }
-  }, [title, autoSlug, setValue]);
+  function syncAutoSlug(nextTitle: string) {
+    if (!autoSlug) return;
+    setValue('slug', generateSlug(nextTitle), { shouldValidate: false });
+  }
+
+  function toggleAutoSlug() {
+    setAutoSlug((current) => {
+      const next = !current;
+      if (next) {
+        syncAutoSlug(getValues('title') ?? '');
+      }
+      return next;
+    });
+  }
 
   function toggleTag(tagId: number) {
     const current = selectedTagIds ?? [];
@@ -118,35 +136,20 @@ export function PostForm({ mode, post }: PostFormProps) {
     setCreateTagOpen(false);
   }
 
-  async function onSubmit(rawValues: PostFormValues) {
-    // zodResolver transforms scheduledAt (string → Date) at runtime, but
-    // TypeScript sees it as string | undefined (the form input type).
-    // `new Date(value)` handles both strings and Date objects correctly.
-    const scheduledAtIso = rawValues.scheduledAt
-      ? new Date(rawValues.scheduledAt as string).toISOString()
-      : undefined;
-
-    const payload = {
-      ...rawValues,
-      coverUrl: rawValues.coverUrl || undefined,
-      excerpt: rawValues.excerpt || undefined,
-      slug: rawValues.slug || undefined,
-      scheduledAt: scheduledAtIso,
-    };
+  async function onSubmit(values: CreatePostInput) {
+    const payload = toPostPayload(values);
 
     try {
       if (mode === 'create') {
-        await createMutation.mutateAsync(
-          payload as Parameters<typeof createMutation.mutateAsync>[0]
-        );
+        await createMutation.mutateAsync(payload);
         router.push('/admin/posts');
       } else if (post) {
-        await updateMutation.mutateAsync(
-          payload as Parameters<typeof updateMutation.mutateAsync>[0]
-        );
+        await updateMutation.mutateAsync(payload);
         router.push('/admin/posts');
       }
     } catch {
+      // Mutation errors are displayed via toast (in mutation hook).
+      // This catch prevents unhandled promise rejection if the hook re-throws.
       return;
     }
   }
@@ -162,7 +165,11 @@ export function PostForm({ mode, post }: PostFormProps) {
         </Label>
         <Input
           id="title"
-          {...register('title')}
+          {...titleField}
+          onChange={(e) => {
+            titleField.onChange(e);
+            syncAutoSlug(e.target.value);
+          }}
           placeholder="Título do post"
           className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
@@ -178,7 +185,7 @@ export function PostForm({ mode, post }: PostFormProps) {
           {mode === 'create' && (
             <button
               type="button"
-              onClick={() => setAutoSlug((v) => !v)}
+              onClick={toggleAutoSlug}
               className={cn(
                 'text-xs flex items-center gap-1 px-2 py-0.5 rounded transition-colors',
                 autoSlug

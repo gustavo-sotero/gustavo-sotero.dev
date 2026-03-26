@@ -238,3 +238,50 @@ describe('comment email cooldown — Redis fallback', () => {
     vi.resetModules();
   });
 });
+
+describe('createRateLimit — RATE_LIMIT_LOCAL_FALLBACK=false returns 503 when Redis is unavailable', () => {
+  it('returns 503 SERVICE_UNAVAILABLE when Redis throws and fallback is disabled', async () => {
+    vi.resetModules();
+
+    vi.doMock('../config/redis', () => ({
+      redis: {
+        multi: vi.fn(() => ({
+          zremrangebyscore: vi.fn().mockReturnThis(),
+          zadd: vi.fn().mockReturnThis(),
+          zcard: vi.fn().mockReturnThis(),
+          expire: vi.fn().mockReturnThis(),
+          exec: vi.fn().mockRejectedValue(new Error('ECONNREFUSED')),
+        })),
+        get: vi.fn(),
+        set: vi.fn(),
+      },
+    }));
+
+    // Override env so RATE_LIMIT_LOCAL_FALLBACK is false — no local fallback allowed
+    vi.doMock('../config/env', () => ({
+      env: { RATE_LIMIT_LOCAL_FALLBACK: false },
+    }));
+
+    const { createRateLimit } = await import('./rateLimit');
+    const app = new Hono();
+    app.post(
+      '/limited',
+      createRateLimit({ maxRequests: 5, windowMs: 60_000, keyPrefix: 'rl:nofall' }) as never,
+      (c) => c.json({ ok: true })
+    );
+
+    const response = await app.request('/limited', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '198.51.100.50' },
+    });
+
+    const body = await response.json();
+    expect(response.status).toBe(503);
+    expect(body).toMatchObject({
+      success: false,
+      error: { code: 'SERVICE_UNAVAILABLE' },
+    });
+
+    vi.resetModules();
+  });
+});

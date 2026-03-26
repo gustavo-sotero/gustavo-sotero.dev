@@ -3,7 +3,7 @@
 import type { PublicCommentNode } from '@portfolio/shared';
 import { MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { CommentForm } from './CommentForm';
 import { CommentList } from './CommentList';
 
@@ -20,7 +20,7 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
   const router = useRouter();
   const [replyTarget, setReplyTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const handleReply = useCallback((commentId: string, authorName: string) => {
+  const handleReply = (commentId: string, authorName: string) => {
     setReplyTarget({ id: commentId, name: authorName });
     // Scroll the form into view smoothly
     requestAnimationFrame(() => {
@@ -28,16 +28,16 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
         .getElementById('comment-form-anchor')
         ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
-  }, []);
+  };
 
-  const handleCancelReply = useCallback(() => {
+  const handleCancelReply = () => {
     setReplyTarget(null);
-  }, []);
+  };
 
-  const handleSuccess = useCallback(() => {
+  const handleSuccess = () => {
     setReplyTarget(null);
     router.refresh();
-  }, [router]);
+  };
 
   const commentCount = countNodes(initialComments);
 

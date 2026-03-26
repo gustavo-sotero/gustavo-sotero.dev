@@ -9,6 +9,7 @@
 import { educationQuerySchema } from '@portfolio/shared/schemas/education';
 import { Hono } from 'hono';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { validateQuery } from '../../lib/validate';
 import { getEducationBySlug, listEducation } from '../../services/education.service';
 import type { AppEnv } from '../../types/index';
 
@@ -19,20 +20,13 @@ const publicEducationRouter = new Hono<AppEnv>();
  * Returns paginated published education entries.
  */
 publicEducationRouter.get('/', async (c) => {
-  const queryParsed = educationQuerySchema.safeParse({
+  const qv = validateQuery(c, educationQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
   });
+  if (!qv.ok) return qv.response;
 
-  if (!queryParsed.success) {
-    const details = queryParsed.error.issues.map((i) => ({
-      field: i.path.join('.'),
-      message: i.message,
-    }));
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Invalid query parameters', details);
-  }
-
-  const result = await listEducation(queryParsed.data, false);
+  const result = await listEducation(qv.data, false);
   return paginatedResponse(c, result.data, result.meta);
 });
 
