@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock env before importing api to prevent Zod env-validation from failing in tests
 vi.mock('./env', () => ({
   env: {
-    NEXT_PUBLIC_API_URL: 'https://api.example.com',
+    NEXT_PUBLIC_API_URL: 'https://example.com/api',
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'test-key',
     NEXT_PUBLIC_S3_PUBLIC_DOMAIN: 'https://s3.example.com',
   },
@@ -142,7 +142,7 @@ describe('apiFetch', () => {
 
     await apiFetch('/posts/my-slug');
 
-    expect(capturedUrl).toBe('https://api.example.com/posts/my-slug');
+    expect(capturedUrl).toBe('https://example.com/api/posts/my-slug');
   });
 });
 
@@ -237,7 +237,7 @@ describe('apiFetchPaginated', () => {
 
     await apiFetchPaginated('/posts?page=2&perPage=10');
 
-    expect(capturedUrl).toBe('https://api.example.com/posts?page=2&perPage=10');
+    expect(capturedUrl).toBe('https://example.com/api/posts?page=2&perPage=10');
   });
 
   it('includes credentials: include', async () => {
@@ -254,5 +254,72 @@ describe('apiFetchPaginated', () => {
     await apiFetchPaginated('/posts');
 
     expect(capturedInit?.credentials).toBe('include');
+  });
+});
+
+// ── Path-based API URL topology ───────────────────────────────────────────────
+// Verifies that all client helpers correctly concatenate paths when
+// NEXT_PUBLIC_API_URL contains a path suffix (e.g. https://example.com/api).
+describe('path-based API URL (https://example.com/api)', () => {
+  let apiFetchPathBased: typeof import('./api').apiFetch;
+  let apiFetchPaginatedPathBased: typeof import('./api').apiFetchPaginated;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.doMock('./env', () => ({
+      env: {
+        NEXT_PUBLIC_API_URL: 'https://example.com/api',
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'test-key',
+        NEXT_PUBLIC_S3_PUBLIC_DOMAIN: 'https://s3.example.com',
+      },
+    }));
+    vi.doMock('@portfolio/shared', () => ({
+      ERROR_CODES: {
+        VALIDATION_ERROR: 'VALIDATION_ERROR',
+        UNAUTHORIZED: 'UNAUTHORIZED',
+        FORBIDDEN: 'FORBIDDEN',
+        NOT_FOUND: 'NOT_FOUND',
+        CONFLICT: 'CONFLICT',
+        RATE_LIMITED: 'RATE_LIMITED',
+        SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+        INTERNAL_ERROR: 'INTERNAL_ERROR',
+      },
+    }));
+    const mod = await import('./api');
+    apiFetchPathBased = mod.apiFetch;
+    apiFetchPaginatedPathBased = mod.apiFetchPaginated;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it('builds URL with path prefix correctly for apiFetch', async () => {
+    let capturedUrl = '';
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(async (url) => {
+      capturedUrl = String(url);
+      return makeResponse(200, { success: true, data: { id: 1 } });
+    });
+
+    await apiFetchPathBased('/posts/my-slug');
+
+    expect(capturedUrl).toBe('https://example.com/api/posts/my-slug');
+  });
+
+  it('builds URL with path prefix correctly for apiFetchPaginated', async () => {
+    let capturedUrl = '';
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(async (url) => {
+      capturedUrl = String(url);
+      return makeResponse(200, {
+        success: true,
+        data: [],
+        meta: { page: 1, perPage: 20, total: 0, totalPages: 0 },
+      });
+    });
+
+    await apiFetchPaginatedPathBased('/posts?page=1');
+
+    expect(capturedUrl).toBe('https://example.com/api/posts?page=1');
   });
 });

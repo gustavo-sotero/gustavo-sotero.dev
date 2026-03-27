@@ -9,7 +9,8 @@ const { cachedMock, selectMock } = vi.hoisted(() => ({
 vi.mock('../../config/env', () => ({
   env: {
     ALLOWED_ORIGIN: 'https://site.example.com',
-    API_PUBLIC_URL: 'https://api.example.com',
+    // Uses the official path-based topology as primary fixture (https://example.com/api).
+    API_PUBLIC_URL: 'https://example.com/api',
   },
 }));
 
@@ -71,8 +72,12 @@ describe('sitemap route', () => {
     expect(xml).toContain('<loc>https://site.example.com/projects</loc>');
     expect(xml).toContain('<loc>https://site.example.com/blog</loc>');
     expect(xml).toContain('<loc>https://site.example.com/contact</loc>');
-    expect(xml).toContain('<loc>https://api.example.com/doc</loc>');
+    // /doc lives under the API public URL — path-based topology: https://example.com/api/doc
+    expect(xml).toContain('<loc>https://example.com/api/doc</loc>');
     expect(xml).toContain('<loc>https://site.example.com/blog/post-1</loc>');
     expect(xml).toContain('<loc>https://site.example.com/projects/project-1</loc>');
+    // No API URL must appear in page or content URLs — those belong to the site
+    expect(xml).not.toContain('<loc>https://example.com/api/blog/');
+    expect(xml).not.toContain('<loc>https://example.com/api/projects/');
   });
 });

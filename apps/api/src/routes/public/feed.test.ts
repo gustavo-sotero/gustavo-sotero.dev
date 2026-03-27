@@ -9,7 +9,8 @@ const { limitMock, cachedMock } = vi.hoisted(() => ({
 vi.mock('../../config/env', () => ({
   env: {
     ALLOWED_ORIGIN: 'https://site.example.com',
-    API_PUBLIC_URL: 'https://api.example.com',
+    // Uses the official path-based topology as primary fixture (https://example.com/api).
+    API_PUBLIC_URL: 'https://example.com/api',
   },
 }));
 
@@ -75,5 +76,19 @@ describe('feed route', () => {
     expect(xml).toContain('<title>Post &amp; 1</title>');
     expect(xml).toContain('<description>Descrição &lt;segura&gt;</description>');
     expect(xml.match(/<item>/g)?.length).toBe(2);
+  });
+
+  it('uses API_PUBLIC_URL for the RSS atom:link self-reference', async () => {
+    const app = new Hono();
+    app.route('/', feedRouter);
+
+    const response = await app.request('/feed.xml');
+    const xml = await response.text();
+
+    // The atom:link self-reference must point to the API public URL, not the site URL.
+    // Path-based topology: https://example.com/api/feed.xml.
+    expect(xml).toContain('<atom:link href="https://example.com/api/feed.xml"');
+    // Post item links must point to the site, not the API.
+    expect(xml).not.toContain('https://example.com/api/blog/');
   });
 });

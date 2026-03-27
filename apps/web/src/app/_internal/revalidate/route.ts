@@ -36,12 +36,15 @@ function authenticate(req: NextRequest): AuthResult {
 }
 
 /**
- * POST /api/revalidate
+ * POST /_internal/revalidate
  *
  * Revalidates Next.js App Router cache entries by tag.
  * Designed for server-to-server calls with `x-revalidate-secret` header.
  * Internal admin browser calls should use Server Actions
  * (see lib/actions/revalidate-tags.ts).
+ *
+ * This route lives under /_internal/ so it does not collide with the public
+ * /api/* namespace that the Hono API now occupies via the proxy StripPrefix.
  *
  * Body: `{ tags: string[] }`
  * Response: `{ revalidated: string[], invalid: string[], count: number }`
@@ -112,7 +115,7 @@ export async function POST(req: NextRequest) {
       revalidated.push(tag);
     }
   } catch (err) {
-    logServerError('/api/revalidate', 'Unexpected error during revalidation', {
+    logServerError('/_internal/revalidate', 'Unexpected error during revalidation', {
       error: err instanceof Error ? err.message : String(err),
     });
     return NextResponse.json(

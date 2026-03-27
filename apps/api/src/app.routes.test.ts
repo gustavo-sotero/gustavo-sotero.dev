@@ -12,7 +12,8 @@ vi.mock('./config/env', () => ({
     BODY_SIZE_LIMIT: 1_048_576,
     ALLOWED_ORIGIN: 'https://web.example.com',
     S3_PUBLIC_DOMAIN: 'https://cdn.example.com',
-    API_PUBLIC_URL: 'https://api.example.com',
+    // Uses the official path-based topology (https://example.com/api) as primary fixture.
+    API_PUBLIC_URL: 'https://example.com/api',
   },
 }));
 

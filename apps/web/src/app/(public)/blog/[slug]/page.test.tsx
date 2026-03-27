@@ -2,11 +2,12 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getPublicPostDetailMock, notFoundMock } = vi.hoisted(() => ({
+const { getPublicPostDetailMock, notFoundMock, mockJsonLdScript } = vi.hoisted(() => ({
   getPublicPostDetailMock: vi.fn(),
   notFoundMock: vi.fn(() => {
     throw new Error('NEXT_NOT_FOUND');
   }),
+  mockJsonLdScript: vi.fn().mockReturnValue(null),
 }));
 
 vi.mock('@/lib/data/public/posts', () => ({
@@ -18,7 +19,11 @@ vi.mock('@/components/blog/CommentsSection', () => ({
 }));
 
 vi.mock('@/components/shared/JsonLdScript', () => ({
-  JsonLdScript: () => null,
+  JsonLdScript: (props: unknown) => mockJsonLdScript(props),
+}));
+
+vi.mock('@/lib/env', () => ({
+  env: { NEXT_PUBLIC_API_URL: 'https://example.com/api' },
 }));
 
 vi.mock('@/components/shared/MermaidRenderer', () => ({
@@ -51,10 +56,6 @@ vi.mock('next/image', () => ({
 
 vi.mock('next/navigation', () => ({
   notFound: notFoundMock,
-}));
-
-vi.mock('@/lib/env', () => ({
-  env: { NEXT_PUBLIC_API_URL: 'https://api.example.com' },
 }));
 
 import BlogDetailPage, { generateMetadata } from './page';
@@ -105,6 +106,40 @@ describe('BlogDetailPage', () => {
     expect(screen.getByText('Post 1')).toBeDefined();
     expect(screen.getByTestId('trusted-html')).toBeDefined();
     expect(screen.getByTestId('comments-section')).toBeDefined();
+  });
+
+  // ── JSON-LD URL contract ───────────────────────────────────────────────────
+
+  it('JSON-LD url uses SITE_METADATA.url, not the API URL', async () => {
+    mockJsonLdScript.mockClear();
+    getPublicPostDetailMock.mockResolvedValueOnce({
+      state: 'ok',
+      data: {
+        id: 1,
+        slug: 'post-1',
+        title: 'Post 1',
+        content: 'Conteudo',
+        renderedContent: '<p>Conteudo</p>',
+        createdAt: '2026-03-10T00:00:00.000Z',
+        updatedAt: '2026-03-10T00:00:00.000Z',
+        comments: [],
+        tags: [],
+      },
+    });
+
+    const element = await BlogDetailPage({ params: Promise.resolve({ slug: 'post-1' }) });
+    render(element as React.ReactElement);
+
+    expect(mockJsonLdScript).toHaveBeenCalledOnce();
+    const passedData = mockJsonLdScript.mock.calls[0][0].data as { url?: string };
+    // The blog detail page builds JSON-LD url as `${SITE_METADATA.url}/blog/${slug}`.
+    // SITE_METADATA.url is sourced from DEVELOPER_PUBLIC_PROFILE.links.website — never from
+    // NEXT_PUBLIC_API_URL. This assertion guards against regressions where the API URL
+    // (which may contain an /api prefix in path-based topology) bleeds into schema.org data.
+    expect(passedData.url).toBe('https://gustavo-sotero.dev/blog/post-1');
+    // Explicitly assert the API URL mock value does not appear in JSON-LD
+    expect(passedData.url).not.toContain('example.com/api');
+    expect(passedData.url).not.toContain('/api/');
   });
 });
 

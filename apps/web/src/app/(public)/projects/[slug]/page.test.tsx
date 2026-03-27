@@ -2,11 +2,12 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getPublicProjectDetailMock, notFoundMock } = vi.hoisted(() => ({
+const { getPublicProjectDetailMock, notFoundMock, mockJsonLdScript } = vi.hoisted(() => ({
   getPublicProjectDetailMock: vi.fn(),
   notFoundMock: vi.fn(() => {
     throw new Error('NEXT_NOT_FOUND');
   }),
+  mockJsonLdScript: vi.fn().mockReturnValue(null),
 }));
 
 vi.mock('@/lib/data/public/projects', () => ({
@@ -14,7 +15,7 @@ vi.mock('@/lib/data/public/projects', () => ({
 }));
 
 vi.mock('@/components/shared/JsonLdScript', () => ({
-  JsonLdScript: () => null,
+  JsonLdScript: (props: unknown) => mockJsonLdScript(props),
 }));
 
 vi.mock('@/components/shared/PublicPageUnavailable', () => ({
@@ -46,7 +47,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/env', () => ({
-  env: { NEXT_PUBLIC_API_URL: 'https://api.example.com' },
+  env: { NEXT_PUBLIC_API_URL: 'https://example.com/api' },
 }));
 
 import ProjectDetailPage, { generateMetadata } from './page';
@@ -95,6 +96,39 @@ describe('ProjectDetailPage', () => {
 
     expect(screen.getByText('Project 1')).toBeDefined();
     expect(screen.getByTestId('trusted-html')).toBeDefined();
+  });
+
+  // ── JSON-LD URL contract ───────────────────────────────────────────────────
+
+  it('JSON-LD url uses SITE_METADATA.url, not the API URL', async () => {
+    mockJsonLdScript.mockClear();
+    getPublicProjectDetailMock.mockResolvedValueOnce({
+      state: 'ok',
+      data: {
+        id: 1,
+        slug: 'project-1',
+        title: 'Project 1',
+        description: 'Descricao',
+        renderedContent: '<p>Descricao</p>',
+        createdAt: '2026-03-10T00:00:00.000Z',
+        updatedAt: '2026-03-10T00:00:00.000Z',
+        tags: [],
+      },
+    });
+
+    const element = await ProjectDetailPage({ params: Promise.resolve({ slug: 'project-1' }) });
+    render(element as React.ReactElement);
+
+    expect(mockJsonLdScript).toHaveBeenCalledOnce();
+    const passedData = mockJsonLdScript.mock.calls[0][0].data as { url?: string };
+    // The project detail page builds JSON-LD url as `${SITE_METADATA.url}/projects/${slug}`.
+    // SITE_METADATA.url is sourced from DEVELOPER_PUBLIC_PROFILE.links.website — never from
+    // NEXT_PUBLIC_API_URL. This assertion guards against regressions where the API URL
+    // (which may contain an /api prefix) bleeds into canonical structured data.
+    expect(passedData.url).toBe('https://gustavo-sotero.dev/projects/project-1');
+    // Explicitly assert the API URL mock value does not appear in JSON-LD
+    expect(passedData.url).not.toContain('example.com/api');
+    expect(passedData.url).not.toContain('/api/');
   });
 });
 

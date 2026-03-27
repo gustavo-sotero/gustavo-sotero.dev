@@ -15,14 +15,14 @@ const { POST } = await import('./route');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function makeRequest(body: unknown, headers: Record<string, string> = {}) {
-  return new NextRequest('http://localhost/api/revalidate', {
+  return new NextRequest('http://localhost/_internal/revalidate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
   });
 }
 
-describe('POST /api/revalidate', () => {
+describe('POST /_internal/revalidate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -95,7 +95,7 @@ describe('POST /api/revalidate', () => {
   });
 
   it('rejects malformed JSON body with 400', async () => {
-    const req = new NextRequest('http://localhost/api/revalidate', {
+    const req = new NextRequest('http://localhost/_internal/revalidate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

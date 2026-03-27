@@ -9,8 +9,8 @@ import { TechIcon } from '@/components/shared/TechIcon';
 import { TrustedHtml } from '@/components/shared/TrustedHtml';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { SITE_METADATA } from '@/lib/constants';
 import { getPublicProjectDetail } from '@/lib/data/public/projects';
-import { env } from '@/lib/env';
 import { cn } from '@/lib/utils';
 
 interface ProjectDetailPageProps {
@@ -77,7 +77,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     '@type': 'CreativeWork',
     name: project.title,
     description: project.description,
-    url: `${env.NEXT_PUBLIC_API_URL?.replace('api.', '')}/projects/${project.slug}`,
+    url: `${SITE_METADATA.url}/projects/${project.slug}`,
     author: {
       '@type': 'Person',
       name: 'Gustavo Sotero',

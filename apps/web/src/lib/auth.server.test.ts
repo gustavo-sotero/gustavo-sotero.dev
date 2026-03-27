@@ -43,7 +43,7 @@ describe('validateAdminSession', () => {
   });
 
   it('returns true when /auth/session responds with 200', async () => {
-    process.env.NEXT_PUBLIC_API_URL = 'https://api.example.com/';
+    process.env.NEXT_PUBLIC_API_URL = 'https://example.com/api/';
     cookiesMock.mockResolvedValue({
       get: vi.fn().mockReturnValue({ value: 'valid-token' }),
     });
@@ -52,7 +52,7 @@ describe('validateAdminSession', () => {
     const result = await validateAdminSession();
 
     expect(result).toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/auth/session', {
+    expect(fetchMock).toHaveBeenCalledWith('https://example.com/api/auth/session', {
       method: 'GET',
       headers: {
         Cookie: 'admin_token=valid-token',
@@ -83,5 +83,46 @@ describe('validateAdminSession', () => {
     const result = await validateAdminSession();
 
     expect(result).toBe(false);
+  });
+
+  // ── Path-based topology ────────────────────────────────────────────────────
+
+  it('calls /auth/session at the path-based public URL when API_INTERNAL_URL is absent', async () => {
+    delete process.env.API_INTERNAL_URL;
+    process.env.NEXT_PUBLIC_API_URL = 'https://example.com/api';
+    cookiesMock.mockResolvedValue({
+      get: vi.fn().mockReturnValue({ value: 'path-based-token' }),
+    });
+    fetchMock.mockResolvedValue({ ok: true });
+
+    const result = await validateAdminSession();
+
+    expect(result).toBe(true);
+    // resolveServerApiBaseUrl returns the path-based URL as-is (trailing slash stripped);
+    // the fetch target must include /api before /auth/session.
+    expect(fetchMock).toHaveBeenCalledWith('https://example.com/api/auth/session', {
+      method: 'GET',
+      headers: { Cookie: 'admin_token=path-based-token' },
+      cache: 'no-store',
+    });
+  });
+
+  it('prefers API_INTERNAL_URL over path-based NEXT_PUBLIC_API_URL', async () => {
+    process.env.API_INTERNAL_URL = 'http://api:3000';
+    process.env.NEXT_PUBLIC_API_URL = 'https://example.com/api';
+    cookiesMock.mockResolvedValue({
+      get: vi.fn().mockReturnValue({ value: 'internal-token' }),
+    });
+    fetchMock.mockResolvedValue({ ok: true });
+
+    const result = await validateAdminSession();
+
+    expect(result).toBe(true);
+    // The internal URL wins — no /api prefix in the SSR request path.
+    expect(fetchMock).toHaveBeenCalledWith('http://api:3000/auth/session', {
+      method: 'GET',
+      headers: { Cookie: 'admin_token=internal-token' },
+      cache: 'no-store',
+    });
   });
 });

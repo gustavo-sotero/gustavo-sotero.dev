@@ -14,6 +14,7 @@
 
 import { swaggerUI } from '@hono/swagger-ui';
 import { Hono } from 'hono';
+import { env } from '../../config/env';
 import type { AppEnv } from '../../types/index';
 import { OPENAPI_SPEC } from './openapi/spec';
 
@@ -38,7 +39,9 @@ openApiRouter.get('/doc/spec', (c) => {
 openApiRouter.get(
   '/doc',
   swaggerUI({
-    url: '/doc/spec',
+    // Use the public API base so Swagger keeps working when the app is exposed
+    // behind a proxy path prefix such as https://site.com/api.
+    url: `${env.API_PUBLIC_URL}/doc/spec`,
     title: 'Portfolio API — Documentation',
   })
 );

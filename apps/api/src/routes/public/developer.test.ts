@@ -87,7 +87,7 @@ const MOCK_PROFILE = {
       coverUrl: null,
       featured: true,
       repositoryUrl: 'https://github.com/example/portfolio',
-      liveUrl: 'https://api.gustavo-sotero.dev',
+      liveUrl: 'https://gustavo-sotero.dev/api',
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-06-01T00:00:00.000Z',
       tags: [

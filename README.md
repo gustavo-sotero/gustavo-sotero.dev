@@ -19,7 +19,70 @@ packages/
 
 ---
 
+## API Topology (Official: Path-Based)
+
+The **official public topology** exposes the API under a route prefix:
+
+```
+https://yoursite.com/api/*  →  Hono API service (StripPrefix /api applied at proxy)
+https://yoursite.com/*      →  Next.js web app
+https://yoursite.com/_internal/revalidate  →  Next.js on-demand ISR endpoint (internal use only)
+```
+
+### How it works
+
+The Hono API backend is **root-mounted** internally — it serves routes like `/posts`, `/auth/github/callback`, `/doc` directly. The proxy (Traefik/Dokploy) is responsible for:
+
+1. Matching `/api/*` requests
+2. Stripping the `/api` prefix
+3. Forwarding to the `api` container on port 3000
+
+This means:
+- Public URL: `https://yoursite.com/api/posts`
+- Internal/SSR URL: `http://api:3000/posts` (via `API_INTERNAL_URL` — no prefix)
+
+### OAuth callback
+
+The GitHub OAuth App must be configured with the **public** callback URL:
+
+```
+https://yoursite.com/api/auth/github/callback
+```
+
+After the proxy strips `/api`, the backend processes the request at `/auth/github/callback`.
+
+### Subdomain compatibility
+
+The codebase is neutral with respect to API origin format. Setting `NEXT_PUBLIC_API_URL=https://api.yoursite.com` (subdomain mode) also works — the path-based mode (`https://yoursite.com/api`) is simply the official documented default.
+
+### Proxy configuration (Traefik/Dokploy)
+
+```yaml
+# Dokploy / Traefik labels for the web service
+- "traefik.http.routers.web.rule=Host(`yoursite.com`)"
+- "traefik.http.routers.web.service=web"
+- "traefik.http.services.web.loadbalancer.server.port=3001"
+
+# Route /api/* to the API service with StripPrefix
+- "traefik.http.routers.api.rule=Host(`yoursite.com`) && PathPrefix(`/api`)"
+- "traefik.http.routers.api.middlewares=strip-api-prefix"
+- "traefik.http.middlewares.strip-api-prefix.stripprefix.prefixes=/api"
+- "traefik.http.routers.api.service=api"
+- "traefik.http.services.api.loadbalancer.server.port=3000"
+
+# Route /_internal/* to the web service (Next.js internal routes — higher priority)
+- "traefik.http.routers.web-internal.rule=Host(`yoursite.com`) && PathPrefix(`/_internal`)"
+- "traefik.http.routers.web-internal.priority=10"
+- "traefik.http.routers.web-internal.service=web"
+```
+
+> **Key invariant:** the `/api` prefix exists **only** at the proxy layer. The Hono service never sees it. SSR fetches via `API_INTERNAL_URL` go directly to `http://api:3000` without any prefix.
+
+---
+
 ## API Route Domains
+
+All routes below are **internal paths** (what the Hono service receives after the proxy strips `/api`).
 
 ### Public
 
@@ -65,6 +128,12 @@ All admin routes are prefixed with `/admin`. Detail GETs use `:slug`; PATCH/DELE
 | `/admin/analytics`        | Pageview summary + top-posts metrics      |
 | `/admin/jobs`             | Jobs operational endpoints                |
 | `/admin/jobs/dlq`         | DLQ queue counts endpoint (backend only in v1) |
+
+### Next.js internal (web service only)
+
+| Route                          | Description                                  |
+| ------------------------------ | -------------------------------------------- |
+| `POST /_internal/revalidate`   | On-demand ISR tag revalidation (secret required) |
 
 ---
 

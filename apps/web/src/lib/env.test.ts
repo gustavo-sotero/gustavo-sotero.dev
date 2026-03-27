@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const VALID_ENV = {
-  NEXT_PUBLIC_API_URL: 'https://api.example.com',
+  NEXT_PUBLIC_API_URL: 'https://example.com/api',
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'test-site-key',
   NEXT_PUBLIC_S3_PUBLIC_DOMAIN: 'https://cdn.example.com',
 };
@@ -88,5 +88,21 @@ describe('env validation', () => {
 
     await expect(import('./env')).rejects.toThrow('process.exit(1)');
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  // ── Path-based topology ────────────────────────────────────────────────────
+
+  it('accepts a path-based NEXT_PUBLIC_API_URL (https://example.com/api)', async () => {
+    // The official production topology exposes the Hono API under a /api path prefix
+    // via a proxy StripPrefix rule. The env schema must accept such absolute URLs
+    // with a non-empty path component, not only host-only origins.
+    process.env.NEXT_PUBLIC_API_URL = 'https://example.com/api';
+    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = VALID_ENV.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    process.env.NEXT_PUBLIC_S3_PUBLIC_DOMAIN = VALID_ENV.NEXT_PUBLIC_S3_PUBLIC_DOMAIN;
+
+    const { env } = await import('./env');
+
+    expect(env.NEXT_PUBLIC_API_URL).toBe('https://example.com/api');
+    expect(exitSpy).not.toHaveBeenCalled();
   });
 });

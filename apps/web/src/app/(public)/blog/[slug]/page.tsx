@@ -11,8 +11,8 @@ import { TechIcon } from '@/components/shared/TechIcon';
 import { TrustedHtml } from '@/components/shared/TrustedHtml';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { SITE_METADATA } from '@/lib/constants';
 import { getPublicPostDetail } from '@/lib/data/public/posts';
-import { env } from '@/lib/env';
 import { cn, formatDateBR } from '@/lib/utils';
 
 interface BlogDetailPageProps {
@@ -99,7 +99,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
     },
     datePublished: post.publishedAt ?? post.createdAt,
     dateModified: post.updatedAt,
-    url: `${env.NEXT_PUBLIC_API_URL?.replace('api.', '')}/blog/${post.slug}`,
+    url: `${SITE_METADATA.url}/blog/${post.slug}`,
   };
 
   return (

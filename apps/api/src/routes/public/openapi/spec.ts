@@ -7,6 +7,7 @@
  *  - admin-paths.ts  — all admin (JWT-required) path definitions
  */
 
+import { env } from '../../../config/env';
 import { openApiComponents } from './components';
 import { adminPaths } from './paths/admin-paths';
 import { publicPaths } from './paths/public-paths';
@@ -35,8 +36,8 @@ export const OPENAPI_SPEC = {
       description: 'API Server',
       variables: {
         apiUrl: {
-          default: 'http://localhost:3000',
-          description: 'Base URL of the API',
+          default: env.API_PUBLIC_URL,
+          description: 'Base URL of the API (e.g. https://yoursite.com/api in production)',
         },
       },
     },

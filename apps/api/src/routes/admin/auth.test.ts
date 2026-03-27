@@ -25,10 +25,12 @@ vi.mock('../../config/env', () => ({
   env: {
     GITHUB_CLIENT_ID: 'github-client-id',
     GITHUB_CLIENT_SECRET: 'github-client-secret',
-    GITHUB_CALLBACK_URL: 'http://localhost:3000/auth/github/callback',
+    // Path-based production format: https://example.com/api/auth/github/callback
+    // The proxy strips /api, so the backend internally receives /auth/github/callback.
+    GITHUB_CALLBACK_URL: 'https://example.com/api/auth/github/callback',
     ADMIN_GITHUB_ID: '12345',
     JWT_SECRET: '12345678901234567890123456789012',
-    ALLOWED_ORIGIN: 'http://localhost:3001',
+    ALLOWED_ORIGIN: 'https://example.com',
     NODE_ENV: 'test',
   },
 }));
@@ -216,7 +218,7 @@ describe('auth routes', () => {
     );
 
     expect(callbackRes.status).toBe(302);
-    expect(callbackRes.headers.get('location')).toBe('http://localhost:3001/admin');
+    expect(callbackRes.headers.get('location')).toBe('https://example.com/admin');
   });
 
   it('GET /github/callback returns 400 when code or state is missing', async () => {
@@ -426,7 +428,7 @@ describe('auth routes', () => {
     });
 
     expect(response.status).toBe(302);
-    expect(response.headers.get('location')).toBe('http://localhost:3001/admin');
+    expect(response.headers.get('location')).toBe('https://example.com/admin');
 
     const setCookieHeader = response.headers.get('set-cookie');
     expect(setCookieHeader).toContain('admin_token=signed-jwt-token');

@@ -35,7 +35,25 @@ describe('openapi routes', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/html');
     expect(html).toContain('SwaggerUIBundle');
-    expect(html).toContain('/doc/spec');
+    expect(html).toContain('https://example.com/api/doc/spec');
+  });
+
+  it('GET /doc/spec exposes the path-based API server as the default server URL', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      servers: Array<{
+        variables?: {
+          apiUrl?: {
+            default?: string;
+          };
+        };
+      }>;
+    };
+
+    expect(body.servers[0]?.variables?.apiUrl?.default).toBe('https://example.com/api');
   });
 
   it('GET /doc/spec includes all Module 8 route contracts', async () => {
