@@ -4,10 +4,21 @@
  * Polls the `outbox` table for pending events and publishes them to BullMQ.
  * Using a BullMQ jobId of `outbox:{uuid}` provides idempotency — if the relay
  * runs twice before marking processed, BullMQ silently deduplicates.
+ *
+ * Failure classes:
+ *  UNSUPPORTED_EVENT_TYPE     — event.eventType is not a known OutboxEventType value
+ *  INVALID_PAYLOAD            — event.payload does not pass the event-type schema
+ *  QUEUE_PUBLISH_FAILURE      — queue.add() threw; the job was never enqueued
+ *  OUTBOX_STATUS_UPDATE_FAILURE — queue.add() succeeded but marking the outbox row
+ *                                 as processed failed (job will still run due to dedup)
  */
 
-import { OutboxEventType } from '@portfolio/shared';
-import { outbox } from '@portfolio/shared/db/schema';
+import {
+  imageOptimizeOutboxPayloadSchema,
+  OutboxEventType,
+  scheduledPostPublishOutboxPayloadSchema,
+} from '@portfolio/shared';
+import { outbox, uploads } from '@portfolio/shared/db/schema';
 import type { Queue } from 'bullmq';
 import { and, asc, eq, lte } from 'drizzle-orm';
 import { db } from '../config/db';
@@ -15,6 +26,13 @@ import { getLogger } from '../config/logger';
 
 const logger = getLogger('lib', 'outbox-relay');
 let outboxSchemaMissing = false;
+
+/** Structured failure category for relay log correlation. */
+type RelayFailureClass =
+  | 'UNSUPPORTED_EVENT_TYPE'
+  | 'INVALID_PAYLOAD'
+  | 'QUEUE_PUBLISH_FAILURE'
+  | 'OUTBOX_STATUS_UPDATE_FAILURE';
 
 export const OUTBOX_MAX_ATTEMPTS = 5;
 
@@ -75,13 +93,37 @@ export async function processOutboxEvents(
   }
 
   for (const event of events) {
+    // Extract uploadId eagerly from the raw payload for reconciliation purposes.
+    // This is intentionally done before schema validation so that even a
+    // malformed image-optimize event can still have its upload row reconciled
+    // if the uploadId field is present but the schema otherwise rejects the payload.
+    let resolvedUploadId: string | undefined;
+    if (event.eventType === OutboxEventType.IMAGE_OPTIMIZE) {
+      const raw = event.payload as Record<string, unknown> | null;
+      if (raw && typeof raw.uploadId === 'string') {
+        resolvedUploadId = raw.uploadId;
+      }
+    }
+
+    let queuePublishSucceeded = false;
+
     try {
       if (event.eventType === OutboxEventType.IMAGE_OPTIMIZE) {
-        const payload = event.payload as { uploadId: string };
+        const payloadResult = imageOptimizeOutboxPayloadSchema.safeParse(event.payload);
+
+        if (!payloadResult.success) {
+          throw Object.assign(
+            new Error(`Invalid image-optimize payload: ${payloadResult.error.message}`),
+            { failureClass: 'INVALID_PAYLOAD' as RelayFailureClass }
+          );
+        }
+
+        const { uploadId } = payloadResult.data;
+
         // jobId = `outbox:{uuid}` → BullMQ deduplicates replays automatically
         await imageQueue.add(
           OutboxEventType.IMAGE_OPTIMIZE,
-          { uploadId: payload.uploadId },
+          { uploadId },
           {
             jobId: `outbox:${event.id}`,
             attempts: 3,
@@ -89,17 +131,26 @@ export async function processOutboxEvents(
           }
         );
       } else if (event.eventType === OutboxEventType.SCHEDULED_POST_PUBLISH) {
+        const payloadResult = scheduledPostPublishOutboxPayloadSchema.safeParse(event.payload);
+
+        if (!payloadResult.success) {
+          throw Object.assign(
+            new Error(`Invalid scheduled-post-publish payload: ${payloadResult.error.message}`),
+            { failureClass: 'INVALID_PAYLOAD' as RelayFailureClass }
+          );
+        }
+
+        const { postId, scheduledAt } = payloadResult.data;
+
         // Use deterministic jobId `post-publish:{postId}` so:
         //  a) BullMQ deduplicates replays when the outbox relay runs twice
         //  b) cancelScheduledPostPublish() in the API (same ID format) still works
-        const payload = event.payload as { postId: number; scheduledAt: string };
-        const scheduledAt = new Date(payload.scheduledAt);
-        const delay = Math.max(0, scheduledAt.getTime() - Date.now());
+        const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
         await postPublishQueue.add(
           'publish',
-          { postId: payload.postId },
+          { postId },
           {
-            jobId: `post-publish:${payload.postId}`,
+            jobId: `post-publish:${postId}`,
             delay,
             attempts: 3,
             backoff: { type: 'exponential', delay: 2000 },
@@ -110,8 +161,14 @@ export async function processOutboxEvents(
       } else {
         // Unknown event type — throw so the event enters the retry/failure path
         // rather than being silently consumed. This surfaces domain contract drift.
-        throw new Error(`Unsupported outbox event type: "${event.eventType}"`);
+        throw Object.assign(new Error(`Unsupported outbox event type: "${event.eventType}"`), {
+          failureClass: 'UNSUPPORTED_EVENT_TYPE' as RelayFailureClass,
+        });
       }
+
+      // queue.add() succeeded — mark separately so the catch block can classify
+      // a subsequent outbox-status write failure correctly.
+      queuePublishSucceeded = true;
 
       await db
         .update(outbox)
@@ -125,6 +182,19 @@ export async function processOutboxEvents(
     } catch (err) {
       const newAttempts = event.attempts + 1;
       const isFinal = newAttempts >= OUTBOX_MAX_ATTEMPTS;
+      const errObj = err as Error & { failureClass?: RelayFailureClass };
+
+      // When the queue publish succeeded but the outbox status-update failed, the
+      // job will still run (BullMQ dedup prevents duplicate work). Log this case
+      // distinctly: no upload reconciliation needed since the job is live.
+      const failureClass: RelayFailureClass =
+        errObj.failureClass === 'INVALID_PAYLOAD'
+          ? 'INVALID_PAYLOAD'
+          : errObj.failureClass === 'UNSUPPORTED_EVENT_TYPE'
+            ? 'UNSUPPORTED_EVENT_TYPE'
+            : queuePublishSucceeded
+              ? 'OUTBOX_STATUS_UPDATE_FAILURE'
+              : 'QUEUE_PUBLISH_FAILURE';
 
       await db
         .update(outbox)
@@ -142,11 +212,47 @@ export async function processOutboxEvents(
           });
         });
 
+      // Reconcile: when the final relay attempt fails for an image-optimize event
+      // and the queue publish never succeeded, the imageOptimize job will never run.
+      // Mark the upload as failed so the admin UI shows a terminal error state
+      // instead of stalling indefinitely in the `uploaded` pseudo-processing limbo.
+      //
+      // Do NOT reconcile when queuePublishSucceeded=true (OUTBOX_STATUS_UPDATE_FAILURE):
+      // the job is already in BullMQ and imageOptimize.ts manages the terminal states.
+      if (
+        isFinal &&
+        !queuePublishSucceeded &&
+        event.eventType === OutboxEventType.IMAGE_OPTIMIZE &&
+        resolvedUploadId
+      ) {
+        await db
+          .update(uploads)
+          .set({ status: 'failed' })
+          .where(eq(uploads.id, resolvedUploadId))
+          .catch((dbErr) => {
+            logger.error(
+              'Outbox relay: failed to reconcile upload status after terminal relay failure',
+              {
+                eventId: event.id,
+                uploadId: resolvedUploadId,
+                error: dbErr instanceof Error ? dbErr.message : String(dbErr),
+              }
+            );
+          });
+
+        logger.warn('Outbox relay: upload marked as failed after terminal relay failure', {
+          eventId: event.id,
+          uploadId: resolvedUploadId,
+        });
+      }
+
       logger.error('Outbox relay: failed to process event', {
         eventId: event.id,
         eventType: event.eventType,
         attempt: newAttempts,
         isFinal,
+        failureClass,
+        ...(resolvedUploadId ? { uploadId: resolvedUploadId } : {}),
         error: err instanceof Error ? err.message : String(err),
       });
     }

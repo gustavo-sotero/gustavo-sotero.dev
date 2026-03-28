@@ -12,6 +12,7 @@ export * from './schemas/comments';
 export * from './schemas/contacts';
 export * from './schemas/education';
 export * from './schemas/experience';
+export * from './schemas/outbox';
 export * from './schemas/posts';
 export * from './schemas/projects';
 export * from './schemas/tags';

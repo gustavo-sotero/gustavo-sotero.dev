@@ -218,19 +218,45 @@ logger.info('All workers ready', {
 // ── Transactional Outbox Relay ────────────────────────────────────────────────
 // Polls the `outbox` table for pending events and publishes them to BullMQ.
 // processOutboxEvents is defined in ./lib/outbox-relay (extracted for testability).
+//
+// In-flight guard rationale:
+//   Under normal load each relay run completes well within the poll interval
+//   (simple SELECT + queue.add + UPDATE per batch). However, under a slow DB
+//   or during a large backlog flush, a run could theoretically exceed the
+//   interval. Two concurrent relay executions would each SELECT the same
+//   pending events; BullMQ's `jobId = outbox:{uuid}` deduplication prevents
+//   duplicate jobs, and the DB UPDATE is idempotent (setting status='processed'
+//   twice is harmless). The flag below is therefore a belt-and-braces guard
+//   that avoids the additional DB + queue pressure of a concurrent batch and
+//   eliminates noisy duplicate log entries, without relying solely on
+//   downstream idempotency for correctness.
 
 const OUTBOX_POLL_INTERVAL_MS = 5_000;
+let relayInFlight = false;
+
+async function runOutboxRelay(): Promise<void> {
+  if (relayInFlight) return;
+  relayInFlight = true;
+  try {
+    await processOutboxEvents(imageQueue, postPublishQueue);
+  } finally {
+    relayInFlight = false;
+  }
+}
 
 // Initial run on startup then poll on interval
-processOutboxEvents(imageQueue, postPublishQueue).catch((err) => {
+runOutboxRelay().catch((err) => {
   logger.error('Outbox relay initial run failed', {
     error: err instanceof Error ? err.message : String(err),
   });
 });
-const outboxInterval = setInterval(
-  () => processOutboxEvents(imageQueue, postPublishQueue),
-  OUTBOX_POLL_INTERVAL_MS
-);
+const outboxInterval = setInterval(() => {
+  runOutboxRelay().catch((err) => {
+    logger.error('Outbox relay poll failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+}, OUTBOX_POLL_INTERVAL_MS);
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
 async function shutdown(signal: string): Promise<void> {

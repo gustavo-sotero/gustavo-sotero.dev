@@ -26,7 +26,7 @@ const stageLabel: Record<string, string> = {
   presigning: 'Gerando URL assinada...',
   uploading: 'Enviando para S3...',
   confirming: 'Confirmando upload...',
-  processing: 'Otimizando imagem...',
+  processing: 'Aguardando worker e otimizando imagem...',
 };
 
 function resolveEffectiveUrl(upload: Upload): string {
@@ -53,6 +53,7 @@ export function CoverMediaField({
   const [showManualUrl, setShowManualUrl] = useState(false);
   const [manualInput, setManualInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const isRetryableTerminalState = ['failed', 'timeout', 'error'].includes(state.stage);
 
   const isUploading = ['presigning', 'uploading', 'confirming', 'processing'].includes(state.stage);
   const hasPreview = Boolean(value);
@@ -167,6 +168,10 @@ export function CoverMediaField({
             <span className="text-xs text-zinc-600 ml-auto font-mono">{state.progress}%</span>
           </div>
           <Progress value={state.progress} className="h-1.5 bg-zinc-800" />
+          <p className="text-[11px] text-zinc-500">
+            O arquivo já foi confirmado quando esta etapa começa; agora o relay e o worker precisam
+            concluir o processamento.
+          </p>
         </div>
       )}
 
@@ -187,7 +192,7 @@ export function CoverMediaField({
               'cursor-pointer transition-all duration-150 p-6 text-center',
               dragOver
                 ? 'border-emerald-500/60 bg-emerald-500/5'
-                : state.stage === 'error'
+                : isRetryableTerminalState
                   ? 'border-red-800 bg-red-950/20 hover:border-red-700'
                   : 'border-zinc-700 bg-zinc-900/50 hover:border-zinc-600 hover:bg-zinc-900'
             )}
@@ -210,10 +215,18 @@ export function CoverMediaField({
               <p className="text-xs text-zinc-600">JPG, PNG, WebP, GIF · máx. 5 MB</p>
             </div>
 
-            {state.stage === 'error' && (
-              <p className="text-xs text-red-400 bg-red-950/30 px-3 py-1.5 rounded border border-red-900/50">
-                {state.error}
-              </p>
+            {isRetryableTerminalState && (
+              <div className="space-y-1">
+                <p className="text-xs text-red-400 bg-red-950/30 px-3 py-1.5 rounded border border-red-900/50">
+                  {state.error}
+                </p>
+                {state.stage === 'timeout' && (
+                  <p className="text-[11px] text-red-300/80">
+                    O processamento assíncrono não foi confirmado dentro do tempo esperado. Você
+                    pode reenviar o arquivo ou validar o worker.
+                  </p>
+                )}
+              </div>
             )}
 
             <input

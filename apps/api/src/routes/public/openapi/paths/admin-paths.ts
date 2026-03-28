@@ -554,9 +554,9 @@ export const adminPaths = {
   '/admin/uploads/{id}/confirm': {
     post: {
       tags: ['Admin - Uploads'],
-      summary: 'Confirm upload and trigger optimization',
+      summary: 'Confirm upload and schedule optimization via outbox',
       description:
-        'Transitions the upload status from `pending` to `uploaded` and enqueues the `image-optimize` job. ' +
+        'Transitions the upload status from `pending` to `uploaded` and writes an `image-optimize` outbox event for asynchronous delivery to the worker. ' +
         'The response is **immediate** and reflects the pre-optimization state — `optimizedUrl` and `variants` ' +
         'will be `null` at this point. Poll `GET /admin/uploads/{id}` to track when the job completes ' +
         '(`status: "processed"`) and retrieve the final optimized URLs.',
@@ -566,7 +566,7 @@ export const adminPaths = {
       responses: {
         '200': {
           description:
-            'Upload confirmed, optimization job enqueued. Status is `uploaded` — not yet `processed`.',
+            'Upload confirmed and outbox event persisted. Status is `uploaded` — not yet `processed`.',
           content: {
             'application/json': {
               example: {
@@ -600,7 +600,8 @@ export const adminPaths = {
       description:
         'Returns the current status and metadata of an upload. ' +
         'Use this endpoint to poll for optimization completion after confirming an upload via `POST /admin/uploads/{id}/confirm`. ' +
-        'The optimization job runs asynchronously — keep polling until `status` is `"processed"` (success) or `"failed"` (error). ' +
+        'A status of `uploaded` means the confirm step succeeded and the file is still waiting for relay and/or worker completion. ' +
+        'Keep polling until `status` is `"processed"` (success) or `"failed"` (error). ' +
         'When `processed`, use `optimizedUrl` as the cover URL (falls back to `variants.medium` → `originalUrl`).',
       operationId: 'adminGetUpload',
       security: [{ cookieAuth: [] }],

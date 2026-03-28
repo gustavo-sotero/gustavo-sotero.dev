@@ -20,6 +20,7 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/worker/package.json ./apps/worker/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
+COPY scripts ./scripts/
 
 RUN bun install --frozen-lockfile
 

@@ -13,6 +13,8 @@ export type UploadStage =
   | 'confirming'
   | 'processing'
   | 'done'
+  | 'failed'
+  | 'timeout'
   | 'error';
 
 export interface UploadState {
@@ -24,6 +26,13 @@ export interface UploadState {
   optimizedUrl?: string | null;
   variants?: { thumbnail?: string; medium?: string } | null;
   error?: string;
+  errorCode?: string;
+}
+
+interface UseAdminUploadOptions {
+  pollMaxAttempts?: number;
+  pollInitialDelayMs?: number;
+  pollMaxDelayMs?: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -43,6 +52,24 @@ function isUploadLike(value: unknown): value is Upload {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function resolveErrorStage(error: unknown): Pick<UploadState, 'stage' | 'errorCode'> {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const errorCode = typeof error.code === 'string' ? error.code : undefined;
+
+    if (errorCode === 'PROCESSING_FAILED') {
+      return { stage: 'failed', errorCode };
+    }
+
+    if (errorCode === 'PROCESSING_TIMEOUT') {
+      return { stage: 'timeout', errorCode };
+    }
+
+    return { stage: 'error', errorCode };
+  }
+
+  return { stage: 'error' };
 }
 
 /**
@@ -118,75 +145,84 @@ async function putToS3(
   });
 }
 
-export function useAdminUpload() {
+export function useAdminUpload(options: UseAdminUploadOptions = {}) {
   const [state, setState] = useState<UploadState>({ stage: 'idle', progress: 0 });
+  const { pollMaxAttempts = 15, pollInitialDelayMs = 1000, pollMaxDelayMs = 10_000 } = options;
 
-  const upload = useCallback(async (file: File): Promise<Upload | null> => {
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
-    if (!allowedMimes.includes(file.type as (typeof allowedMimes)[number])) {
-      toast.error('Tipo de arquivo não permitido. Use JPG, PNG, WebP ou GIF.');
-      return null;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Arquivo muito grande. Máximo de 5MB.');
-      return null;
-    }
-    try {
-      setState({ stage: 'presigning', progress: 0 });
-      const presignReq: PresignRequest = {
-        mime: file.type as PresignRequest['mime'],
-        size: file.size,
-        filename: file.name,
-      };
-      const presignRes = await apiFetch<PresignResponse>('/admin/uploads/presign', {
-        method: 'POST',
-        body: JSON.stringify(presignReq),
-      });
-      const { presignedUrl, uploadId } = presignRes?.data as PresignResponse;
-
-      setState({ stage: 'uploading', progress: 0 });
-      await putToS3(presignedUrl, file, (pct) => {
-        setState((prev) => ({ ...prev, progress: pct }));
-      });
-
-      setState((prev) => ({ ...prev, stage: 'confirming', progress: 100 }));
-      const confirmRes = await apiFetch<Upload>(`/admin/uploads/${uploadId}/confirm`, {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
-      const confirmed = confirmRes?.data;
-
-      if (!isUploadLike(confirmed)) {
-        throw new Error('Resposta de confirmação inválida. Tente reenviar a imagem.');
+  const upload = useCallback(
+    async (file: File): Promise<Upload | null> => {
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+      if (!allowedMimes.includes(file.type as (typeof allowedMimes)[number])) {
+        toast.error('Tipo de arquivo não permitido. Use JPG, PNG, WebP ou GIF.');
+        return null;
       }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Arquivo muito grande. Máximo de 5MB.');
+        return null;
+      }
+      try {
+        setState({ stage: 'presigning', progress: 0 });
+        const presignReq: PresignRequest = {
+          mime: file.type as PresignRequest['mime'],
+          size: file.size,
+          filename: file.name,
+        };
+        const presignRes = await apiFetch<PresignResponse>('/admin/uploads/presign', {
+          method: 'POST',
+          body: JSON.stringify(presignReq),
+        });
+        const { presignedUrl, uploadId } = presignRes?.data as PresignResponse;
 
-      // The confirm endpoint returns status='uploaded' — the image-optimize job
-      // runs asynchronously. Poll until the worker finishes (processed/failed).
-      setState((prev) => ({ ...prev, stage: 'processing' }));
-      const processed = await pollUntilProcessed(
-        uploadId,
-        (id) => apiFetch<Upload>(`/admin/uploads/${id}`) as Promise<{ data: Upload }>
-      );
+        setState({ stage: 'uploading', progress: 0 });
+        await putToS3(presignedUrl, file, (pct) => {
+          setState((prev) => ({ ...prev, progress: pct }));
+        });
 
-      const effectiveUrl = resolveUploadEffectiveUrl(processed);
+        setState((prev) => ({ ...prev, stage: 'confirming', progress: 100 }));
+        const confirmRes = await apiFetch<Upload>(`/admin/uploads/${uploadId}/confirm`, {
+          method: 'POST',
+          body: JSON.stringify({}),
+        });
+        const confirmed = confirmRes?.data;
 
-      setState({
-        stage: 'done',
-        progress: 100,
-        uploadId: processed.id,
-        originalUrl: processed.originalUrl,
-        effectiveUrl,
-        optimizedUrl: processed.optimizedUrl,
-        variants: processed.variants,
-      });
-      return processed;
-    } catch (err) {
-      const message = getUploadErrorMessage(err);
-      setState({ stage: 'error', progress: 0, error: message });
-      toast.error(`Upload falhou: ${message}`);
-      return null;
-    }
-  }, []);
+        if (!isUploadLike(confirmed)) {
+          throw new Error('Resposta de confirmação inválida. Tente reenviar a imagem.');
+        }
+
+        // The confirm endpoint returns status='uploaded' after the API writes the
+        // transactional outbox event. The relay + worker then finish the image
+        // processing asynchronously, so the UI must poll for a terminal status.
+        setState((prev) => ({ ...prev, stage: 'processing' }));
+        const processed = await pollUntilProcessed(
+          uploadId,
+          (id) => apiFetch<Upload>(`/admin/uploads/${id}`) as Promise<{ data: Upload }>,
+          pollMaxAttempts,
+          pollInitialDelayMs,
+          pollMaxDelayMs
+        );
+
+        const effectiveUrl = resolveUploadEffectiveUrl(processed);
+
+        setState({
+          stage: 'done',
+          progress: 100,
+          uploadId: processed.id,
+          originalUrl: processed.originalUrl,
+          effectiveUrl,
+          optimizedUrl: processed.optimizedUrl,
+          variants: processed.variants,
+        });
+        return processed;
+      } catch (err) {
+        const message = getUploadErrorMessage(err);
+        const { stage, errorCode } = resolveErrorStage(err);
+        setState({ stage, progress: 0, error: message, errorCode });
+        toast.error(`Upload falhou: ${message}`);
+        return null;
+      }
+    },
+    [pollInitialDelayMs, pollMaxAttempts, pollMaxDelayMs]
+  );
 
   const reset = useCallback(() => setState({ stage: 'idle', progress: 0 }), []);
 

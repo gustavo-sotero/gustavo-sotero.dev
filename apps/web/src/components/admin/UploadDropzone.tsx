@@ -19,6 +19,7 @@ export function UploadDropzone({ onUploaded, onInsert, className }: UploadDropzo
   const { state, upload, reset } = useAdminUpload();
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isRetryableTerminalState = ['failed', 'timeout', 'error'].includes(state.stage);
 
   const processFile = useCallback(
     async (file: File) => {
@@ -61,7 +62,7 @@ export function UploadDropzone({ onUploaded, onInsert, className }: UploadDropzo
     presigning: 'Gerando URL assinada...',
     uploading: 'Enviando para S3...',
     confirming: 'Confirmando upload...',
-    processing: 'Otimizando imagem...',
+    processing: 'Aguardando worker e otimizando imagem...',
   };
 
   const isUploading = ['presigning', 'uploading', 'confirming', 'processing'].includes(state.stage);
@@ -69,7 +70,7 @@ export function UploadDropzone({ onUploaded, onInsert, className }: UploadDropzo
   return (
     <div className={cn('space-y-3', className)}>
       {/* Drop zone */}
-      {(state.stage === 'idle' || state.stage === 'error') && (
+      {(state.stage === 'idle' || isRetryableTerminalState) && (
         <div className="space-y-3">
           <button
             type="button"
@@ -109,9 +110,21 @@ export function UploadDropzone({ onUploaded, onInsert, className }: UploadDropzo
             />
           </button>
 
-          {state.stage === 'error' && (
+          {isRetryableTerminalState && (
             <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 space-y-2">
               <p className="text-xs text-red-300">{state.error}</p>
+              {state.stage === 'failed' && (
+                <p className="text-[11px] text-red-200/80">
+                  O processamento em background terminou em falha. Reenvie a imagem para gerar um
+                  novo evento.
+                </p>
+              )}
+              {state.stage === 'timeout' && (
+                <p className="text-[11px] text-red-200/80">
+                  O upload foi confirmado, mas o resultado final não apareceu a tempo. Você pode
+                  reenviar ou verificar os logs do worker.
+                </p>
+              )}
               <Button
                 type="button"
                 size="sm"
@@ -140,6 +153,9 @@ export function UploadDropzone({ onUploaded, onInsert, className }: UploadDropzo
             <span className="text-xs text-zinc-600 ml-auto font-mono">{state.progress}%</span>
           </div>
           <Progress value={state.progress} className="h-1.5 bg-zinc-800" />
+          <p className="text-[11px] text-zinc-500">
+            A confirmação grava o evento no outbox; a geração final depende do relay e do worker.
+          </p>
         </div>
       )}
 

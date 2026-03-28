@@ -64,7 +64,7 @@ describe('UploadDropzone', () => {
 
     render(<UploadDropzone />);
 
-    expect(screen.getByText('Otimizando imagem...')).toBeInTheDocument();
+    expect(screen.getByText('Aguardando worker e otimizando imagem...')).toBeInTheDocument();
     expect(screen.queryByText('Upload concluído')).not.toBeInTheDocument();
   });
 
@@ -86,5 +86,35 @@ describe('UploadDropzone', () => {
 
     expect(screen.getByText('Upload concluído')).toBeInTheDocument();
     expect(screen.getByText('https://cdn.example.com/opt.webp')).toBeInTheDocument();
+  });
+
+  it('shows retry action with error message when processing fails with backend failure', () => {
+    currentState = {
+      stage: 'failed',
+      progress: 0,
+      error: 'Otimização da imagem falhou. Tente fazer o upload novamente.',
+    };
+
+    render(<UploadDropzone />);
+
+    expect(
+      screen.getByText('Otimização da imagem falhou. Tente fazer o upload novamente.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tentar novamente/i })).toBeInTheDocument();
+  });
+
+  it('shows retry action with timeout error message on processing timeout', () => {
+    currentState = {
+      stage: 'timeout',
+      progress: 0,
+      error: 'Tempo limite de processamento excedido. Tente reenviar a imagem.',
+    };
+
+    render(<UploadDropzone />);
+
+    expect(
+      screen.getByText('Tempo limite de processamento excedido. Tente reenviar a imagem.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tentar novamente/i })).toBeInTheDocument();
   });
 });

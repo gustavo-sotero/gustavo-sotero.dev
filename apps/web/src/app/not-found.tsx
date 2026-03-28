@@ -8,7 +8,7 @@ export default function NotFound() {
       <div className="font-mono space-y-1 text-left select-none">
         <p className="text-xs text-zinc-600">~/portfolio $</p>
         <p className="text-xs text-zinc-600">
-          curl <span className="text-emerald-400">https://gustavo-sotero.dev</span>/???
+          curl <span className="text-emerald-400">https://gustavo-sotero.dev</span>/&lt;rota&gt;
         </p>
         <p className="text-xs text-red-400/70">{'// Error: 404 Not Found'}</p>
       </div>

@@ -1,3 +1,4 @@
+import { OutboxEventType } from '@portfolio/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -7,6 +8,7 @@ const {
   findUploadByIdMock,
   updateUploadMock,
   enqueueImageOptimizeMock,
+  txInsertValuesMock,
   txUpdateReturningMock,
 }: {
   presignMock: ReturnType<typeof vi.fn>;
@@ -15,6 +17,7 @@ const {
   findUploadByIdMock: ReturnType<typeof vi.fn>;
   updateUploadMock: ReturnType<typeof vi.fn>;
   enqueueImageOptimizeMock: ReturnType<typeof vi.fn>;
+  txInsertValuesMock: ReturnType<typeof vi.fn>;
   txUpdateReturningMock: ReturnType<typeof vi.fn>;
 } = vi.hoisted(() => ({
   presignMock: vi.fn(),
@@ -23,6 +26,7 @@ const {
   findUploadByIdMock: vi.fn(),
   updateUploadMock: vi.fn(),
   enqueueImageOptimizeMock: vi.fn(),
+  txInsertValuesMock: vi.fn(),
   txUpdateReturningMock: vi.fn(),
 }));
 
@@ -50,7 +54,7 @@ vi.mock('../config/db', () => ({
           })),
         })),
         insert: vi.fn(() => ({
-          values: vi.fn().mockResolvedValue(undefined),
+          values: txInsertValuesMock,
         })),
       };
       return cb(tx);
@@ -88,6 +92,7 @@ describe('uploads service', () => {
       createdAt: new Date(),
     });
     enqueueImageOptimizeMock.mockResolvedValue(undefined);
+    txInsertValuesMock.mockResolvedValue(undefined);
     // Default: transaction update succeeds and returns the uploaded row
     txUpdateReturningMock.mockResolvedValue([
       {
@@ -190,7 +195,7 @@ describe('uploads service', () => {
     await expect(confirmUpload('upload-1')).rejects.toMatchObject({ code: 'NOT_FOUND_IN_BUCKET' });
   });
 
-  it('confirmUpload updates status and enqueues optimization on success', async () => {
+  it('confirmUpload updates status and writes an outbox event on success', async () => {
     findUploadByIdMock.mockResolvedValue({
       id: 'upload-1',
       storageKey: 'uploads/2026/02/file.jpg',
@@ -205,6 +210,10 @@ describe('uploads service', () => {
     // updateUpload (repo fn) and enqueueImageOptimize are no longer called directly.
     expect(updateUploadMock).not.toHaveBeenCalled();
     expect(enqueueImageOptimizeMock).not.toHaveBeenCalled();
+    expect(txInsertValuesMock).toHaveBeenCalledWith({
+      eventType: OutboxEventType.IMAGE_OPTIMIZE,
+      payload: { uploadId: 'upload-1' },
+    });
     expect(result).toMatchObject({ id: 'upload-1', status: 'uploaded' });
     expect(result.originalUrl).toContain('/uploads/');
     expect(result.variants?.thumbnail).toContain('thumb');

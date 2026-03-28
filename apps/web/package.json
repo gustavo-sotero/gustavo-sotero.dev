@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "bun next dev -p 3001",
-    "build": "NODE_ENV=production bun run --env-file ../../.env --bun next build",
+    "build": "bun run build:next && bun ../../scripts/verify-admin-routes.ts --next-dir .next",
+    "build:next": "NODE_ENV=production bun run --env-file ../../.env --bun next build",
     "start": "bun --bun next start",
     "test": "vitest run",
     "test:watch": "vitest"

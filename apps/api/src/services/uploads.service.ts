@@ -3,7 +3,7 @@
  *
  * Flow:
  *  1. generatePresignedUrl() — create DB record (pending) + presigned PUT URL
- *  2. confirmUpload() — validate object in bucket → update to 'uploaded' → enqueue imageOptimize
+ *  2. confirmUpload() — validate object in bucket → update to 'uploaded' → write outbox event
  */
 
 import { OutboxEventType } from '@portfolio/shared';

@@ -6,7 +6,7 @@
  * Routes:
  *  GET   /admin/uploads/:id          - Get upload status and metadata (poll for optimization)
  *  POST  /admin/uploads/presign      - Request presigned PUT URL for direct S3 upload
- *  POST  /admin/uploads/:id/confirm  - Confirm completed upload → trigger optimization pipeline
+ *  POST  /admin/uploads/:id/confirm  - Confirm completed upload → write outbox event for optimization
  */
 
 import { presignRequestSchema } from '@portfolio/shared/schemas/uploads';
@@ -29,6 +29,8 @@ function serializeUpload(upload: Awaited<ReturnType<typeof getUploadById>>): Upl
  * GET /admin/uploads/:id
  * Get the current status and metadata of an upload by ID.
  * Use this to poll for optimization completion after confirming an upload.
+ * A status of `uploaded` means the file was confirmed and is waiting for
+ * outbox relay and/or worker processing to reach a terminal state.
  *
  * Returns the full upload record including `status`, `optimizedUrl` and `variants`.
  *
@@ -81,7 +83,7 @@ adminUploadsRouter.post('/presign', async (c) => {
  * Confirm that a file was successfully uploaded to the bucket.
  *
  * Transitions upload status: pending → uploaded.
- * Enqueues the `image-optimize` BullMQ job for async processing.
+ * Writes an `image-optimize` outbox event for async delivery to the worker.
  *
  * Error cases:
  *  404 — upload ID not found

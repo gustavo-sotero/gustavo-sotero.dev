@@ -1,173 +1,159 @@
-# Portfolio — Fullstack Backend-Centric v2.0
+# Portfólio — Fullstack Backend-Centric v2.0
 
-Personal portfolio platform built as a **technical proof of concept**: queues, cache, security, CRUD, moderation, direct uploads, image optimization, analytics, and background jobs.
+Plataforma de portfólio pessoal construída como **prova de conceito técnica**: filas, cache, segurança, CRUD, moderação, uploads diretos, otimização de imagens, analytics e jobs em background.
 
-**Stack:** Bun + Hono · Drizzle ORM + PostgreSQL · BullMQ + Redis · Next.js App Router · S3-compatible storage · Docker Compose + Dokploy
+**Stack:** Bun + Hono · Drizzle ORM + PostgreSQL · BullMQ + Redis · Next.js App Router · S3-compatível · Docker Compose + Dokploy
 
 ---
 
-## Monorepo Structure
+## Estrutura do Monorepo
 
 ```
 apps/
-  api/      # Hono REST API (Bun)
-  worker/   # BullMQ background jobs (Bun)
+  api/      # REST API com Hono (Bun)
+  worker/   # Jobs em background com BullMQ (Bun)
   web/      # Next.js 16 App Router (React 19, Tailwind 4)
 packages/
-  shared/   # Shared types, Zod schemas, constants
+  shared/   # Tipos TypeScript, schemas Zod e constantes compartilhadas
 ```
 
 ---
 
-## API Topology (Official: Path-Based)
+## Topologia da API (Oficial: Baseada em Path)
 
-The **official public topology** exposes the API under a route prefix:
-
-```
-https://yoursite.com/api/*  →  Hono API service (StripPrefix /api applied at proxy)
-https://yoursite.com/*      →  Next.js web app
-https://yoursite.com/_internal/revalidate  →  Next.js on-demand ISR endpoint (internal use only)
-```
-
-### How it works
-
-The Hono API backend is **root-mounted** internally — it serves routes like `/posts`, `/auth/github/callback`, `/doc` directly. The proxy (Traefik/Dokploy) is responsible for:
-
-1. Matching `/api/*` requests
-2. Stripping the `/api` prefix
-3. Forwarding to the `api` container on port 3000
-
-This means:
-- Public URL: `https://yoursite.com/api/posts`
-- Internal/SSR URL: `http://api:3000/posts` (via `API_INTERNAL_URL` — no prefix)
-
-### OAuth callback
-
-The GitHub OAuth App must be configured with the **public** callback URL:
+A topologia pública oficial expõe a API sob um prefixo de rota:
 
 ```
-https://yoursite.com/api/auth/github/callback
+https://seusite.com/api/*             →  Serviço Hono (proxy aplica StripPrefix /api)
+https://seusite.com/*                 →  Aplicação Next.js
+https://seusite.com/_internal/revalidate  →  ISR on-demand do Next.js (uso interno)
 ```
 
-After the proxy strips `/api`, the backend processes the request at `/auth/github/callback`.
+O backend Hono é montado na raiz internamente — serve rotas como `/posts`, `/auth/github/callback` e `/doc` diretamente. O proxy (Traefik/Dokploy) é responsável por capturar `/api/*`, remover o prefixo `/api` e encaminhar ao container `api` na porta 3000.
 
-### Subdomain compatibility
+- URL pública: `https://seusite.com/api/posts`
+- URL interna/SSR: `http://api:3000/posts` (via `API_INTERNAL_URL` — sem prefixo)
 
-The codebase is neutral with respect to API origin format. Setting `NEXT_PUBLIC_API_URL=https://api.yoursite.com` (subdomain mode) also works — the path-based mode (`https://yoursite.com/api`) is simply the official documented default.
+### Callback do OAuth
 
-### Proxy configuration (Traefik/Dokploy)
+O GitHub OAuth App deve ser configurado com a URL de callback **pública**:
+
+```
+https://seusite.com/api/auth/github/callback
+```
+
+Após o proxy remover `/api`, o backend processa a requisição em `/auth/github/callback`.
+
+### Configuração do proxy (Traefik/Dokploy)
 
 ```yaml
-# Dokploy / Traefik labels for the web service
-- "traefik.http.routers.web.rule=Host(`yoursite.com`)"
-- "traefik.http.routers.web.service=web"
+# Serviço web (Next.js)
+- "traefik.http.routers.web.rule=Host(`seusite.com`)"
 - "traefik.http.services.web.loadbalancer.server.port=3001"
 
-# Route /api/* to the API service with StripPrefix
-- "traefik.http.routers.api.rule=Host(`yoursite.com`) && PathPrefix(`/api`)"
+# Serviço api (Hono) — captura /api/* e remove o prefixo
+- "traefik.http.routers.api.rule=Host(`seusite.com`) && PathPrefix(`/api`)"
 - "traefik.http.routers.api.middlewares=strip-api-prefix"
 - "traefik.http.middlewares.strip-api-prefix.stripprefix.prefixes=/api"
-- "traefik.http.routers.api.service=api"
 - "traefik.http.services.api.loadbalancer.server.port=3000"
 
-# Route /_internal/* to the web service (Next.js internal routes — higher priority)
-- "traefik.http.routers.web-internal.rule=Host(`yoursite.com`) && PathPrefix(`/_internal`)"
+# Rotas internas do Next.js (/_internal) — prioridade elevada
+- "traefik.http.routers.web-internal.rule=Host(`seusite.com`) && PathPrefix(`/_internal`)"
 - "traefik.http.routers.web-internal.priority=10"
 - "traefik.http.routers.web-internal.service=web"
 ```
 
-> **Key invariant:** the `/api` prefix exists **only** at the proxy layer. The Hono service never sees it. SSR fetches via `API_INTERNAL_URL` go directly to `http://api:3000` without any prefix.
+> O serviço Hono **nunca vê o prefixo `/api`**. Fetches SSR via `API_INTERNAL_URL` vão direto para `http://api:3000` sem nenhum prefixo.
 
 ---
 
-## API Route Domains
+## Rotas da API
 
-All routes below are **internal paths** (what the Hono service receives after the proxy strips `/api`).
+Todos os caminhos abaixo são **internos** (o que o Hono recebe após o proxy remover `/api`).
 
-### Public
+### Públicas
 
-| Route domain        | Description                                    |
-| ------------------- | ---------------------------------------------- |
-| `GET /health`       | Liveness check                                 |
-| `GET /ready`        | Readiness check (DB + Redis)                   |
-| `/posts`            | Published blog posts                           |
-| `/projects`         | Published projects                             |
-| `/tags`             | Tags in use across posts/projects              |
-| `/comments`         | Anonymous comment submission                   |
-| `/contact`          | Contact form submission                        |
-| `/developer`        | Developer profile data (bio, availability)     |
-| `/experience`       | Professional experience entries                |
-| `/education`        | Education entries                              |
-| `GET /feed.xml`     | RSS 2.0 feed (published posts)                 |
-| `GET /sitemap.xml`  | XML sitemap (public routes + published slugs)  |
-| `GET /doc`          | Swagger UI (interactive API docs)              |
-| `GET /doc/spec`     | OpenAPI 3.1 spec (JSON)                        |
+| Rota                | Descrição                                          |
+| ------------------- | -------------------------------------------------- |
+| `GET /health`       | Liveness check                                     |
+| `GET /ready`        | Readiness check (DB + Redis)                       |
+| `/posts`            | Posts do blog publicados                           |
+| `/projects`         | Projetos publicados                                |
+| `/tags`             | Tags em uso em posts/projetos                      |
+| `/comments`         | Envio de comentários anônimos                      |
+| `/contact`          | Envio de formulário de contato                     |
+| `/developer`        | Dados do perfil (bio, disponibilidade)             |
+| `/experience`       | Experiências profissionais                         |
+| `/education`        | Formação acadêmica                                 |
+| `GET /feed.xml`     | RSS 2.0 (posts publicados)                         |
+| `GET /sitemap.xml`  | Sitemap XML (rotas públicas + slugs publicados)    |
+| `GET /doc`          | Swagger UI (documentação interativa da API)        |
+| `GET /doc/spec`     | Spec OpenAPI 3.1 (JSON)                            |
 
-### Auth
+### Autenticação
 
-| Route                        | Description                            |
-| ---------------------------- | -------------------------------------- |
-| `POST /auth/github/start`    | Start GitHub OAuth flow                |
-| `GET /auth/github/callback`  | OAuth callback — issues JWT + CSRF     |
-| `POST /auth/logout`          | Clear session cookies                  |
+| Rota                         | Descrição                                    |
+| ---------------------------- | -------------------------------------------- |
+| `POST /auth/github/start`    | Inicia o fluxo OAuth com GitHub              |
+| `GET /auth/github/callback`  | Callback OAuth — emite JWT + cookie CSRF     |
+| `POST /auth/logout`          | Limpa os cookies de sessão                   |
 
-### Admin (JWT + CSRF required)
+### Admin (JWT + CSRF obrigatórios)
 
-All admin routes are prefixed with `/admin`. Detail GETs use `:slug`; PATCH/DELETE use `:id`.
+Todas as rotas admin têm o prefixo `/admin`. GETs de detalhe usam `:slug`; PATCH/DELETE usam `:id`.
 
-| Route domain              | Description                               |
-| ------------------------- | ----------------------------------------- |
-| `/admin/posts`            | CMS — blog posts                          |
-| `/admin/projects`         | CMS — projects                            |
-| `/admin/tags`             | Tag management                            |
-| `/admin/experience`       | Experience entries (admin UI + backend)   |
-| `/admin/education`        | Education entries (admin UI + backend)    |
-| `/admin/comments`         | Comment moderation (approve/reject)       |
-| `/admin/contacts`         | Contact message management                |
-| `/admin/uploads`          | Presigned upload + confirm pipeline       |
-| `/admin/analytics`        | Pageview summary + top-posts metrics      |
-| `/admin/jobs`             | Jobs operational endpoints                |
-| `/admin/jobs/dlq`         | DLQ queue counts endpoint (backend only in v1) |
+| Domínio de rota           | Descrição                                        |
+| ------------------------- | ------------------------------------------------ |
+| `/admin/posts`            | CMS — posts do blog                              |
+| `/admin/projects`         | CMS — projetos                                   |
+| `/admin/tags`             | Gerenciamento de tags                            |
+| `/admin/experience`       | Experiências profissionais                       |
+| `/admin/education`        | Formação acadêmica                               |
+| `/admin/comments`         | Moderação de comentários (aprovar/rejeitar)      |
+| `/admin/contacts`         | Gerenciamento de mensagens de contato            |
+| `/admin/uploads`          | Upload via presigned URL + pipeline de confirmação |
+| `/admin/analytics`        | Resumo de pageviews + top posts                  |
+| `/admin/jobs`             | Endpoints operacionais de jobs                   |
+| `/admin/jobs/dlq`         | Contagem de filas DLQ                            |
 
-### Next.js internal (web service only)
+### Next.js interno (apenas serviço web)
 
-| Route                          | Description                                  |
-| ------------------------------ | -------------------------------------------- |
-| `POST /_internal/revalidate`   | On-demand ISR tag revalidation (secret required) |
+| Rota                           | Descrição                                         |
+| ------------------------------ | ------------------------------------------------- |
+| `POST /_internal/revalidate`   | Revalidação ISR on-demand por tag (secret obrigatório) |
 
 ---
 
-## Getting Started
+## Como Começar
 
-### Prerequisites
+### Pré-requisitos
 
 - [Bun](https://bun.sh) ≥ 1.0
 - [Docker](https://www.docker.com) + Docker Compose
 
-### Local Setup
+### Setup Local
 
-The root `.env` file is the single local source of truth for `bun run dev`, `bun run db:*`, API, worker, and web commands.
-Keep local secrets in that root file and avoid duplicating them into per-app `.env` files.
+O arquivo `.env` na raiz do repositório é a **única fonte de verdade** local para todos os comandos (`bun run dev`, `bun run db:*`, API, worker e web). Não duplique variáveis em `.env` por app.
 
 ```bash
-# 1. Install dependencies
+# 1. Instalar dependências
 bun install
 
-# 2. Copy and fill environment variables
+# 2. Copiar e preencher variáveis de ambiente
 cp .env.example .env
-# Edit .env with your values
+# Edite .env com seus valores
 
-# 3. Start dev services (PostgreSQL, Redis, MinIO)
+# 3. Subir serviços de infra (PostgreSQL, Redis, MinIO)
 docker compose -f docker-compose.dev.yml up -d
 
-# 4. Run database migrations
+# 4. Aplicar migrações do banco
 bun run db:migrate
 
-# 5. Seed sample data
+# 5. Popular com dados de exemplo
 bun run db:seed
 ```
 
-Windows PowerShell equivalents:
+PowerShell (Windows):
 
 ```powershell
 Copy-Item .env.example .env
@@ -176,138 +162,114 @@ bun run db:migrate
 bun run db:seed
 ```
 
-### Development Servers
+### Servidores de Desenvolvimento
 
 ```bash
-# Start all app processes (requires Docker infra running separately via docker-compose.dev.yml)
+# Inicia todos os processos (requer infra Docker rodando via docker-compose.dev.yml)
 bun run dev
 
-# Start individually
-bun run dev:api      # API on http://localhost:3000
-bun run dev:worker   # Background worker
-bun run dev:web      # Web on http://localhost:3001
+# Individualmente
+bun run dev:api      # API em http://localhost:3000
+bun run dev:worker   # Worker em background
+bun run dev:web      # Web em http://localhost:3001
 ```
 
 ---
 
-## Available Scripts
+## Scripts Disponíveis
 
-| Script                  | Description                                 |
-| ----------------------- | ------------------------------------------- |
-| `bun run dev`           | Start all app processes (api + worker + web) |
-| `bun run dev:api`       | API in watch mode                           |
-| `bun run dev:worker`    | Worker in watch mode                        |
-| `bun run dev:web`       | Next.js dev server                          |
-| `bun run db:migrate`    | Apply Drizzle migrations                    |
-| `bun run db:seed`       | Seed sample data                            |
-| `bun run db:backfill:comments` | Re-render legacy comments to sanitized HTML |
-| `bun run db:generate`   | Generate new migrations from schema changes |
-| `bun run db:studio`     | Open Drizzle Studio (DB GUI)                |
-| `bun run lint`          | Run Biome linter                            |
-| `bun run format`        | Format code with Biome                      |
-| `bun run check`         | Lint + format with auto-fix                 |
-| `bun run test`          | Run all workspace tests                     |
-| `bun run test:services` | Start isolated test infrastructure          |
+| Script                         | Descrição                                          |
+| ------------------------------ | -------------------------------------------------- |
+| `bun run dev`                  | Inicia todos os processos (api + worker + web)     |
+| `bun run dev:api`              | API em modo watch                                  |
+| `bun run dev:worker`           | Worker em modo watch                               |
+| `bun run dev:web`              | Servidor de desenvolvimento Next.js                |
+| `bun run db:migrate`           | Aplica migrações do Drizzle                        |
+| `bun run db:seed`              | Popula o banco com dados de exemplo                |
+| `bun run db:backfill:comments` | Re-renderiza comentários legados para HTML sanitizado |
+| `bun run db:generate`          | Gera novas migrações a partir de mudanças no schema |
+| `bun run db:studio`            | Abre o Drizzle Studio (GUI do banco)               |
+| `bun run lint`                 | Executa o linter Biome                             |
+| `bun run format`               | Formata o código com Biome                         |
+| `bun run check`                | Lint + format com auto-fix                         |
+| `bun run test`                 | Executa todos os testes do workspace               |
+| `bun run test:services`        | Sobe a infraestrutura de teste isolada             |
+| `bun scripts/verify-admin-routes.ts` | Verifica rotas admin no artefato Next.js (pós-build) |
 
-> Use `bun run test`, not `bun test`.
-> This monorepo relies on per-workspace Vitest configuration such as `jsdom`, setup files, and module aliases. Running Bun's native test runner directly produces misleading failures like `document is not defined` and unresolved `server-only` imports.
+> Use sempre `bun run test`, nunca `bun test` diretamente. O monorepo depende de configurações per-workspace do Vitest (`jsdom`, setup files, aliases de módulo). Executar o test runner nativo do Bun diretamente gera falhas enganosas como `document is not defined`.
 
-> Migration convention: always generate migrations with `bun run db:generate` from the repository root.
+> Sempre gere migrações com `bun run db:generate` a partir da raiz do repositório.
 
-> Drizzle config loads the repository root `.env` on its own before reading `DATABASE_URL`. That keeps `bun run db:generate`, `bun run db:studio`, and direct `apps/api` Drizzle commands consistent with the same root env contract used by local development.
-
-> Legacy repair step: for existing databases, run `bun run db:backfill:comments` **before** `bun run db:migrate`. The migration now fails fast when `comments.rendered_content` is still null.
-
-### Optional Local Flags
-
-- `RATE_LIMIT_LOCAL_FALLBACK=true` keeps rate limiting available when Redis is temporarily unavailable by using a **single-process in-memory fallback**.
-  - Safe on a **single-instance** deployment (one API container/process): the fallback state is consistent within that process.
-  - **Not safe for replicated/horizontally-scaled deployments**: each API replica maintains its own in-memory counter, so a client can bypass the global limit by distributing requests across replicas. Set to `false` in any production topology where more than one API process runs.
-- Set `RATE_LIMIT_LOCAL_FALLBACK=false` if you want Redis failure to return `503 SERVICE_UNAVAILABLE` instead, which is the correct choice for multi-replica production.
-
-- **OAuth state store:** when Redis is unavailable during the GitHub OAuth flow, state tokens fall back to a **process-local in-memory store**. This is safe only for **single-instance deployments**; in a multi-replica topology each replica maintains its own local state, so an OAuth callback routed to a different replica than the one that generated the state token will fail with an invalid-state error. The current `docker-compose.yml` runs a single API container, making this safe by default.
-
-### Web Env Contract (Build vs Runtime)
-
-For `apps/web`, environment variables are split between build-time and runtime concerns:
-
-- Build-time (`docker/web.Dockerfile` ARG/ENV):
-  - `NEXT_PUBLIC_API_URL`
-  - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
-  - `NEXT_PUBLIC_S3_PUBLIC_DOMAIN`
-- Runtime (`docker-compose.yml` web service `environment`):
-  - `REVALIDATE_SECRET`
-  - `API_INTERNAL_URL` (recommended in Docker: `http://api:3000`)
-
-Server-side API calls resolve base URL with deterministic precedence:
-
-1. `API_INTERNAL_URL` (internal network, preferred)
-2. `NEXT_PUBLIC_API_URL` (public fallback)
-
-If neither is valid, the server-side fetch layer fails with an explicit configuration error.
+> **Reparo legado:** em bancos existentes, execute `bun run db:backfill:comments` **antes** de `bun run db:migrate`. A migração falha rápido quando `comments.rendered_content` ainda é nulo.
 
 ---
 
-## API Health Endpoints
+## Variáveis de Ambiente (Web)
 
-| Endpoint        | Description                         |
-| --------------- | ----------------------------------- |
-| `GET /health`   | Liveness — process is running       |
-| `GET /ready`    | Readiness — DB + Redis connectivity |
-| `GET /doc`      | Swagger UI (interactive API docs)   |
-| `GET /doc/spec` | OpenAPI 3.1 spec (JSON)             |
+Para `apps/web`, as variáveis são divididas entre build-time e runtime:
 
-### Security note for `/doc`
+**Build-time** (`docker/web.Dockerfile` ARG/ENV):
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+- `NEXT_PUBLIC_S3_PUBLIC_DOMAIN`
 
-`/doc` and `/doc/*` use a **route-scoped CSP exception** (Swagger UI requires inline assets and `cdn.jsdelivr.net`).
-The stricter global CSP remains active for all other public/admin routes.
+**Runtime** (`docker-compose.yml` serviço web):
+- `REVALIDATE_SECRET`
+- `API_INTERNAL_URL` (recomendado no Docker: `http://api:3000`)
+
+Chamadas server-side resolvem a URL base com a seguinte precedência:
+1. `API_INTERNAL_URL` (rede interna, preferencial)
+2. `NEXT_PUBLIC_API_URL` (fallback público)
+
+### Flags opcionais de ambiente local
+
+- `RATE_LIMIT_LOCAL_FALLBACK=true` — mantém o rate limiting disponível quando o Redis está indisponível usando um fallback in-memory por processo. **Seguro apenas em instância única.** Em produção com múltiplas réplicas, use `false` para que a falha do Redis retorne `503`.
+- **Estado OAuth:** quando o Redis está indisponível, tokens de state do OAuth caem para uma store in-memory local. Seguro apenas em instância única; em múltiplas réplicas um callback roteado para outra réplica falhará com erro de state inválido.
 
 ---
 
-## Dependency Installation Convention
+## Verificação de Deploy (Checklist de Paridade de Rotas)
 
-Always install dependencies **without specifying versions**:
+A raiz do repositório inclui `scripts/verify-admin-routes.ts`, que lê o `app-paths-manifest.json` do build do Next.js e também pode sondar uma rota admin por HTTP contra um artefato já em execução.
 
 ```bash
-# Correct
-bun add hono
-bun add drizzle-orm postgres
+# Após `bun run build` em apps/web:
+bun scripts/verify-admin-routes.ts
+# Saída: ✓ All required admin routes found (exit 0)
+# Ou uma mensagem de diagnóstico listando as rotas ausentes (exit 1)
 
-# Wrong — never specify version
-bun add zod@4      # ❌
-bun add hono@latest # ❌
+# Com o standalone já rodando localmente:
+bun scripts/verify-admin-routes.ts --probe-url http://localhost:3001/admin/uploads
+# Falha se a rota resolver para a 404 customizada ou retornar 5xx
 ```
 
-The resolved version is locked in `bun.lock` (always committed).
+O `build` de `apps/web` já executa a verificação de manifesto automaticamente. O probe HTTP é complementar para validar o artefato em runtime. Como `/admin/uploads` é protegido, um probe sem sessão pode terminar em `/admin/login`; isso é aceitável desde que a resposta não seja a 404 customizada.
+
+### Checklist de paridade de rotas em produção
+
+Quando uma rota admin retorna a página 404 customizada em produção mas funciona localmente, siga esta sequência antes de investigar o código-fonte:
+
+1. **Confirme o artefato:** a imagem/tag ou commit SHA em produção corresponde ao build mais recente?
+2. **Verifique a rota no container:** dentro do container web (antes do proxy), acesse `http://localhost:3001/admin/uploads` diretamente — se retornar 404, o artefato está faltando a rota; se retornar 200, o problema está no proxy.
+3. **Execute o script de verificação:** `bun scripts/verify-admin-routes.ts` confirma a presença no manifesto do Next.js; com o serviço já em pé, adicione `--probe-url http://localhost:3001/admin/uploads` para validar também a resposta HTTP.
+4. **Valide as regras do proxy:** a configuração do Traefik/Dokploy que roteia `/admin/*` não está sombreando ou reescrevendo incorretamente? A configuração do proxy é **externa ao repositório** e precisa ser validada separadamente quando fonte e produção divergem.
+5. **Compare interno vs. público:** `http://web:3001/admin/uploads` (interno) vs. `https://seusite.com/admin/uploads` (público) — se o interno funciona e o público não, é um problema do proxy.
 
 ---
 
-## Disaster Recovery
+## Endpoints de Saúde
 
-To restore from a backup:
+| Endpoint        | Descrição                              |
+| --------------- | -------------------------------------- |
+| `GET /health`   | Liveness — processo está no ar         |
+| `GET /ready`    | Readiness — conectividade DB + Redis   |
+| `GET /doc`      | Swagger UI (documentação interativa)   |
+| `GET /doc/spec` | Spec OpenAPI 3.1 (JSON)                |
 
-```bash
-# 1. Download backup from S3
-aws s3 cp s3://your-bucket/backups/YYYY-MM-DD.sql.gz ./
-
-# 2. Decompress
-gunzip backup.sql.gz
-
-# 3. Recreate the database
-dropdb portfolio && createdb portfolio
-
-# 4. Restore
-psql portfolio < backup.sql
-
-# 5. Restart services
-docker compose restart
-
-# 6. Verify readiness
-curl http://localhost:3000/ready
-```
+> `/doc` e `/doc/*` usam uma exceção de CSP escopada por rota (o Swagger UI exige assets inline e `cdn.jsdelivr.net`). A CSP global mais restrita permanece ativa em todas as demais rotas.
 
 ---
 
-## License
+## Licença
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License — veja [LICENSE](LICENSE) para detalhes.

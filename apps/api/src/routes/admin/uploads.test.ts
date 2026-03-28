@@ -214,5 +214,35 @@ describe('admin uploads routes', () => {
       expect(body.data?.optimizedUrl).toBeNull();
       expect(body.data?.storageKey).toBeUndefined();
     });
+
+    it('returns upload with failed status when relay terminal failure occurred', async () => {
+      // Verifies that the admin UI can distinguish terminal backend failure vs active processing.
+      // This state is set by the outbox relay when image-optimize delivery permanently fails
+      // (after OUTBOX_MAX_ATTEMPTS) and queue.add() never succeeded.
+      getUploadByIdMock.mockResolvedValue({
+        id: 'upload-3',
+        storageKey: 'uploads/2026/02/file3.jpg',
+        originalUrl: 'https://cdn.example.com/uploads/2026/02/file3.jpg',
+        optimizedUrl: null,
+        variants: null,
+        mime: 'image/jpeg',
+        size: 512,
+        width: null,
+        height: null,
+        status: 'failed',
+        createdAt: new Date(),
+      });
+
+      const res = await app.request('/admin/uploads/upload-3', { method: 'GET' });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as JsonResponse;
+      expect(body.success).toBe(true);
+      expect(body.data?.id).toBe('upload-3');
+      expect(body.data?.status).toBe('failed');
+      expect(body.data?.optimizedUrl).toBeNull();
+      expect(body.data?.variants).toBeNull();
+      expect(body.data?.storageKey).toBeUndefined();
+    });
   });
 });
