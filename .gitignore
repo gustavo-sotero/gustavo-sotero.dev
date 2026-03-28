@@ -35,8 +35,9 @@ tmp/
 # Next.js
 .next/
 
-# Uploads
-uploads/
+# Runtime uploads generated at the repository root only.
+# Do not ignore nested source routes such as apps/web/src/app/**/uploads.
+/uploads/
 
 
 # IntelliJ based IDEs
