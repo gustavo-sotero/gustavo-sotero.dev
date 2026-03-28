@@ -9,6 +9,7 @@
  * monorepo. BullMQ creates its own internal connection.
  */
 
+import { legacyScheduledPostPublishJobId, scheduledPostPublishJobId } from '@portfolio/shared';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
 import { Queue } from 'bullmq';
 import { env } from '../config/env';
@@ -135,11 +136,6 @@ export interface PostPublishJobData {
   postId: number;
 }
 
-/** Deterministic job ID for a scheduled post — ensures at-most-once scheduling. */
-function postPublishJobId(postId: number): string {
-  return `post-publish:${postId}`;
-}
-
 /**
  * Enqueue a delayed job to publish a post at `scheduledAt` (UTC).
  * If a job for this post already exists in the delayed state, it will be
@@ -150,7 +146,7 @@ export async function enqueueScheduledPostPublish(
   postId: number,
   scheduledAt: Date
 ): Promise<void> {
-  const jobId = postPublishJobId(postId);
+  const jobId = scheduledPostPublishJobId(postId);
   const delay = Math.max(0, scheduledAt.getTime() - Date.now());
 
   const existing = await postPublishQueue.getJob(jobId);
@@ -175,11 +171,27 @@ export async function enqueueScheduledPostPublish(
 
 /**
  * Cancel a pending post-publish job.
- * No-op if the job does not exist or has already been processed.
+ * Tries the current safe format first, then falls back to the legacy format
+ * to handle jobs that were enqueued before the colon-separator was removed.
+ * No-op if no matching job exists or the job has already been processed.
  */
 export async function cancelScheduledPostPublish(postId: number): Promise<void> {
-  const jobId = postPublishJobId(postId);
-  const existing = await postPublishQueue.getJob(jobId);
+  const jobId = scheduledPostPublishJobId(postId);
+  let resolvedJobId = jobId;
+  let usedLegacyFormat = false;
+  let existing = await postPublishQueue.getJob(jobId);
+
+  if (!existing) {
+    // Compatibility lookup: job may have been enqueued under the legacy
+    // `post-publish:{postId}` format before the colon-separator was removed.
+    const legacyJobId = legacyScheduledPostPublishJobId(postId);
+    existing = await postPublishQueue.getJob(legacyJobId);
+    if (existing) {
+      resolvedJobId = legacyJobId;
+      usedLegacyFormat = true;
+    }
+  }
+
   if (!existing) return;
 
   const state = await existing.getState();
@@ -187,6 +199,10 @@ export async function cancelScheduledPostPublish(postId: number): Promise<void> 
     await existing.remove().catch(() => {
       /* already gone — safe to ignore */
     });
-    logger.info('Cancelled post-publish job', { jobId, postId });
+    logger.info('Cancelled post-publish job', {
+      jobId: existing.opts.jobId ?? resolvedJobId,
+      jobIdFormat: usedLegacyFormat ? 'legacy' : 'current',
+      postId,
+    });
   }
 }

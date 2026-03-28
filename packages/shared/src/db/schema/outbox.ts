@@ -7,8 +7,10 @@
  * ensuring events are never lost even if the process crashes between the
  * DB write and the queue publish.
  *
- * Idempotency: BullMQ jobId is set to `outbox:{id}` by the relay, so
- * replaying an already-processed event produces a no-op duplicate dedup.
+ * Idempotency: the relay sets a deterministic BullMQ-safe job ID (hyphen-separated,
+ * e.g. `outbox-{uuid}` for image-optimize) via the shared helpers in
+ * `@portfolio/shared/lib/jobIds`. BullMQ v5+ rejects job IDs containing `:`,
+ * so all producers must use the shared helpers instead of constructing IDs locally.
  */
 
 import {

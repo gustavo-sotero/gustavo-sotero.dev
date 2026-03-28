@@ -6,6 +6,7 @@ export * from './constants/enums';
 export * from './constants/errorCodes';
 // Lib
 export * from './lib/iconResolver';
+export * from './lib/jobIds';
 export * from './lib/slug';
 // Schemas
 export * from './schemas/comments';

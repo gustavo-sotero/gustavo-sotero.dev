@@ -2,8 +2,12 @@
  * Transactional Outbox Relay
  *
  * Polls the `outbox` table for pending events and publishes them to BullMQ.
- * Using a BullMQ jobId of `outbox:{uuid}` provides idempotency — if the relay
- * runs twice before marking processed, BullMQ silently deduplicates.
+ * Deterministic BullMQ job IDs (from `@portfolio/shared/lib/jobIds`) provide
+ * idempotency — if the relay runs twice before marking a row as processed,
+ * BullMQ silently deduplicates the second publish attempt.
+ *
+ * NOTE: BullMQ v5+ rejects any custom jobId containing `:`. All job IDs are
+ * built via the shared helpers which use hyphens instead.
  *
  * Failure classes:
  *  UNSUPPORTED_EVENT_TYPE     — event.eventType is not a known OutboxEventType value
@@ -14,8 +18,10 @@
  */
 
 import {
+  imageOptimizeJobId,
   imageOptimizeOutboxPayloadSchema,
   OutboxEventType,
+  scheduledPostPublishJobId,
   scheduledPostPublishOutboxPayloadSchema,
 } from '@portfolio/shared';
 import { outbox, uploads } from '@portfolio/shared/db/schema';
@@ -120,12 +126,14 @@ export async function processOutboxEvents(
 
         const { uploadId } = payloadResult.data;
 
-        // jobId = `outbox:{uuid}` → BullMQ deduplicates replays automatically
+        // Deterministic jobId via shared helper — BullMQ deduplicates replays automatically.
+        // The helper uses `outbox-{uuid}` (hyphen separator) which is required because
+        // BullMQ v5+ rejects any custom jobId containing `:`.
         await imageQueue.add(
           OutboxEventType.IMAGE_OPTIMIZE,
           { uploadId },
           {
-            jobId: `outbox:${event.id}`,
+            jobId: imageOptimizeJobId(event.id),
             attempts: 3,
             backoff: { type: 'exponential', delay: 1000 },
           }
@@ -142,15 +150,17 @@ export async function processOutboxEvents(
 
         const { postId, scheduledAt } = payloadResult.data;
 
-        // Use deterministic jobId `post-publish:{postId}` so:
-        //  a) BullMQ deduplicates replays when the outbox relay runs twice
-        //  b) cancelScheduledPostPublish() in the API (same ID format) still works
+        // Deterministic jobId via shared helper — BullMQ deduplicates replays when the
+        // relay runs twice, and cancelScheduledPostPublish() in the API uses the same
+        // shared helper so cancellation still works.
+        // The helper uses `post-publish-{postId}` (hyphen separator) because
+        // BullMQ v5+ rejects any custom jobId containing `:`.
         const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
         await postPublishQueue.add(
           'publish',
           { postId },
           {
-            jobId: `post-publish:${postId}`,
+            jobId: scheduledPostPublishJobId(postId),
             delay,
             attempts: 3,
             backoff: { type: 'exponential', delay: 2000 },

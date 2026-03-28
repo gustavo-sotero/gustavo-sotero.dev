@@ -1,4 +1,4 @@
-import { OutboxEventType } from '@portfolio/shared';
+import { imageOptimizeJobId, OutboxEventType, scheduledPostPublishJobId } from '@portfolio/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ describe('processOutboxEvents', () => {
     expect(imageQueueAddMock).toHaveBeenCalledWith(
       OutboxEventType.IMAGE_OPTIMIZE,
       { uploadId: '00000000-0000-0000-0000-000000000042' },
-      expect.objectContaining({ jobId: `outbox:${event.id}` })
+      expect.objectContaining({ jobId: imageOptimizeJobId(event.id) })
     );
     // Marks event as processed
     expect(dbUpdateSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'processed' }));
@@ -176,7 +176,7 @@ describe('processOutboxEvents', () => {
     expect(postPublishQueueAddMock).toHaveBeenCalledWith(
       'publish',
       { postId: 7 },
-      expect.objectContaining({ jobId: 'post-publish:7' })
+      expect.objectContaining({ jobId: scheduledPostPublishJobId(7) })
     );
     expect(dbUpdateSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'processed' }));
   });

@@ -16,7 +16,7 @@
  * completion, final upload status retrieval."
  */
 
-import { OutboxEventType } from '@portfolio/shared';
+import { imageOptimizeJobId, OutboxEventType } from '@portfolio/shared';
 import type { Job } from 'bullmq';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -217,7 +217,7 @@ describe('upload pipeline: relay → imageOptimize state transition', () => {
       { jobId: string },
     ];
     expect(relayJobData[1].uploadId).toBe(UPLOAD_ID);
-    expect(relayJobData[2].jobId).toBe(`outbox:${OUTBOX_EVENT_ID}`);
+    expect(relayJobData[2].jobId).toBe(imageOptimizeJobId(OUTBOX_EVENT_ID));
 
     // Outbox row must be marked processed
     expect(dbUpdateSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'processed' }));

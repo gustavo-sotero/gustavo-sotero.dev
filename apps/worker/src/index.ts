@@ -224,7 +224,7 @@ logger.info('All workers ready', {
 //   (simple SELECT + queue.add + UPDATE per batch). However, under a slow DB
 //   or during a large backlog flush, a run could theoretically exceed the
 //   interval. Two concurrent relay executions would each SELECT the same
-//   pending events; BullMQ's `jobId = outbox:{uuid}` deduplication prevents
+//   pending events; BullMQ's `jobId = outbox-{uuid}` deduplication prevents
 //   duplicate jobs, and the DB UPDATE is idempotent (setting status='processed'
 //   twice is harmless). The flag below is therefore a belt-and-braces guard
 //   that avoids the additional DB + queue pressure of a concurrent batch and

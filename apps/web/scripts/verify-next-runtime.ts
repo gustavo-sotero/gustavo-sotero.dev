@@ -31,7 +31,7 @@ export function loadAndValidateNextRuntime(
   validateNextRuntimeModule(loader());
 }
 
-if (import.meta.main) {
+if ((import.meta as { main?: boolean }).main) {
   try {
     loadAndValidateNextRuntime();
   } catch (error) {
