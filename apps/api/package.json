@@ -21,8 +21,8 @@
     "@logtape/logtape": "^2.0.5",
     "@portfolio/shared": "workspace:*",
     "@shikijs/rehype": "^3.23.0",
-    "bullmq": "^5.71.0",
-    "drizzle-orm": "^0.45.1",
+    "bullmq": "^5.71.1",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.12.9",
     "ioredis": "^5.10.1",
     "postgres": "^3.4.8",
@@ -51,6 +51,6 @@
     "hast-util-sanitize": "^5.0.2",
     "mdast": "^3.0.0",
     "unist": "^0.0.1",
-    "vitest": "^4.1.1"
+    "vitest": "^4.1.2"
   }
 }
