@@ -1,0 +1,23 @@
+{
+  "console-ninja.toolsToEnableSupportAutomaticallyFor": {
+    "vite": true,
+    "angular": true,
+    "jest": true,
+    "webpack": true,
+    "next.js": false,
+    "nest.js": true,
+    "cypress": true,
+    "http-server": true,
+    "serve": true,
+    "live-server": true,
+    "nuxt": true,
+    "remix": true,
+    "qwik": true,
+    "hydrogen": true,
+    "serverless": true,
+    "astro": true,
+    "react-native": true,
+    "live-server-extension": false,
+    "live-preview-extension": false
+  }
+}

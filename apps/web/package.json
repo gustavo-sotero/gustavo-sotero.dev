@@ -3,9 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "bun --bun next dev -p 3001",
-    "build": "NODE_ENV=production bun run --env-file ../../.env --bun next build",
-    "start": "bun --bun next start",
+    "predev": "bun run scripts/verify-next-runtime.ts",
+    "dev": "bun --env-file ../../.env --bun next dev -p 3001",
+    "build": "NODE_ENV=production bun --env-file ../../.env --bun next build",
+    "start": "NODE_ENV=production PORT=3001 HOSTNAME=0.0.0.0 bun --env-file ../../.env .next/standalone/apps/web/server.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },
