@@ -1,6 +1,6 @@
 export const DEVELOPER_PUBLIC_PROFILE = {
   name: 'Gustavo Sotero',
-  role: 'Desenvolvedor Fullstack',
+  role: 'Full Stack Developer',
   /**
    * Full bio — displayed in the Hero section after the experience label.
    * Deliberately does NOT repeat the role (already shown above as AnimatedGradientText).

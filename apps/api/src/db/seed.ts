@@ -1,6 +1,6 @@
 import { posts, postTags, projects, projectTags, tags } from '@portfolio/shared/db/schema';
 import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, ne, or } from 'drizzle-orm';
 import { db, pgClient } from '../config/db';
 import { getLogger } from '../config/logger';
 
@@ -10,14 +10,14 @@ const logger = getLogger('db', 'seed');
 const _RAW_SEED_TAGS = [
   { name: 'TypeScript', slug: 'typescript', category: 'language' as const },
   { name: 'JavaScript', slug: 'javascript', category: 'language' as const },
-  { name: 'Node.js', slug: 'nodejs', category: 'language' as const },
+  { name: 'Node.js', slug: 'nodejs', category: 'tool' as const },
   { name: 'React', slug: 'react', category: 'framework' as const },
   { name: 'Next.js', slug: 'nextjs', category: 'framework' as const },
   { name: 'Hono', slug: 'hono', category: 'framework' as const },
   { name: 'Tailwind CSS', slug: 'tailwind', category: 'framework' as const },
   { name: 'PostgreSQL', slug: 'postgresql', category: 'db' as const },
   { name: 'Redis', slug: 'redis', category: 'db' as const },
-  { name: 'Docker', slug: 'docker', category: 'tool' as const },
+  { name: 'Docker', slug: 'docker', category: 'infra' as const },
   { name: 'Bun', slug: 'bun', category: 'tool' as const },
   { name: 'Drizzle ORM', slug: 'drizzle', category: 'tool' as const },
   { name: 'Vitest', slug: 'vitest', category: 'tool' as const },
@@ -212,21 +212,27 @@ async function seed() {
     .onConflictDoNothing({ target: tags.slug })
     .returning({ id: tags.id, slug: tags.slug });
 
-  // Backfill iconKey for predefined tags that already existed with NULL iconKey
-  // (handles legacy environments seeded before iconKey was required)
-  let backfillCount = 0;
+  // Keep predefined tags canonical across reruns.
+  // This heals legacy environments that already have a seed tag with a stale
+  // category or iconKey from older catalog definitions.
+  let canonicalizedCount = 0;
   for (const tag of SEED_TAGS) {
     if (tag.iconKey) {
       const updated = await db
         .update(tags)
-        .set({ iconKey: tag.iconKey })
-        .where(and(eq(tags.slug, tag.slug), isNull(tags.iconKey)))
+        .set({ category: tag.category, iconKey: tag.iconKey })
+        .where(
+          and(
+            eq(tags.slug, tag.slug),
+            or(ne(tags.category, tag.category), isNull(tags.iconKey), ne(tags.iconKey, tag.iconKey))
+          )
+        )
         .returning({ id: tags.id });
-      backfillCount += updated.length;
+      canonicalizedCount += updated.length;
     }
   }
-  if (backfillCount > 0) {
-    logger.info(`Backfilled iconKey for ${backfillCount} tag(s)`);
+  if (canonicalizedCount > 0) {
+    logger.info(`Canonicalized ${canonicalizedCount} predefined tag(s)`);
   }
 
   // Fetch all tags to get IDs (including pre-existing ones)

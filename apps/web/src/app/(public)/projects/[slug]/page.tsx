@@ -131,12 +131,12 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
                   className={cn(
                     'gap-1.5 text-xs font-mono border transition-colors',
                     tag.isHighlighted
-                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:border-amber-400/50 hover:text-amber-200'
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400/50 hover:text-emerald-200'
                       : 'border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-emerald-500/30 hover:text-zinc-100'
                   )}
                 >
                   {tag.isHighlighted && (
-                    <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400 shrink-0" />
+                    <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
                   )}
                   <TechIcon iconKey={tag.iconKey} category={tag.category} size={12} />
                   {tag.name}

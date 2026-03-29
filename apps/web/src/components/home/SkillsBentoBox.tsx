@@ -79,8 +79,7 @@ export function SkillsBentoBox({ tags }: SkillsBentoBoxProps) {
                       className={cn(
                         'group relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl overflow-hidden',
                         'glass-card transition-all duration-200 cursor-default',
-                        'hover:bg-emerald-500/5 hover:border-emerald-500/30',
-                        isHighlighted ? 'md:col-span-2' : ''
+                        'hover:bg-emerald-500/5 hover:border-emerald-500/30'
                       )}
                     >
                       {/* Featured badge — shown only on highlighted tags */}
@@ -97,14 +96,14 @@ export function SkillsBentoBox({ tags }: SkillsBentoBoxProps) {
                           category={tag.category}
                           name={tag.name}
                           originalColor
-                          className={cn(isHighlighted ? 'h-7 w-7' : 'h-6 w-6')}
+                          className="h-6 w-6"
                         />
                       </div>
                       <div className="text-center">
                         <p
                           className={cn(
                             'font-medium leading-tight group-hover:text-zinc-100',
-                            isHighlighted ? 'text-sm text-zinc-100' : 'text-xs text-zinc-200'
+                            'text-xs text-zinc-200'
                           )}
                         >
                           {tag.name}

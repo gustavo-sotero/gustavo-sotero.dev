@@ -319,7 +319,7 @@ describe('admin content routes', () => {
       id: 88,
       name: 'Node.js',
       slug: 'nodejs',
-      category: 'language',
+      category: 'tool',
       iconKey: 'si:SiNodedotjs',
     });
 

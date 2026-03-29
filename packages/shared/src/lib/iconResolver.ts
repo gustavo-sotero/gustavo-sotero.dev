@@ -71,7 +71,7 @@ export const ICON_CATALOG: Readonly<IconCatalogEntry[]> = [
   },
   {
     name: 'Node.js',
-    category: 'language',
+    category: 'tool',
     iconKey: 'si:SiNodedotjs',
     aliases: ['node', 'nodejs', 'node js'],
   },
@@ -411,7 +411,7 @@ export const ICON_CATALOG: Readonly<IconCatalogEntry[]> = [
   // ── Tools ─────────────────────────────────────────────────────────────────
   {
     name: 'Docker',
-    category: 'tool',
+    category: 'infra',
     iconKey: 'si:SiDocker',
     aliases: ['docker container'],
   },
@@ -931,13 +931,13 @@ export const ICON_CATALOG: Readonly<IconCatalogEntry[]> = [
   },
   {
     name: 'RabbitMQ',
-    category: 'tool',
+    category: 'infra',
     iconKey: 'lucide:Zap',
     aliases: ['rabbitmq broker', 'amqp', 'message broker'],
   },
   {
     name: 'Apache Kafka',
-    category: 'tool',
+    category: 'infra',
     iconKey: 'lucide:Zap',
     aliases: ['kafka', 'kafka streams', 'kafka broker'],
   },

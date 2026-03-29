@@ -84,13 +84,13 @@ describe('resolveTagIcon — specific match', () => {
 
 describe('resolveTagIcon — alias match', () => {
   it('resolves "nodejs" alias to Node.js icon', () => {
-    const result = resolveTagIcon('nodejs', 'language');
+    const result = resolveTagIcon('nodejs', 'tool');
     expect(result.iconKey).toBe('si:SiNodedotjs');
     expect(result.source).toBe('specific');
   });
 
   it('resolves "node js" alias to Node.js icon', () => {
-    const result = resolveTagIcon('node js', 'language');
+    const result = resolveTagIcon('node js', 'tool');
     expect(result.iconKey).toBe('si:SiNodedotjs');
     expect(result.source).toBe('specific');
   });
@@ -299,9 +299,16 @@ describe('resolveCatalogEntry', () => {
     expect(entry?.name).toBe('TypeScript');
   });
 
-  it('resolves a well-known framework alias', () => {
+  it('resolves a well-known runtime alias to the tool category', () => {
     const entry = resolveCatalogEntry('node');
     expect(entry?.name).toBe('Node.js');
+    expect(entry?.category).toBe('tool');
+  });
+
+  it('returns Docker in the infra category', () => {
+    const entry = resolveCatalogEntry('Docker');
+    expect(entry?.name).toBe('Docker');
+    expect(entry?.category).toBe('infra');
   });
 
   it('returns null for an unknown name', () => {

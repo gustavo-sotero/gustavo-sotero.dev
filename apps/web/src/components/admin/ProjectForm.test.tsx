@@ -38,7 +38,7 @@ vi.mock('@portfolio/shared', async () => {
 
 vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useAdminTags: () => ({
-    data: [{ id: 1, name: 'Docker', slug: 'docker', category: 'tool', iconKey: 'si:SiDocker' }],
+    data: [{ id: 1, name: 'Docker', slug: 'docker', category: 'infra', iconKey: 'si:SiDocker' }],
     isLoading: false,
   }),
 }));

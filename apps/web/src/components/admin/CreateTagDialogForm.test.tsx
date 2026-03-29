@@ -120,12 +120,12 @@ describe('CreateTagDialogForm — name-first flow', () => {
     expect(categoryDisplay).toHaveTextContent('Banco de Dados');
   });
 
-  it('auto-detected category correct — Docker → Ferramenta', () => {
+  it('auto-detected category correct — Docker → Infraestrutura', () => {
     render(<CreateTagDialogForm {...defaultProps} />);
     fireEvent.change(screen.getByLabelText(/Nome/i), { target: { value: 'Docker' } });
     expect(screen.getByText('Definido automaticamente')).toBeInTheDocument();
     const categoryDisplay = screen.getByLabelText('Categoria definida automaticamente');
-    expect(categoryDisplay).toHaveTextContent('Ferramenta');
+    expect(categoryDisplay).toHaveTextContent('Infraestrutura');
   });
 
   it('resolves via alias — typing exact alias maps to catalog entry category', () => {
@@ -325,7 +325,7 @@ describe('CreateTagDialogForm — name-first flow', () => {
       id: 21,
       name: 'Docker',
       slug: 'docker',
-      category: 'tool',
+      category: 'infra',
       iconKey: 'si:SiDocker',
       isHighlighted: false,
       createdAt: '2026-01-01T00:00:00.000Z',

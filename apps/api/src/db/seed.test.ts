@@ -44,4 +44,12 @@ describe('SEED_TAGS data integrity', () => {
       drizzleTag?.iconKey?.startsWith('si:') || drizzleTag?.iconKey?.startsWith('lucide:')
     ).toBe(true);
   });
+
+  it('keeps canonical categories for runtime and infra seed tags', () => {
+    const nodeTag = SEED_TAGS.find((t) => t.slug === 'nodejs');
+    const dockerTag = SEED_TAGS.find((t) => t.slug === 'docker');
+
+    expect(nodeTag?.category).toBe('tool');
+    expect(dockerTag?.category).toBe('infra');
+  });
 });

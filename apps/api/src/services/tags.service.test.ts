@@ -134,7 +134,7 @@ describe('tags service', () => {
       id: 2,
       name: 'Docker',
       slug: 'docker',
-      category: 'tool',
+      category: 'infra',
       iconKey: null,
     });
     tagNameExistsMock.mockResolvedValue(false);
@@ -142,7 +142,7 @@ describe('tags service', () => {
       id: 2,
       name: 'Docker',
       slug: 'docker',
-      category: 'tool',
+      category: 'infra',
       iconKey: 'si:SiDocker',
     });
 
@@ -373,7 +373,12 @@ describe('tags service', () => {
   });
 
   it('deletes an existing tag and invalidates all related caches', async () => {
-    findTagByIdMock.mockResolvedValue({ id: 10, name: 'Docker', slug: 'docker', category: 'tool' });
+    findTagByIdMock.mockResolvedValue({
+      id: 10,
+      name: 'Docker',
+      slug: 'docker',
+      category: 'infra',
+    });
     deleteTagMock.mockResolvedValue({ id: 10 });
 
     const result = await deleteTagService(10);

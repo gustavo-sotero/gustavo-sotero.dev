@@ -93,6 +93,7 @@ describe('getSuggestionsByCategory', () => {
 
 describe('searchSuggestions', () => {
   const languageSuggestions = getSuggestionsByCategory('language');
+  const toolSuggestions = getSuggestionsByCategory('tool');
 
   it('returns all suggestions when query is empty', () => {
     const result = searchSuggestions(languageSuggestions, '');
@@ -105,9 +106,9 @@ describe('searchSuggestions', () => {
     expect(names).toContain('TypeScript');
   });
 
-  it('filters by alias (case-insensitive)', () => {
+  it('filters by alias within the tool category', () => {
     // Node.js has alias 'node'
-    const result = searchSuggestions(languageSuggestions, 'node');
+    const result = searchSuggestions(toolSuggestions, 'node');
     const names = result.map((s) => s.name);
     expect(names).toContain('Node.js');
   });
@@ -124,14 +125,13 @@ describe('searchSuggestions', () => {
     expect(names).toContain('TypeScript');
   });
 
-  it('matches separator variations in query (e.g. underscore/hyphen)', () => {
-    const result = searchSuggestions(languageSuggestions, 'node_js');
+  it('matches separator variations in tool aliases (e.g. underscore/hyphen)', () => {
+    const result = searchSuggestions(toolSuggestions, 'node_js');
     const names = result.map((s) => s.name);
     expect(names).toContain('Node.js');
   });
 
   it('matches tokenized query even with different spacing', () => {
-    const toolSuggestions = getSuggestionsByCategory('tool');
     const result = searchSuggestions(toolSuggestions, 'tanstack    query');
     const names = result.map((s) => s.name);
     expect(names).toContain('TanStack Query');
