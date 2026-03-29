@@ -14,6 +14,7 @@ import { cached, invalidateGroup } from '../lib/cache';
 import { renderMarkdown } from '../lib/markdown';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
+import { assertTagsExist, normalizeTagIds } from '../lib/tagValidation';
 import {
   createProject,
   findManyProjects,
@@ -98,10 +99,16 @@ export async function createProjectService(data: CreateProjectInput) {
 
   // 2. Render Markdown content if provided
   const renderedContent = data.content ? await renderMarkdown(data.content) : undefined;
+  const normalizedTagIds = data.tagIds ? normalizeTagIds(data.tagIds) : [];
 
   // 3. Persist atomically: create project + tag sync in one transaction.
   // Keeping tag sync inside the same transaction guarantees that a crash between
   // project insert and tag sync never leaves the project in a tag-less state.
+
+  // Validate tag references before the transaction to surface a deterministic
+  // domain error instead of a foreign-key 500.
+  await assertTagsExist(normalizedTagIds);
+
   const project = await db.transaction(async (tx) => {
     // Insert project via repo — passes tx so the operation joins the transaction
     const row = await createProject(
@@ -124,8 +131,8 @@ export async function createProjectService(data: CreateProjectInput) {
     if (!row) throw new Error('Failed to create project — database returned no row');
 
     // Sync tags atomically with the project insert
-    if (data.tagIds && data.tagIds.length > 0) {
-      await syncProjectTagsInTx(tx, row.id, data.tagIds);
+    if (normalizedTagIds.length > 0) {
+      await syncProjectTagsInTx(tx, row.id, normalizedTagIds);
     }
 
     return row;
@@ -181,6 +188,13 @@ export async function updateProjectService(id: number, data: UpdateProjectInput)
   }
 
   // 5. Persist atomically: update project + tag sync in one transaction
+
+  // Validate tag references before the transaction.
+  const normalizedTagIds = data.tagIds !== undefined ? normalizeTagIds(data.tagIds) : undefined;
+  if (normalizedTagIds !== undefined) {
+    await assertTagsExist(normalizedTagIds);
+  }
+
   const updated = await db.transaction(async (tx) => {
     // Update project via repo — passes tx so the operation joins the transaction
     const row = await updateProject(id, patch, tx);
@@ -188,8 +202,8 @@ export async function updateProjectService(id: number, data: UpdateProjectInput)
     if (!row) return null;
 
     // Sync tags atomically with the project update — tag failure rolls back the update
-    if (data.tagIds !== undefined) {
-      await syncProjectTagsInTx(tx, id, data.tagIds);
+    if (normalizedTagIds !== undefined) {
+      await syncProjectTagsInTx(tx, id, normalizedTagIds);
     }
 
     return row;

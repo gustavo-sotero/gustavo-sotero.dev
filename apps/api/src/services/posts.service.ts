@@ -16,6 +16,7 @@ import { renderMarkdown } from '../lib/markdown';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { cancelScheduledPostPublish } from '../lib/queues';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
+import { assertTagsExist, normalizeTagIds } from '../lib/tagValidation';
 import { findApprovedCommentsByPostId } from '../repositories/comments.repo';
 import {
   createPost,
@@ -103,6 +104,11 @@ export async function createPostService(data: CreatePostInput) {
   const publishedAt = status === 'published' ? new Date() : undefined;
   // scheduledAt is a Date from Zod transform when status = 'scheduled'
   const scheduledAt = status === 'scheduled' ? (data.scheduledAt as Date | undefined) : undefined;
+  const normalizedTagIds = data.tagIds ? normalizeTagIds(data.tagIds) : [];
+
+  // 3a. Validate tag references before the transaction to surface a
+  // deterministic domain error instead of a foreign-key 500.
+  await assertTagsExist(normalizedTagIds);
 
   // 4. Persist atomically: create post + tag sync + outbox event in one transaction.
   // Keeping tag sync inside the same transaction guarantees that a crash between
@@ -129,8 +135,8 @@ export async function createPostService(data: CreatePostInput) {
     if (!row) throw new Error('Failed to create post — database returned no row');
 
     // Sync tags atomically with the post insert
-    if (data.tagIds && data.tagIds.length > 0) {
-      await syncPostTagsInTx(tx, row.id, data.tagIds);
+    if (normalizedTagIds.length > 0) {
+      await syncPostTagsInTx(tx, row.id, normalizedTagIds);
     }
 
     if (status === 'scheduled' && scheduledAt) {
@@ -219,6 +225,14 @@ export async function updatePostService(id: number, data: UpdatePostInput) {
   // 7. Persist atomically: update post + optional outbox event for new scheduling.
   // Cancellation of existing BullMQ jobs (transitioning away from scheduled) is
   // direct and idempotent — no outbox needed for removals.
+
+  // Validate tag references before the transaction to surface a deterministic
+  // domain error instead of a foreign-key 500.
+  const normalizedTagIds = data.tagIds !== undefined ? normalizeTagIds(data.tagIds) : undefined;
+  if (normalizedTagIds !== undefined) {
+    await assertTagsExist(normalizedTagIds);
+  }
+
   const updated = await db.transaction(async (tx) => {
     // 7. Update post via repo — passes tx so the operation joins the transaction
     const row = await updatePost(id, patch, tx);
@@ -226,8 +240,8 @@ export async function updatePostService(id: number, data: UpdatePostInput) {
     if (!row) return null;
 
     // Sync tags atomically with the post update — tag failure rolls back the update
-    if (data.tagIds !== undefined) {
-      await syncPostTagsInTx(tx, id, data.tagIds);
+    if (normalizedTagIds !== undefined) {
+      await syncPostTagsInTx(tx, id, normalizedTagIds);
     }
 
     if (newStatus === 'scheduled' && patch.scheduledAt) {

@@ -15,6 +15,7 @@ import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
+import { assertTagsExist, normalizeTagIds } from '../lib/tagValidation';
 import type { ExperienceFilters } from '../repositories/experience.repo';
 import {
   createExperience,
@@ -25,10 +26,6 @@ import {
   updateExperience,
 } from '../repositories/experience.repo';
 import { syncExperienceTagsInTx } from '../repositories/tags.repo';
-
-function normalizeTagIds(tagIds: number[]): number[] {
-  return Array.from(new Set(tagIds));
-}
 
 // ── Cache TTLs ────────────────────────────────────────────────────────────────
 
@@ -116,6 +113,11 @@ export async function createExperienceService(data: CreateExperienceInput) {
   const baseSlug = data.slug ?? generateSlug(`${data.role} ${data.company}`);
   const slug = await ensureUniqueSlug(baseSlug, (s) => experienceSlugTaken(s));
 
+  // Validate tag references before entering the transaction to produce a
+  // deterministic domain error instead of a foreign-key 500.
+  const normalizedTagIds = data.tagIds ? normalizeTagIds(data.tagIds) : [];
+  await assertTagsExist(normalizedTagIds);
+
   // Atomically write the experience row and sync tags in one transaction,
   // matching the same consistency guarantee used in posts/projects services.
   const entry = await db.transaction(async (tx) => {
@@ -140,8 +142,8 @@ export async function createExperienceService(data: CreateExperienceInput) {
 
     if (!row) throw new Error('Failed to create experience — database returned no row');
 
-    if (data.tagIds && data.tagIds.length > 0) {
-      await syncExperienceTagsInTx(tx, row.id, normalizeTagIds(data.tagIds));
+    if (normalizedTagIds.length > 0) {
+      await syncExperienceTagsInTx(tx, row.id, normalizedTagIds);
     }
 
     return row;
@@ -174,6 +176,12 @@ export async function updateExperienceService(id: number, data: UpdateExperience
     slug = await ensureUniqueSlug(data.slug, (s) => experienceSlugTaken(s, id));
   }
 
+  // Validate tag references before entering the transaction.
+  const normalizedTagIds = data.tagIds !== undefined ? normalizeTagIds(data.tagIds) : undefined;
+  if (normalizedTagIds !== undefined) {
+    await assertTagsExist(normalizedTagIds);
+  }
+
   // Atomically write the update and sync tags in one transaction.
   const updated = await db.transaction(async (tx) => {
     const row = await updateExperience(
@@ -198,8 +206,8 @@ export async function updateExperienceService(id: number, data: UpdateExperience
 
     if (!row) return null;
 
-    if (data.tagIds !== undefined) {
-      await syncExperienceTagsInTx(tx, id, normalizeTagIds(data.tagIds));
+    if (normalizedTagIds !== undefined) {
+      await syncExperienceTagsInTx(tx, id, normalizedTagIds);
     }
 
     return row;

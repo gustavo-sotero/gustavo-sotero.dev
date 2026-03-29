@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
+import { env } from '../../config/env';
 import { openApiRouter } from './openapi';
 
 describe('openapi routes', () => {
@@ -35,7 +36,7 @@ describe('openapi routes', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/html');
     expect(html).toContain('SwaggerUIBundle');
-    expect(html).toContain('https://example.com/api/doc/spec');
+    expect(html).toContain(`${env.API_PUBLIC_URL}/doc/spec`);
   });
 
   it('GET /doc/spec exposes the path-based API server as the default server URL', async () => {
@@ -53,7 +54,7 @@ describe('openapi routes', () => {
       }>;
     };
 
-    expect(body.servers[0]?.variables?.apiUrl?.default).toBe('https://example.com/api');
+    expect(body.servers[0]?.variables?.apiUrl?.default).toBe(env.API_PUBLIC_URL);
   });
 
   it('GET /doc/spec includes all Module 8 route contracts', async () => {
@@ -107,7 +108,7 @@ describe('openapi routes', () => {
       '/education',
       '/education/{slug}',
       '/admin/experience',
-      '/admin/experience/{id}',
+      '/admin/experience/{identifier}',
       '/admin/education',
       '/admin/education/{id}',
       '/admin/jobs/dlq',
@@ -115,7 +116,88 @@ describe('openapi routes', () => {
     ];
 
     for (const path of expectedPaths) {
-      expect(body.paths).toHaveProperty(path);
+      expect(Object.hasOwn(body.paths, path)).toBe(true);
     }
+  });
+
+  it('GET /doc/spec documents admin project and experience write contracts truthfully', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<
+        string,
+        {
+          get?: {
+            summary?: string;
+            description?: string;
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    example?: {
+                      success?: boolean;
+                      data?: Record<string, string>;
+                    };
+                  };
+                };
+              }
+            >;
+          };
+          post?: {
+            responses?: Record<string, unknown>;
+            requestBody?: {
+              content?: {
+                'application/json'?: {
+                  schema?: {
+                    properties?: Record<string, { default?: boolean; uniqueItems?: boolean }>;
+                  };
+                };
+              };
+            };
+          };
+          patch?: {
+            responses?: Record<string, unknown>;
+            requestBody?: {
+              content?: {
+                'application/json'?: {
+                  schema?: {
+                    properties?: Record<string, { uniqueItems?: boolean }>;
+                  };
+                };
+              };
+            };
+          };
+        }
+      >;
+    };
+
+    const projectCreate =
+      body.paths['/admin/projects']?.post?.requestBody?.content?.['application/json']?.schema;
+    const postCreate = body.paths['/admin/posts']?.post;
+    const experiencePath = body.paths['/admin/experience/{identifier}'];
+    const readyPath = body.paths['/ready']?.get;
+
+    expect(projectCreate?.properties?.tagIds?.uniqueItems).toBe(true);
+    expect(projectCreate?.properties?.featured?.default).toBe(false);
+    expect(postCreate?.responses && Object.hasOwn(postCreate.responses, '409')).toBe(true);
+    expect(experiencePath?.get?.summary).toBe('Get experience entry by slug (admin)');
+    expect(
+      experiencePath?.patch?.requestBody?.content?.['application/json']?.schema?.properties?.tagIds
+        ?.uniqueItems
+    ).toBe(true);
+    expect(
+      experiencePath?.patch?.responses && Object.hasOwn(experiencePath.patch.responses, '409')
+    ).toBe(true);
+    expect(readyPath?.description).toBe(
+      'Checks database connectivity, Redis connectivity, and required schema parity.'
+    );
+    expect(readyPath?.responses?.['200']?.content?.['application/json']?.example?.data).toEqual({
+      db: 'ok',
+      redis: 'ok',
+      schema: 'ok',
+    });
   });
 });

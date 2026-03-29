@@ -62,6 +62,19 @@ adminProjectsRouter.post('/', async (c) => {
     if (message.startsWith('CONFLICT:') || message.toLowerCase().includes('unique')) {
       return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
     }
+    if (message.startsWith('VALIDATION_ERROR:')) {
+      const details = (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
+        field: 'tagIds',
+        message: `Tag with id ${id} does not exist`,
+      }));
+      return errorResponse(
+        c,
+        400,
+        'VALIDATION_ERROR',
+        message.replace('VALIDATION_ERROR: ', ''),
+        details
+      );
+    }
     throw err;
   }
 });
@@ -104,6 +117,19 @@ adminProjectsRouter.patch('/:id', async (c) => {
     const message = (err as Error).message;
     if (message.startsWith('CONFLICT:') || message.toLowerCase().includes('unique')) {
       return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
+    }
+    if (message.startsWith('VALIDATION_ERROR:')) {
+      const details = (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
+        field: 'tagIds',
+        message: `Tag with id ${id} does not exist`,
+      }));
+      return errorResponse(
+        c,
+        400,
+        'VALIDATION_ERROR',
+        message.replace('VALIDATION_ERROR: ', ''),
+        details
+      );
     }
     throw err;
   }

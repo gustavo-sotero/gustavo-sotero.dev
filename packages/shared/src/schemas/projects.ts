@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+const uniqueTagIds = z
+  .array(z.number().int().positive())
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: 'tagIds cannot contain duplicates',
+  });
+
 export const createProjectSchema = z.object({
   title: z.string().min(1).max(255),
   slug: z
@@ -14,7 +20,7 @@ export const createProjectSchema = z.object({
   liveUrl: z.union([z.literal(''), z.string().url()]).optional(),
   featured: z.boolean().default(false),
   order: z.number().int().default(0),
-  tagIds: z.array(z.number().int().positive()).optional(),
+  tagIds: uniqueTagIds.optional(),
 });
 
 export const updateProjectSchema = createProjectSchema.partial();

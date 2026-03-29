@@ -17,6 +17,12 @@ const futureISODate = z
  * Used to derive both createPostSchema and updatePostSchema (via .partial()).
  * In Zod v4, .partial() cannot be called on a schema that already has .superRefine().
  */
+const uniqueTagIds = z
+  .array(z.number().int().positive())
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: 'tagIds cannot contain duplicates',
+  });
+
 const postSchemaBase = z.object({
   title: z.string().min(1).max(255),
   slug: z
@@ -27,7 +33,7 @@ const postSchemaBase = z.object({
   excerpt: z.string().max(500).optional(),
   coverUrl: z.union([z.literal(''), z.string().url()]).optional(),
   status: z.enum(['draft', 'published', 'scheduled']).default('draft'),
-  tagIds: z.array(z.number().int().positive()).optional(),
+  tagIds: uniqueTagIds.optional(),
   scheduledAt: futureISODate.optional(),
 });
 

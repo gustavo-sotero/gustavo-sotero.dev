@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { db, pgClient } from '../config/db';
 import { getLogger } from '../config/logger';
+import { verifyRequiredSchema } from './verify-schema';
 
 const logger = getLogger('db', 'migrate');
 
@@ -11,17 +12,31 @@ const logger = getLogger('db', 'migrate');
  * Run Drizzle migrations with a PostgreSQL advisory lock to prevent
  * race conditions if multiple instances start simultaneously.
  *
- * Gracefully skips if the migrations folder does not exist yet
- * (e.g. before `bun run db:generate` is executed in Module 2).
+ * A missing migrations folder is fatal in production. Set
+ * ALLOW_MISSING_MIGRATIONS=true to skip (development only — never in
+ * deployed images, which must always contain the drizzle directory).
+ *
+ * After migrations complete, runs a schema-parity check to catch drift
+ * between the migration history and the actual schema state. Startup is
+ * blocked if required objects are absent.
  */
 export async function runMigrations(): Promise<void> {
   const migrationsFolder = join(import.meta.dirname, '../../../../drizzle');
 
   if (!existsSync(migrationsFolder)) {
-    logger.warn(
-      'Migrations folder not found — skipping. Run `bun run db:generate` to create migrations.'
+    if (process.env.ALLOW_MISSING_MIGRATIONS === 'true') {
+      logger.warn(
+        'Migrations folder not found — skipping (ALLOW_MISSING_MIGRATIONS=true). ' +
+          'Run `bun run db:generate` to create migrations.'
+      );
+      return;
+    }
+
+    throw new Error(
+      'Migrations folder not found at expected path. ' +
+        'The runtime image must contain the drizzle directory. ' +
+        'Set ALLOW_MISSING_MIGRATIONS=true to skip (development only).'
     );
-    return;
   }
 
   logger.info('Acquiring advisory lock for migrations...');
@@ -37,6 +52,19 @@ export async function runMigrations(): Promise<void> {
     await db.execute(sql`SELECT pg_advisory_unlock(8301981)`);
     logger.info('Advisory lock released.');
   }
+
+  // Verify required schema objects exist after migrations complete.
+  // A missing table or column after migration indicates a drift condition
+  // that must block startup rather than serve broken traffic.
+  logger.info('Verifying required schema objects...');
+  const parity = await verifyRequiredSchema();
+  if (!parity.ok) {
+    throw new Error(
+      `Schema parity check failed after migrations. Missing: ${parity.missing.join(', ')}. ` +
+        "Inspect '__drizzle_migrations' and re-run migrations against the target database."
+    );
+  }
+  logger.info('Schema parity OK.');
 }
 
 // Allow running this file directly: bun run src/db/migrate.ts

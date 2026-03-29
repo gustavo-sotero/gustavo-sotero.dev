@@ -455,7 +455,7 @@ export const publicPaths = {
     get: {
       tags: ['Health'],
       summary: 'Readiness probe',
-      description: 'Checks database and Redis connectivity.',
+      description: 'Checks database connectivity, Redis connectivity, and required schema parity.',
       operationId: 'getReady',
       responses: {
         '200': {
@@ -463,7 +463,7 @@ export const publicPaths = {
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/SuccessResponse' },
-              example: { success: true, data: { db: 'ok', redis: 'ok' } },
+              example: { success: true, data: { db: 'ok', redis: 'ok', schema: 'ok' } },
             },
           },
         },

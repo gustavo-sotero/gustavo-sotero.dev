@@ -27,6 +27,7 @@ const {
   ensureUniqueSlugMock,
   syncExperienceTagsMock,
   syncExperienceTagsInTxMock,
+  assertTagsExistMock,
 } = vi.hoisted(() => ({
   dbSelectExperienceMock: vi.fn(),
   invalidatePatternMock: vi.fn(),
@@ -45,6 +46,7 @@ const {
   ensureUniqueSlugMock: vi.fn(),
   syncExperienceTagsMock: vi.fn(),
   syncExperienceTagsInTxMock: vi.fn(),
+  assertTagsExistMock: vi.fn(),
 }));
 
 vi.mock('../config/db', () => ({
@@ -104,6 +106,11 @@ vi.mock('../repositories/tags.repo', () => ({
   syncExperienceTagsInTx: syncExperienceTagsInTxMock,
   syncPostTags: vi.fn(),
   syncProjectTags: vi.fn(),
+}));
+
+vi.mock('../lib/tagValidation', () => ({
+  assertTagsExist: assertTagsExistMock,
+  normalizeTagIds: (tagIds: number[]) => Array.from(new Set(tagIds)),
 }));
 
 vi.mock('../repositories/education.repo', () => ({
@@ -178,6 +185,8 @@ const baseEducation = {
 describe('experience service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: all submitted tagIds are valid.
+    assertTagsExistMock.mockResolvedValue(undefined);
   });
 
   // List ──────────────────────────────────────────────────────────────────────
@@ -525,6 +534,63 @@ describe('experience service', () => {
       await updateExperienceService(1, { tagIds: [] });
 
       expect(syncExperienceTagsInTxMock).toHaveBeenCalledWith({}, 1, []);
+    });
+
+    // Tag referential integrity ───────────────────────────────────────────────
+
+    it('throws VALIDATION_ERROR when create is submitted with nonexistent tagIds', async () => {
+      ensureUniqueSlugMock.mockResolvedValueOnce('engineer-corp');
+      assertTagsExistMock.mockRejectedValueOnce(
+        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 999'), {
+          invalidTagIds: [999],
+        })
+      );
+
+      await expect(
+        createExperienceService({
+          role: 'Engineer',
+          company: 'Corp',
+          description: 'D.',
+          startDate: '2022-01-01',
+          isCurrent: true,
+          status: 'draft',
+          order: 0,
+          tagIds: [999],
+        })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('VALIDATION_ERROR'),
+        invalidTagIds: [999],
+      });
+
+      // Cache must NOT be invalidated when validation fails before the transaction
+      expect(invalidatePatternMock).not.toHaveBeenCalled();
+      expect(createExperienceMock).not.toHaveBeenCalled();
+    });
+
+    it('throws VALIDATION_ERROR when update is submitted with nonexistent tagIds', async () => {
+      findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
+      assertTagsExistMock.mockRejectedValueOnce(
+        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 7, 8'), {
+          invalidTagIds: [7, 8],
+        })
+      );
+
+      await expect(updateExperienceService(1, { tagIds: [7, 8] })).rejects.toMatchObject({
+        message: expect.stringContaining('VALIDATION_ERROR'),
+        invalidTagIds: [7, 8],
+      });
+
+      expect(invalidatePatternMock).not.toHaveBeenCalled();
+      expect(updateExperienceMock).not.toHaveBeenCalled();
+    });
+
+    it('does not call assertTagsExist when tagIds is absent from update payload', async () => {
+      findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
+      updateExperienceMock.mockResolvedValueOnce({ ...baseExperience, role: 'New Role' });
+
+      await updateExperienceService(1, { role: 'New Role' });
+
+      expect(assertTagsExistMock).not.toHaveBeenCalled();
     });
   });
 });

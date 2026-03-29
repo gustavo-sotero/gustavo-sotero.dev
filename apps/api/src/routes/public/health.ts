@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from '../../config/db';
 import { redis } from '../../config/redis';
+import { verifyRequiredSchema } from '../../db/verify-schema';
 import { errorResponse, successResponse } from '../../lib/response';
 import type { AppEnv } from '../../types/index';
 
@@ -22,31 +23,58 @@ health.get('/health', (c) => {
 
 /**
  * GET /ready — Readiness probe.
- * Checks both PostgreSQL and Redis connectivity.
- * Returns 200 if both are available, 503 otherwise.
+ * Checks PostgreSQL connectivity, Redis connectivity, and required schema
+ * object presence. Returns 200 only when all three are healthy.
+ * Returns 503 with field-level details identifying which dependency failed.
  */
 health.get('/ready', async (c) => {
-  const results = await Promise.allSettled([db.execute(sql`SELECT 1`), redis.ping()]);
+  const [dbResult, redisResult, schemaResult] = await Promise.allSettled([
+    db.execute(sql`SELECT 1`),
+    redis.ping(),
+    verifyRequiredSchema(),
+  ]);
 
-  const dbOk = results[0]?.status === 'fulfilled';
-  const redisOk = results[1]?.status === 'fulfilled';
+  const dbOk = dbResult.status === 'fulfilled';
+  const redisOk = redisResult.status === 'fulfilled';
+  // Schema check is only meaningful when the DB connection itself is healthy.
+  const schemaOk =
+    dbOk &&
+    schemaResult.status === 'fulfilled' &&
+    (schemaResult.value as Awaited<ReturnType<typeof verifyRequiredSchema>>).ok;
 
-  if (!dbOk || !redisOk) {
+  if (!dbOk || !redisOk || !schemaOk) {
+    const details: Array<{ field: string; message: string }> = [];
+
+    if (!dbOk) {
+      details.push({ field: 'db', message: 'PostgreSQL is unavailable' });
+    }
+    if (!redisOk) {
+      details.push({ field: 'redis', message: 'Redis is unavailable' });
+    }
+    if (dbOk && !schemaOk) {
+      const missing =
+        schemaResult.status === 'fulfilled'
+          ? (schemaResult.value as Awaited<ReturnType<typeof verifyRequiredSchema>>).missing
+          : ['unknown (schema check threw)'];
+      details.push({
+        field: 'db-schema',
+        message: `Required schema objects are missing: ${missing.join(', ')}`,
+      });
+    }
+
     return errorResponse(
       c,
       503,
       'SERVICE_UNAVAILABLE',
       'One or more dependencies are unavailable',
-      [
-        ...(dbOk ? [] : [{ field: 'db', message: 'PostgreSQL is unavailable' }]),
-        ...(redisOk ? [] : [{ field: 'redis', message: 'Redis is unavailable' }]),
-      ]
+      details
     );
   }
 
   return successResponse(c, {
     db: 'ok',
     redis: 'ok',
+    schema: 'ok',
   });
 });
 

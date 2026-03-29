@@ -6,6 +6,7 @@ const {
   countMock,
   eqMock,
   existsMock,
+  inArrayMock,
   isNullMock,
   lteMock,
   neMock,
@@ -21,6 +22,7 @@ const {
   countMock: vi.fn(() => ({ _op: 'count' })),
   eqMock: vi.fn((...args: unknown[]) => ({ _op: 'eq', args })),
   existsMock: vi.fn((subq: unknown) => ({ _op: 'exists', subq })),
+  inArrayMock: vi.fn((field: unknown, ids: unknown[]) => ({ _op: 'inArray', field, ids })),
   isNullMock: vi.fn((field: unknown) => ({ _op: 'isNull', field })),
   lteMock: vi.fn((...args: unknown[]) => ({ _op: 'lte', args })),
   neMock: vi.fn((...args: unknown[]) => ({ _op: 'ne', args })),
@@ -66,6 +68,7 @@ vi.mock('drizzle-orm', () => ({
   count: countMock,
   eq: eqMock,
   exists: existsMock,
+  inArray: inArrayMock,
   isNull: isNullMock,
   lte: lteMock,
   ne: neMock,
@@ -97,7 +100,7 @@ vi.mock('../config/db', () => ({
   },
 }));
 
-import { findManyTags } from './tags.repo';
+import { findExistingTagIds, findManyTags } from './tags.repo';
 
 /** Helper to prime mocks for a publicOnly query with `n` total matching tags. */
 function setupPublicQuery(total: number, rows: unknown[]) {
@@ -193,5 +196,63 @@ describe('tags repository public usage — EXISTS approach', () => {
 
     // lte(posts.publishedAt, sql`now()`) must be included in the posts subquery
     expect(lteMock).toHaveBeenCalledWith(postsTable.publishedAt, expect.anything());
+  });
+});
+
+describe('findExistingTagIds', () => {
+  it('returns empty array immediately without hitting DB when input is empty', async () => {
+    const result = await findExistingTagIds([]);
+
+    expect(result).toEqual([]);
+    // No DB call should occur for empty input
+    expect(selectMock).not.toHaveBeenCalled();
+  });
+
+  it('returns all IDs that exist in the database', async () => {
+    whereMock.mockResolvedValueOnce([{ id: 1 }, { id: 2 }, { id: 3 }]);
+
+    const result = await findExistingTagIds([1, 2, 3]);
+
+    expect(result).toEqual([1, 2, 3]);
+    expect(inArrayMock).toHaveBeenCalledWith(tagsTable.id, [1, 2, 3]);
+  });
+
+  it('returns only the subset of IDs that exist when some are missing', async () => {
+    // DB returns only tags 1 and 3 — tag 99 does not exist
+    whereMock.mockResolvedValueOnce([{ id: 1 }, { id: 3 }]);
+
+    const result = await findExistingTagIds([1, 3, 99]);
+
+    expect(result).toEqual([1, 3]);
+    expect(result).not.toContain(99);
+  });
+
+  it('returns empty array when none of the submitted IDs exist', async () => {
+    whereMock.mockResolvedValueOnce([]);
+
+    const result = await findExistingTagIds([100, 200, 300]);
+
+    expect(result).toEqual([]);
+    expect(inArrayMock).toHaveBeenCalledWith(tagsTable.id, [100, 200, 300]);
+  });
+
+  it('passes deduplicated IDs to inArray when duplicates are submitted', async () => {
+    // The DB may return each unique ID once regardless — the important invariant
+    // is that inArray receives the full submitted list (dedup is caller responsibility).
+    whereMock.mockResolvedValueOnce([{ id: 5 }]);
+
+    await findExistingTagIds([5, 5]);
+
+    // inArray is called with the raw submitted ids (no internal dedup in this helper)
+    expect(inArrayMock).toHaveBeenCalledWith(tagsTable.id, [5, 5]);
+  });
+
+  it('maps returned row objects to plain id numbers', async () => {
+    whereMock.mockResolvedValueOnce([{ id: 7 }, { id: 42 }]);
+
+    const result = await findExistingTagIds([7, 42]);
+
+    expect(result).toEqual([7, 42]);
+    expect(result.every((v) => typeof v === 'number')).toBe(true);
   });
 });

@@ -157,6 +157,17 @@ export async function findTagById(id: number) {
   return row ?? null;
 }
 
+/**
+ * Given a list of tag IDs, return the subset that actually exists in the database.
+ * Use this before pivot writes to detect invalid references without opening a transaction.
+ * Returns an empty array for empty input.
+ */
+export async function findExistingTagIds(ids: number[]): Promise<number[]> {
+  if (ids.length === 0) return [];
+  const rows = await db.select({ id: tags.id }).from(tags).where(inArray(tags.id, ids));
+  return rows.map((r) => r.id);
+}
+
 /** Find a tag by slug. */
 export async function findTagBySlug(slug: string) {
   const [row] = await db.select().from(tags).where(eq(tags.slug, slug)).limit(1);

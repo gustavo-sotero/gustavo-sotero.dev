@@ -15,6 +15,7 @@
     "dev:web": "bun run --env-file .env --filter @portfolio/web dev",
     "db:migrate": "cd apps/api && bun run src/db/migrate.ts",
     "db:seed": "cd apps/api && bun run src/db/seed.ts",
+    "db:audit:schema": "bun --env-file .env run apps/api/src/db/audit-schema-parity.ts",
     "db:backfill:comments": "cd apps/api && bun run src/db/backfill-comment-rendered-content.ts",
     "db:studio": "cd apps/api && bunx drizzle-kit studio",
     "db:generate": "cd apps/api && bunx drizzle-kit generate",

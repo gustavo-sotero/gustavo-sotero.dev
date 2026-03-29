@@ -61,7 +61,17 @@ adminExperienceRouter.post('/', async (c) => {
       return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
     }
     if (message.startsWith('VALIDATION_ERROR:')) {
-      return errorResponse(c, 400, 'VALIDATION_ERROR', message.replace('VALIDATION_ERROR: ', ''));
+      const details = (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
+        field: 'tagIds',
+        message: `Tag with id ${id} does not exist`,
+      }));
+      return errorResponse(
+        c,
+        400,
+        'VALIDATION_ERROR',
+        message.replace('VALIDATION_ERROR: ', ''),
+        details
+      );
     }
     throw err;
   }
@@ -107,7 +117,17 @@ adminExperienceRouter.patch('/:id', async (c) => {
       return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
     }
     if (message.startsWith('VALIDATION_ERROR:')) {
-      return errorResponse(c, 400, 'VALIDATION_ERROR', message.replace('VALIDATION_ERROR: ', ''));
+      const details = (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
+        field: 'tagIds',
+        message: `Tag with id ${id} does not exist`,
+      }));
+      return errorResponse(
+        c,
+        400,
+        'VALIDATION_ERROR',
+        message.replace('VALIDATION_ERROR: ', ''),
+        details
+      );
     }
     throw err;
   }

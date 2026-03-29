@@ -15,6 +15,7 @@ export const adminPaths = {
       parameters: [
         { $ref: '#/components/parameters/page' },
         { $ref: '#/components/parameters/perPage' },
+        { $ref: '#/components/parameters/tag' },
         {
           name: 'status',
           in: 'query',
@@ -55,7 +56,12 @@ export const adminPaths = {
                   description:
                     "Required when status is 'scheduled'. Must be a future UTC datetime.",
                 },
-                tagIds: { type: 'array', items: { type: 'integer' } },
+                tagIds: {
+                  type: 'array',
+                  items: { type: 'integer' },
+                  uniqueItems: true,
+                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
+                },
               },
             },
           },
@@ -66,6 +72,7 @@ export const adminPaths = {
         '400': { $ref: '#/components/responses/ValidationError' },
         '401': { $ref: '#/components/responses/Unauthorized' },
         '403': { $ref: '#/components/responses/Forbidden' },
+        '409': { $ref: '#/components/responses/Conflict' },
       },
     },
   },
@@ -95,7 +102,12 @@ export const adminPaths = {
                   format: 'date-time',
                   description: "Required when status is 'scheduled'",
                 },
-                tagIds: { type: 'array', items: { type: 'integer' } },
+                tagIds: {
+                  type: 'array',
+                  items: { type: 'integer' },
+                  uniqueItems: true,
+                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
+                },
               },
             },
           },
@@ -103,8 +115,10 @@ export const adminPaths = {
       },
       responses: {
         '200': { description: 'Post updated' },
+        '400': { $ref: '#/components/responses/ValidationError' },
         '401': { $ref: '#/components/responses/Unauthorized' },
         '404': { $ref: '#/components/responses/NotFound' },
+        '409': { $ref: '#/components/responses/Conflict' },
       },
     },
     delete: {
@@ -131,6 +145,17 @@ export const adminPaths = {
       parameters: [
         { $ref: '#/components/parameters/page' },
         { $ref: '#/components/parameters/perPage' },
+        { $ref: '#/components/parameters/tag' },
+        {
+          name: 'status',
+          in: 'query',
+          schema: { type: 'string', enum: ['draft', 'published'] },
+        },
+        {
+          name: 'featured',
+          in: 'query',
+          schema: { type: 'boolean' },
+        },
       ],
       responses: { '200': { description: 'Paginated project list' } },
     },
@@ -139,7 +164,46 @@ export const adminPaths = {
       summary: 'Create project',
       operationId: 'adminCreateProject',
       security: [{ cookieAuth: [] }],
-      responses: { '201': { description: 'Project created' } },
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['title'],
+              properties: {
+                title: { type: 'string' },
+                slug: { type: 'string', pattern: '^[a-z0-9-]+$' },
+                description: { type: 'string', maxLength: 500 },
+                content: { type: 'string' },
+                coverUrl: { type: 'string', format: 'uri' },
+                status: {
+                  type: 'string',
+                  enum: ['draft', 'published'],
+                  default: 'draft',
+                },
+                repositoryUrl: { type: 'string', format: 'uri' },
+                liveUrl: { type: 'string', format: 'uri' },
+                featured: { type: 'boolean', default: false },
+                order: { type: 'integer', default: 0 },
+                tagIds: {
+                  type: 'array',
+                  items: { type: 'integer' },
+                  uniqueItems: true,
+                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '201': { description: 'Project created' },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '409': { $ref: '#/components/responses/Conflict' },
+      },
     },
   },
   '/admin/projects/{id}': {
@@ -149,7 +213,40 @@ export const adminPaths = {
       operationId: 'adminUpdateProject',
       security: [{ cookieAuth: [] }],
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-      responses: { '200': { description: 'Project updated' } },
+      requestBody: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                title: { type: 'string' },
+                slug: { type: 'string', pattern: '^[a-z0-9-]+$' },
+                description: { type: 'string', maxLength: 500 },
+                content: { type: 'string' },
+                coverUrl: { type: 'string', format: 'uri' },
+                status: { type: 'string', enum: ['draft', 'published'] },
+                repositoryUrl: { type: 'string', format: 'uri' },
+                liveUrl: { type: 'string', format: 'uri' },
+                featured: { type: 'boolean' },
+                order: { type: 'integer' },
+                tagIds: {
+                  type: 'array',
+                  items: { type: 'integer' },
+                  uniqueItems: true,
+                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': { description: 'Project updated' },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '404': { $ref: '#/components/responses/NotFound' },
+        '409': { $ref: '#/components/responses/Conflict' },
+      },
     },
     delete: {
       tags: ['Admin - Projects'],
@@ -776,6 +873,12 @@ export const adminPaths = {
                 status: { type: 'string', enum: ['draft', 'published'] },
                 logoUrl: { type: 'string' },
                 credentialUrl: { type: 'string' },
+                tagIds: {
+                  type: 'array',
+                  items: { type: 'integer' },
+                  uniqueItems: true,
+                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
+                },
               },
             },
           },
@@ -789,13 +892,21 @@ export const adminPaths = {
       },
     },
   },
-  '/admin/experience/{id}': {
+  '/admin/experience/{identifier}': {
     get: {
       tags: ['Admin - Experience'],
-      summary: 'Get experience entry by ID (admin)',
+      summary: 'Get experience entry by slug (admin)',
       operationId: 'adminGetExperience',
       security: [{ cookieAuth: [] }],
-      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      parameters: [
+        {
+          name: 'identifier',
+          in: 'path',
+          required: true,
+          schema: { type: 'string' },
+          description: 'Experience slug.',
+        },
+      ],
       responses: {
         '200': { description: 'Experience detail' },
         '401': { $ref: '#/components/responses/Unauthorized' },
@@ -807,11 +918,42 @@ export const adminPaths = {
       summary: 'Update experience entry',
       operationId: 'adminUpdateExperience',
       security: [{ cookieAuth: [] }],
-      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      parameters: [
+        {
+          name: 'identifier',
+          in: 'path',
+          required: true,
+          schema: { type: 'integer' },
+          description: 'Numeric experience ID.',
+        },
+      ],
       requestBody: {
         content: {
           'application/json': {
-            schema: { $ref: '#/components/schemas/Experience' },
+            schema: {
+              type: 'object',
+              properties: {
+                role: { type: 'string' },
+                company: { type: 'string' },
+                description: { type: 'string' },
+                slug: { type: 'string', pattern: '^[a-z0-9-]+$' },
+                location: { type: 'string' },
+                employmentType: { type: 'string' },
+                startDate: { type: 'string', format: 'date' },
+                endDate: { type: 'string', format: 'date' },
+                isCurrent: { type: 'boolean' },
+                order: { type: 'integer' },
+                status: { type: 'string', enum: ['draft', 'published'] },
+                logoUrl: { type: 'string' },
+                credentialUrl: { type: 'string' },
+                tagIds: {
+                  type: 'array',
+                  items: { type: 'integer' },
+                  uniqueItems: true,
+                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
+                },
+              },
+            },
           },
         },
       },
@@ -820,6 +962,7 @@ export const adminPaths = {
         '400': { $ref: '#/components/responses/ValidationError' },
         '401': { $ref: '#/components/responses/Unauthorized' },
         '404': { $ref: '#/components/responses/NotFound' },
+        '409': { $ref: '#/components/responses/Conflict' },
       },
     },
     delete: {
@@ -827,7 +970,15 @@ export const adminPaths = {
       summary: 'Soft delete experience entry',
       operationId: 'adminDeleteExperience',
       security: [{ cookieAuth: [] }],
-      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      parameters: [
+        {
+          name: 'identifier',
+          in: 'path',
+          required: true,
+          schema: { type: 'integer' },
+          description: 'Numeric experience ID.',
+        },
+      ],
       responses: {
         '204': { description: 'Deleted' },
         '401': { $ref: '#/components/responses/Unauthorized' },

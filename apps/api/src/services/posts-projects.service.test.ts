@@ -13,6 +13,9 @@ const {
   findProjectBySlugMock,
   enqueueScheduledPostPublishMock,
   cancelScheduledPostPublishMock,
+  assertTagsExistMock,
+  syncPostTagsInTxMock,
+  syncProjectTagsInTxMock,
 } = vi.hoisted(() => ({
   dbLimitMock: vi.fn(),
   renderMarkdownMock: vi.fn(),
@@ -26,6 +29,9 @@ const {
   findProjectBySlugMock: vi.fn(),
   enqueueScheduledPostPublishMock: vi.fn(),
   cancelScheduledPostPublishMock: vi.fn(),
+  assertTagsExistMock: vi.fn(),
+  syncPostTagsInTxMock: vi.fn(),
+  syncProjectTagsInTxMock: vi.fn(),
 }));
 
 vi.mock('../config/db', () => ({
@@ -81,8 +87,13 @@ vi.mock('../repositories/projects.repo', () => ({
 vi.mock('../repositories/tags.repo', () => ({
   syncPostTags: vi.fn(),
   syncProjectTags: vi.fn(),
-  syncPostTagsInTx: vi.fn(),
-  syncProjectTagsInTx: vi.fn(),
+  syncPostTagsInTx: syncPostTagsInTxMock,
+  syncProjectTagsInTx: syncProjectTagsInTxMock,
+}));
+
+vi.mock('../lib/tagValidation', () => ({
+  assertTagsExist: assertTagsExistMock,
+  normalizeTagIds: (tagIds: number[]) => Array.from(new Set(tagIds)),
 }));
 
 vi.mock('../lib/queues', () => ({
@@ -108,6 +119,7 @@ describe('posts/projects services', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     renderMarkdownMock.mockResolvedValue('<p>rendered</p>');
+    assertTagsExistMock.mockResolvedValue(undefined);
   });
 
   it('createPostService gera slug único com sufixo numérico em colisão', async () => {
@@ -419,5 +431,146 @@ describe('posts/projects services', () => {
         comments: commentsTree,
       })
     );
+  });
+
+  // ── tagIds validation ──────────────────────────────────────────────────
+
+  describe('tag validation – createPostService', () => {
+    it('throws VALIDATION_ERROR when tagIds contain nonexistent ids', async () => {
+      dbLimitMock.mockResolvedValueOnce([]); // slug check → no collision
+      assertTagsExistMock.mockRejectedValueOnce(
+        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 999'), {
+          invalidTagIds: [999],
+        })
+      );
+      const { invalidateGroup } = await import('../lib/cache');
+      await expect(
+        createPostService({ title: 'T', content: 'C', status: 'draft', tagIds: [999] })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('VALIDATION_ERROR'),
+        invalidTagIds: [999],
+      });
+      expect(invalidateGroup).not.toHaveBeenCalled();
+      expect(createPostMock).not.toHaveBeenCalled();
+    });
+
+    it('normalizes duplicate tagIds before validation and pivot sync', async () => {
+      dbLimitMock.mockResolvedValueOnce([]);
+      createPostMock.mockResolvedValueOnce({ id: 11, slug: 't' });
+
+      await createPostService({
+        title: 'T',
+        content: 'C',
+        status: 'draft',
+        tagIds: [5, 5, 7],
+      });
+
+      expect(assertTagsExistMock).toHaveBeenCalledWith([5, 7]);
+      expect(syncPostTagsInTxMock).toHaveBeenCalledWith(expect.anything(), 11, [5, 7]);
+    });
+  });
+
+  describe('tag validation – updatePostService', () => {
+    it('throws VALIDATION_ERROR when tagIds contain nonexistent ids', async () => {
+      dbLimitMock.mockResolvedValueOnce([
+        { id: 1, slug: 'my-post', status: 'draft', publishedAt: null, scheduledAt: null },
+      ]);
+      assertTagsExistMock.mockRejectedValueOnce(
+        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 777'), {
+          invalidTagIds: [777],
+        })
+      );
+      const { invalidateGroup } = await import('../lib/cache');
+      await expect(updatePostService(1, { tagIds: [777] })).rejects.toMatchObject({
+        message: expect.stringContaining('VALIDATION_ERROR'),
+        invalidTagIds: [777],
+      });
+      expect(invalidateGroup).not.toHaveBeenCalled();
+      expect(updatePostMock).not.toHaveBeenCalled();
+    });
+
+    it('normalizes duplicate tagIds before validation and pivot sync', async () => {
+      dbLimitMock.mockResolvedValueOnce([
+        { id: 1, slug: 'my-post', status: 'draft', publishedAt: null, scheduledAt: null },
+      ]);
+      updatePostMock.mockResolvedValueOnce({ id: 1, slug: 'my-post' });
+
+      await updatePostService(1, { tagIds: [2, 2, 4] });
+
+      expect(assertTagsExistMock).toHaveBeenCalledWith([2, 4]);
+      expect(syncPostTagsInTxMock).toHaveBeenCalledWith(expect.anything(), 1, [2, 4]);
+    });
+  });
+
+  describe('tag validation – createProjectService', () => {
+    it('throws VALIDATION_ERROR when tagIds contain nonexistent ids', async () => {
+      dbLimitMock.mockResolvedValueOnce([]); // slug check → no collision
+      assertTagsExistMock.mockRejectedValueOnce(
+        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 888'), {
+          invalidTagIds: [888],
+        })
+      );
+      const { invalidateGroup } = await import('../lib/cache');
+      await expect(
+        createProjectService({
+          title: 'P',
+          content: 'C',
+          status: 'draft',
+          featured: false,
+          order: 0,
+          tagIds: [888],
+        })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('VALIDATION_ERROR'),
+        invalidTagIds: [888],
+      });
+      expect(invalidateGroup).not.toHaveBeenCalled();
+      expect(createProjectMock).not.toHaveBeenCalled();
+    });
+
+    it('normalizes duplicate tagIds before validation and pivot sync', async () => {
+      dbLimitMock.mockResolvedValueOnce([]);
+      createProjectMock.mockResolvedValueOnce({ id: 21, slug: 'p' });
+
+      await createProjectService({
+        title: 'P',
+        content: 'C',
+        status: 'draft',
+        featured: false,
+        order: 0,
+        tagIds: [8, 8, 9],
+      });
+
+      expect(assertTagsExistMock).toHaveBeenCalledWith([8, 9]);
+      expect(syncProjectTagsInTxMock).toHaveBeenCalledWith(expect.anything(), 21, [8, 9]);
+    });
+  });
+
+  describe('tag validation – updateProjectService', () => {
+    it('throws VALIDATION_ERROR when tagIds contain nonexistent ids', async () => {
+      dbLimitMock.mockResolvedValueOnce([{ id: 2, slug: 'my-project' }]);
+      assertTagsExistMock.mockRejectedValueOnce(
+        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 555'), {
+          invalidTagIds: [555],
+        })
+      );
+      const { invalidateGroup } = await import('../lib/cache');
+      await expect(updateProjectService(2, { tagIds: [555] })).rejects.toMatchObject({
+        message: expect.stringContaining('VALIDATION_ERROR'),
+        invalidTagIds: [555],
+      });
+      expect(invalidateGroup).not.toHaveBeenCalled();
+      expect(updateProjectMock).not.toHaveBeenCalled();
+    });
+
+    it('normalizes duplicate tagIds before validation and pivot sync', async () => {
+      dbLimitMock.mockResolvedValueOnce([{ id: 2, slug: 'my-project' }]);
+      updateProjectMock.mockResolvedValueOnce({ id: 2, slug: 'my-project' });
+
+      await updateProjectService(2, { tagIds: [3, 3, 6] });
+
+      expect(assertTagsExistMock).toHaveBeenCalledWith([3, 6]);
+      expect(syncProjectTagsInTxMock).toHaveBeenCalledWith(expect.anything(), 2, [3, 6]);
+    });
   });
 });

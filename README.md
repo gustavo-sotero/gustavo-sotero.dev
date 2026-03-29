@@ -76,7 +76,7 @@ Todos os caminhos abaixo são **internos** (o que o Hono recebe após o proxy re
 | Rota                | Descrição                                          |
 | ------------------- | -------------------------------------------------- |
 | `GET /health`       | Liveness check                                     |
-| `GET /ready`        | Readiness check (DB + Redis)                       |
+| `GET /ready`        | Readiness check (DB + Redis + schema parity)       |
 | `/posts`            | Posts do blog publicados                           |
 | `/projects`         | Projetos publicados                                |
 | `/tags`             | Tags em uso em posts/projetos                      |
@@ -186,6 +186,7 @@ bun run dev:web      # Web em http://localhost:3001
 | `bun run dev:web`              | Servidor de desenvolvimento Next.js                |
 | `bun run db:migrate`           | Aplica migrações do Drizzle                        |
 | `bun run db:seed`              | Popula o banco com dados de exemplo                |
+| `bun run db:audit:schema`      | Verifica paridade de schema (exit 1 se objetos ausentes) |
 | `bun run db:backfill:comments` | Re-renderiza comentários legados para HTML sanitizado |
 | `bun run db:generate`          | Gera novas migrações a partir de mudanças no schema |
 | `bun run db:studio`            | Abre o Drizzle Studio (GUI do banco)               |
@@ -194,7 +195,6 @@ bun run dev:web      # Web em http://localhost:3001
 | `bun run check`                | Lint + format com auto-fix                         |
 | `bun run test`                 | Executa todos os testes do workspace               |
 | `bun run test:services`        | Sobe a infraestrutura de teste isolada             |
-| `bun scripts/verify-admin-routes.ts` | Verifica rotas admin no artefato Next.js (pós-build) |
 
 > Use sempre `bun run test`, nunca `bun test` diretamente. O monorepo depende de configurações per-workspace do Vitest (`jsdom`, setup files, aliases de módulo). Executar o test runner nativo do Bun diretamente gera falhas enganosas como `document is not defined`.
 
@@ -228,22 +228,85 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 
 ---
 
-## Verificação de Deploy (Checklist de Paridade de Rotas)
+## Verificação de Paridade de Schema
 
-A raiz do repositório inclui `scripts/verify-admin-routes.ts`, que lê o `app-paths-manifest.json` do build do Next.js e também pode sondar uma rota admin por HTTP contra um artefato já em execução.
+A paridade de schema verifica se os objetos críticos do banco de dados existem após a execução das migrações. Esse check é executado automaticamente no startup da API e no probe `/ready`, mas também pode ser disparado manualmente.
+
+### Audit manual (local/CI)
 
 ```bash
-# Após `bun run build` em apps/web:
-bun scripts/verify-admin-routes.ts
-# Saída: ✓ All required admin routes found (exit 0)
-# Ou uma mensagem de diagnóstico listando as rotas ausentes (exit 1)
-
-# Com o standalone já rodando localmente:
-bun scripts/verify-admin-routes.ts --probe-url http://localhost:3001/admin/uploads
-# Falha se a rota resolver para a 404 customizada ou retornar 5xx
+# A partir da raiz do repositório:
+bun --env-file .env run apps/api/src/db/audit-schema-parity.ts
+# Saída: ✅ Schema parity OK (exit 0)
+# Ou: ❌ Schema parity FAILED — lista de objetos ausentes (exit 1)
 ```
 
-O `build` de `apps/web` já executa a verificação de manifesto automaticamente. O probe HTTP é complementar para validar o artefato em runtime. Como `/admin/uploads` é protegido, um probe sem sessão pode terminar em `/admin/login`; isso é aceitável desde que a resposta não seja a 404 customizada.
+Objetos verificados:
+- `table:experience_tags` — pivô entre experience e tags
+- `column:tags.is_highlighted` — coluna de destaque de tags
+
+### Checklist de verificação pós-deploy
+
+Execute essa sequência ao investigar falhas de startup ou readiness no ambiente de destino:
+
+```sql
+-- 1. Confirme o histórico de migrações aplicadas
+SELECT * FROM __drizzle_migrations ORDER BY created_at DESC;
+
+-- 2. Verifique se a tabela experience_tags existe
+SELECT to_regclass('public.experience_tags') AS experience_tags_table;
+
+-- 3. Liste as colunas da tabela tags
+SELECT column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'tags'
+ORDER BY ordinal_position;
+
+-- 4. Confirme que as tags referenciadas em falhas existem
+-- (substitua os IDs pelos da requisição com problema)
+SELECT id, name, slug FROM tags WHERE id IN (1, 5, 9, 13, 15);
+```
+
+### Quando `/ready` retorna 503 com `db-schema`
+
+Significa que o banco é alcançável mas um ou mais objetos obrigatórios estão ausentes. Passos de remediação:
+
+1. Confirme que o container está usando a imagem correta (tag/commit SHA)
+2. Confirme que `DATABASE_URL` aponta para o banco de destino pretendido
+3. Execute as migrações manualmente: `bun run db:migrate`
+4. Rode o audit de paridade: `bun --env-file .env run apps/api/src/db/audit-schema-parity.ts`
+5. Se o audit ainda falhar após as migrações, investigue `__drizzle_migrations` — pode haver uma entrada de migração faltando ou que não foi aplicada com sucesso
+
+### Erros de tagIds em endpoints admin
+
+Se `POST /admin/experience`, `POST /admin/posts` ou `POST /admin/projects` retornar `400 VALIDATION_ERROR` com `field: tagIds`, significa que um ou mais IDs submetidos não existem na tabela `tags`. Isso é comportamento correto — substitui a falha opaca `500` que ocorria anteriormente.
+
+Para diagnosticar:
+```sql
+-- Verifique se os IDs existem (substitua pelos IDs do erro)
+SELECT id, name FROM tags WHERE id IN (<ids_do_cliente>);
+```
+
+---
+
+## Verificação de Deploy (Checklist de Paridade de Rotas)
+
+Para confirmar se o artefato do Next.js contém as rotas admin esperadas, use o manifesto gerado pelo próprio build e, opcionalmente, um probe HTTP contra o standalone já em execução.
+
+```text
+Arquivo do manifesto: apps/web/.next/app-path-routes-manifest.json
+Entradas mínimas esperadas: /admin/uploads, /admin/posts, /admin/projects, /admin/experience
+```
+
+```bash
+# Com o standalone já rodando localmente:
+curl -I http://localhost:3001/admin/uploads
+# Aceitável: 200 OK ou redirecionamento para /admin/login
+# Falha: 404 da aplicação ou qualquer resposta 5xx
+```
+
+O `build` de `apps/web` gera o manifesto usado nessa checagem. O probe HTTP é complementar para validar o artefato em runtime. Como `/admin/uploads` é protegido, um probe sem sessão pode terminar em `/admin/login`; isso é aceitável desde que a resposta não seja a 404 customizada.
 
 ### Checklist de paridade de rotas em produção
 
@@ -251,7 +314,7 @@ Quando uma rota admin retorna a página 404 customizada em produção mas funcio
 
 1. **Confirme o artefato:** a imagem/tag ou commit SHA em produção corresponde ao build mais recente?
 2. **Verifique a rota no container:** dentro do container web (antes do proxy), acesse `http://localhost:3001/admin/uploads` diretamente — se retornar 404, o artefato está faltando a rota; se retornar 200, o problema está no proxy.
-3. **Execute o script de verificação:** `bun scripts/verify-admin-routes.ts` confirma a presença no manifesto do Next.js; com o serviço já em pé, adicione `--probe-url http://localhost:3001/admin/uploads` para validar também a resposta HTTP.
+3. **Valide o manifesto do build:** confira `apps/web/.next/app-path-routes-manifest.json` e confirme que a rota esperada aparece no artefato gerado pelo Next.js.
 4. **Valide as regras do proxy:** a configuração do Traefik/Dokploy que roteia `/admin/*` não está sombreando ou reescrevendo incorretamente? A configuração do proxy é **externa ao repositório** e precisa ser validada separadamente quando fonte e produção divergem.
 5. **Compare interno vs. público:** `http://web:3001/admin/uploads` (interno) vs. `https://seusite.com/admin/uploads` (público) — se o interno funciona e o público não, é um problema do proxy.
 
@@ -262,7 +325,7 @@ Quando uma rota admin retorna a página 404 customizada em produção mas funcio
 | Endpoint        | Descrição                              |
 | --------------- | -------------------------------------- |
 | `GET /health`   | Liveness — processo está no ar         |
-| `GET /ready`    | Readiness — conectividade DB + Redis   |
+| `GET /ready`    | Readiness — DB + Redis + paridade de schema |
 | `GET /doc`      | Swagger UI (documentação interativa)   |
 | `GET /doc/spec` | Spec OpenAPI 3.1 (JSON)                |
 
