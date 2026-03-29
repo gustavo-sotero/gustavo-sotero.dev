@@ -34,7 +34,11 @@ interface StackBadge {
 
 function pickStackBadges(tags: Tag[], count = 5): StackBadge[] {
   return [...tags]
-    .sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category))
+    .sort(
+      (a, b) =>
+        Number(b.isHighlighted) - Number(a.isHighlighted) ||
+        CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category)
+    )
     .slice(0, count)
     .map((t) => ({ name: t.name, isHighlighted: !!t.isHighlighted }));
 }
