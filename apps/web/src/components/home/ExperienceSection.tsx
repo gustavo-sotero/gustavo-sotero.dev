@@ -1,7 +1,8 @@
 'use client';
 
 import type { Experience } from '@portfolio/shared';
-import { Briefcase, Building2, CalendarRange, MapPin } from 'lucide-react';
+import { Briefcase, Building2, CalendarRange, ChevronDown, MapPin } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { BlurFade } from '@/components/ui/blur-fade';
 
@@ -33,6 +34,43 @@ function formatPeriod(startDate: string, endDate: string | null, isCurrent: bool
   if (isCurrent) return `${start} — presente`;
   if (endDate) return `${start} — ${fmt(endDate)}`;
   return start;
+}
+
+function ExpandableDescription({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+  const ref = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    // Only measure when the clamp is active to avoid false negatives when expanded
+    if (expanded) return;
+    const el = ref.current;
+    if (!el) return;
+    setIsClamped(el.scrollHeight > el.clientHeight);
+  }, [expanded]);
+
+  return (
+    <div>
+      <p
+        ref={ref}
+        className={`text-sm text-zinc-400 leading-relaxed ${expanded ? '' : 'line-clamp-3'}`}
+      >
+        {text}
+      </p>
+      {isClamped && (
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          className="mt-1.5 flex items-center gap-1 text-xs text-emerald-500 hover:text-emerald-400 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500 rounded"
+        >
+          {expanded ? 'ver menos' : 'ver mais'}
+          <ChevronDown
+            className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          />
+        </button>
+      )}
+    </div>
+  );
 }
 
 function ExperienceCard({ item, index }: { item: Experience; index: number }) {
@@ -98,7 +136,7 @@ function ExperienceCard({ item, index }: { item: Experience; index: number }) {
           </div>
 
           {/* Description */}
-          <p className="text-sm text-zinc-400 leading-relaxed line-clamp-3">{item.description}</p>
+          <ExpandableDescription text={item.description} />
 
           {/* Tags */}
           {item.tags && item.tags.length > 0 && (

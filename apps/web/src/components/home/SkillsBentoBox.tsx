@@ -74,11 +74,8 @@ function SkillCard({ tag, index }: { tag: Tag; index: number }) {
 export function SkillsBentoBox({ tags }: SkillsBentoBoxProps) {
   if (tags.length === 0) return null;
 
-  const highlighted = tags.filter((t) => t.isHighlighted);
-
-  // Group by category (only non-highlighted, to avoid duplication)
-  const rest = tags.filter((t) => !t.isHighlighted);
-  const grouped = rest.reduce(
+  // Group all tags by category (highlighted ones stay in their category)
+  const grouped = tags.reduce(
     (acc, tag) => {
       const cat = tag.category ?? 'other';
       if (!acc[cat]) acc[cat] = [];
@@ -87,6 +84,11 @@ export function SkillsBentoBox({ tags }: SkillsBentoBoxProps) {
     },
     {} as Record<string, Tag[]>
   );
+
+  // Within each category, sort highlighted tags first
+  for (const cat of Object.keys(grouped)) {
+    grouped[cat].sort((a, b) => (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0));
+  }
 
   const categoryOrder = ['language', 'framework', 'db', 'tool', 'cloud', 'infra', 'other'];
 
@@ -98,21 +100,7 @@ export function SkillsBentoBox({ tags }: SkillsBentoBoxProps) {
         <h2 className="text-2xl md:text-3xl font-bold text-zinc-100">Stack & Skills</h2>
       </div>
 
-      {/* Highlighted / featured skills — always first */}
-      {highlighted.length > 0 && (
-        <div>
-          <p className="text-xs font-mono text-emerald-500 uppercase tracking-widest mb-3">
-            Destaques
-          </p>
-          <BentoGrid className="grid-cols-2 md:grid-cols-4 auto-rows-auto gap-3">
-            {highlighted.map((tag, i) => (
-              <SkillCard key={tag.id} tag={tag} index={i} />
-            ))}
-          </BentoGrid>
-        </div>
-      )}
-
-      {/* Remaining skills grouped by category */}
+      {/* Skills grouped by category */}
       <div className="space-y-6">
         {categoryOrder.map((category) => {
           const catTags = grouped[category];
