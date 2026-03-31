@@ -36,7 +36,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       )}
 
       {/* Cover image */}
-      <div className="relative h-48 w-full bg-zinc-800/60 overflow-hidden">
+      <div className="relative aspect-[4/3] w-full bg-zinc-800/60 overflow-hidden">
         {project.coverUrl ? (
           <Image
             src={project.coverUrl}

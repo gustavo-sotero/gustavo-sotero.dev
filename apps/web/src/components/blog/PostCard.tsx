@@ -21,7 +21,7 @@ export function PostCard({ post }: PostCardProps) {
     >
       <BorderBeam colorFrom="#34d399" colorTo="#22d3ee" duration={4} size={100} />
       {/* Cover image */}
-      <div className="relative h-44 w-full bg-zinc-800/60 overflow-hidden">
+      <div className="relative aspect-[4/3] w-full bg-zinc-800/60 overflow-hidden">
         {post.coverUrl ? (
           <Image
             src={post.coverUrl}

@@ -107,7 +107,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
       <article className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 py-12 md:py-16">
         {/* Cover */}
         {post.coverUrl && (
-          <div className="relative w-full aspect-video rounded-xl overflow-hidden mb-10 ring-1 ring-zinc-800">
+          <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden mb-10 ring-1 ring-zinc-800">
             <Image src={post.coverUrl} alt={post.title} fill priority className="object-cover" />
           </div>
         )}
