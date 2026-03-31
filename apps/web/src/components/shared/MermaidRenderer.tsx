@@ -19,9 +19,10 @@ async function loadMermaid() {
 /**
  * Client Component that initializes Mermaid diagrams after the HTML is mounted.
  *
- * Security: uses `securityLevel: 'strict'` which sandboxes diagram rendering in
- * an iframe, preventing XSS through malicious diagram source even if the upstream
- * sanitization pipeline were ever bypassed.
+ * Security: uses `securityLevel: 'strict'` (Mermaid v11 default). In v11, strict mode
+ * sanitizes URLs and encodes raw HTML within diagram labels — it does NOT use iframes
+ * (that is `securityLevel: 'sandbox'`). The diagram source itself is safe because it
+ * came from admin-controlled Markdown processed through rehype-sanitize on the backend.
  *
  * Backend generates <div class="mermaid" data-content="<base64>"> placeholders;
  * this component decodes them and calls mermaid.run() client-side.
@@ -57,23 +58,36 @@ export function MermaidRenderer({ html }: MermaidRendererProps) {
         mermaid.initialize({
           startOnLoad: false,
           theme,
-          // 'strict' sandboxes rendering in an iframe, preventing XSS from
-          // diagram source — do NOT downgrade to 'loose' or 'antiscript'.
           securityLevel: 'strict',
           fontFamily: 'var(--font-mono-jetbrains, monospace)',
         });
 
+        let decodeError = false;
         nodes.forEach((node) => {
           const encoded = node.getAttribute('data-content');
           if (!encoded) return;
-          // Decode base64 → UTF-8 (backend stores diagram as Buffer.toString('base64'))
-          const decoded = new TextDecoder().decode(
-            Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0))
-          );
+          let decoded: string;
+          try {
+            // Decode base64 → UTF-8 (backend stores diagram as Buffer.toString('base64'))
+            decoded = new TextDecoder().decode(
+              Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0))
+            );
+          } catch {
+            decodeError = true;
+            return;
+          }
           // Clear previous render artifacts
           node.removeAttribute('data-processed');
           node.textContent = decoded;
         });
+
+        if (decodeError) {
+          logClientError('MermaidRenderer', 'Failed to decode base64 diagram content', {
+            nodeCount: nodes.length,
+          });
+          if (!cancelled) setRenderError(true);
+          return;
+        }
 
         mermaid.run({ nodes: Array.from(nodes) }).catch((err: unknown) => {
           if (cancelled) return;

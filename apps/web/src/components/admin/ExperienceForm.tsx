@@ -297,7 +297,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
           {...register('description')}
           placeholder="Descreva suas responsabilidades..."
           rows={4}
-          className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
+          className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none overflow-y-auto [field-sizing:fixed] focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
         {errors.description && (
           <p className="text-xs text-red-400">{String(errors.description.message)}</p>

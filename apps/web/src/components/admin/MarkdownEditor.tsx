@@ -12,6 +12,7 @@ interface MarkdownEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   minHeight?: number;
+  maxHeight?: number;
   className?: string;
   disabled?: boolean;
 }
@@ -21,6 +22,7 @@ export function MarkdownEditor({
   onChange,
   placeholder = 'Escreva em Markdown...',
   minHeight = 400,
+  maxHeight = 700,
   className,
   disabled,
 }: MarkdownEditorProps) {
@@ -57,9 +59,9 @@ export function MarkdownEditor({
               'min-h-0 resize-none rounded-none border-0 bg-transparent',
               'font-mono text-sm text-zinc-300 placeholder:text-zinc-600',
               'focus-visible:ring-0 focus-visible:ring-offset-0',
-              'p-4 leading-relaxed'
+              'p-4 leading-relaxed overflow-y-auto field-sizing-fixed'
             )}
-            style={{ minHeight }}
+            style={{ minHeight, maxHeight }}
           />
         </TabsContent>
 
@@ -76,7 +78,7 @@ export function MarkdownEditor({
               'prose-hr:border-zinc-800',
               'prose-table:text-zinc-300 prose-th:text-zinc-200 prose-td:border-zinc-800 prose-th:border-zinc-700'
             )}
-            style={{ minHeight }}
+            style={{ minHeight, maxHeight }}
           >
             {value ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>

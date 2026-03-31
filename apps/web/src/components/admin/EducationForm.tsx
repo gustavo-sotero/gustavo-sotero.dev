@@ -287,7 +287,7 @@ export function EducationForm({ mode, education }: EducationFormProps) {
           {...register('description')}
           placeholder="Descreva o curso ou formação..."
           rows={3}
-          className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
+          className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none overflow-y-auto field-sizing-fixed focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
       </div>
 

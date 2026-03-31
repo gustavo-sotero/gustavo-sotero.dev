@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { JsonLdScript } from '@/components/shared/JsonLdScript';
+import { MermaidRenderer } from '@/components/shared/MermaidRenderer';
 import { PublicPageUnavailable } from '@/components/shared/PublicPageUnavailable';
 import { TechIcon } from '@/components/shared/TechIcon';
 import { TrustedHtml } from '@/components/shared/TrustedHtml';
@@ -67,6 +68,8 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   }
 
   const project = result.data;
+
+  const hasMermaid = project.renderedContent?.includes('class="mermaid"') ?? false;
 
   const tags = [...((project as typeof project & { tags?: Tag[] }).tags ?? [])].sort(
     (a, b) => Number(b.isHighlighted) - Number(a.isHighlighted)
@@ -176,12 +179,15 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         </header>
 
         {/* Content */}
-        {project.renderedContent && (
-          <TrustedHtml
-            html={project.renderedContent}
-            className="prose prose-zinc dark:prose-invert max-w-none prose-portfolio"
-          />
-        )}
+        {project.renderedContent &&
+          (hasMermaid ? (
+            <MermaidRenderer html={project.renderedContent} />
+          ) : (
+            <TrustedHtml
+              html={project.renderedContent}
+              className="prose prose-zinc dark:prose-invert max-w-none prose-portfolio"
+            />
+          ))}
       </article>
     </>
   );
