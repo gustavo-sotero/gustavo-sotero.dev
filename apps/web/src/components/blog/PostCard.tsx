@@ -1,20 +1,17 @@
 import type { Post } from '@portfolio/shared';
-import { CalendarDays, Star } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { AnimatedShinyText } from '@/components/ui/animated-shiny-text';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
-import { cn, formatDateBR } from '@/lib/utils';
+import { formatDateBR } from '@/lib/utils';
 
 interface PostCardProps {
   post: Post;
 }
 
 export function PostCard({ post }: PostCardProps) {
-  const tags = [...(post.tags ?? [])].sort(
-    (a, b) => Number(b.isHighlighted) - Number(a.isHighlighted)
-  );
+  const tags = post.tags ?? [];
   const dateStr = formatDateBR(post.publishedAt ?? post.createdAt);
 
   return (
@@ -52,26 +49,9 @@ export function PostCard({ post }: PostCardProps) {
               <Badge
                 key={tag.id}
                 variant="secondary"
-                className={cn(
-                  'text-xs border',
-                  tag.isHighlighted
-                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/50 hover:bg-zinc-700/80'
-                )}
+                className="text-xs border bg-zinc-800/80 text-zinc-400 border-zinc-700/50 hover:bg-zinc-700/80"
               >
-                {tag.isHighlighted && (
-                  <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 mr-1 inline-block flex-shrink-0" />
-                )}
-                {tag.isHighlighted ? (
-                  <AnimatedShinyText
-                    shimmerWidth={60}
-                    className="text-emerald-300! dark:text-emerald-300!"
-                  >
-                    {tag.name}
-                  </AnimatedShinyText>
-                ) : (
-                  tag.name
-                )}
+                {tag.name}
               </Badge>
             ))}
           </div>

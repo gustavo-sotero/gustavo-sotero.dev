@@ -1,5 +1,5 @@
 import type { PublicCommentNode } from '@portfolio/shared';
-import { Calendar, Clock, Star } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SITE_METADATA } from '@/lib/constants';
 import { getPublicPostDetail } from '@/lib/data/public/posts';
-import { cn, formatDateBR } from '@/lib/utils';
+import { formatDateBR } from '@/lib/utils';
 
 interface BlogDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -80,9 +80,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
   const post = result.data;
 
-  const tags = [...(post.tags ?? [])].sort(
-    (a, b) => Number(b.isHighlighted) - Number(a.isHighlighted)
-  );
+  const tags = post.tags ?? [];
   // The API returns only approved non-deleted comments as a nested tree.
   const approvedComments: PublicCommentNode[] = post.comments ?? [];
   const hasMermaid = post.renderedContent?.includes('class="mermaid"') ?? false;
@@ -123,16 +121,8 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
                 <Badge
                   key={tag.id}
                   variant="secondary"
-                  className={cn(
-                    'gap-1.5 text-xs font-mono border transition-colors',
-                    tag.isHighlighted
-                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400/50 hover:text-emerald-200'
-                      : 'border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:text-zinc-100'
-                  )}
+                  className="gap-1.5 text-xs font-mono border transition-colors border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:text-zinc-100"
                 >
-                  {tag.isHighlighted && (
-                    <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
-                  )}
                   <TechIcon
                     iconKey={tag.iconKey}
                     category={tag.category}
