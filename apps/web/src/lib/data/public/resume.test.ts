@@ -26,6 +26,18 @@ describe('getResumeData', () => {
     vi.clearAllMocks();
   });
 
+  it('fetches tags from /tags?source=project', async () => {
+    apiServerGetPaginatedMock
+      .mockResolvedValueOnce(makePaginatedResponse([]))
+      .mockResolvedValueOnce(makePaginatedResponse([]))
+      .mockResolvedValueOnce(makePaginatedResponse([]));
+    apiServerGetMock.mockResolvedValueOnce([]);
+
+    await getResumeData();
+
+    expect(apiServerGetMock).toHaveBeenCalledWith('/tags?source=project');
+  });
+
   it('returns ok state when all sources succeed', async () => {
     apiServerGetPaginatedMock
       .mockResolvedValueOnce(makePaginatedResponse([{ id: 1, role: 'Backend Engineer' }]))

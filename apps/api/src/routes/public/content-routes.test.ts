@@ -265,4 +265,96 @@ describe('public content routes', () => {
     expect(body.success).toBe(true);
     expect(listTagsMock).toHaveBeenCalledWith({ category: 'cloud,infra' }, true);
   });
+
+  it('GET /tags?source=project passes source to service', async () => {
+    listTagsMock.mockResolvedValueOnce({
+      data: [{ id: 1, name: 'TypeScript', slug: 'typescript' }],
+      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+    });
+
+    const app = new Hono();
+    app.route('/tags', publicTagsRouter);
+
+    const response = await app.request('/tags?source=project');
+    const body = (await response.json()) as {
+      success: boolean;
+      data: Array<{ id: number; name: string }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(1);
+    expect(listTagsMock).toHaveBeenCalledWith({ source: 'project' }, true);
+  });
+
+  it('GET /tags?source=post passes source to service', async () => {
+    listTagsMock.mockResolvedValueOnce({
+      data: [],
+      meta: { page: 1, perPage: 20, total: 0, totalPages: 0 },
+    });
+
+    const app = new Hono();
+    app.route('/tags', publicTagsRouter);
+
+    const response = await app.request('/tags?source=post');
+    expect(response.status).toBe(200);
+    expect(listTagsMock).toHaveBeenCalledWith({ source: 'post' }, true);
+  });
+
+  it('GET /tags?source=experience passes source to service', async () => {
+    listTagsMock.mockResolvedValueOnce({
+      data: [],
+      meta: { page: 1, perPage: 20, total: 0, totalPages: 0 },
+    });
+
+    const app = new Hono();
+    app.route('/tags', publicTagsRouter);
+
+    const response = await app.request('/tags?source=experience');
+    expect(response.status).toBe(200);
+    expect(listTagsMock).toHaveBeenCalledWith({ source: 'experience' }, true);
+  });
+
+  it('GET /tags?source=invalid returns validation error', async () => {
+    const app = new Hono();
+    app.route('/tags', publicTagsRouter);
+
+    const response = await app.request('/tags?source=admin');
+    const body = (await response.json()) as {
+      success: boolean;
+      error: { code: string };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('GET /tags?source=project&category=language passes both filters to service', async () => {
+    listTagsMock.mockResolvedValueOnce({
+      data: [{ id: 1, name: 'TypeScript', slug: 'typescript' }],
+      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+    });
+
+    const app = new Hono();
+    app.route('/tags', publicTagsRouter);
+
+    const response = await app.request('/tags?source=project&category=language');
+    expect(response.status).toBe(200);
+    expect(listTagsMock).toHaveBeenCalledWith({ source: 'project', category: 'language' }, true);
+  });
+
+  it('GET /tags without source preserves legacy union behaviour', async () => {
+    listTagsMock.mockResolvedValueOnce({
+      data: [{ id: 1, name: 'TypeScript', slug: 'typescript' }],
+      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+    });
+
+    const app = new Hono();
+    app.route('/tags', publicTagsRouter);
+
+    const response = await app.request('/tags');
+    expect(response.status).toBe(200);
+    expect(listTagsMock).toHaveBeenCalledWith({}, true);
+  });
 });

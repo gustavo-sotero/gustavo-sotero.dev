@@ -51,7 +51,7 @@ export async function getResumeData(): Promise<ResumeLoaderResult> {
       });
       return { data: [] as Education[] };
     }),
-    apiServerGet<Tag[]>('/tags').catch((err) => {
+    apiServerGet<Tag[]>('/tags?source=project').catch((err) => {
       degraded = true;
       logServerError('data:resume', 'Failed to fetch tags', {
         error: err instanceof Error ? err.message : String(err),

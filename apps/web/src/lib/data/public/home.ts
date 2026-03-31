@@ -66,7 +66,7 @@ export async function getHomeTags(): Promise<HomeLoaderResult<Tag>> {
   cacheTag(TAG_HOME, TAG_TAGS_LIST);
 
   try {
-    const data = await apiServerGet<Tag[]>('/tags');
+    const data = await apiServerGet<Tag[]>('/tags?source=project');
     const tags = Array.isArray(data) ? data : [];
     return tags.length > 0 ? { state: 'ok', data: tags } : { state: 'empty', data: [] };
   } catch (err) {

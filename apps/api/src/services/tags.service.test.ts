@@ -64,7 +64,13 @@ vi.mock('../repositories/tags.repo', () => ({
   syncProjectTags: syncProjectTagsMock,
 }));
 
-import { createTagService, deleteTagService, syncTags, updateTagService } from './tags.service';
+import {
+  createTagService,
+  deleteTagService,
+  listTags,
+  syncTags,
+  updateTagService,
+} from './tags.service';
 
 describe('tags service', () => {
   beforeEach(() => {
@@ -75,6 +81,44 @@ describe('tags service', () => {
     tagSlugExistsMock.mockResolvedValue(false);
     // Default: no highlighted tags in any category
     countHighlightedByCategoryMock.mockResolvedValue(0);
+  });
+
+  it('uses a source-aware cache key for public tag listings to avoid collisions', async () => {
+    const repoResult = {
+      data: [{ id: 1, name: 'TypeScript', slug: 'typescript', category: 'language' }],
+      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+    };
+    findManyTagsMock.mockResolvedValue(repoResult);
+
+    const result = await listTags({ category: 'language,framework', source: 'project' }, true);
+
+    expect(cachedMock).toHaveBeenCalledWith(
+      'tags:public:category=language,framework:source=project',
+      300,
+      expect.any(Function)
+    );
+    expect(findManyTagsMock).toHaveBeenCalledWith(
+      { category: 'language,framework', source: 'project' },
+      true
+    );
+    expect(result).toEqual(repoResult);
+  });
+
+  it('preserves legacy union semantics when source is absent on public listing', async () => {
+    const repoResult = {
+      data: [{ id: 1, name: 'TypeScript', slug: 'typescript', category: 'language' }],
+      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+    };
+    findManyTagsMock.mockResolvedValue(repoResult);
+
+    await listTags({ category: 'language' }, true);
+
+    expect(cachedMock).toHaveBeenCalledWith(
+      'tags:public:category=language:source=',
+      300,
+      expect.any(Function)
+    );
+    expect(findManyTagsMock).toHaveBeenCalledWith({ category: 'language' }, true);
   });
 
   it('throws conflict when creating tag with duplicated name', async () => {

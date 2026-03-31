@@ -120,6 +120,38 @@ describe('openapi routes', () => {
     }
   });
 
+  it('GET /doc/spec documents /tags source filter and default union semantics', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<
+        string,
+        {
+          get?: {
+            description?: string;
+            parameters?: Array<{
+              name?: string;
+              in?: string;
+              schema?: { enum?: string[] };
+            }>;
+          };
+        }
+      >;
+    };
+
+    const tagsGet = body.paths['/tags']?.get;
+    const sourceParam = tagsGet?.parameters?.find(
+      (param) => param.name === 'source' && param.in === 'query'
+    );
+
+    expect(sourceParam?.schema?.enum).toEqual(['project', 'post', 'experience']);
+    expect(tagsGet?.description).toContain(
+      'When `source` is omitted, the union of all origins is returned'
+    );
+  });
+
   it('GET /doc/spec documents admin project and experience write contracts truthfully', async () => {
     const app = new Hono();
     app.route('/', openApiRouter);

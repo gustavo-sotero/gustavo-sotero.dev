@@ -96,6 +96,49 @@ describe('ProjectsContent', () => {
     expect(screen.getByText('Project Beta')).toBeDefined();
   });
 
+  it('renders tag chips from the public tags catalog when tags are available', async () => {
+    const projects = [{ id: 1, title: 'Project Alpha', slug: 'project-alpha' }];
+    mockGetPublicProjects.mockResolvedValue({ state: 'ok', data: projects, meta: defaultMeta });
+    mockGetHomeTags.mockResolvedValue({
+      state: 'ok',
+      data: [
+        { id: 1, name: 'TypeScript', slug: 'typescript' },
+        { id: 2, name: 'Bun', slug: 'bun' },
+      ],
+    });
+
+    const element = await ProjectsContent({ currentPage: 1, sort: 'recentes' });
+    render(element as React.ReactElement);
+
+    expect(screen.getByRole('navigation', { name: /filtrar por tecnologia/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Todos' })).toHaveAttribute(
+      'href',
+      '/projects?sort=recentes'
+    );
+    expect(screen.getByRole('link', { name: 'TypeScript' })).toHaveAttribute(
+      'href',
+      '/projects?tag=typescript&sort=recentes'
+    );
+    expect(screen.getByRole('link', { name: 'Bun' })).toHaveAttribute(
+      'href',
+      '/projects?tag=bun&sort=recentes'
+    );
+  });
+
+  it('keeps projects visible and hides tag chips when tags loader is degraded', async () => {
+    const projects = [{ id: 1, title: 'Project Alpha', slug: 'project-alpha' }];
+    mockGetPublicProjects.mockResolvedValue({ state: 'ok', data: projects, meta: defaultMeta });
+    mockGetHomeTags.mockResolvedValue({ state: 'degraded' });
+
+    const element = await ProjectsContent({ currentPage: 1, sort: 'relevancia' });
+    render(element as React.ReactElement);
+
+    expect(screen.getByTestId('project-card')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: /filtrar por tecnologia/i })
+    ).not.toBeInTheDocument();
+  });
+
   it('renders empty state message when API returns no projects', async () => {
     mockGetPublicProjects.mockResolvedValue({
       state: 'empty',

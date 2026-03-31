@@ -52,9 +52,29 @@ export const tagQuerySchema = z.object({
   category: tagCategoryCsvSchema.optional(), // comma-separated list of categories
 });
 
+export const tagSourceValues = ['project', 'post', 'experience'] as const;
+export type TagSource = (typeof tagSourceValues)[number];
+
+/**
+ * Public query schema for GET /tags.
+ *
+ * Extends `tagQuerySchema` with an optional `source` filter that restricts
+ * results to tags associated with a specific entity origin:
+ * - `project`: only tags linked to published, non-deleted projects
+ * - `post`: only tags linked to published, non-deleted posts
+ * - `experience`: only tags linked to published, non-deleted experience entries
+ *
+ * When `source` is omitted the route returns the union of all origins
+ * (legacy/default behavior) for backward compatibility.
+ */
+export const publicTagQuerySchema = tagQuerySchema.extend({
+  source: z.enum(tagSourceValues).optional(),
+});
+
 // Schema-inferred input types
 // CreateTagSchemaInput uses z.input<> so callers can omit fields that have
 // defaults (e.g. isHighlighted, category) — defaults are applied by the schema.
 export type CreateTagSchemaInput = z.input<typeof createTagSchema>;
 export type UpdateTagSchemaInput = z.infer<typeof updateTagSchema>;
 export type TagQuery = z.infer<typeof tagQuerySchema>;
+export type PublicTagQuery = z.infer<typeof publicTagQuerySchema>;

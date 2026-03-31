@@ -642,7 +642,13 @@ export const publicPaths = {
     get: {
       tags: ['Tags'],
       summary: 'List tags in use',
-      description: 'Returns only tags used by at least one published post or project.',
+      description:
+        'Returns tags used by at least one published entity (post, project, or experience).\n\n' +
+        'Use `?source=project` (recommended for stack/skills surfaces) to restrict results to tags\n' +
+        'linked to published projects only. Use `?source=post` or `?source=experience` for the\n' +
+        'corresponding origin. When `source` is omitted, the union of all origins is returned\n' +
+        '(legacy default, backward-compatible).\n\n' +
+        'Both `category` and `source` can be combined in the same request.',
       operationId: 'listTags',
       parameters: [
         {
@@ -650,6 +656,17 @@ export const publicPaths = {
           in: 'query',
           schema: { type: 'string', example: 'language,framework' },
           description: 'Comma-separated category filter',
+        },
+        {
+          name: 'source',
+          in: 'query',
+          schema: {
+            type: 'string',
+            enum: ['project', 'post', 'experience'],
+          },
+          description:
+            'Restrict results to tags associated with a specific entity origin. ' +
+            'When absent, the union of all origins is returned.',
         },
       ],
       responses: {

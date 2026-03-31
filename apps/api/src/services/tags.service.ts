@@ -38,6 +38,8 @@ export interface TagListFilters {
   category?: string;
   page?: string | number;
   perPage?: string | number;
+  /** Restrict public tags to a specific entity origin (project | post | experience). */
+  source?: 'project' | 'post' | 'experience';
 }
 
 /**
@@ -45,7 +47,7 @@ export interface TagListFilters {
  */
 export async function listTags(filters: TagListFilters = {}, publicOnly = false) {
   if (publicOnly) {
-    const key = `tags:public:category=${filters.category ?? ''}`;
+    const key = `tags:public:category=${filters.category ?? ''}:source=${filters.source ?? ''}`;
     return cached(key, LIST_TTL, () => findManyTags(filters, true));
   }
   return findManyTags(filters, false);

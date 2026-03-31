@@ -199,6 +199,58 @@ describe('tags repository public usage — EXISTS approach', () => {
   });
 });
 
+describe('tags repository public usage — source filter', () => {
+  it('does not call or() when source=project (only projectExists used in WHERE)', async () => {
+    setupPublicQuery(0, []);
+
+    await findManyTags({ source: 'project' }, true);
+
+    // All three EXISTS subqueries are still constructed regardless of source
+    expect(existsMock).toHaveBeenCalledTimes(3);
+    // But the result is a single EXISTS condition — or() is never called
+    expect(orMock).not.toHaveBeenCalled();
+  });
+
+  it('does not call or() when source=post (only postExists used in WHERE)', async () => {
+    setupPublicQuery(0, []);
+
+    await findManyTags({ source: 'post' }, true);
+
+    expect(existsMock).toHaveBeenCalledTimes(3);
+    expect(orMock).not.toHaveBeenCalled();
+  });
+
+  it('does not call or() when source=experience (only experienceExists used in WHERE)', async () => {
+    setupPublicQuery(0, []);
+
+    await findManyTags({ source: 'experience' }, true);
+
+    expect(existsMock).toHaveBeenCalledTimes(3);
+    expect(orMock).not.toHaveBeenCalled();
+  });
+
+  it('calls or() to union all sources when source is absent', async () => {
+    setupPublicQuery(0, []);
+
+    await findManyTags({}, true);
+
+    // Union of post + project + experience
+    expect(existsMock).toHaveBeenCalledTimes(3);
+    expect(orMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('combines category filter with source=project', async () => {
+    setupPublicQuery(1, [{ id: 1, name: 'TypeScript', category: 'language' }]);
+
+    const result = await findManyTags({ source: 'project', category: 'language' }, true);
+
+    expect(result.data).toHaveLength(1);
+    expect(orMock).not.toHaveBeenCalled();
+    // inArray should have been called for the category filter
+    expect(inArrayMock).toHaveBeenCalledWith(tagsTable.category, ['language']);
+  });
+});
+
 describe('findExistingTagIds', () => {
   it('returns empty array immediately without hitting DB when input is empty', async () => {
     const result = await findExistingTagIds([]);

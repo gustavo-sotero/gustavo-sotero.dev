@@ -35,6 +35,8 @@ export interface TagFilters {
   category?: string | string[];
   page?: string | number;
   perPage?: string | number;
+  /** Restrict public tags to a specific entity origin. When absent, the union of all origins is returned. */
+  source?: 'project' | 'post' | 'experience';
 }
 
 /** Find all tags (admin: all; public: only those in use by published content). */
@@ -75,44 +77,56 @@ export async function findManyTags(filters: TagFilters = {}, publicOnly = false)
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   if (publicOnly) {
-    // Only tags used by at least one published post, project, or experience.
+    // Only tags used by at least one published entity.
     // Uses EXISTS subqueries to avoid materializing an intermediate ID array in memory —
     // the filter is pushed entirely to the database engine as a correlated subquery.
-    const isUsedCondition = or(
-      exists(
-        db
-          .select({ one: sql<number>`1` })
-          .from(postTags)
-          .innerJoin(posts, eq(postTags.postId, posts.id))
-          .where(and(eq(postTags.tagId, tags.id), ...publicPostVisibilityClauses(posts)))
-      ),
-      exists(
-        db
-          .select({ one: sql<number>`1` })
-          .from(projectTags)
-          .innerJoin(projects, eq(projectTags.projectId, projects.id))
-          .where(
-            and(
-              eq(projectTags.tagId, tags.id),
-              eq(projects.status, 'published'),
-              isNull(projects.deletedAt)
-            )
-          )
-      ),
-      exists(
-        db
-          .select({ one: sql<number>`1` })
-          .from(experienceTags)
-          .innerJoin(experience, eq(experienceTags.experienceId, experience.id))
-          .where(
-            and(
-              eq(experienceTags.tagId, tags.id),
-              eq(experience.status, 'published'),
-              isNull(experience.deletedAt)
-            )
-          )
-      )
+    //
+    // When `source` is specified, only the corresponding pivot table is checked;
+    // when absent the union of post + project + experience is used (legacy default).
+    const postExists = exists(
+      db
+        .select({ one: sql<number>`1` })
+        .from(postTags)
+        .innerJoin(posts, eq(postTags.postId, posts.id))
+        .where(and(eq(postTags.tagId, tags.id), ...publicPostVisibilityClauses(posts)))
     );
+
+    const projectExists = exists(
+      db
+        .select({ one: sql<number>`1` })
+        .from(projectTags)
+        .innerJoin(projects, eq(projectTags.projectId, projects.id))
+        .where(
+          and(
+            eq(projectTags.tagId, tags.id),
+            eq(projects.status, 'published'),
+            isNull(projects.deletedAt)
+          )
+        )
+    );
+
+    const experienceExists = exists(
+      db
+        .select({ one: sql<number>`1` })
+        .from(experienceTags)
+        .innerJoin(experience, eq(experienceTags.experienceId, experience.id))
+        .where(
+          and(
+            eq(experienceTags.tagId, tags.id),
+            eq(experience.status, 'published'),
+            isNull(experience.deletedAt)
+          )
+        )
+    );
+
+    const isUsedCondition =
+      filters.source === 'project'
+        ? projectExists
+        : filters.source === 'post'
+          ? postExists
+          : filters.source === 'experience'
+            ? experienceExists
+            : or(postExists, projectExists, experienceExists);
 
     const publicConditions: SQL[] = [...conditions, isUsedCondition as SQL];
     const publicWhere = publicConditions.length > 0 ? and(...publicConditions) : undefined;

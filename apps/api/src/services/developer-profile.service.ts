@@ -210,7 +210,7 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
     await Promise.all([
       findManyPosts({ page: 1, perPage: RECENT_POSTS_LIMIT }, false),
       findManyProjects({ page: 1, perPage: RECENT_PROJECTS_LIMIT, featuredFirst: true }, false),
-      findManyTags({}, true),
+      findManyTags({ source: 'project' }, true),
       findManyExperience({ page: 1, perPage: 100 }, false),
       findManyEducation({ page: 1, perPage: 100 }, false),
       getPageviewCount({ from: thirtyDaysAgo, to: now }),

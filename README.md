@@ -79,10 +79,10 @@ Todos os caminhos abaixo são **internos** (o que o Hono recebe após o proxy re
 | `GET /ready`        | Readiness check (DB + Redis + schema parity)       |
 | `/posts`            | Posts do blog publicados                           |
 | `/projects`         | Projetos publicados                                |
-| `/tags`             | Tags em uso em posts/projetos                      |
+| `/tags`             | Tags em uso em conteúdo publicado (`?source=project\|post\|experience`; sem `source` retorna a união de todas as origens) |
 | `/comments`         | Envio de comentários anônimos                      |
 | `/contact`          | Envio de formulário de contato                     |
-| `/developer`        | Dados do perfil (bio, disponibilidade)             |
+| `/developer/profile` | Dados do perfil (bio, disponibilidade)            |
 | `/experience`       | Experiências profissionais                         |
 | `/education`        | Formação acadêmica                                 |
 | `GET /feed.xml`     | RSS 2.0 (posts publicados)                         |

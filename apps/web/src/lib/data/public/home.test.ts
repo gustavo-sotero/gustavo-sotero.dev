@@ -104,6 +104,14 @@ describe('getHomeRecentPosts', () => {
 describe('getHomeTags', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('calls /tags?source=project to restrict to project-only tags', async () => {
+    apiServerGetMock.mockResolvedValueOnce([]);
+
+    await getHomeTags();
+
+    expect(apiServerGetMock).toHaveBeenCalledWith('/tags?source=project');
+  });
+
   it('returns ok state with tags when API responds with tags array', async () => {
     const tag = { id: 1, name: 'TypeScript', slug: 'typescript', category: 'language' };
     apiServerGetMock.mockResolvedValueOnce([tag]);
