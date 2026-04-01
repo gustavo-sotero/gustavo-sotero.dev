@@ -2,13 +2,16 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getPublicPostDetailMock, notFoundMock, mockJsonLdScript } = vi.hoisted(() => ({
-  getPublicPostDetailMock: vi.fn(),
-  notFoundMock: vi.fn(() => {
-    throw new Error('NEXT_NOT_FOUND');
-  }),
-  mockJsonLdScript: vi.fn().mockReturnValue(null),
-}));
+const { getPublicPostDetailMock, notFoundMock, mockJsonLdScript, connectionMock } = vi.hoisted(
+  () => ({
+    getPublicPostDetailMock: vi.fn(),
+    notFoundMock: vi.fn(() => {
+      throw new Error('NEXT_NOT_FOUND');
+    }),
+    mockJsonLdScript: vi.fn().mockReturnValue(null),
+    connectionMock: vi.fn().mockResolvedValue(undefined),
+  })
+);
 
 vi.mock('@/lib/data/public/posts', () => ({
   getPublicPostDetail: (...args: unknown[]) => getPublicPostDetailMock(...args),
@@ -58,9 +61,15 @@ vi.mock('next/navigation', () => ({
   notFound: notFoundMock,
 }));
 
-import BlogDetailPage, { generateMetadata } from './page';
+vi.mock('next/server', () => ({
+  connection: (...args: unknown[]) => connectionMock(...args),
+}));
 
-describe('BlogDetailPage', () => {
+import BlogDetailPage, { BlogDetailContent, generateMetadata } from './page';
+
+// ── BlogDetailContent — data-fetching component (cacheComponents pattern) ────
+
+describe('BlogDetailContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -68,7 +77,7 @@ describe('BlogDetailPage', () => {
   it('renders degraded fallback when API is unavailable', async () => {
     getPublicPostDetailMock.mockResolvedValueOnce({ state: 'degraded' });
 
-    const element = await BlogDetailPage({ params: Promise.resolve({ slug: 'post-1' }) });
+    const element = await BlogDetailContent({ params: Promise.resolve({ slug: 'post-1' }) });
     render(element as React.ReactElement);
 
     expect(screen.getByText(/post temporariamente indisponível/i)).toBeDefined();
@@ -78,9 +87,9 @@ describe('BlogDetailPage', () => {
   it('routes to not-found when the slug does not exist', async () => {
     getPublicPostDetailMock.mockResolvedValueOnce({ state: 'not-found' });
 
-    await expect(BlogDetailPage({ params: Promise.resolve({ slug: 'missing' }) })).rejects.toThrow(
-      'NEXT_NOT_FOUND'
-    );
+    await expect(
+      BlogDetailContent({ params: Promise.resolve({ slug: 'missing' }) })
+    ).rejects.toThrow('NEXT_NOT_FOUND');
     expect(notFoundMock).toHaveBeenCalledOnce();
   });
 
@@ -100,7 +109,7 @@ describe('BlogDetailPage', () => {
       },
     });
 
-    const element = await BlogDetailPage({ params: Promise.resolve({ slug: 'post-1' }) });
+    const element = await BlogDetailContent({ params: Promise.resolve({ slug: 'post-1' }) });
     render(element as React.ReactElement);
 
     expect(screen.getByText('Post 1')).toBeDefined();
@@ -127,7 +136,7 @@ describe('BlogDetailPage', () => {
       },
     });
 
-    const element = await BlogDetailPage({ params: Promise.resolve({ slug: 'post-1' }) });
+    const element = await BlogDetailContent({ params: Promise.resolve({ slug: 'post-1' }) });
     render(element as React.ReactElement);
 
     expect(mockJsonLdScript).toHaveBeenCalledOnce();
@@ -142,6 +151,22 @@ describe('BlogDetailPage', () => {
     expect(passedData.url).not.toContain('/api/');
   });
 });
+
+// ── BlogDetailPage — connection() contract ────────────────────────────────────────────
+
+describe('BlogDetailPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls connection() to opt out of PPR before rendering', async () => {
+    await BlogDetailPage({ params: Promise.resolve({ slug: 'test-slug' }) });
+
+    expect(connectionMock).toHaveBeenCalledOnce();
+  });
+});
+
+// ── generateMetadata ──────────────────────────────────────────────────────────
 
 describe('generateMetadata', () => {
   beforeEach(() => {

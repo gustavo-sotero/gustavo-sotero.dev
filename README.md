@@ -228,6 +228,20 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 
 ---
 
+## Decisões Arquiteturais de Confiabilidade
+
+### Renderização request-bound nas rotas públicas de detalhe
+
+As rotas `/blog/[slug]` e `/projects/[slug]` chamam `await connection()` (de `next/server`) no início do export de página, imediatamente antes de acessar `params`. As listagens `/blog` e `/projects` usam um padrão distinto e igualmente correto: um componente intermediário assíncrono (`BlogContentLoader` / `ProjectsContentLoader`) envolto em `<Suspense>`, que acessa `searchParams` e os loaders de dados inteiramente dentro da boundary — eliminando a necessidade de `connection()` nessas rotas.
+
+**Por quê:** Com `cacheComponents: true` (Next 16 PPR), o Next tenta pré-renderizar estáticamente rotinas dinamicas que acessam dados fora de um Suspense boundary. Sem `connection()`, a renderização dessas rotas resulta em `Uncached data was accessed outside of <Suspense>` durante o build e, em produção, em hard refresh ou acesso direto por URL retornando apenas o shell de layout (header + footer) com o miolo vazio.
+
+**Trade-off:** `connection()` atrelha o render a uma requisição real, desativando o caminho de pré-renderização parcial (PPR) para essas rotas. Isso é deliberado — o cache de dados permanece nos loaders `getPublicPostDetail` / `getPublicProjectDetail`, então o impacto em tempo de resposta é mínimo. Confiabilidade de produção tem prioridade sobre a oportunidade de PPR nesses casos.
+
+**Revisão futura:** se o ambiente de produção deixar de interferir com scripts de streaming do App Router (e.g., se o Cloudflare Rocket Loader for desabilitado para as rotas do app via Configuration Rule), é possível migrar as rotas de volta para o padrão Suspense-local com `loading.tsx`, recuperando PPR sem abrir mão da confiabilidade.
+
+**Guardrail de CI:** o job `build-web` usa `NEXT_PUBLIC_API_URL=http://127.0.0.1:65535/api` no build offline e no runtime smoke das detail routes. O host continua com o mesmo sufixo `/api` da topologia path-based, mas a porta loopback inalcançável evita depender de DNS externo, TLS ou do comportamento incidental de `example.com` para forçar o estado degradado.
+
 ## Verificação de Paridade de Schema
 
 A paridade de schema verifica se os objetos críticos do banco de dados existem após a execução das migrações. Esse check é executado automaticamente no startup da API e no probe `/ready`, mas também pode ser disparado manualmente.

@@ -2,13 +2,16 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getPublicProjectDetailMock, notFoundMock, mockJsonLdScript } = vi.hoisted(() => ({
-  getPublicProjectDetailMock: vi.fn(),
-  notFoundMock: vi.fn(() => {
-    throw new Error('NEXT_NOT_FOUND');
-  }),
-  mockJsonLdScript: vi.fn().mockReturnValue(null),
-}));
+const { getPublicProjectDetailMock, notFoundMock, mockJsonLdScript, connectionMock } = vi.hoisted(
+  () => ({
+    getPublicProjectDetailMock: vi.fn(),
+    notFoundMock: vi.fn(() => {
+      throw new Error('NEXT_NOT_FOUND');
+    }),
+    mockJsonLdScript: vi.fn().mockReturnValue(null),
+    connectionMock: vi.fn().mockResolvedValue(undefined),
+  })
+);
 
 vi.mock('@/lib/data/public/projects', () => ({
   getPublicProjectDetail: (...args: unknown[]) => getPublicProjectDetailMock(...args),
@@ -50,9 +53,15 @@ vi.mock('@/lib/env', () => ({
   env: { NEXT_PUBLIC_API_URL: 'https://example.com/api' },
 }));
 
-import ProjectDetailPage, { generateMetadata } from './page';
+vi.mock('next/server', () => ({
+  connection: (...args: unknown[]) => connectionMock(...args),
+}));
 
-describe('ProjectDetailPage', () => {
+import ProjectDetailPage, { generateMetadata, ProjectDetailContent } from './page';
+
+// ── ProjectDetailContent — data-fetching component (cacheComponents pattern) ─
+
+describe('ProjectDetailContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -60,7 +69,9 @@ describe('ProjectDetailPage', () => {
   it('renders degraded fallback when API is unavailable', async () => {
     getPublicProjectDetailMock.mockResolvedValueOnce({ state: 'degraded' });
 
-    const element = await ProjectDetailPage({ params: Promise.resolve({ slug: 'project-1' }) });
+    const element = await ProjectDetailContent({
+      params: Promise.resolve({ slug: 'project-1' }),
+    });
     render(element as React.ReactElement);
 
     expect(screen.getByText(/projeto temporariamente indisponível/i)).toBeDefined();
@@ -71,7 +82,7 @@ describe('ProjectDetailPage', () => {
     getPublicProjectDetailMock.mockResolvedValueOnce({ state: 'not-found' });
 
     await expect(
-      ProjectDetailPage({ params: Promise.resolve({ slug: 'missing' }) })
+      ProjectDetailContent({ params: Promise.resolve({ slug: 'missing' }) })
     ).rejects.toThrow('NEXT_NOT_FOUND');
     expect(notFoundMock).toHaveBeenCalledOnce();
   });
@@ -91,7 +102,9 @@ describe('ProjectDetailPage', () => {
       },
     });
 
-    const element = await ProjectDetailPage({ params: Promise.resolve({ slug: 'project-1' }) });
+    const element = await ProjectDetailContent({
+      params: Promise.resolve({ slug: 'project-1' }),
+    });
     render(element as React.ReactElement);
 
     expect(screen.getByText('Project 1')).toBeDefined();
@@ -116,7 +129,9 @@ describe('ProjectDetailPage', () => {
       },
     });
 
-    const element = await ProjectDetailPage({ params: Promise.resolve({ slug: 'project-1' }) });
+    const element = await ProjectDetailContent({
+      params: Promise.resolve({ slug: 'project-1' }),
+    });
     render(element as React.ReactElement);
 
     expect(mockJsonLdScript).toHaveBeenCalledOnce();
@@ -131,6 +146,22 @@ describe('ProjectDetailPage', () => {
     expect(passedData.url).not.toContain('/api/');
   });
 });
+
+// ── ProjectDetailPage — connection() contract ──────────────────────────────────
+
+describe('ProjectDetailPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls connection() to opt out of PPR before rendering', async () => {
+    await ProjectDetailPage({ params: Promise.resolve({ slug: 'test-slug' }) });
+
+    expect(connectionMock).toHaveBeenCalledOnce();
+  });
+});
+
+// ── generateMetadata ──────────────────────────────────────────────────────────
 
 describe('generateMetadata', () => {
   beforeEach(() => {

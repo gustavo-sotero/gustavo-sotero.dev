@@ -8,6 +8,7 @@
  */
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
+import { Suspense } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
@@ -58,7 +59,27 @@ vi.mock('lucide-react', () => ({
 
 // ── Subject under test ────────────────────────────────────────────────────────
 
-import { ProjectsContent } from './page';
+import ProjectsPage, { ProjectsContent } from './page';
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return typeof value === 'object' && value !== null && 'then' in value;
+}
+
+describe('ProjectsPage', () => {
+  it('keeps searchParams resolution inside a Suspense wrapper', () => {
+    const element = ProjectsPage({
+      searchParams: new Promise<{ page?: string; tag?: string; sort?: string }>(() => undefined),
+    });
+
+    expect(isPromiseLike(element)).toBe(false);
+    if (isPromiseLike(element)) {
+      throw new Error('ProjectsPage must stay synchronous to keep runtime params inside Suspense.');
+    }
+
+    const suspenseBoundary = element.props.children as React.ReactElement;
+    expect(suspenseBoundary.type).toBe(Suspense);
+  });
+});
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 

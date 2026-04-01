@@ -2,12 +2,14 @@ import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 import { FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 import { connection } from 'next/server';
+import { Suspense } from 'react';
 import { ResumeDownloadButton } from '@/components/resume/ResumeDownloadButton';
 import { ResumePage } from '@/components/resume/ResumePage';
 import { SectionUnavailable } from '@/components/shared/SectionUnavailable';
 import { SITE_BRAND_NAME, SITE_METADATA } from '@/lib/constants';
 import { getResumeData } from '@/lib/data/public/resume';
 import { buildResumeViewModel } from '@/lib/resume/mapper';
+import CurriculoLoading from './loading';
 
 export const metadata: Metadata = {
   title: `Currículo — ${SITE_BRAND_NAME}`,
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function CurriculoPage() {
+export async function CurriculoContent() {
   await connection();
   const [resumeResult, now] = await Promise.all([getResumeData(), Promise.resolve(new Date())]);
   const resume = buildResumeViewModel({ ...resumeResult.data, now });
@@ -55,5 +57,13 @@ export default async function CurriculoPage() {
         <ResumeDownloadButton resume={resume} variant="outline" />
       </div>
     </div>
+  );
+}
+
+export default function CurriculoPage() {
+  return (
+    <Suspense fallback={<CurriculoLoading />}>
+      <CurriculoContent />
+    </Suspense>
   );
 }

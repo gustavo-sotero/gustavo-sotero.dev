@@ -3,6 +3,7 @@ import { ExternalLink, Github, Star } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import { JsonLdScript } from '@/components/shared/JsonLdScript';
 import { MermaidRenderer } from '@/components/shared/MermaidRenderer';
 import { PublicPageUnavailable } from '@/components/shared/PublicPageUnavailable';
@@ -50,7 +51,7 @@ export async function generateMetadata({ params }: ProjectDetailPageProps): Prom
   };
 }
 
-export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+export async function ProjectDetailContent({ params }: ProjectDetailPageProps) {
   const { slug } = await params;
   const result = await getPublicProjectDetail(slug);
 
@@ -191,4 +192,19 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       </article>
     </>
   );
+}
+
+/**
+ * Request-bound page: calls connection() to opt out of PPR/prerender entirely,
+ * then renders ProjectDetailContent directly (no inline Suspense).  This
+ * ensures the full page — including the degraded-state fallback — is rendered
+ * server-side before the first byte is sent, eliminating the streaming-
+ * dependent rendering path that can be disrupted by proxy middleware (e.g.
+ * Cloudflare Rocket Loader) reordering inline scripts.  A route-level
+ * loading.tsx still provides the navigation skeleton via Next.js's built-in
+ * Suspense wrapper around the page segment.
+ */
+export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+  await connection();
+  return <ProjectDetailContent params={params} />;
 }

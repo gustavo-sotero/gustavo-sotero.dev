@@ -263,16 +263,25 @@ interface ProjectsPageProps {
   searchParams: Promise<{ page?: string; tag?: string; sort?: string }>;
 }
 
-export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
-  const { page: rawPage, tag, sort: rawSort } = await searchParams;
-  const currentPage = normalizePage(rawPage);
-  const sort = normalizeSortMode(rawSort);
-
+export default function ProjectsPage({ searchParams }: ProjectsPageProps) {
   return (
     <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-12 md:py-16">
       <Suspense fallback={<ProjectsPageFallback />}>
-        <ProjectsContent currentPage={currentPage} tag={tag} sort={sort} />
+        <ProjectsContentLoader searchParams={searchParams} />
       </Suspense>
     </div>
   );
+}
+
+/**
+ * Thin async wrapper that resolves searchParams inside the Suspense boundary,
+ * then delegates to ProjectsContent with parsed values.  Keeps all dynamic
+ * data access (searchParams + network fetches) inside Suspense so that
+ * cacheComponents can prerender the static shell without blocking.
+ */
+async function ProjectsContentLoader({ searchParams }: ProjectsPageProps) {
+  const { page: rawPage, tag, sort: rawSort } = await searchParams;
+  const currentPage = normalizePage(rawPage);
+  const sort = normalizeSortMode(rawSort);
+  return <ProjectsContent currentPage={currentPage} tag={tag} sort={sort} />;
 }

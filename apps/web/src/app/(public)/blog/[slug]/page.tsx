@@ -3,6 +3,7 @@ import { Calendar, Clock } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import { CommentsSection } from '@/components/blog/CommentsSection';
 import { JsonLdScript } from '@/components/shared/JsonLdScript';
 import { MermaidRenderer } from '@/components/shared/MermaidRenderer';
@@ -61,7 +62,7 @@ function readingTime(content?: string | null): string {
   return `${mins} min de leitura`;
 }
 
-export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
+export async function BlogDetailContent({ params }: BlogDetailPageProps) {
   const { slug } = await params;
   const result = await getPublicPostDetail(slug);
 
@@ -107,7 +108,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
       <article className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 py-12 md:py-16">
         {/* Cover */}
         {post.coverUrl && (
-          <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden mb-10 ring-1 ring-zinc-800">
+          <div className="relative w-full aspect-4/3 rounded-xl overflow-hidden mb-10 ring-1 ring-zinc-800">
             <Image src={post.coverUrl} alt={post.title} fill priority className="object-cover" />
           </div>
         )}
@@ -173,4 +174,19 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
       </article>
     </>
   );
+}
+
+/**
+ * Request-bound page: calls connection() to opt out of PPR/prerender entirely,
+ * then renders BlogDetailContent directly (no inline Suspense).  This ensures
+ * the full page — including the degraded-state fallback — is rendered
+ * server-side before the first byte is sent, eliminating the streaming-
+ * dependent rendering path that can be disrupted by proxy middleware (e.g.
+ * Cloudflare Rocket Loader) reordering inline scripts.  A route-level
+ * loading.tsx still provides the navigation skeleton via Next.js's built-in
+ * Suspense wrapper around the page segment.
+ */
+export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
+  await connection();
+  return <BlogDetailContent params={params} />;
 }

@@ -180,15 +180,24 @@ export async function BlogContent({ currentPage, tag }: BlogContentProps) {
   );
 }
 
-export default async function BlogPage({ searchParams }: BlogPageProps) {
-  const { page: rawPage, tag } = await searchParams;
-  const currentPage = normalizePage(rawPage);
-
+export default function BlogPage({ searchParams }: BlogPageProps) {
   return (
     <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-12 md:py-16">
       <Suspense fallback={<BlogPageFallback />}>
-        <BlogContent currentPage={currentPage} tag={tag} />
+        <BlogContentLoader searchParams={searchParams} />
       </Suspense>
     </div>
   );
+}
+
+/**
+ * Thin async wrapper that resolves searchParams inside the Suspense boundary,
+ * then delegates to BlogContent with the parsed values.  Keeps all dynamic
+ * data access (searchParams + network fetches) inside Suspense so that
+ * cacheComponents can prerender the static shell without blocking.
+ */
+async function BlogContentLoader({ searchParams }: BlogPageProps) {
+  const { page: rawPage, tag } = await searchParams;
+  const currentPage = normalizePage(rawPage);
+  return <BlogContent currentPage={currentPage} tag={tag} />;
 }

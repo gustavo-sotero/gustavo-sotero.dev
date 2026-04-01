@@ -48,5 +48,6 @@ tmp/
 
 # Build artifacts
 *.tgz
-.github
-!.github/workflows
+.github/*
+!.github/workflows/
+!.github/workflows/**
