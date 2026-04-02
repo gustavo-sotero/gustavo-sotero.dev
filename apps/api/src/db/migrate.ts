@@ -67,7 +67,9 @@ export async function runMigrations(): Promise<void> {
   logger.info('Schema parity OK.');
 }
 
-// Allow running this file directly: bun run src/db/migrate.ts
+// Allow running this file directly. Local use should pass an explicit env file
+// (for example via `bun run db:migrate` from the repo root); CI should inject
+// DATABASE_URL and use `bun --no-env-file run apps/api/src/db/migrate.ts`.
 if (import.meta.main) {
   const { setupLogger } = await import('../config/logger');
   await setupLogger();

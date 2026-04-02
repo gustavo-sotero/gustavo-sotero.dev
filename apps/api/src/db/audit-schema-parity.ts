@@ -9,8 +9,10 @@
  * used in CI to catch missing-migration-artifact regressions.
  *
  * Usage:
- *   bun --env-file ../../.env run src/db/audit-schema-parity.ts
- *   bun --env-file apps/api/.env run apps/api/src/db/audit-schema-parity.ts
+ *   Local: bun --env-file .env run apps/api/src/db/audit-schema-parity.ts
+ *   CI/hermetic: bun --no-env-file run apps/api/src/db/audit-schema-parity.ts
+ *   In hermetic mode, inject DATABASE_URL (and optionally NODE_ENV=test)
+ *   through the calling shell or workflow step.
  */
 
 import { pgClient } from '../config/db';

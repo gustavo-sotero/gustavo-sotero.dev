@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { resetLoggerStateForTests, type SetupLoggerOptions, setupLogger } from './logger';
 
 /**
  * Logger configuration tests.
@@ -25,60 +26,52 @@ type LoggerConfig = {
  * Build a fresh `setupLogger` import with the given NODE_ENV and capture
  * the config passed to `configure()`.
  */
-async function buildLogger(nodeEnv: string): Promise<LoggerConfig> {
-  vi.resetModules();
-
+async function buildLogger(nodeEnv: SetupLoggerOptions['nodeEnv']): Promise<LoggerConfig> {
   let captured: LoggerConfig | undefined;
 
-  vi.doMock('@logtape/logtape', () => ({
-    configure: async (cfg: LoggerConfig) => {
-      captured = cfg;
-    },
-    getConsoleSink: () => () => {},
-    getAnsiColorFormatter: () => () => {},
-    getJsonLinesFormatter: () => () => {},
-    getLogger: () => ({
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    }),
-  }));
+  resetLoggerStateForTests();
 
-  vi.doMock('@logtape/file', () => ({
-    getFileSink: (_path: string, _opts?: unknown) => () => {},
-  }));
+  const configureImpl: NonNullable<SetupLoggerOptions['configureImpl']> = async (cfg) => {
+    captured = cfg as LoggerConfig;
+  };
 
-  vi.doMock('./env', () => ({ env: { NODE_ENV: nodeEnv } }));
+  const mkdirImpl: NonNullable<SetupLoggerOptions['mkdirImpl']> = async () => undefined;
 
-  const { setupLogger } = await import('./logger');
-  await setupLogger();
+  await setupLogger({
+    nodeEnv,
+    configureImpl,
+    mkdirImpl,
+  });
 
   if (!captured) throw new Error('configure() was never called');
   return captured;
 }
 
+afterEach(() => {
+  resetLoggerStateForTests();
+});
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('setupLogger() — test environment', () => {
-  beforeEach(() => {
-    vi.resetModules();
-  });
-
   it('is idempotent — calling twice does not throw', async () => {
-    vi.resetModules();
-    vi.doMock('@logtape/logtape', () => ({
-      configure: vi.fn(),
-      getConsoleSink: () => () => {},
-      getAnsiColorFormatter: () => () => {},
-      getJsonLinesFormatter: () => () => {},
-      getLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
-    }));
-    vi.doMock('./env', () => ({ env: { NODE_ENV: 'test' } }));
+    resetLoggerStateForTests();
 
-    const { setupLogger } = await import('./logger');
-    await expect(setupLogger()).resolves.toBeUndefined();
-    await expect(setupLogger()).resolves.toBeUndefined();
+    const configureImpl = vi.fn(async () => undefined);
+
+    await expect(
+      setupLogger({
+        nodeEnv: 'test',
+        configureImpl,
+      })
+    ).resolves.toBeUndefined();
+    await expect(
+      setupLogger({
+        nodeEnv: 'test',
+        configureImpl,
+      })
+    ).resolves.toBeUndefined();
+    expect(configureImpl).toHaveBeenCalledTimes(1);
   });
 
   it('registers portfolio:api category with debug level in test/dev', async () => {
@@ -114,10 +107,6 @@ describe('setupLogger() — test environment', () => {
 });
 
 describe('setupLogger() — production/development environment', () => {
-  beforeEach(() => {
-    vi.resetModules();
-  });
-
   it('adds a jsonl sink in production environment', async () => {
     const config = await buildLogger('production');
     expect(Object.keys(config.sinks)).toContain('jsonl');

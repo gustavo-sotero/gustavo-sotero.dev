@@ -1,4 +1,4 @@
-# Portfólio — Fullstack Backend-Centric v2.0
+# Portfólio — Fullstack Backend-Centric
 
 Plataforma de portfólio pessoal construída como **prova de conceito técnica**: filas, cache, segurança, CRUD, moderação, uploads diretos, otimização de imagens, analytics e jobs em background.
 
@@ -201,6 +201,19 @@ bun run dev:web      # Web em http://localhost:3001
 > Sempre gere migrações com `bun run db:generate` a partir da raiz do repositório.
 
 > **Reparo legado:** em bancos existentes, execute `bun run db:backfill:comments` **antes** de `bun run db:migrate`. A migração falha rápido quando `comments.rendered_content` ainda é nulo.
+
+### Contratos de Ambiente por Script
+
+Os scripts de banco de dados têm contratos de variáveis de ambiente intencionalmente menores que o runtime da API:
+
+| Contexto | Variáveis necessárias |
+| --- | --- |
+| **Scripts de BD** (`db:migrate`, `db:seed`, `db:audit:schema`, `db:backfill:comments`) | Apenas `DATABASE_URL` (+ `NODE_ENV` opcional) |
+| **Runtime da API** (`dev:api`, `start`) | Contrato completo — todas as variáveis em `.env` |
+
+Os scripts de BD locais (`bun run db:*`) passam `--env-file .env` explicitamente para carregar o `.env` do repositório. Em CI, os scripts de BD são invocados diretamente com `bun --no-env-file run ...` e apenas a variável necessária é injetada via `env:` no step do workflow — sem depender da leitura automática de `.env`.
+
+Isso garante que migrações e audits de schema possam rodar em pipelines de CI que provisionam apenas PostgreSQL, sem precisar fornecer segredos irrelevantes como Redis, OAuth, S3 ou Telegram.
 
 ---
 

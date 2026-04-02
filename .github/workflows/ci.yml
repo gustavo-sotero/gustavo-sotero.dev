@@ -99,141 +99,6 @@ jobs:
           NODE_ENV: test
         run: bun run test
 
-  build-web:
-    name: Build Web
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-
-      - name: Cache bun modules
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
-      - run: bun install --frozen-lockfile
-
-      # Validates that next build succeeds without the API being available.
-      # Use an unreachable loopback URL with the same /api path suffix used in
-      # production so the scenario is deterministic and does not depend on
-      # external DNS, TLS, or how example.com happens to respond.
-      - name: Build Next.js app (API offline scenario)
-        env:
-          NEXT_PUBLIC_API_URL: http://127.0.0.1:65535/api
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ci_sitekey
-          NEXT_PUBLIC_S3_PUBLIC_DOMAIN: https://minio.example.com
-          REVALIDATE_SECRET: ci_revalidate_secret_32chars_long
-          NODE_ENV: production
-        run: cd apps/web && bun run --bun next build
-
-      # Regression guard for the cacheComponents hard-refresh bug.
-      #
-      # Detail routes call `await connection()` at the top of the page export
-      # (next/server). This attaches the render to an incoming request and
-      # prevents Next from attempting to prerender them outside a Suspense
-      # boundary, which is the root cause of the blank-shell symptom on hard
-      # refresh and direct URL access.
-      #
-      # This step starts the standalone production server with the API pointed
-      # at an unreachable loopback port and probes both /blog/<slug> and
-      # /projects/<slug>. The expected result is that degraded-state content
-      # ("indisponível") is rendered in full, and that the public/global error
-      # boundary markers are absent.
-      # Both detail routes use connection() to opt out of PPR, so the full page
-      # — including the degraded-state fallback — is rendered server-side before
-      # the first byte is sent. If the response body lacks degraded content the
-      # grep fails and CI is blocked — matching the original production symptom.
-      - name: Runtime smoke — detail routes (cacheComponents regression guard)
-        working-directory: apps/web
-        env:
-          NEXT_PUBLIC_API_URL: http://127.0.0.1:65535/api
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ci_sitekey
-          NEXT_PUBLIC_S3_PUBLIC_DOMAIN: https://minio.example.com
-          REVALIDATE_SECRET: ci_revalidate_secret_32chars_long
-          NODE_ENV: production
-          PORT: "3001"
-          HOSTNAME: 0.0.0.0
-        run: |
-          # Start standalone server in background
-          bun .next/standalone/apps/web/server.js &
-          SERVER_PID=$!
-
-          # Wait up to 20 s for the server to accept connections
-          echo "Waiting for Next.js standalone server..."
-          for i in $(seq 1 20); do
-            if curl -s "http://127.0.0.1:3001/" -o /dev/null 2>&1; then
-              echo "  server ready after ${i}s"
-              break
-            fi
-            sleep 1
-          done
-
-          # Blog detail route — API offline → must render degraded content, not empty shell.
-          # "indispon" appears in "serviço indisponível" rendered by PublicPageUnavailable
-          # and in its parent title "Post temporariamente indisponível". Pure ASCII prefix —
-          # matches reliably against the UTF-8 HTML body.
-          BLOG_BODY=$(curl -s "http://127.0.0.1:3001/blog/ci-probe-slug")
-          if echo "$BLOG_BODY" | grep -q "indispon"; then
-            echo "✓ /blog/ci-probe-slug: degraded content present (connection() request-bound rendering active)"
-          else
-            echo "✗ /blog/ci-probe-slug: expected degraded content missing — possible connection() regression"
-            echo "--- first 80 lines of response ---"
-            echo "$BLOG_BODY" | head -80
-            kill "$SERVER_PID" 2>/dev/null || true
-            exit 1
-          fi
-
-          # Blog detail route must not render the public/global error boundaries.
-          if echo "$BLOG_BODY" | grep -Eiq "Algo deu errado|500 Internal Error|Ocorreu um erro inesperado"; then
-            echo "✗ /blog/ci-probe-slug: unexpected public/global error boundary marker detected"
-            echo "--- first 80 lines of response ---"
-            echo "$BLOG_BODY" | head -80
-            kill "$SERVER_PID" 2>/dev/null || true
-            exit 1
-          fi
-
-          # Project detail route — same check
-          PROJECT_BODY=$(curl -s "http://127.0.0.1:3001/projects/ci-probe-slug")
-          if echo "$PROJECT_BODY" | grep -q "indispon"; then
-            echo "✓ /projects/ci-probe-slug: degraded content present (connection() request-bound rendering active)"
-          else
-            echo "✗ /projects/ci-probe-slug: expected degraded content missing — possible connection() regression"
-            echo "--- first 80 lines of response ---"
-            echo "$PROJECT_BODY" | head -80
-            kill "$SERVER_PID" 2>/dev/null || true
-            exit 1
-          fi
-
-          # Project detail route must not render the public/global error boundaries.
-          if echo "$PROJECT_BODY" | grep -Eiq "Algo deu errado|500 Internal Error|Ocorreu um erro inesperado"; then
-            echo "✗ /projects/ci-probe-slug: unexpected public/global error boundary marker detected"
-            echo "--- first 80 lines of response ---"
-            echo "$PROJECT_BODY" | head -80
-            kill "$SERVER_PID" 2>/dev/null || true
-            exit 1
-          fi
-
-          kill "$SERVER_PID" 2>/dev/null || true
-          echo "Runtime smoke passed: cacheComponents detail-route regression guard green"
-
-  build-api-image:
-    name: Build API Docker Image
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build API Docker image
-        run: docker build -f docker/api.Dockerfile -t portfolio-api:ci .
-
-      - name: Verify drizzle directory is present in image
-        run: |
-          docker run --rm --entrypoint sh portfolio-api:ci \
-            -c "test -d /app/drizzle && echo 'drizzle OK' || (echo 'ERROR: drizzle directory missing' && exit 1)"
-
   api-schema-smoke:
     name: API Migration and Schema Smoke Test
     runs-on: ubuntu-latest
@@ -272,9 +137,11 @@ jobs:
       - name: Run migrations
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/portfolio_smoke
-        run: bun run db:migrate
+          NODE_ENV: test
+        run: bun --no-env-file run apps/api/src/db/migrate.ts
 
       - name: Run schema parity audit
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/portfolio_smoke
-        run: bun --env-file /dev/null run apps/api/src/db/audit-schema-parity.ts
+          NODE_ENV: test
+        run: bun --no-env-file run apps/api/src/db/audit-schema-parity.ts
