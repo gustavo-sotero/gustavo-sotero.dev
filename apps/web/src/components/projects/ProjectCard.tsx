@@ -20,10 +20,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-all duration-300">
-      {/* Stretched link — covers entire card, below action buttons */}
+      {/* Stretched link — covers entire card, above image/content but below action buttons (z-10) */}
       <Link
         href={`/projects/${project.slug}`}
-        className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-xl"
+        className="absolute inset-0 z-[1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-xl"
         aria-label={`Ver projeto ${project.title}`}
       />
       <BorderBeam colorFrom="#34d399" colorTo="#22d3ee" duration={4} size={120} />
