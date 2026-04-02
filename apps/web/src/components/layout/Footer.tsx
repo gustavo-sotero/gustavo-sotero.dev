@@ -65,7 +65,7 @@ export function Footer() {
             >
               {SITE_BRAND_NAME}
             </AnimatedShinyText>
-            <span className="text-xs text-zinc-500">{DEVELOPER_PUBLIC_PROFILE.role}</span>
+            <span className="text-xs text-zinc-400">{DEVELOPER_PUBLIC_PROFILE.role}</span>
           </div>
 
           {/* Social links */}
@@ -109,7 +109,7 @@ export function Footer() {
 
         {/* Copyright */}
         <div className="mt-6 pt-6 border-t border-zinc-800/40">
-          <p className="text-center text-xs text-zinc-600 font-mono">
+          <p className="text-center text-xs text-zinc-400 font-mono">
             © {CURRENT_YEAR} {SITE_BRAND_NAME}. Todos os direitos reservados.
           </p>
         </div>

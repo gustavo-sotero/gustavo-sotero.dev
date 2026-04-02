@@ -217,7 +217,7 @@ export function HeroTerminal({ stack = FALLBACK_STACK }: HeroTerminalProps) {
         </TypingAnimation>
 
         {/* 2. Status label */}
-        <AnimatedSpan className="font-mono text-xs text-zinc-500 mt-1 mb-0.5">
+        <AnimatedSpan className="font-mono text-xs text-zinc-400 mt-1 mb-0.5">
           {'// 200 OK'}
         </AnimatedSpan>
 

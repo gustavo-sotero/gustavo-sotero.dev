@@ -13,13 +13,13 @@ import { JetBrains_Mono, Sora } from 'next/font/google';
 export const sora = Sora({
   variable: '--font-sora',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
 });
 
 export const jetbrainsMono = JetBrains_Mono({
   variable: '--font-mono-jetbrains',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
 });

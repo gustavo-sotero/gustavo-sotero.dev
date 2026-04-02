@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
+import { AdminProviders } from './providers';
 
 /**
- * Admin layout — nested under the root layout (app/layout.tsx) which owns
- * the HTML shell, CSS, fonts and Providers. This layout intentionally renders
- * no extra wrapper so AdminShell owns the admin-specific chrome and landmarks.
+ * Admin layout — wraps all admin routes with the admin-specific QueryClient
+ * provider (unauthorized redirect, stale time, retry). Public routes are
+ * intentionally excluded from this boundary.
  */
 export default function AdminRootLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return <AdminProviders>{children}</AdminProviders>;
 }

@@ -30,9 +30,9 @@ export function RecentPosts({ posts }: RecentPostsProps) {
         </div>
         <Link
           href="/blog"
-          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-emerald-400 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
+          className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-emerald-400 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
         >
-          Ver todos
+          Ver todos os posts
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -67,7 +67,7 @@ export function RecentPosts({ posts }: RecentPostsProps) {
                   <p className="text-base font-semibold text-zinc-200 transition-colors group-hover:text-emerald-400">
                     Ver todos os posts
                   </p>
-                  <p className="text-sm text-zinc-500">Leia todos os artigos do blog</p>
+                  <p className="text-sm text-zinc-400">Leia todos os artigos do blog</p>
                 </div>
                 <span
                   className="flex items-center gap-1.5 text-sm font-medium text-emerald-500 opacity-0 transition-opacity group-hover:opacity-100"

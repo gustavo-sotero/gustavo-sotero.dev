@@ -4,17 +4,57 @@ import { SiGithub, SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons
 import type { Tag, TagCategory } from '@portfolio/shared';
 import { DEVELOPER_PUBLIC_PROFILE, getExperienceLabel } from '@portfolio/shared';
 import { Linkedin, Mail, Star } from 'lucide-react';
-import { motion, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { AnimatedGradientText } from '@/components/ui/animated-gradient-text';
-import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
 import { Button } from '@/components/ui/button';
 import { Marquee } from '@/components/ui/marquee';
 import { SOCIAL_LINKS } from '@/lib/constants';
 import type { ResumeDataPayload } from '@/lib/data/public/resume';
 import { buildResumeViewModel } from '@/lib/resume/mapper';
 import { HeroResumeDownloadButton } from './HeroResumeDownloadButton';
-import { HeroTerminal } from './HeroTerminal';
+
+/**
+ * Deferred animated grid — loaded after the main hero content is painted.
+ * Using ssr:false removes the 30+ motion instances from the critical
+ * hydration pass and keeps them out of the SSR output entirely.
+ * The glow blobs are static CSS and remain in the SSR output.
+ */
+const HeroBackground = dynamic(() => import('./HeroBackground').then((m) => m.HeroBackground), {
+  ssr: false,
+});
+
+/**
+ * Deferred terminal — loaded after the LCP-critical left column is painted.
+ * The terminal renders ~50+ span elements for JSON syntax highlighting plus
+ * multiple motion instances for the typing animation. Keeping it out of the
+ * SSR payload reduces initial HTML size and ensures the LCP text is visible
+ * and interactive before the right-column enhancement loads.
+ * This mirrors the same ssr:false pattern used by HeroBackground.
+ */
+const HeroTerminal = dynamic(() => import('./HeroTerminal').then((m) => m.HeroTerminal), {
+  ssr: false,
+  loading: () => (
+    <div className="relative w-full max-w-xl mx-auto">
+      <div className="w-full rounded-xl border border-zinc-800 bg-zinc-900/90 p-4 shadow-2xl shadow-zinc-950/80">
+        <div className="flex items-center gap-1.5 mb-4">
+          <div className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
+          <div className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
+          <div className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
+        </div>
+        <div className="space-y-2 animate-pulse">
+          <div className="h-3 w-3/4 rounded bg-zinc-800" />
+          <div className="h-3 w-1/3 rounded bg-zinc-800" />
+          <div className="h-3 w-full rounded bg-zinc-800 mt-2" />
+          <div className="h-3 w-5/6 rounded bg-zinc-800" />
+          <div className="h-3 w-4/5 rounded bg-zinc-800" />
+          <div className="h-3 w-2/3 rounded bg-zinc-800" />
+        </div>
+      </div>
+    </div>
+  ),
+});
 
 const FALLBACK_STACK = ['TypeScript', 'Bun', 'Next.js', 'PostgreSQL', 'Docker'];
 const CATEGORY_ORDER: TagCategory[] = [
@@ -61,28 +101,19 @@ export function HeroSection({ tags = [], resumeData }: HeroSectionProps) {
     <section className="relative overflow-hidden min-h-[88vh] flex items-center">
       {/* Background effects */}
       <div className="absolute inset-0 -z-10">
-        {/* Animated grid pattern (replaces inline CSS grid) */}
-        <AnimatedGridPattern
-          numSquares={prefersReducedMotion ? 0 : 30}
-          maxOpacity={0.04}
-          duration={3}
-          repeatDelay={1}
-          className="mask-[radial-gradient(600px_circle_at_center,white,transparent)] stroke-emerald-500/20 fill-emerald-500/5"
-        />
-        {/* Radial glow */}
+        {/* Animated grid — deferred so it doesn't block initial paint */}
+        <HeroBackground />
+        {/* Static glow blobs — pure CSS, present in SSR output */}
         <div className="absolute top-0 left-1/4 w-150 h-150 rounded-full bg-emerald-500/6 blur-[120px]" />
         <div className="absolute bottom-0 right-1/4 w-100 h-100 rounded-full bg-cyan-500/4 blur-[100px]" />
       </div>
 
       <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-16 md:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left: Text content */}
-          <motion.div
-            className="flex flex-col gap-6 order-1"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-          >
+          {/* Left: Text content — rendered without entrance animation so the LCP
+              text is immediately visible in the initial HTML. The terminal on the
+              right is decorative and can animate in after hydration. */}
+          <div className="flex flex-col gap-6 order-1">
             {/* Availability indicator */}
             <div className="flex items-center gap-2.5 self-start">
               <span className="relative flex h-2.5 w-2.5">
@@ -236,17 +267,17 @@ export function HeroSection({ tags = [], resumeData }: HeroSectionProps) {
                 <Mail className="h-5 w-5 sm:h-4 sm:w-4" />
               </a>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Right: Terminal */}
-          <motion.div
-            className="relative order-2 flex justify-center lg:justify-end"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
-          >
+          {/* Right: Terminal — loaded client-side after LCP text is painted.
+              The ssr:false dynamic import ensures the terminal (50+ spans for
+              JSON syntax highlighting plus motion typing instances) is absent
+              from the initial SSR payload. The terminal's own internal
+              TypingAnimation / AnimatedSpan sequence handles the reveal once
+              the chunk loads on the client. */}
+          <div className="relative order-2 flex justify-center lg:justify-end">
             <HeroTerminal stack={terminalStack} />
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

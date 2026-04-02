@@ -1,8 +1,5 @@
-'use client';
-
 import type { Tag } from '@portfolio/shared';
 import { Star } from 'lucide-react';
-import { motion } from 'motion/react';
 import { TechIcon } from '@/components/shared/TechIcon';
 import { BentoGrid } from '@/components/ui/bento-grid';
 import { cn } from '@/lib/utils';
@@ -23,19 +20,14 @@ interface SkillsBentoBoxProps {
 
 function SkillCard({ tag, index }: { tag: Tag; index: number }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{
-        duration: 0.35,
-        delay: index * 0.05,
-        ease: 'easeOut',
-      }}
+    <div
       className={cn(
         'group relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl overflow-hidden',
         'glass-card transition-all duration-200 cursor-default',
-        'hover:bg-emerald-500/5 hover:border-emerald-500/30'
+        'hover:bg-emerald-500/5 hover:border-emerald-500/30',
+        'animate-skill-card'
       )}
+      style={{ animationDelay: `${index * 50}ms` }}
     >
       {/* Featured badge — shown only on highlighted tags */}
       {tag.isHighlighted && (
@@ -63,11 +55,11 @@ function SkillCard({ tag, index }: { tag: Tag; index: number }) {
         >
           {tag.name}
         </p>
-        <p className="text-[10px] text-zinc-600 mt-0.5">
+        <p className="text-[10px] text-zinc-400 mt-0.5">
           {CATEGORY_LABELS[tag.category ?? 'other']}
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

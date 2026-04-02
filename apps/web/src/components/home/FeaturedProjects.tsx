@@ -28,9 +28,9 @@ export function FeaturedProjects({ projects }: FeaturedProjectsProps) {
         </div>
         <Link
           href="/projects"
-          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-emerald-400 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
+          className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-emerald-400 transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
         >
-          Ver todos
+          Ver todos os projetos
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -61,7 +61,7 @@ export function FeaturedProjects({ projects }: FeaturedProjectsProps) {
                   <p className="text-base font-semibold text-zinc-200 transition-colors group-hover:text-emerald-400">
                     Ver todos os projetos
                   </p>
-                  <p className="text-sm text-zinc-500">Explore o portfólio completo</p>
+                  <p className="text-sm text-zinc-400">Explore o portfólio completo</p>
                 </div>
                 <span
                   className="flex items-center gap-1.5 text-sm font-medium text-emerald-500 opacity-0 transition-opacity group-hover:opacity-100"

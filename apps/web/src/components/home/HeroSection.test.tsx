@@ -43,14 +43,6 @@ vi.mock('next/link', () => ({
 }));
 
 vi.mock('motion/react', () => ({
-  motion: {
-    div: ({
-      children,
-      ...props
-    }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => (
-      <div {...props}>{children}</div>
-    ),
-  },
   useReducedMotion: () => true,
 }));
 
@@ -105,6 +97,15 @@ vi.mock('./HeroTerminal', () => ({
   HeroTerminal: () => <div data-testid="hero-terminal" />,
 }));
 
+/**
+ * HeroBackground is loaded via next/dynamic with ssr:false.
+ * Mock the module so tests do not depend on motion internals and
+ * so the deferred load path is exercised synchronously in jsdom.
+ */
+vi.mock('./HeroBackground', () => ({
+  HeroBackground: () => <div data-testid="hero-background" />,
+}));
+
 import { HeroSection } from './HeroSection';
 
 function makeTag(overrides: Partial<Tag> & Pick<Tag, 'id' | 'name' | 'category'>): Tag {
@@ -141,6 +142,39 @@ describe('HeroSection', () => {
     expect(screen.getByText('Next.js')).toBeInTheDocument();
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
     expect(screen.getByText('Docker')).toBeInTheDocument();
+  });
+
+  it('renders all LCP-critical hero content without requiring motion entrance', () => {
+    render(<HeroSection tags={[]} resumeData={makeResumeData()} />);
+
+    // Developer name is the primary LCP candidate — must be in a heading.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Gustavo Sotero');
+
+    // Role text is the second most prominent element.
+    expect(screen.getByText('Desenvolvedor Fullstack')).toBeInTheDocument();
+
+    // Greeting and focus line complete the headline block.
+    expect(screen.getByText('Ola')).toBeInTheDocument();
+    expect(screen.getByText('Backend e arquitetura')).toBeInTheDocument();
+
+    // Availability status must be visible (pulse indicator + label).
+    expect(screen.getByText('Disponivel para novos projetos')).toBeInTheDocument();
+
+    // Bio text must be present — the full static bio.
+    expect(screen.getByText(/Construo APIs robustas/)).toBeInTheDocument();
+  });
+
+  it('renders the experience label from getExperienceLabel inside the bio', () => {
+    render(<HeroSection tags={[]} resumeData={makeResumeData()} />);
+
+    // getExperienceLabel() is mocked to return '3+ anos'.
+    const label = screen.getByText(/3\+ anos/);
+    expect(label).toBeInTheDocument();
+
+    // The experience label must NOT be inside the h1 — it belongs in the bio
+    // paragraph so the LCP heading element stays purely static.
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1).not.toHaveTextContent('3+ anos');
   });
 
   it('orders stack badges with highlighted tags first and then by category priority', () => {

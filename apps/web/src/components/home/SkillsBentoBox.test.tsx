@@ -5,17 +5,6 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('motion/react', () => ({
-  motion: {
-    div: ({
-      children,
-      ...props
-    }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-}));
-
 vi.mock('lucide-react', () => ({
   Star: () => <span data-testid="icon-star" />,
 }));
