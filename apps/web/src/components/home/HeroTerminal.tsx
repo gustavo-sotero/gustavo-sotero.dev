@@ -212,7 +212,7 @@ export function HeroTerminal({ stack = FALLBACK_STACK }: HeroTerminalProps) {
       {/* Magic UI Terminal — sequences children automatically */}
       <Terminal className="max-h-none max-w-full w-full bg-zinc-900/90 border-zinc-800 shadow-2xl shadow-zinc-950/80">
         {/* 1. curl command — types out char by char */}
-        <TypingAnimation duration={28} as="div" className="font-mono text-sm text-zinc-300">
+        <TypingAnimation duration={12} as="div" className="font-mono text-sm text-zinc-300">
           {`$ curl -X GET ${env.NEXT_PUBLIC_API_URL}/developer/profile`}
         </TypingAnimation>
 
