@@ -136,6 +136,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   framework: 'Frameworks',
   tool: 'Ferramentas',
   db: 'Bancos de Dados',
+  infra: 'Infraestrutura',
+  cloud: 'Cloud',
   other: 'Outras',
 };
 
@@ -222,7 +224,7 @@ export function buildResumeViewModel(opts: {
   }));
 
   // Skills — group by category, dedupe names, limit per category
-  const categoryOrder = ['language', 'framework', 'db', 'tool', 'other'];
+  const categoryOrder = ['language', 'framework', 'db', 'tool', 'infra', 'cloud', 'other'];
   const grouped = new Map<string, string[]>();
   for (const tag of opts.tags) {
     const cat = tag.category ?? 'other';
