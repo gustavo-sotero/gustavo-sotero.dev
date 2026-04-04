@@ -37,10 +37,16 @@ async function buildLogger(nodeEnv: SetupLoggerOptions['nodeEnv']): Promise<Logg
 
   const mkdirImpl: NonNullable<SetupLoggerOptions['mkdirImpl']> = async () => undefined;
 
+  // Provide a fake file sink so tests don't depend on @logtape/file being installed
+  const loadFileSinkModule: NonNullable<SetupLoggerOptions['loadFileSinkModule']> = async () => ({
+    getFileSink: (_path: string, _options?: unknown) => (() => {}) as never,
+  });
+
   await setupLogger({
     nodeEnv,
     configureImpl,
     mkdirImpl,
+    loadFileSinkModule,
   });
 
   if (!captured) throw new Error('configure() was never called');
