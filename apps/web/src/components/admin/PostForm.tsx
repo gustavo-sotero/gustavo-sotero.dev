@@ -80,7 +80,7 @@ function ScheduledAtSection({
         type="datetime-local"
         value={toDatetimeLocal(scheduledAt)}
         onChange={(e) => handleScheduledAtChange(e.target.value)}
-        min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+        min={toDatetimeLocal(new Date(Date.now() + 60_000).toISOString())}
         className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60 w-fit"
       />
       {!scheduledAt && (
