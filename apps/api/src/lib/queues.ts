@@ -138,6 +138,12 @@ export interface PostPublishJobData {
 
 /**
  * Enqueue a delayed job to publish a post at `scheduledAt` (UTC).
+ *
+ * Secondary utility only: the authoritative application flow for scheduled posts is
+ * `posts.service -> outbox row -> worker outbox relay -> BullMQ job`.
+ * Keep this helper for isolated queue tests and operational/manual use-cases, but do not
+ * reintroduce direct enqueue from the post services for normal scheduling/rescheduling.
+ *
  * If a job for this post already exists in the delayed state, it will be
  * rescheduled to the new time. If it is in any other state (completed, failed,
  * waiting) it is removed and re-added to reset the timeline cleanly.

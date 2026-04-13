@@ -20,7 +20,7 @@
 
 import { imageOptimizeJobId, scheduledPostPublishJobId } from '@portfolio/shared';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
-import { Queue } from 'bullmq';
+import { Queue, QueueEvents, Worker } from 'bullmq';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -165,5 +165,74 @@ describe('BullMQ jobId runtime contract', () => {
     expect(second.id).toBe(jobId);
     expect(stored?.data).toEqual({ uploadId: 'dedup-test-1' });
     expect(counts.delayed).toBe(1);
+  });
+
+  it('re-add com mesmo jobId NÃO atualiza o delay (documenta a raiz do bug de reagendamento)', async () => {
+    if (!redisAvailable) {
+      console.warn('[skip] Redis unavailable — skipping BullMQ runtime test');
+      return;
+    }
+
+    // This test documents the exact BullMQ contract that caused the reschedule bug:
+    // calling queue.add() with an existing custom jobId is silently deduped —
+    // the delay from the first add() is preserved regardless of the second add().
+    // The fix is to use job.changeDelay() for delayed jobs instead.
+    const jobId = scheduledPostPublishJobId(999);
+    const delayA = 120_000; // 2 min
+    const delayB = 60_000; // 1 min — a user "rescheduled earlier"
+
+    await queue.add('publish', { postId: 999 }, { jobId, delay: delayA });
+    // Second add with same jobId and different delay — this is the relay behaviour
+    // that was bugged: it adds again hoping BullMQ replaces, but it does not.
+    await queue.add('publish', { postId: 999 }, { jobId, delay: delayB });
+
+    const stored = await queue.getJob(jobId);
+    const counts = await queue.getJobCounts('delayed');
+
+    // Only one job should exist (deduplication worked)
+    expect(counts.delayed).toBe(1);
+    // The stored delay must still reflect delayA — the second add() was ignored.
+    // This is the bug: the new scheduledAt is not respected by a naive re-add.
+    expect(stored).toBeDefined();
+    // BullMQ stores delay as milliseconds in job.opts.delay
+    expect(stored?.opts.delay).toBe(delayA);
+  });
+
+  it('changeDelay() actualiza o delay de um job delayed existente (caminho correto de reagendamento)', async () => {
+    if (!redisAvailable) {
+      console.warn('[skip] Redis unavailable — skipping BullMQ runtime test');
+      return;
+    }
+
+    // Validates that job.changeDelay() is the correct BullMQ-native API for
+    // rescheduling a delayed job — this is the fix applied in outbox-relay.ts.
+    // `opts.delay` is not a reliable assertion target after changeDelay(), so this
+    // test validates observable queue behaviour: the job must complete within the
+    // new shorter window instead of waiting for the original delay.
+    const jobId = scheduledPostPublishJobId(1000);
+    const delayA = 5_000; // original delay
+    const delayB = 100; // rescheduled to sooner
+    const connection = parseRedisUrl(REDIS_URL);
+    const worker = new Worker(TEST_QUEUE_NAME, async () => 'processed', { connection });
+    const queueEvents = new QueueEvents(TEST_QUEUE_NAME, { connection });
+
+    try {
+      await worker.waitUntilReady();
+      await queueEvents.waitUntilReady();
+
+      const startedAt = Date.now();
+      const job = await queue.add('publish', { postId: 1000 }, { jobId, delay: delayA });
+
+      // Simulate the relay calling changeDelay after receiving a new outbox event.
+      await job.changeDelay(delayB);
+
+      await expect(job.waitUntilFinished(queueEvents, 3_000)).resolves.toBe('processed');
+
+      const elapsedMs = Date.now() - startedAt;
+      expect(elapsedMs).toBeLessThan(delayA);
+    } finally {
+      await worker.close();
+      await queueEvents.close();
+    }
   });
 });

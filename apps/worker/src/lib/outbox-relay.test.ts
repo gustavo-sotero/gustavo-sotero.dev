@@ -9,6 +9,7 @@ const {
   dbUpdateSetWhereMock,
   imageQueueAddMock,
   postPublishQueueAddMock,
+  postPublishQueueGetJobMock,
   loggerInfoMock,
   loggerWarnMock,
   loggerErrorMock,
@@ -18,6 +19,7 @@ const {
   dbUpdateSetWhereMock: vi.fn(),
   imageQueueAddMock: vi.fn(),
   postPublishQueueAddMock: vi.fn(),
+  postPublishQueueGetJobMock: vi.fn(),
   loggerInfoMock: vi.fn(),
   loggerWarnMock: vi.fn(),
   loggerErrorMock: vi.fn(),
@@ -88,7 +90,10 @@ function makeEvent(
 
 function makeQueues() {
   const imageQueue = { add: imageQueueAddMock } as never;
-  const postPublishQueue = { add: postPublishQueueAddMock } as never;
+  const postPublishQueue = {
+    add: postPublishQueueAddMock,
+    getJob: postPublishQueueGetJobMock,
+  } as never;
   return { imageQueue, postPublishQueue };
 }
 
@@ -115,6 +120,9 @@ describe('processOutboxEvents', () => {
         })),
       })),
     });
+
+    // Default: postPublishQueue.getJob returns undefined (no existing job)
+    postPublishQueueGetJobMock.mockResolvedValue(undefined);
 
     // Default: update resolves successfully
     dbUpdateSetMock.mockReturnValue({
@@ -152,7 +160,7 @@ describe('processOutboxEvents', () => {
     expect(dbUpdateSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'processed' }));
   });
 
-  it('enqueues scheduled-post-publish job and marks event processed', async () => {
+  it('enqueues scheduled-post-publish job and marks event processed (no existing job)', async () => {
     const futureTime = new Date(Date.now() + 10_000).toISOString();
     const event = makeEvent({
       eventType: OutboxEventType.SCHEDULED_POST_PUBLISH,
@@ -168,11 +176,14 @@ describe('processOutboxEvents', () => {
         })),
       })),
     });
+    // No existing job — relay should create a fresh one via add()
+    postPublishQueueGetJobMock.mockResolvedValueOnce(undefined);
     postPublishQueueAddMock.mockResolvedValue(undefined);
 
     const { imageQueue, postPublishQueue } = makeQueues();
     await processOutboxEvents(imageQueue, postPublishQueue);
 
+    expect(postPublishQueueGetJobMock).toHaveBeenCalledWith(scheduledPostPublishJobId(7));
     expect(postPublishQueueAddMock).toHaveBeenCalledWith(
       'publish',
       { postId: 7 },
@@ -617,6 +628,175 @@ describe('processOutboxEvents', () => {
     expect(loggerErrorMock).toHaveBeenCalledWith(
       'Outbox relay: failed to process event',
       expect.objectContaining({ uploadId })
+    );
+  });
+
+  // ── Scheduled-post-publish upsert / reschedule scenarios ────────────────────
+
+  it('scheduled-post-publish: reagenda job delayed existente via changeDelay (bug-fix regression)', async () => {
+    // This is the core regression test for the reschedule bug:
+    // when the relay fires again with a new scheduledAt and a delayed job already exists,
+    // it must call changeDelay() — not queue.add() (which BullMQ would silently deduplicate,
+    // leaving the old delay unchanged).
+    const newScheduledAt = new Date(Date.now() + 60_000).toISOString();
+    const event = makeEvent({
+      id: 'event-reschedule-1',
+      eventType: OutboxEventType.SCHEDULED_POST_PUBLISH,
+      payload: { postId: 11, scheduledAt: newScheduledAt },
+    });
+
+    dbSelectMock.mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue([event]),
+          })),
+        })),
+      })),
+    });
+
+    const changeDelayMock = vi.fn().mockResolvedValue(undefined);
+    const existingJob = {
+      getState: vi.fn().mockResolvedValue('delayed'),
+      changeDelay: changeDelayMock,
+    };
+    postPublishQueueGetJobMock.mockResolvedValueOnce(existingJob);
+
+    const { imageQueue, postPublishQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue);
+
+    // Must have queried for existing job first
+    expect(postPublishQueueGetJobMock).toHaveBeenCalledWith(scheduledPostPublishJobId(11));
+    // Must have rescheduled via changeDelay, not re-added
+    expect(changeDelayMock).toHaveBeenCalledWith(expect.any(Number));
+    expect(postPublishQueueAddMock).not.toHaveBeenCalled();
+    // Event must be marked as processed
+    expect(dbUpdateSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'processed' }));
+    // Structured log must document the action
+    expect(loggerInfoMock).toHaveBeenCalledWith(
+      'Outbox relay: scheduled-post-publish job rescheduled',
+      expect.objectContaining({ action: 'rescheduled', postId: 11 })
+    );
+  });
+
+  it('scheduled-post-publish: substitui job em estado waiting (remove + re-add)', async () => {
+    const scheduledAt = new Date(Date.now() + 30_000).toISOString();
+    const event = makeEvent({
+      id: 'event-replace-1',
+      eventType: OutboxEventType.SCHEDULED_POST_PUBLISH,
+      payload: { postId: 12, scheduledAt },
+    });
+
+    dbSelectMock.mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue([event]),
+          })),
+        })),
+      })),
+    });
+
+    const removeMock = vi.fn().mockResolvedValue(undefined);
+    const existingJob = { getState: vi.fn().mockResolvedValue('waiting'), remove: removeMock };
+    postPublishQueueGetJobMock.mockResolvedValueOnce(existingJob);
+    postPublishQueueAddMock.mockResolvedValue(undefined);
+
+    const { imageQueue, postPublishQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue);
+
+    // Must have removed the old job
+    expect(removeMock).toHaveBeenCalledOnce();
+    // Must have re-added with the same jobId and new delay
+    expect(postPublishQueueAddMock).toHaveBeenCalledWith(
+      'publish',
+      { postId: 12 },
+      expect.objectContaining({ jobId: scheduledPostPublishJobId(12) })
+    );
+    expect(dbUpdateSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'processed' }));
+    expect(loggerInfoMock).toHaveBeenCalledWith(
+      'Outbox relay: scheduled-post-publish job replaced',
+      expect.objectContaining({ action: 'replaced', postId: 12 })
+    );
+  });
+
+  it('scheduled-post-publish: não remove job ativo — deixa processor se auto-atrasar', async () => {
+    const scheduledAt = new Date(Date.now() + 15_000).toISOString();
+    const event = makeEvent({
+      id: 'event-active-1',
+      eventType: OutboxEventType.SCHEDULED_POST_PUBLISH,
+      payload: { postId: 13, scheduledAt },
+    });
+
+    dbSelectMock.mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue([event]),
+          })),
+        })),
+      })),
+    });
+
+    const removeMock = vi.fn();
+    const existingJob = { getState: vi.fn().mockResolvedValue('active'), remove: removeMock };
+    postPublishQueueGetJobMock.mockResolvedValueOnce(existingJob);
+
+    const { imageQueue, postPublishQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue);
+
+    // Must NOT attempt to remove an active (locked) job
+    expect(removeMock).not.toHaveBeenCalled();
+    expect(postPublishQueueAddMock).not.toHaveBeenCalled();
+    // Event is still marked processed — the active job will self-delay via the processor
+    expect(dbUpdateSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'processed' }));
+    expect(loggerInfoMock).toHaveBeenCalledWith(
+      'Outbox relay: scheduled-post-publish job is active; processor will self-delay',
+      expect.objectContaining({ action: 'active-job-kept', postId: 13 })
+    );
+  });
+
+  it('scheduled-post-publish: falha em changeDelay propaga retry do outbox', async () => {
+    const scheduledAt = new Date(Date.now() + 20_000).toISOString();
+    const event = makeEvent({
+      id: 'event-fail-1',
+      eventType: OutboxEventType.SCHEDULED_POST_PUBLISH,
+      payload: { postId: 14, scheduledAt },
+      attempts: 1,
+    });
+
+    dbSelectMock.mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue([event]),
+          })),
+        })),
+      })),
+    });
+
+    const changeDelayMock = vi.fn().mockRejectedValue(new Error('Redis connection lost'));
+    const existingJob = {
+      getState: vi.fn().mockResolvedValue('delayed'),
+      changeDelay: changeDelayMock,
+    };
+    postPublishQueueGetJobMock.mockResolvedValueOnce(existingJob);
+
+    const { imageQueue, postPublishQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue);
+
+    // changeDelay threw → relay must NOT mark event as processed
+    expect(dbUpdateSetMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'processed' })
+    );
+    // Attempt counter must have been incremented
+    expect(dbUpdateSetMock).toHaveBeenCalledWith(
+      expect.objectContaining({ attempts: event.attempts + 1 })
+    );
+    // Failure class: QUEUE_PUBLISH_FAILURE (queue operation failed, not payload validation)
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      'Outbox relay: failed to process event',
+      expect.objectContaining({ failureClass: 'QUEUE_PUBLISH_FAILURE' })
     );
   });
 });

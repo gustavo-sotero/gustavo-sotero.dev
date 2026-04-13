@@ -223,6 +223,8 @@ export async function updatePostService(id: number, data: UpdatePostInput) {
   }
 
   // 7. Persist atomically: update post + optional outbox event for new scheduling.
+  // Scheduled publish creation/reschedule is intentionally materialized only by the
+  // worker outbox relay so the DB write and async intent stay in the same transaction.
   // Cancellation of existing BullMQ jobs (transitioning away from scheduled) is
   // direct and idempotent — no outbox needed for removals.
 

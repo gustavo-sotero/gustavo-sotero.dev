@@ -364,6 +364,40 @@ describe('posts/projects services', () => {
     expect(cancelScheduledPostPublishMock).toHaveBeenCalledWith(5);
   });
 
+  it('updatePostService reagendamento scheduled→scheduled persiste nova data sem cancelar job', async () => {
+    // Regression guard for the reschedule bug:
+    // editing scheduledAt on an already-scheduled post must persist the new date
+    // and emit an outbox event for the worker relay to reschedule the BullMQ job.
+    // cancelScheduledPostPublish must NOT be called — the relay is responsible
+    // for updating the existing job via changeDelay / replace, not the service.
+    const dateA = new Date(Date.now() + 3_600_000); // original: +1h
+    const dateB = new Date(Date.now() + 7_200_000); // new:      +2h
+
+    dbLimitMock.mockResolvedValueOnce([
+      { id: 9, slug: 'post-z', status: 'scheduled', publishedAt: null, scheduledAt: dateA },
+    ]);
+    updatePostMock.mockResolvedValueOnce({ id: 9, slug: 'post-z' });
+
+    await updatePostService(9, { status: 'scheduled', scheduledAt: dateB });
+
+    // The service must persist the new scheduledAt (B) and keep status scheduled
+    expect(updatePostMock).toHaveBeenCalledWith(
+      9,
+      expect.objectContaining({
+        status: 'scheduled',
+        scheduledAt: dateB,
+        publishedAt: null,
+      }),
+      expect.anything()
+    );
+
+    // Rescheduling is handled by the worker relay reacting to the new outbox event.
+    // The service must NOT cancel the existing job — that would remove the job
+    // instead of rescheduling it.
+    expect(cancelScheduledPostPublishMock).not.toHaveBeenCalled();
+    expect(enqueueScheduledPostPublishMock).not.toHaveBeenCalled();
+  });
+
   it('softDeletePostService cancela job quando post estava scheduled', async () => {
     // First db.select for status check
     dbLimitMock.mockResolvedValueOnce([{ id: 7, status: 'scheduled' }]);

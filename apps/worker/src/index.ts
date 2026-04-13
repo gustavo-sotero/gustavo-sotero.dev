@@ -144,8 +144,8 @@ imageWorker.on('error', (err) => {
 // ── Post Publish Worker ───────────────────────────────────────────────────────
 const postPublishWorker = new Worker<PostPublishJobData>(
   'post-publish',
-  async (job) => {
-    await processPostPublish(job);
+  async (job, token) => {
+    await processPostPublish(job, token);
   },
   {
     connection: workerConnection,

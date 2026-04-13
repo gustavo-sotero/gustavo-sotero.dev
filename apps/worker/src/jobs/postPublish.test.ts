@@ -77,6 +77,7 @@ vi.mock('../lib/cache', () => ({
 }));
 
 import type { Job } from 'bullmq';
+import { DelayedError } from 'bullmq';
 import { type PostPublishJobData, processPostPublish } from './postPublish';
 
 function makeJob(postId: number): Job<PostPublishJobData> {
@@ -84,6 +85,7 @@ function makeJob(postId: number): Job<PostPublishJobData> {
     id: 'test-job-1',
     data: { postId },
     attemptsMade: 0,
+    moveToDelayed: vi.fn().mockResolvedValue(undefined),
   } as unknown as Job<PostPublishJobData>;
 }
 
@@ -190,7 +192,10 @@ describe('processPostPublish', () => {
     expect(invalidatePatternMock).not.toHaveBeenCalled();
   });
 
-  it('lança erro se scheduledAt ainda está no futuro (aciona retry)', async () => {
+  it('lança erro descritivo se scheduledAt futuro e token ausente', async () => {
+    // When a stale job fires before the DB-authoritative scheduledAt but the worker
+    // did not provide a token, the processor must throw a clear diagnostic error
+    // instead of silently using generic retry with a misleading message.
     const futureScheduledAt = new Date(Date.now() + 10_000);
     mockDbSelect({
       id: 5,
@@ -201,9 +206,59 @@ describe('processPostPublish', () => {
       publishedAt: null,
     });
 
-    await expect(processPostPublish(makeJob(5))).rejects.toThrow(/still in the future/);
+    // No token passed — mirrors the old worker bootstrap before the fix
+    await expect(processPostPublish(makeJob(5))).rejects.toThrow(/no BullMQ token/i);
     expect(dbUpdateMock).not.toHaveBeenCalled();
     expect(invalidatePatternMock).not.toHaveBeenCalled();
+  });
+
+  it('chama moveToDelayed e lança DelayedError quando scheduledAt futuro com token válido', async () => {
+    // Core regression test for the processor re-delay path:
+    // an outdated job that fires before the new DB-authoritative scheduledAt
+    // must re-position itself via moveToDelayed + DelayedError, NOT consume a retry.
+    const futureScheduledAt = new Date(Date.now() + 60_000);
+    mockDbSelect({
+      id: 8,
+      slug: 'post-h',
+      status: 'scheduled',
+      scheduledAt: futureScheduledAt,
+      deletedAt: null,
+      publishedAt: null,
+    });
+
+    const token = 'valid-worker-token';
+    const job = makeJob(8);
+
+    await expect(processPostPublish(job, token)).rejects.toThrow(DelayedError);
+
+    // moveToDelayed must be called with the authoritative timestamp and the token
+    expect(job.moveToDelayed).toHaveBeenCalledWith(futureScheduledAt.getTime(), token);
+    // No publish must have occurred
+    expect(dbUpdateMock).not.toHaveBeenCalled();
+    expect(invalidatePatternMock).not.toHaveBeenCalled();
+  });
+
+  it('fluxo feliz permanece intacto: publica quando scheduledAt <= now com token', async () => {
+    // Validate that passing token does not break the publish happy path
+    const scheduledAt = new Date(Date.now() - 1000);
+    mockDbSelect({
+      id: 9,
+      slug: 'post-i',
+      status: 'scheduled',
+      scheduledAt,
+      deletedAt: null,
+      publishedAt: null,
+    });
+    const { setMock } = mockDbUpdate({ id: 9, slug: 'post-i' });
+    const job = makeJob(9);
+
+    await processPostPublish(job, 'some-token');
+
+    expect(setMock).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'published', scheduledAt: null })
+    );
+    // moveToDelayed must NOT have been called — deadline was already reached
+    expect(job.moveToDelayed).not.toHaveBeenCalled();
   });
 
   it('não falha se CAS update retorna 0 linhas (concorrência)', async () => {

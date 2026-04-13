@@ -236,6 +236,62 @@ describe('PostForm', () => {
     });
   });
 
+  it('changing scheduledAt during edit propagates the new date in the submit payload', async () => {
+    // Regression guard: editing scheduledAt on a scheduled post must send the
+    // new value, not the original one. The UI is not the root cause of the
+    // reschedule bug, but this test documents the invariant so that future
+    // regressions in the form layer are caught early.
+    const originalUtc = '2099-06-15T14:00:00.000Z';
+    const newLocalValue = '2099-07-20T10:00'; // datetime-local input format (no seconds/Z)
+
+    const scheduledPost = {
+      id: 3,
+      slug: 'post-c',
+      title: 'Post C',
+      content: 'Conteúdo C',
+      excerpt: null,
+      coverUrl: null,
+      status: 'scheduled' as const,
+      scheduledAt: originalUtc,
+      renderedContent: null,
+      deletedAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      publishedAt: null,
+      tags: [],
+    };
+
+    mutateAsyncMock.mockResolvedValueOnce({ data: scheduledPost });
+
+    render(<PostForm mode="edit" post={scheduledPost} />);
+
+    const scheduledAtInput = screen.getByLabelText(/Data e hora de publicação/i);
+    expect(scheduledAtInput).toBeInTheDocument();
+
+    // Change the scheduled date to a different value
+    fireEvent.change(scheduledAtInput, { target: { value: newLocalValue } });
+
+    // Submit the form
+    fireEvent.click(screen.getByRole('button', { name: /Salvar alterações/i }));
+
+    await waitFor(() => {
+      expect(mutateAsyncMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'scheduled',
+          scheduledAt: expect.any(Date),
+        })
+      );
+
+      // The submitted Date must reflect the new value, not the original one
+      const submittedPayload = mutateAsyncMock.mock.calls[0]?.[0] as {
+        scheduledAt?: Date;
+      };
+      const submittedMs = submittedPayload?.scheduledAt?.getTime();
+      const originalMs = new Date(originalUtc).getTime();
+      expect(submittedMs).not.toBe(originalMs);
+    });
+  });
+
   it('does not include scheduledAt in payload when status is draft', async () => {
     mutateAsyncMock.mockResolvedValueOnce({ data: {} });
 

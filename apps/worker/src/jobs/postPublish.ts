@@ -13,7 +13,7 @@
  */
 
 import { posts } from '@portfolio/shared/db/schema';
-import type { Job } from 'bullmq';
+import { DelayedError, type Job } from 'bullmq';
 import { and, eq, isNull, lte, sql } from 'drizzle-orm';
 import { db } from '../config/db';
 import { getLogger } from '../config/logger';
@@ -25,7 +25,10 @@ export interface PostPublishJobData {
   postId: number;
 }
 
-export async function processPostPublish(job: Job<PostPublishJobData>): Promise<void> {
+export async function processPostPublish(
+  job: Job<PostPublishJobData>,
+  token?: string
+): Promise<void> {
   const { postId } = job.data;
 
   logger.info('Post-publish job started', {
@@ -76,12 +79,33 @@ export async function processPostPublish(job: Job<PostPublishJobData>): Promise<
     return;
   }
 
-  // 6. Validate temporal window: scheduledAt must be <= now
-  if (!post.scheduledAt || post.scheduledAt.getTime() > Date.now()) {
-    // This should not happen for a delayed job, but guard defensively
-    throw new Error(
-      `Post ${postId} scheduledAt (${post.scheduledAt?.toISOString()}) is still in the future — will retry`
-    );
+  // 6. Validate temporal window: scheduledAt must be set and <= now
+  if (!post.scheduledAt) {
+    // scheduledAt should never be null for a scheduled post; treat as a data integrity issue
+    throw new Error(`Post ${postId} has status 'scheduled' but scheduledAt is null`);
+  }
+
+  if (post.scheduledAt.getTime() > Date.now()) {
+    // An outdated job fired before the DB-authoritative deadline (e.g. admin rescheduled
+    // to a later date). Re-delay this job to the correct timestamp instead of consuming
+    // a retry attempt — this is expected behaviour under normal reschedule flows.
+    if (!token) {
+      throw new Error(
+        `Post ${postId}: scheduledAt is still in the future but no BullMQ token was provided ` +
+          'for moveToDelayed(). Ensure the worker bootstrap passes the token argument to processPostPublish.'
+      );
+    }
+
+    const targetTimestamp = post.scheduledAt.getTime();
+    await job.moveToDelayed(targetTimestamp, token);
+    logger.info('Post-publish job: moved back to delayed queue', {
+      jobId: job.id,
+      postId,
+      scheduledAt: post.scheduledAt.toISOString(),
+      action: 'moved-back-to-delayed',
+      nextDelayMs: targetTimestamp - Date.now(),
+    });
+    throw new DelayedError();
   }
 
   // 7. Promote to published — only update if still in scheduled state (race-safe CAS)

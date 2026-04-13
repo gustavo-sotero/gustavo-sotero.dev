@@ -25,7 +25,7 @@ import {
   scheduledPostPublishOutboxPayloadSchema,
 } from '@portfolio/shared';
 import { outbox, uploads } from '@portfolio/shared/db/schema';
-import type { Queue } from 'bullmq';
+import type { Job, Queue } from 'bullmq';
 import { and, asc, eq, lte } from 'drizzle-orm';
 import { db } from '../config/db';
 import { getLogger } from '../config/logger';
@@ -41,6 +41,110 @@ type RelayFailureClass =
   | 'OUTBOX_STATUS_UPDATE_FAILURE';
 
 export const OUTBOX_MAX_ATTEMPTS = 5;
+
+/**
+ * Upserts a scheduled-post-publish job in BullMQ with full state-aware reschedule semantics.
+ *
+ * A deterministic `jobId = post-publish-{postId}` makes this function idempotent for
+ * outbox replays, and also enables the correct reschedule path when `scheduledAt` changes:
+ *
+ *  - Job **missing**:  create fresh delayed job.
+ *  - Job **delayed**:  call `changeDelay()` — the only BullMQ-native reschedule path.
+ *  - Job **active**:   leave in place; the processor will re-delay itself after reading
+ *                      the DB-authoritative `scheduledAt`.
+ *  - Job **waiting** / **prioritized** / **paused** / **completed** / **failed** / **unknown**:
+ *                      remove and re-add so the correct delay is applied.
+ */
+async function upsertScheduledPostPublishJob(
+  postPublishQueue: Queue,
+  opts: { postId: number; scheduledAt: string; eventId: string }
+): Promise<void> {
+  const { postId, scheduledAt, eventId } = opts;
+  const jobId = scheduledPostPublishJobId(postId);
+  const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
+  const jobOptions = {
+    jobId,
+    delay,
+    attempts: 3,
+    backoff: { type: 'exponential' as const, delay: 2000 },
+    removeOnComplete: { count: 200 },
+    removeOnFail: { count: 100 },
+  };
+
+  const existing = await postPublishQueue.getJob(jobId);
+
+  if (!existing) {
+    await postPublishQueue.add('publish', { postId }, jobOptions);
+    logger.info('Outbox relay: scheduled-post-publish job created', {
+      eventId,
+      postId,
+      jobId,
+      scheduledAt,
+      delay,
+      action: 'created',
+    });
+    return;
+  }
+
+  const existingState = await (existing as Job).getState();
+
+  if (existingState === 'delayed') {
+    // changeDelay is the BullMQ-native API for rescheduling a delayed job.
+    // Using queue.add() with the same jobId here would be silently deduped
+    // and the old delay would remain — that is the root cause of the reschedule bug.
+    await (existing as Job).changeDelay(delay);
+    logger.info('Outbox relay: scheduled-post-publish job rescheduled', {
+      eventId,
+      postId,
+      jobId,
+      scheduledAt,
+      delay,
+      existingState,
+      action: 'rescheduled',
+    });
+    return;
+  }
+
+  if (existingState === 'active') {
+    // Active jobs hold a lock and cannot be removed safely.
+    // The processor will consult the DB-authoritative scheduledAt and call
+    // job.moveToDelayed() + throw DelayedError if the deadline has not arrived.
+    logger.info('Outbox relay: scheduled-post-publish job is active; processor will self-delay', {
+      eventId,
+      postId,
+      jobId,
+      scheduledAt,
+      existingState,
+      action: 'active-job-kept',
+    });
+    return;
+  }
+
+  // For all other states (waiting, prioritized, paused, completed, failed, unknown):
+  // remove and re-add to restore the correct delay.
+  try {
+    await (existing as Job).remove();
+  } catch (removeErr) {
+    logger.warn('Outbox relay: could not remove existing job before re-add', {
+      eventId,
+      postId,
+      jobId,
+      existingState,
+      error: removeErr instanceof Error ? removeErr.message : String(removeErr),
+    });
+  }
+
+  await postPublishQueue.add('publish', { postId }, jobOptions);
+  logger.info('Outbox relay: scheduled-post-publish job replaced', {
+    eventId,
+    postId,
+    jobId,
+    scheduledAt,
+    delay,
+    existingState,
+    action: 'replaced',
+  });
+}
 
 function isMissingOutboxSchemaError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
@@ -150,24 +254,11 @@ export async function processOutboxEvents(
 
         const { postId, scheduledAt } = payloadResult.data;
 
-        // Deterministic jobId via shared helper — BullMQ deduplicates replays when the
-        // relay runs twice, and cancelScheduledPostPublish() in the API uses the same
-        // shared helper so cancellation still works.
-        // The helper uses `post-publish-{postId}` (hyphen separator) because
-        // BullMQ v5+ rejects any custom jobId containing `:`.
-        const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
-        await postPublishQueue.add(
-          'publish',
-          { postId },
-          {
-            jobId: scheduledPostPublishJobId(postId),
-            delay,
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 2000 },
-            removeOnComplete: { count: 200 },
-            removeOnFail: { count: 100 },
-          }
-        );
+        await upsertScheduledPostPublishJob(postPublishQueue, {
+          postId,
+          scheduledAt,
+          eventId: event.id,
+        });
       } else {
         // Unknown event type — throw so the event enters the retry/failure path
         // rather than being silently consumed. This surfaces domain contract drift.
