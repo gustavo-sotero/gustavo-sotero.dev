@@ -25,6 +25,7 @@ import {
   IMAGE_PROMPT_RULES,
   STYLE_EXEMPLARS,
 } from '../lib/ai/style-exemplars';
+import { resolveActiveAiPostGenerationConfig } from './ai-post-generation-settings.service';
 
 const logger = getLogger('services', 'post-generation');
 
@@ -315,9 +316,9 @@ function logValidationFailure(
 export async function generateTopicSuggestions(
   req: GenerateTopicsRequest
 ): Promise<GenerateTopicsResponse> {
-  assertFeatureEnabled();
+  const activeConfig = await resolveActiveAiPostGenerationConfig();
   const normalizedReq = normalizeTopicsRequest(req);
-  const model = env.AI_POSTS_MODEL_TOPICS;
+  const model = activeConfig.topicsModelId;
 
   try {
     const result = await generateStructuredObject({
@@ -348,9 +349,9 @@ export async function generateTopicSuggestions(
  * Throws a generic Error if the feature is disabled.
  */
 export async function generatePostDraft(req: GenerateDraftRequest): Promise<GenerateDraftResponse> {
-  assertFeatureEnabled();
+  const activeConfig = await resolveActiveAiPostGenerationConfig();
   const normalizedReq = normalizeDraftRequest(req);
-  const model = env.AI_POSTS_MODEL_DRAFT;
+  const model = activeConfig.draftModelId;
 
   try {
     const result = await generateStructuredObject({
@@ -368,11 +369,5 @@ export async function generatePostDraft(req: GenerateDraftRequest): Promise<Gene
       logValidationFailure('draft', normalizedReq.category, model, err.message);
     }
     throw err;
-  }
-}
-
-function assertFeatureEnabled(): void {
-  if (!env.AI_POSTS_ENABLED) {
-    throw Object.assign(new Error('AI post generation is disabled'), { code: 'DISABLED' });
   }
 }

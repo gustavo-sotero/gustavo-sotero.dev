@@ -11,6 +11,7 @@ export * from './lib/jobIds';
 export * from './lib/slug';
 // Schemas
 export * from './schemas/ai-post-generation';
+export * from './schemas/ai-post-generation-config';
 export * from './schemas/comments';
 export * from './schemas/contacts';
 export * from './schemas/education';

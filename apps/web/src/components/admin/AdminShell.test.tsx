@@ -38,6 +38,7 @@ vi.mock('lucide-react', () => {
   return {
     BarChart3: MockIcon,
     BookOpen: MockIcon,
+    Bot: MockIcon,
     Briefcase: MockIcon,
     ChevronRight: MockIcon,
     GraduationCap: MockIcon,

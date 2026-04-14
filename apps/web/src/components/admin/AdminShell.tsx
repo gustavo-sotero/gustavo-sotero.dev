@@ -3,6 +3,7 @@
 import {
   BarChart3,
   BookOpen,
+  Bot,
   Briefcase,
   ChevronRight,
   GraduationCap,
@@ -40,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Comentários', href: '/admin/comments', icon: MessageSquare },
   { label: 'Uploads', href: '/admin/uploads', icon: ImageIcon },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { label: 'Assistente IA', href: '/admin/settings/ai-post-generation', icon: Bot },
 ];
 
 function NavLink({

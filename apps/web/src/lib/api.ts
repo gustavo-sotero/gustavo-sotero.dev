@@ -82,7 +82,7 @@ async function performRequest(path: string, options: RequestInit = {}): Promise<
     ...(options.headers as Record<string, string>),
   };
 
-  if (['POST', 'PATCH', 'DELETE'].includes(method)) {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     const csrf = getCsrfToken();
     if (csrf) headers['X-CSRF-Token'] = csrf;
   }
@@ -144,6 +144,9 @@ export const apiPost = <T>(path: string, body: unknown, init?: RequestInit) =>
 
 export const apiPatch = <T>(path: string, body: unknown, init?: RequestInit) =>
   apiFetch<T>(path, { ...init, method: 'PATCH', body: JSON.stringify(body) });
+
+export const apiPut = <T>(path: string, body: unknown, init?: RequestInit) =>
+  apiFetch<T>(path, { ...init, method: 'PUT', body: JSON.stringify(body) });
 
 /** DELETE request — expects no response body (HTTP 204). */
 export const apiDelete = (path: string, init?: RequestInit) =>

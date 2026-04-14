@@ -85,6 +85,8 @@ describe('openapi routes', () => {
       '/auth/logout',
       '/admin/posts',
       '/admin/posts/{id}',
+      '/admin/posts/generate/config',
+      '/admin/posts/generate/models',
       '/admin/posts/generate/topics',
       '/admin/posts/generate/draft',
       '/admin/projects',

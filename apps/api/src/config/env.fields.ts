@@ -80,9 +80,7 @@ export const runtimeOnlyFields = {
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
-  OPENAI_API_KEY: z.string().optional(),
-  AI_POSTS_MODEL_TOPICS: z.string().default('gpt-4o-mini'),
-  AI_POSTS_MODEL_DRAFT: z.string().default('gpt-4o-mini'),
+  OPENROUTER_API_KEY: z.string().optional(),
   AI_POSTS_TIMEOUT_MS: z.coerce.number().default(30_000),
   AI_POSTS_MAX_SUGGESTIONS: z.coerce
     .number()

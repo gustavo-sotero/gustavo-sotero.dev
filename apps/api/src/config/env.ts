@@ -2,11 +2,11 @@ import { z } from 'zod';
 import { apiRuntimeFields } from './env.fields';
 
 const envSchema = z.object(apiRuntimeFields).superRefine((data, ctx) => {
-  if (data.AI_POSTS_ENABLED && !data.OPENAI_API_KEY) {
+  if (data.AI_POSTS_ENABLED && !data.OPENROUTER_API_KEY) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ['OPENAI_API_KEY'],
-      message: 'OPENAI_API_KEY is required when AI_POSTS_ENABLED=true',
+      path: ['OPENROUTER_API_KEY'],
+      message: 'OPENROUTER_API_KEY is required when AI_POSTS_ENABLED=true',
     });
   }
 });

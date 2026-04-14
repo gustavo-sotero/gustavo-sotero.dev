@@ -202,8 +202,9 @@ describe('migrate module can be imported in minimal-env context', () => {
 // ── AI env fields ─────────────────────────────────────────────────────────────
 // Validate the AI-specific env fields defined in env.fields.ts:
 //  - defaults work correctly
-//  - OPENAI_API_KEY is optional when AI feature is disabled
-//  - cross-field constraint: OPENAI_API_KEY required when AI_POSTS_ENABLED=true
+//  - OPENROUTER_API_KEY is optional when AI feature is disabled
+//  - cross-field constraint: OPENROUTER_API_KEY required when AI_POSTS_ENABLED=true
+//  - AI_POSTS_MODEL_TOPICS and AI_POSTS_MODEL_DRAFT are no longer part of the runtime contract
 
 describe('AI env fields (env.fields.ts)', () => {
   it('AI_POSTS_ENABLED defaults to false when not set', () => {
@@ -218,9 +219,9 @@ describe('AI env fields (env.fields.ts)', () => {
     expect(result.AI_POSTS_ENABLED).toBe(true);
   });
 
-  it('OPENAI_API_KEY is optional when AI_POSTS_ENABLED=false', () => {
+  it('OPENROUTER_API_KEY is optional when AI_POSTS_ENABLED=false', () => {
     const schema = z.object(apiRuntimeFields);
-    const result = schema.safeParse(FULL_RUNTIME_BASE); // no OPENAI_API_KEY
+    const result = schema.safeParse(FULL_RUNTIME_BASE); // no OPENROUTER_API_KEY
     expect(result.success).toBe(true);
   });
 
@@ -230,16 +231,12 @@ describe('AI env fields (env.fields.ts)', () => {
     expect(result.AI_POSTS_MAX_SUGGESTIONS).toBe(4);
   });
 
-  it('AI_POSTS_MODEL_TOPICS defaults to "gpt-4o-mini"', () => {
-    const schema = z.object(apiRuntimeFields);
-    const result = schema.parse(FULL_RUNTIME_BASE);
-    expect(result.AI_POSTS_MODEL_TOPICS).toBe('gpt-4o-mini');
+  it('AI_POSTS_MODEL_TOPICS is not a runtime env field (removed in OpenRouter migration)', () => {
+    expect('AI_POSTS_MODEL_TOPICS' in apiRuntimeFields).toBe(false);
   });
 
-  it('AI_POSTS_MODEL_DRAFT defaults to "gpt-4o-mini"', () => {
-    const schema = z.object(apiRuntimeFields);
-    const result = schema.parse(FULL_RUNTIME_BASE);
-    expect(result.AI_POSTS_MODEL_DRAFT).toBe('gpt-4o-mini');
+  it('AI_POSTS_MODEL_DRAFT is not a runtime env field (removed in OpenRouter migration)', () => {
+    expect('AI_POSTS_MODEL_DRAFT' in apiRuntimeFields).toBe(false);
   });
 
   it('AI_POSTS_TIMEOUT_MS defaults to 30000', () => {
@@ -248,39 +245,39 @@ describe('AI env fields (env.fields.ts)', () => {
     expect(result.AI_POSTS_TIMEOUT_MS).toBe(30_000);
   });
 
-  it('cross-field: OPENAI_API_KEY required when AI_POSTS_ENABLED=true (mirrors env.ts startup guard)', () => {
+  it('cross-field: OPENROUTER_API_KEY required when AI_POSTS_ENABLED=true (mirrors env.ts startup guard)', () => {
     const schema = z.object(apiRuntimeFields).superRefine((data, ctx) => {
-      if (data.AI_POSTS_ENABLED && !data.OPENAI_API_KEY) {
+      if (data.AI_POSTS_ENABLED && !data.OPENROUTER_API_KEY) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['OPENAI_API_KEY'],
-          message: 'OPENAI_API_KEY is required when AI_POSTS_ENABLED=true',
+          path: ['OPENROUTER_API_KEY'],
+          message: 'OPENROUTER_API_KEY is required when AI_POSTS_ENABLED=true',
         });
       }
     });
     const result = schema.safeParse({
       ...FULL_RUNTIME_BASE,
       AI_POSTS_ENABLED: 'true',
-      // OPENAI_API_KEY intentionally absent
+      // OPENROUTER_API_KEY intentionally absent
     });
     expect(result.success).toBe(false);
-    expect(result.error?.issues.some((i) => i.path.includes('OPENAI_API_KEY'))).toBe(true);
+    expect(result.error?.issues.some((i) => i.path.includes('OPENROUTER_API_KEY'))).toBe(true);
   });
 
-  it('cross-field: passes when AI_POSTS_ENABLED=true and OPENAI_API_KEY is provided', () => {
+  it('cross-field: passes when AI_POSTS_ENABLED=true and OPENROUTER_API_KEY is provided', () => {
     const schema = z.object(apiRuntimeFields).superRefine((data, ctx) => {
-      if (data.AI_POSTS_ENABLED && !data.OPENAI_API_KEY) {
+      if (data.AI_POSTS_ENABLED && !data.OPENROUTER_API_KEY) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['OPENAI_API_KEY'],
-          message: 'OPENAI_API_KEY is required when AI_POSTS_ENABLED=true',
+          path: ['OPENROUTER_API_KEY'],
+          message: 'OPENROUTER_API_KEY is required when AI_POSTS_ENABLED=true',
         });
       }
     });
     const result = schema.safeParse({
       ...FULL_RUNTIME_BASE,
       AI_POSTS_ENABLED: 'true',
-      OPENAI_API_KEY: 'sk-test-key',
+      OPENROUTER_API_KEY: 'sk-or-test-key',
     });
     expect(result.success).toBe(true);
   });

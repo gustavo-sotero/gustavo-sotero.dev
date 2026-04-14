@@ -32,4 +32,8 @@ export const adminKeys = {
 
   education: (params?: object) => ['admin', 'education', params ?? {}] as const,
   educationItem: (slug: string) => ['admin', 'education-item', slug] as const,
+
+  aiPostGenerationConfig: () => ['admin', 'ai-post-generation', 'config'] as const,
+  aiPostGenerationModels: (params?: object) =>
+    ['admin', 'ai-post-generation', 'models', params ?? {}] as const,
 } as const;

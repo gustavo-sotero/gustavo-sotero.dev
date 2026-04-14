@@ -145,6 +145,160 @@ export const adminPaths = {
       },
     },
   },
+  '/admin/posts/generate/config': {
+    get: {
+      tags: ['Admin - Posts'],
+      summary: 'Get AI post generation config state',
+      description:
+        'Returns the current feature state and active model configuration for AI post generation.',
+      operationId: 'adminGetAiPostGenerationConfig',
+      security: [{ cookieAuth: [] }],
+      responses: {
+        '200': {
+          description: 'Current config state',
+          content: {
+            'application/json': {
+              example: {
+                success: true,
+                data: {
+                  featureEnabled: true,
+                  status: 'ready',
+                  config: {
+                    topicsModelId: 'anthropic/claude-sonnet-4-5',
+                    draftModelId: 'openai/gpt-4o',
+                  },
+                  issues: [],
+                  updatedAt: '2026-04-14T12:00:00.000Z',
+                  updatedBy: '12345678',
+                  catalogFetchedAt: '2026-04-14T12:00:00.000Z',
+                },
+              },
+            },
+          },
+        },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+      },
+    },
+    put: {
+      tags: ['Admin - Posts'],
+      summary: 'Save AI post generation config',
+      description:
+        'Validates and persists the active model pair for AI post generation. Both models must support structured_outputs in the OpenRouter catalog.',
+      operationId: 'adminSaveAiPostGenerationConfig',
+      security: [{ cookieAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['topicsModelId', 'draftModelId'],
+              properties: {
+                topicsModelId: {
+                  type: 'string',
+                  description: 'OpenRouter model ID for topic generation.',
+                  example: 'anthropic/claude-sonnet-4-5',
+                },
+                draftModelId: {
+                  type: 'string',
+                  description: 'OpenRouter model ID for draft generation.',
+                  example: 'openai/gpt-4o',
+                },
+              },
+            },
+            example: {
+              topicsModelId: 'anthropic/claude-sonnet-4-5',
+              draftModelId: 'openai/gpt-4o',
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Config saved and validated',
+          content: {
+            'application/json': {
+              example: {
+                success: true,
+                data: {
+                  featureEnabled: true,
+                  status: 'ready',
+                  config: {
+                    topicsModelId: 'anthropic/claude-sonnet-4-5',
+                    draftModelId: 'openai/gpt-4o',
+                  },
+                  issues: [],
+                  updatedAt: '2026-04-14T12:00:00.000Z',
+                  updatedBy: '12345678',
+                  catalogFetchedAt: '2026-04-14T12:00:00.000Z',
+                },
+              },
+            },
+          },
+        },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '503': { description: 'Catalog unavailable or feature disabled' },
+      },
+    },
+  },
+  '/admin/posts/generate/models': {
+    get: {
+      tags: ['Admin - Posts'],
+      summary: 'List eligible AI models',
+      description:
+        'Returns a paginated, searchable list of OpenRouter models that support structured_outputs and are eligible for AI post generation.',
+      operationId: 'adminListAiPostGenerationModels',
+      security: [{ cookieAuth: [] }],
+      parameters: [
+        { $ref: '#/components/parameters/page' },
+        { $ref: '#/components/parameters/perPage' },
+        {
+          name: 'q',
+          in: 'query',
+          schema: { type: 'string', maxLength: 100 },
+          description: 'Search by model ID, name, or description.',
+        },
+        {
+          name: 'forceRefresh',
+          in: 'query',
+          schema: { type: 'boolean' },
+          description: 'Bypass the server-side catalog cache.',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Paginated eligible model list',
+          content: {
+            'application/json': {
+              example: {
+                success: true,
+                data: [
+                  {
+                    id: 'anthropic/claude-sonnet-4-5',
+                    providerFamily: 'anthropic',
+                    name: 'Claude Sonnet 4.5',
+                    description: 'Balanced intelligence and speed from Anthropic.',
+                    contextLength: 200000,
+                    maxCompletionTokens: 8096,
+                    inputPrice: '0.000003',
+                    outputPrice: '0.000015',
+                    supportsStructuredOutputs: true,
+                    expirationDate: null,
+                    isDeprecated: false,
+                  },
+                ],
+                meta: { page: 1, perPage: 20, total: 42, totalPages: 3 },
+              },
+            },
+          },
+        },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '503': { description: 'OpenRouter catalog unavailable' },
+      },
+    },
+  },
   '/admin/posts/generate/topics': {
     post: {
       tags: ['Admin - Posts'],

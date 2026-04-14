@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
-const { generateStructuredObjectMock, envMock } = vi.hoisted(() => ({
+const { generateStructuredObjectMock, resolveActiveConfigMock, envMock } = vi.hoisted(() => ({
   generateStructuredObjectMock: vi.fn(),
+  resolveActiveConfigMock: vi.fn(),
   envMock: {
-    AI_POSTS_ENABLED: true,
-    AI_POSTS_MODEL_TOPICS: 'gpt-4o-mini',
-    AI_POSTS_MODEL_DRAFT: 'gpt-4o-mini',
     AI_POSTS_TIMEOUT_MS: 30_000,
     AI_POSTS_MAX_SUGGESTIONS: 4,
     AI_POSTS_MAX_BRIEFING_CHARS: 1_000,
@@ -14,6 +12,10 @@ const { generateStructuredObjectMock, envMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('../config/env', () => ({ env: envMock }));
+
+vi.mock('./ai-post-generation-settings.service', () => ({
+  resolveActiveAiPostGenerationConfig: resolveActiveConfigMock,
+}));
 
 vi.mock('../lib/ai/generateStructuredObject', async () => {
   const actual = await vi.importActual<typeof import('../lib/ai/generateStructuredObject')>(
@@ -42,7 +44,10 @@ const VALID_SUGGESTION = {
 describe('post-generation.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    envMock.AI_POSTS_ENABLED = true;
+    resolveActiveConfigMock.mockResolvedValue({
+      topicsModelId: 'openai/gpt-4o',
+      draftModelId: 'openai/gpt-4o',
+    });
     envMock.AI_POSTS_MAX_SUGGESTIONS = 4;
     envMock.AI_POSTS_MAX_BRIEFING_CHARS = 1_000;
   });
@@ -205,8 +210,10 @@ describe('post-generation.service', () => {
       ).rejects.toMatchObject({ kind: 'timeout' });
     });
 
-    it('throws when AI_POSTS_ENABLED is false', async () => {
-      envMock.AI_POSTS_ENABLED = false;
+    it('throws when feature is disabled (DISABLED code)', async () => {
+      resolveActiveConfigMock.mockRejectedValue(
+        Object.assign(new Error('AI post generation is disabled'), { code: 'DISABLED' })
+      );
 
       await expect(
         generateTopicSuggestions({
@@ -216,6 +223,52 @@ describe('post-generation.service', () => {
           excludedIdeas: [],
         })
       ).rejects.toMatchObject({ code: 'DISABLED' });
+    });
+
+    it('throws when config is not configured (NOT_CONFIGURED code)', async () => {
+      resolveActiveConfigMock.mockRejectedValue(
+        Object.assign(new Error('AI post generation is not configured'), { code: 'NOT_CONFIGURED' })
+      );
+
+      await expect(
+        generateTopicSuggestions({
+          category: 'backend-arquitetura',
+          briefing: null,
+          limit: 4,
+          excludedIdeas: [],
+        })
+      ).rejects.toMatchObject({ code: 'NOT_CONFIGURED' });
+    });
+
+    it('uses the persisted topics model from config', async () => {
+      resolveActiveConfigMock.mockResolvedValue({
+        topicsModelId: 'anthropic/claude-3-haiku',
+        draftModelId: 'openai/gpt-4o',
+      });
+
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          suggestions: [
+            VALID_SUGGESTION,
+            { ...VALID_SUGGESTION, suggestionId: 'abc2', proposedTitle: 'Segundo tema' },
+            { ...VALID_SUGGESTION, suggestionId: 'abc3', proposedTitle: 'Terceiro tema' },
+          ],
+        },
+        durationMs: 1000,
+        inputTokens: 100,
+        outputTokens: 200,
+      });
+
+      await generateTopicSuggestions({
+        category: 'backend-arquitetura',
+        briefing: null,
+        limit: 4,
+        excludedIdeas: [],
+      });
+
+      expect(generateStructuredObjectMock).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'anthropic/claude-3-haiku' })
+      );
     });
   });
 
@@ -606,6 +659,70 @@ describe('post-generation.service', () => {
       });
 
       expect(result.suggestedTagNames).toEqual(['Arquitetura Assíncrona', 'BullMQ']);
+    });
+
+    it('throws when feature is disabled (DISABLED code)', async () => {
+      resolveActiveConfigMock.mockRejectedValue(
+        Object.assign(new Error('AI post generation is disabled'), { code: 'DISABLED' })
+      );
+
+      await expect(
+        generatePostDraft({
+          category: 'backend-arquitetura',
+          briefing: null,
+          selectedSuggestion: VALID_SUGGESTION,
+          rejectedAngles: [],
+        })
+      ).rejects.toMatchObject({ code: 'DISABLED' });
+    });
+
+    it('throws when config is not configured (NOT_CONFIGURED code)', async () => {
+      resolveActiveConfigMock.mockRejectedValue(
+        Object.assign(new Error('AI post generation is not configured'), { code: 'NOT_CONFIGURED' })
+      );
+
+      await expect(
+        generatePostDraft({
+          category: 'backend-arquitetura',
+          briefing: null,
+          selectedSuggestion: VALID_SUGGESTION,
+          rejectedAngles: [],
+        })
+      ).rejects.toMatchObject({ code: 'NOT_CONFIGURED' });
+    });
+
+    it('uses the persisted draft model (draftModelId) from config — not the topics model', async () => {
+      resolveActiveConfigMock.mockResolvedValue({
+        topicsModelId: 'openai/gpt-4o',
+        draftModelId: 'anthropic/claude-sonnet-4-5',
+      });
+
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que o modelo de rascunho é o correto.',
+          suggestedTagNames: ['Node.js'],
+          imagePrompt: 'illustration',
+          notes: null,
+        },
+        durationMs: 1200,
+        inputTokens: 200,
+        outputTokens: 400,
+      });
+
+      await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      expect(generateStructuredObjectMock).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'anthropic/claude-sonnet-4-5' })
+      );
     });
   });
 });

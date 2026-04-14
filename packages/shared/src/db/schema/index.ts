@@ -1,3 +1,4 @@
+export * from './ai-post-generation-settings';
 export * from './analytics';
 export * from './comments';
 export * from './contacts';

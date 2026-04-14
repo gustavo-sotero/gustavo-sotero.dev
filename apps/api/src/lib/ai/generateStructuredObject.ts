@@ -2,7 +2,7 @@ import { generateObject, NoObjectGeneratedError } from 'ai';
 import type { ZodSchema } from 'zod';
 import { env } from '../../config/env';
 import { getLogger } from '../../config/logger';
-import { getOpenAiProvider } from './provider';
+import { getOpenRouterProvider } from './provider';
 
 const logger = getLogger('ai', 'generate');
 
@@ -39,7 +39,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
   options: GenerateStructuredObjectOptions<TSchema>
 ): Promise<GenerateStructuredObjectResult<import('zod').infer<TSchema>>> {
   const { model: modelId, system, prompt, schema, operation, metadata } = options;
-  const openai = getOpenAiProvider();
+  const openrouter = getOpenRouterProvider();
   const start = Date.now();
   const inputSizeApprox = system.length + prompt.length;
 
@@ -48,7 +48,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
 
   try {
     const result = await generateObject({
-      model: openai(modelId),
+      model: openrouter(modelId, { provider: { require_parameters: true } }),
       schema,
       system,
       prompt,
@@ -157,7 +157,15 @@ function approximateSize(value: unknown): number | undefined {
 
 // ── Typed error class ─────────────────────────────────────────────────────────
 
-export type AiGenerationErrorKind = 'timeout' | 'refusal' | 'provider' | 'validation';
+export type AiGenerationErrorKind =
+  | 'timeout'
+  | 'refusal'
+  | 'provider'
+  | 'validation'
+  | 'disabled'
+  | 'not-configured'
+  | 'invalid-config'
+  | 'catalog-unavailable';
 
 export class AiGenerationError extends Error {
   readonly kind: AiGenerationErrorKind;

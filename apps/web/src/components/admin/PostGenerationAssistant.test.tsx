@@ -5,6 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mutateAsyncTopicsMock = vi.fn();
 const mutateAsyncDraftMock = vi.fn();
+const useAiPostGenerationConfigMock = vi.fn();
+
+vi.mock('@/hooks/admin/use-ai-post-generation-config', () => ({
+  useAiPostGenerationConfig: () => useAiPostGenerationConfigMock(),
+}));
 
 vi.mock('@/hooks/admin/use-post-generation', () => ({
   useGeneratePostTopics: () => ({
@@ -209,6 +214,19 @@ function renderAssistant() {
 describe('PostGenerationAssistant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: feature is ready
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: {
+        status: 'ready',
+        config: { topicsModelId: 'openai/gpt-4o', draftModelId: 'openai/gpt-4o' },
+        featureEnabled: true,
+        issues: [],
+        updatedAt: null,
+        updatedBy: null,
+        catalogFetchedAt: null,
+      },
+      isLoading: false,
+    });
   });
 
   afterEach(() => {
@@ -485,6 +503,108 @@ describe('PostGenerationAssistant', () => {
     });
     // Topics mutation should have been called exactly once (no re-fetch on recovery)
     expect(mutateAsyncTopicsMock).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Config state gating ────────────────────────────────────────────────────
+
+  it('shows disabled notice and blocks generation when status is disabled', () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: {
+        status: 'disabled',
+        config: null,
+        featureEnabled: false,
+        issues: ['Desabilitado.'],
+        updatedAt: null,
+        updatedBy: null,
+        catalogFetchedAt: null,
+      },
+      isLoading: false,
+    });
+
+    renderAssistant();
+    fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+    expect(screen.getByText(/desabilitada/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('category-select')).not.toBeInTheDocument();
+  });
+
+  it('shows configure CTA when status is not-configured', () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: {
+        status: 'not-configured',
+        config: null,
+        featureEnabled: true,
+        issues: [],
+        updatedAt: null,
+        updatedBy: null,
+        catalogFetchedAt: null,
+      },
+      isLoading: false,
+    });
+
+    renderAssistant();
+    fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+    expect(screen.getByText(/Nenhum modelo configurado/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Configurar modelos/i })).toBeInTheDocument();
+    expect(screen.queryByTestId('category-select')).not.toBeInTheDocument();
+  });
+
+  it('shows invalid config warning and configure link when status is invalid-config', () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: {
+        status: 'invalid-config',
+        config: { topicsModelId: 'old/model', draftModelId: 'old/model' },
+        featureEnabled: true,
+        issues: ['Modelo inválido.'],
+        updatedAt: null,
+        updatedBy: null,
+        catalogFetchedAt: null,
+      },
+      isLoading: false,
+    });
+
+    renderAssistant();
+    fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+    expect(screen.getByText(/configuração de modelos é inválida/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Configurar modelos/i })).toBeInTheDocument();
+    expect(screen.queryByTestId('category-select')).not.toBeInTheDocument();
+  });
+
+  it('shows loading skeleton while config is being fetched', () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    });
+
+    renderAssistant();
+    fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+    // Skeleton is rendered, not the category selector or gating messages
+    expect(screen.queryByTestId('category-select')).not.toBeInTheDocument();
+    expect(screen.queryByText(/desabilitada/i)).not.toBeInTheDocument();
+  });
+
+  it('allows generation when status is catalog-unavailable (resilient degraded state)', () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: {
+        status: 'catalog-unavailable',
+        config: { topicsModelId: 'openai/gpt-4o', draftModelId: 'openai/gpt-4o' },
+        featureEnabled: true,
+        issues: [],
+        updatedAt: null,
+        updatedBy: null,
+        catalogFetchedAt: null,
+      },
+      isLoading: false,
+    });
+
+    renderAssistant();
+    fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+    // Category select must be visible — generation is allowed in catalog-unavailable
+    expect(screen.getByTestId('category-select')).toBeInTheDocument();
   });
 
   it('discarding a generated draft returns the assistant to the idle step', async () => {

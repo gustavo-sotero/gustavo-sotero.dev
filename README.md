@@ -243,8 +243,9 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 ### Assistente de geração de posts com IA
 
 - `AI_POSTS_ENABLED=true` habilita as rotas `POST /admin/posts/generate/topics` e `POST /admin/posts/generate/draft`.
-- `OPENAI_API_KEY` é obrigatório quando a flag está ligada.
-- `AI_POSTS_MODEL_TOPICS`, `AI_POSTS_MODEL_DRAFT` e `AI_POSTS_TIMEOUT_MS` ajustam modelo e timeout do provider.
+- `OPENROUTER_API_KEY` é obrigatório quando a flag está ligada. Obtenha em [openrouter.ai/keys](https://openrouter.ai/keys).
+- `AI_POSTS_TIMEOUT_MS` ajusta o timeout do provider.
+- Os modelos ativos (**topics** e **draft**) são configurados via painel admin em `/admin/settings/ai-post-generation` e armazenados no banco de dados. Não são mais configurados por variável de ambiente.
 
 Quando habilitado, o assistente aparece apenas em `/admin/posts/new`. Temas e drafts gerados são efêmeros: nada é salvo automaticamente, o admin precisa aplicar manualmente os campos ao formulário e o prompt de imagem é apenas copiável, não persistido.
 

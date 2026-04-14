@@ -12,17 +12,22 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   RefreshCcw,
+  Settings,
   Sparkles,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import type { UseFormSetValue } from 'react-hook-form';
 import type { z } from 'zod';
+import { useAiPostGenerationConfig } from '@/hooks/admin/use-ai-post-generation-config';
 import { useGeneratePostDraft, useGeneratePostTopics } from '@/hooks/admin/use-post-generation';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Skeleton } from '../ui/skeleton';
 import { Textarea } from '../ui/textarea';
 import { PostDraftReview } from './PostDraftReview';
 import { PostTopicSuggestionList } from './PostTopicSuggestionList';
@@ -101,6 +106,7 @@ export function PostGenerationAssistant({
 
   const topicsMutation = useGeneratePostTopics();
   const draftMutation = useGeneratePostDraft();
+  const { data: configState, isLoading: isLoadingConfig } = useAiPostGenerationConfig();
 
   function handleCategoryChange(nextCategory: AiPostCategory) {
     setCategory((currentCategory) => {
@@ -260,160 +266,213 @@ export function PostGenerationAssistant({
       {/* Body */}
       {expanded && (
         <div id="ai-assistant-body" className="px-4 pb-4 space-y-4 border-t border-zinc-800/60">
-          {/* Category + briefing (visible in idle/error) */}
-          {(state.step === 'idle' || state.step === 'error') && (
-            <div className="pt-4 space-y-4">
-              <div className="space-y-2">
-                <Label className="text-zinc-300 text-sm">Categoria editorial</Label>
-                <Select
-                  value={category}
-                  onValueChange={(v) => handleCategoryChange(v as AiPostCategory)}
-                >
-                  <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-emerald-500/40">
-                    <SelectValue placeholder="Escolha uma categoria..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-800">
-                    {AI_POST_CATEGORIES.map((cat) => (
-                      <SelectItem
-                        key={cat}
-                        value={cat}
-                        className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-                      >
-                        {AI_POST_CATEGORY_META[cat].label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {category && (
-                  <p className="text-xs text-zinc-500">
-                    {AI_POST_CATEGORY_META[category].description}
-                  </p>
-                )}
-              </div>
+          {/* ── Config state gate ── */}
+          {isLoadingConfig && (
+            <div className="pt-4">
+              <Skeleton className="h-10 w-full bg-zinc-800/60 rounded-md" />
+            </div>
+          )}
 
-              <div className="space-y-2">
-                <Label htmlFor="ai-briefing" className="text-zinc-300 text-sm">
-                  Briefing{' '}
-                  <span className="text-zinc-600 text-xs">
-                    (opcional — ângulo, público, restrições)
-                  </span>
-                </Label>
-                <Textarea
-                  id="ai-briefing"
-                  value={briefing}
-                  onChange={(e) => setBriefing(e.target.value.slice(0, AI_POST_MAX_BRIEFING_CHARS))}
-                  placeholder="Ex: foco em deploys com Dokploy, público CTO/DevOps, evitar CLI básica..."
-                  rows={3}
-                  className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
-                />
-                {briefing.length > AI_POST_MAX_BRIEFING_CHARS - 100 && (
-                  <p className="text-xs text-amber-400">
-                    {AI_POST_MAX_BRIEFING_CHARS - briefing.length} caracteres restantes
-                  </p>
-                )}
-              </div>
+          {!isLoadingConfig && configState?.status === 'disabled' && (
+            <div className="pt-4 flex items-start gap-2 rounded-md border border-zinc-700/50 bg-zinc-800/30 px-3 py-3 text-sm text-zinc-500">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-zinc-600" />
+              <span>
+                A geração de posts com IA está{' '}
+                <strong className="text-zinc-400">desabilitada</strong> nesta instância.
+              </span>
+            </div>
+          )}
 
-              {state.step === 'error' && (
-                <div className="space-y-2">
-                  <div className="flex items-start gap-2 rounded-md border border-red-900/50 bg-red-950/30 px-3 py-2 text-sm text-red-400">
-                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                    <span>{state.message}</span>
-                  </div>
-                  {state.topics && state.topics.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!state.topics || !state.category || state.briefing === undefined) {
-                          return;
-                        }
-                        restoreTopics(state.topics, state.category, state.briefing);
-                      }}
-                      className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          {!isLoadingConfig &&
+            (configState?.status === 'not-configured' ||
+              configState?.status === 'invalid-config') && (
+              <div className="pt-4 rounded-md border border-yellow-700/40 bg-yellow-500/5 px-3 py-3">
+                <div className="flex items-start gap-2 text-sm text-yellow-400/90">
+                  <Settings className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p>
+                      {configState.status === 'not-configured'
+                        ? 'Nenhum modelo configurado ainda.'
+                        : 'A configuração de modelos é inválida.'}
+                    </p>
+                    <Link
+                      href="/admin/settings/ai-post-generation"
+                      className="inline-flex items-center gap-1 text-xs text-yellow-400 hover:text-yellow-300 underline underline-offset-2"
                     >
-                      <ArrowLeft className="h-3 w-3" />
-                      Voltar para temas
-                    </button>
-                  )}
+                      Configurar modelos
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              <Button
-                type="button"
-                onClick={() => handleGenerateTopics()}
-                disabled={!category || isLoading}
-                className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20 disabled:opacity-50"
-                variant="outline"
-              >
-                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                Sugerir temas
-              </Button>
-            </div>
-          )}
+          {/* ── Main assistant body (only when config is ready or catalog-unavailable) ── */}
+          {!isLoadingConfig &&
+            (configState?.status === 'ready' || configState?.status === 'catalog-unavailable') && (
+              <>
+                {/* Category + briefing (visible in idle/error) */}
+                {(state.step === 'idle' || state.step === 'error') && (
+                  <div className="pt-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-zinc-300 text-sm">Categoria editorial</Label>
+                      <Select
+                        value={category}
+                        onValueChange={(v) => handleCategoryChange(v as AiPostCategory)}
+                      >
+                        <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-emerald-500/40">
+                          <SelectValue placeholder="Escolha uma categoria..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                          {AI_POST_CATEGORIES.map((cat) => (
+                            <SelectItem
+                              key={cat}
+                              value={cat}
+                              className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                            >
+                              {AI_POST_CATEGORY_META[cat].label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {category && (
+                        <p className="text-xs text-zinc-500">
+                          {AI_POST_CATEGORY_META[category].description}
+                        </p>
+                      )}
+                    </div>
 
-          {/* Loading states */}
-          {state.step === 'generatingTopics' && (
-            <div className="pt-4 flex items-center gap-2 text-sm text-zinc-400">
-              <RefreshCcw className="h-4 w-4 animate-spin" />
-              Gerando sugestões de temas...
-            </div>
-          )}
-          {state.step === 'generatingDraft' && (
-            <div className="pt-4 flex items-center gap-2 text-sm text-zinc-400">
-              <RefreshCcw className="h-4 w-4 animate-spin" />
-              Gerando draft do post...
-            </div>
-          )}
+                    <div className="space-y-2">
+                      <Label htmlFor="ai-briefing" className="text-zinc-300 text-sm">
+                        Briefing{' '}
+                        <span className="text-zinc-600 text-xs">
+                          (opcional — ângulo, público, restrições)
+                        </span>
+                      </Label>
+                      <Textarea
+                        id="ai-briefing"
+                        value={briefing}
+                        onChange={(e) =>
+                          setBriefing(e.target.value.slice(0, AI_POST_MAX_BRIEFING_CHARS))
+                        }
+                        placeholder="Ex: foco em deploys com Dokploy, público CTO/DevOps, evitar CLI básica..."
+                        rows={3}
+                        className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
+                      />
+                      {briefing.length > AI_POST_MAX_BRIEFING_CHARS - 100 && (
+                        <p className="text-xs text-amber-400">
+                          {AI_POST_MAX_BRIEFING_CHARS - briefing.length} caracteres restantes
+                        </p>
+                      )}
+                    </div>
 
-          {/* Topic suggestions */}
-          {state.step === 'topicsReady' && (
-            <PostTopicSuggestionList
-              topics={state.topics}
-              onSelect={handleSelectTopic}
-              onRegenerate={handleRegenerateTopics}
-              onReset={handleReset}
-              isRegenerating={isLoading}
-            />
-          )}
+                    {state.step === 'error' && (
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2 rounded-md border border-red-900/50 bg-red-950/30 px-3 py-2 text-sm text-red-400">
+                          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                          <span>{state.message}</span>
+                        </div>
+                        {state.topics && state.topics.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                !state.topics ||
+                                !state.category ||
+                                state.briefing === undefined
+                              ) {
+                                return;
+                              }
+                              restoreTopics(state.topics, state.category, state.briefing);
+                            }}
+                            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                          >
+                            <ArrowLeft className="h-3 w-3" />
+                            Voltar para temas
+                          </button>
+                        )}
+                      </div>
+                    )}
 
-          {/* Draft review */}
-          {state.step === 'draftReady' && (
-            <PostDraftReview
-              draft={state.draft}
-              allTags={allTags}
-              currentValues={currentValues}
-              onApplyAll={(fields) => {
-                if (fields.title) {
-                  setValue('title', fields.title);
-                }
-                if (fields.slug) {
-                  setValue('slug', fields.slug);
-                }
-                if (fields.excerpt) {
-                  setValue('excerpt', fields.excerpt);
-                }
-                if (fields.content) {
-                  setValue('content', fields.content);
-                }
-                if (fields.tagIds && fields.tagIds.length > 0) {
-                  onTagsApplied?.(fields.tagIds);
-                  setValue('tagIds', fields.tagIds);
-                }
-              }}
-              onApplyField={(field, value) => {
-                if (field === 'tagIds' && Array.isArray(value)) {
-                  onTagsApplied?.(value as number[]);
-                  setValue('tagIds', value as number[]);
-                } else if (field !== 'tagIds') {
-                  // biome-ignore lint/suspicious/noExplicitAny: dynamic field apply
-                  setValue(field as any, value as string);
-                }
-              }}
-              onRegenerate={handleRegenerateDraft}
-              onBackToTopics={handleBackToTopics}
-              onDiscard={handleReset}
-              isRegenerating={draftMutation.isPending}
-            />
-          )}
+                    <Button
+                      type="button"
+                      onClick={() => handleGenerateTopics()}
+                      disabled={!category || isLoading}
+                      className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20 disabled:opacity-50"
+                      variant="outline"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                      Sugerir temas
+                    </Button>
+                  </div>
+                )}
+
+                {/* Loading states */}
+                {state.step === 'generatingTopics' && (
+                  <div className="pt-4 flex items-center gap-2 text-sm text-zinc-400">
+                    <RefreshCcw className="h-4 w-4 animate-spin" />
+                    Gerando sugestões de temas...
+                  </div>
+                )}
+                {state.step === 'generatingDraft' && (
+                  <div className="pt-4 flex items-center gap-2 text-sm text-zinc-400">
+                    <RefreshCcw className="h-4 w-4 animate-spin" />
+                    Gerando draft do post...
+                  </div>
+                )}
+
+                {/* Topic suggestions */}
+                {state.step === 'topicsReady' && (
+                  <PostTopicSuggestionList
+                    topics={state.topics}
+                    onSelect={handleSelectTopic}
+                    onRegenerate={handleRegenerateTopics}
+                    onReset={handleReset}
+                    isRegenerating={isLoading}
+                  />
+                )}
+
+                {/* Draft review */}
+                {state.step === 'draftReady' && (
+                  <PostDraftReview
+                    draft={state.draft}
+                    allTags={allTags}
+                    currentValues={currentValues}
+                    onApplyAll={(fields) => {
+                      if (fields.title) {
+                        setValue('title', fields.title);
+                      }
+                      if (fields.slug) {
+                        setValue('slug', fields.slug);
+                      }
+                      if (fields.excerpt) {
+                        setValue('excerpt', fields.excerpt);
+                      }
+                      if (fields.content) {
+                        setValue('content', fields.content);
+                      }
+                      if (fields.tagIds && fields.tagIds.length > 0) {
+                        onTagsApplied?.(fields.tagIds);
+                        setValue('tagIds', fields.tagIds);
+                      }
+                    }}
+                    onApplyField={(field, value) => {
+                      if (field === 'tagIds' && Array.isArray(value)) {
+                        onTagsApplied?.(value as number[]);
+                        setValue('tagIds', value as number[]);
+                      } else if (field !== 'tagIds') {
+                        // biome-ignore lint/suspicious/noExplicitAny: dynamic field apply
+                        setValue(field as any, value as string);
+                      }
+                    }}
+                    onRegenerate={handleRegenerateDraft}
+                    onBackToTopics={handleBackToTopics}
+                    onDiscard={handleReset}
+                    isRegenerating={draftMutation.isPending}
+                  />
+                )}
+              </>
+            )}
         </div>
       )}
     </div>

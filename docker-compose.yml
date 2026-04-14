@@ -28,6 +28,8 @@ services:
       API_PUBLIC_URL: ${API_PUBLIC_URL}
       IP_HASH_SALT: ${IP_HASH_SALT}
       BODY_SIZE_LIMIT: ${BODY_SIZE_LIMIT}
+      AI_POSTS_ENABLED: ${AI_POSTS_ENABLED:-false}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     networks:
       - dokploy-network
 
