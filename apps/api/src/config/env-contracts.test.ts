@@ -198,3 +198,90 @@ describe('migrate module can be imported in minimal-env context', () => {
     await pgClient.end();
   });
 });
+
+// ── AI env fields ─────────────────────────────────────────────────────────────
+// Validate the AI-specific env fields defined in env.fields.ts:
+//  - defaults work correctly
+//  - OPENAI_API_KEY is optional when AI feature is disabled
+//  - cross-field constraint: OPENAI_API_KEY required when AI_POSTS_ENABLED=true
+
+describe('AI env fields (env.fields.ts)', () => {
+  it('AI_POSTS_ENABLED defaults to false when not set', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.parse(FULL_RUNTIME_BASE);
+    expect(result.AI_POSTS_ENABLED).toBe(false);
+  });
+
+  it('AI_POSTS_ENABLED parses "true" to boolean true', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.parse({ ...FULL_RUNTIME_BASE, AI_POSTS_ENABLED: 'true' });
+    expect(result.AI_POSTS_ENABLED).toBe(true);
+  });
+
+  it('OPENAI_API_KEY is optional when AI_POSTS_ENABLED=false', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.safeParse(FULL_RUNTIME_BASE); // no OPENAI_API_KEY
+    expect(result.success).toBe(true);
+  });
+
+  it('AI_POSTS_MAX_SUGGESTIONS defaults to 4', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.parse(FULL_RUNTIME_BASE);
+    expect(result.AI_POSTS_MAX_SUGGESTIONS).toBe(4);
+  });
+
+  it('AI_POSTS_MODEL_TOPICS defaults to "gpt-4o-mini"', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.parse(FULL_RUNTIME_BASE);
+    expect(result.AI_POSTS_MODEL_TOPICS).toBe('gpt-4o-mini');
+  });
+
+  it('AI_POSTS_MODEL_DRAFT defaults to "gpt-4o-mini"', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.parse(FULL_RUNTIME_BASE);
+    expect(result.AI_POSTS_MODEL_DRAFT).toBe('gpt-4o-mini');
+  });
+
+  it('AI_POSTS_TIMEOUT_MS defaults to 30000', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.parse(FULL_RUNTIME_BASE);
+    expect(result.AI_POSTS_TIMEOUT_MS).toBe(30_000);
+  });
+
+  it('cross-field: OPENAI_API_KEY required when AI_POSTS_ENABLED=true (mirrors env.ts startup guard)', () => {
+    const schema = z.object(apiRuntimeFields).superRefine((data, ctx) => {
+      if (data.AI_POSTS_ENABLED && !data.OPENAI_API_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['OPENAI_API_KEY'],
+          message: 'OPENAI_API_KEY is required when AI_POSTS_ENABLED=true',
+        });
+      }
+    });
+    const result = schema.safeParse({
+      ...FULL_RUNTIME_BASE,
+      AI_POSTS_ENABLED: 'true',
+      // OPENAI_API_KEY intentionally absent
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.some((i) => i.path.includes('OPENAI_API_KEY'))).toBe(true);
+  });
+
+  it('cross-field: passes when AI_POSTS_ENABLED=true and OPENAI_API_KEY is provided', () => {
+    const schema = z.object(apiRuntimeFields).superRefine((data, ctx) => {
+      if (data.AI_POSTS_ENABLED && !data.OPENAI_API_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['OPENAI_API_KEY'],
+          message: 'OPENAI_API_KEY is required when AI_POSTS_ENABLED=true',
+        });
+      }
+    });
+    const result = schema.safeParse({
+      ...FULL_RUNTIME_BASE,
+      AI_POSTS_ENABLED: 'true',
+      OPENAI_API_KEY: 'sk-test-key',
+    });
+    expect(result.success).toBe(true);
+  });
+});

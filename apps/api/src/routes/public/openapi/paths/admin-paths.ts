@@ -1,3 +1,14 @@
+import {
+  AI_POST_CATEGORIES,
+  AI_POST_DEFAULT_SUGGESTIONS,
+  AI_POST_MAX_BRIEFING_CHARS,
+  AI_POST_MAX_EXCLUDED_ITEMS,
+  AI_POST_MAX_EXCLUDED_TEXT_CHARS,
+  AI_POST_MAX_SUGGESTIONS,
+  AI_POST_MAX_TOPIC_TAG_NAMES,
+  AI_POST_MIN_SUGGESTIONS,
+} from '@portfolio/shared';
+
 /**
  * OpenAPI path definitions for all admin (JWT-required) routes.
  * Includes: posts, projects, tags, comments, contacts, uploads, analytics,
@@ -131,6 +142,306 @@ export const adminPaths = {
         '204': { description: 'Post soft-deleted' },
         '401': { $ref: '#/components/responses/Unauthorized' },
         '404': { $ref: '#/components/responses/NotFound' },
+      },
+    },
+  },
+  '/admin/posts/generate/topics': {
+    post: {
+      tags: ['Admin - Posts'],
+      summary: 'Generate AI topic suggestions',
+      description:
+        'Generates 3-5 structured topic suggestions for a new post. Admin-only, CSRF-protected, ephemeral, and rate limited to 10 requests per minute.',
+      operationId: 'adminGeneratePostTopics',
+      security: [{ cookieAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['category'],
+              properties: {
+                category: {
+                  type: 'string',
+                  enum: [...AI_POST_CATEGORIES],
+                  description: 'Editorial category that orients the AI prompt.',
+                  example: 'dados-filas-consistencia',
+                },
+                briefing: {
+                  type: 'string',
+                  nullable: true,
+                  maxLength: AI_POST_MAX_BRIEFING_CHARS,
+                  description: 'Optional short briefing with angle, target reader, or constraints.',
+                  example:
+                    'Foco em trade-offs reais de filas em produção; evitar tutorial introdutório.',
+                },
+                limit: {
+                  type: 'integer',
+                  minimum: AI_POST_MIN_SUGGESTIONS,
+                  maximum: AI_POST_MAX_SUGGESTIONS,
+                  default: AI_POST_DEFAULT_SUGGESTIONS,
+                  description: 'Number of topic suggestions to generate.',
+                },
+                excludedIdeas: {
+                  type: 'array',
+                  maxItems: AI_POST_MAX_EXCLUDED_ITEMS,
+                  description: 'Previously rejected ideas to avoid repeating the same angle.',
+                  items: {
+                    type: 'string',
+                    maxLength: AI_POST_MAX_EXCLUDED_TEXT_CHARS,
+                  },
+                  default: [],
+                  example: ['Introdução a filas', 'O que é Redis'],
+                },
+              },
+            },
+            example: {
+              category: 'dados-filas-consistencia',
+              briefing:
+                'Foco em trade-offs reais de filas em produção; evitar tutorial introdutório.',
+              limit: AI_POST_DEFAULT_SUGGESTIONS,
+              excludedIdeas: ['Introdução a filas', 'O que é Redis'],
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Structured topic suggestions generated successfully',
+          content: {
+            'application/json': {
+              example: {
+                success: true,
+                data: {
+                  suggestions: [
+                    {
+                      suggestionId: 'queue-tradeoffs-1',
+                      category: 'dados-filas-consistencia',
+                      proposedTitle: 'Fila não é solução mágica — é troca',
+                      angle:
+                        'Quando uma fila reduz latência de verdade e quando ela só empurra complexidade para depois',
+                      summary:
+                        'Mostra o custo operacional de retries, DLQ e consistência eventual versus um fluxo síncrono mais simples.',
+                      targetReader: 'Engenheiros backend que já usam Redis ou BullMQ em produção',
+                      suggestedTagNames: ['BullMQ', 'Redis', 'Arquitetura'],
+                      rationale:
+                        'Tema técnico, específico e alinhado ao tom editorial do portfólio.',
+                    },
+                    {
+                      suggestionId: 'idempotencia-2',
+                      category: 'dados-filas-consistencia',
+                      proposedTitle:
+                        'Idempotência não é detalhe quando seu job pode rodar duas vezes',
+                      angle:
+                        'Como evitar efeitos colaterais duplicados em filas e integrações com retry automático',
+                      summary:
+                        'Discute deduplicação, chaves naturais e limites do retry cego em pipelines assíncronos.',
+                      targetReader:
+                        'Desenvolvedores lidando com workers, webhooks e reprocessamento',
+                      suggestedTagNames: ['Idempotência', 'BullMQ', 'PostgreSQL'],
+                      rationale:
+                        'Conecta consistência eventual com um problema prático de produção.',
+                    },
+                    {
+                      suggestionId: 'outbox-3',
+                      category: 'dados-filas-consistencia',
+                      proposedTitle:
+                        'Outbox pattern só vale o custo quando a inconsistência dói de verdade',
+                      angle:
+                        'Quando transação local + publicação assíncrona compensa a complexidade adicional',
+                      summary:
+                        'Compara outbox contra abordagens mais simples e mostra o ponto em que o padrão passa a fazer sentido.',
+                      targetReader:
+                        'Engenheiros backend avaliando garantias de entrega entre banco e fila',
+                      suggestedTagNames: ['Outbox', 'Transações', 'Consistência'],
+                      rationale: 'Explora trade-off de arquitetura em vez de evangelizar padrão.',
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '429': { $ref: '#/components/responses/RateLimited' },
+        '503': {
+          description:
+            'AI provider unavailable, incomplete response, refusal, timeout, or feature disabled',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                error: {
+                  code: 'SERVICE_UNAVAILABLE',
+                  message: 'AI post generation is not enabled on this instance.',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  '/admin/posts/generate/draft': {
+    post: {
+      tags: ['Admin - Posts'],
+      summary: 'Generate AI post draft',
+      description:
+        'Generates a full editorial draft from an approved topic suggestion. Admin-only, CSRF-protected, ephemeral, and rate limited to 5 requests per minute.',
+      operationId: 'adminGeneratePostDraft',
+      security: [{ cookieAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['category', 'selectedSuggestion'],
+              properties: {
+                category: {
+                  type: 'string',
+                  enum: [...AI_POST_CATEGORIES],
+                  description: 'Editorial category that orients the AI prompt.',
+                  example: 'dados-filas-consistencia',
+                },
+                briefing: {
+                  type: 'string',
+                  nullable: true,
+                  maxLength: AI_POST_MAX_BRIEFING_CHARS,
+                  description: 'Optional extra briefing from the admin.',
+                  example: 'Manter tom técnico, direto e sem tutorial básico.',
+                },
+                selectedSuggestion: {
+                  type: 'object',
+                  required: [
+                    'suggestionId',
+                    'category',
+                    'proposedTitle',
+                    'angle',
+                    'summary',
+                    'targetReader',
+                    'suggestedTagNames',
+                    'rationale',
+                  ],
+                  properties: {
+                    suggestionId: { type: 'string', example: 'queue-tradeoffs-1' },
+                    category: {
+                      type: 'string',
+                      enum: [...AI_POST_CATEGORIES],
+                      example: 'dados-filas-consistencia',
+                    },
+                    proposedTitle: {
+                      type: 'string',
+                      example: 'Fila não é solução mágica — é troca',
+                    },
+                    angle: {
+                      type: 'string',
+                      example:
+                        'Quando uma fila reduz latência de verdade e quando ela só empurra complexidade para depois',
+                    },
+                    summary: {
+                      type: 'string',
+                      example:
+                        'Mostra o custo operacional de retries, DLQ e consistência eventual versus um fluxo síncrono mais simples.',
+                    },
+                    targetReader: {
+                      type: 'string',
+                      example: 'Engenheiros backend que já usam Redis ou BullMQ em produção',
+                    },
+                    suggestedTagNames: {
+                      type: 'array',
+                      maxItems: AI_POST_MAX_TOPIC_TAG_NAMES,
+                      items: { type: 'string' },
+                      example: ['BullMQ', 'Redis', 'Arquitetura'],
+                    },
+                    rationale: {
+                      type: 'string',
+                      example: 'Tema técnico, específico e alinhado ao tom editorial do portfólio.',
+                    },
+                  },
+                },
+                rejectedAngles: {
+                  type: 'array',
+                  maxItems: AI_POST_MAX_EXCLUDED_ITEMS,
+                  description: 'Angles rejected in previous draft attempts for the same topic.',
+                  items: {
+                    type: 'string',
+                    maxLength: AI_POST_MAX_EXCLUDED_TEXT_CHARS,
+                  },
+                  default: [],
+                  example: [
+                    'Abordagem focada só em performance sem falar de complexidade operacional',
+                  ],
+                },
+              },
+            },
+            example: {
+              category: 'dados-filas-consistencia',
+              briefing: 'Manter tom técnico, direto e sem tutorial básico.',
+              selectedSuggestion: {
+                suggestionId: 'queue-tradeoffs-1',
+                category: 'dados-filas-consistencia',
+                proposedTitle: 'Fila não é solução mágica — é troca',
+                angle:
+                  'Quando uma fila reduz latência de verdade e quando ela só empurra complexidade para depois',
+                summary:
+                  'Mostra o custo operacional de retries, DLQ e consistência eventual versus um fluxo síncrono mais simples.',
+                targetReader: 'Engenheiros backend que já usam Redis ou BullMQ em produção',
+                suggestedTagNames: ['BullMQ', 'Redis', 'Arquitetura'],
+                rationale: 'Tema técnico, específico e alinhado ao tom editorial do portfólio.',
+              },
+              rejectedAngles: [
+                'Abordagem focada só em performance sem falar de complexidade operacional',
+              ],
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Structured post draft generated successfully',
+          content: {
+            'application/json': {
+              example: {
+                success: true,
+                data: {
+                  title: 'Fila não é solução mágica — é troca',
+                  slug: 'fila-nao-e-solucao-magica-e-troca',
+                  excerpt:
+                    'Você coloca algo numa fila porque não quer pagar o custo agora. O custo não some; ele migra para operação, latência eventual e consistência.',
+                  content:
+                    "## O custo não desaparece\n\nQuando você empurra trabalho para uma fila, troca simplicidade síncrona por complexidade operacional.\n\n## Quando faz sentido\n\nUse fila quando o tempo de resposta ao usuário realmente importa e o processamento pode ser refeito com segurança.\n\n```typescript\nawait queue.add('send-email', payload);\n```",
+                  suggestedTagNames: ['BullMQ', 'Redis', 'Arquitetura', 'Consistência'],
+                  imagePrompt:
+                    'Minimalist dark background illustration of asynchronous job queues and trade-offs, flat design, tech aesthetic, no text, square format',
+                  notes:
+                    'Validar se o exemplo de código deve mencionar DLQ explicitamente para o público-alvo.',
+                },
+              },
+            },
+          },
+        },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '429': { $ref: '#/components/responses/RateLimited' },
+        '503': {
+          description:
+            'AI provider unavailable, incomplete response, refusal, timeout, or feature disabled',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                error: {
+                  code: 'SERVICE_UNAVAILABLE',
+                  message: 'AI generated an incomplete response. Please try again.',
+                },
+              },
+            },
+          },
+        },
       },
     },
   },

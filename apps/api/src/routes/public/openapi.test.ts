@@ -85,6 +85,8 @@ describe('openapi routes', () => {
       '/auth/logout',
       '/admin/posts',
       '/admin/posts/{id}',
+      '/admin/posts/generate/topics',
+      '/admin/posts/generate/draft',
       '/admin/projects',
       '/admin/projects/{id}',
       '/admin/tags',
@@ -231,5 +233,84 @@ describe('openapi routes', () => {
       redis: 'ok',
       schema: 'ok',
     });
+  });
+
+  it('GET /doc/spec documents AI post generation contracts with concrete examples', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<
+        string,
+        {
+          post?: {
+            description?: string;
+            requestBody?: {
+              content?: {
+                'application/json'?: {
+                  schema?: {
+                    properties?: Record<
+                      string,
+                      {
+                        enum?: string[];
+                        default?: number | unknown[];
+                        minimum?: number;
+                        maximum?: number;
+                        maxItems?: number;
+                        nullable?: boolean;
+                        required?: string[];
+                        properties?: Record<string, { maxItems?: number }>;
+                      }
+                    >;
+                    required?: string[];
+                  };
+                  example?: Record<string, unknown>;
+                };
+              };
+            };
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    example?: {
+                      success?: boolean;
+                      data?: Record<string, unknown>;
+                    };
+                  };
+                };
+              }
+            >;
+          };
+        }
+      >;
+    };
+
+    const topicsPost = body.paths['/admin/posts/generate/topics']?.post;
+    const draftPost = body.paths['/admin/posts/generate/draft']?.post;
+    const topicsSchema = topicsPost?.requestBody?.content?.['application/json']?.schema;
+    const draftSchema = draftPost?.requestBody?.content?.['application/json']?.schema;
+    const topicsSuccess = topicsPost?.responses?.['200']?.content?.['application/json']?.example;
+    const draftSuccess = draftPost?.responses?.['200']?.content?.['application/json']?.example;
+
+    expect(topicsPost?.description).toContain('ephemeral');
+    expect(topicsSchema?.properties?.category?.enum).toContain('backend-arquitetura');
+    expect(topicsSchema?.properties?.limit?.default).toBe(4);
+    expect(topicsSchema?.properties?.limit?.minimum).toBe(3);
+    expect(topicsSchema?.properties?.limit?.maximum).toBe(5);
+    expect(topicsSchema?.properties?.briefing?.nullable).toBe(true);
+    expect(topicsSchema?.properties?.excludedIdeas?.maxItems).toBe(10);
+    expect(Array.isArray(topicsSuccess?.data?.suggestions)).toBe(true);
+    expect((topicsSuccess?.data?.suggestions as unknown[]).length).toBeGreaterThanOrEqual(3);
+
+    expect(draftPost?.description).toContain('ephemeral');
+    expect(draftSchema?.required).toContain('selectedSuggestion');
+    expect(
+      draftSchema?.properties?.selectedSuggestion?.properties?.suggestedTagNames?.maxItems
+    ).toBe(6);
+    expect(Array.isArray(draftSuccess?.data?.suggestedTagNames)).toBe(true);
+    expect(typeof draftSuccess?.data?.imagePrompt).toBe('string');
+    expect(typeof draftSuccess?.data?.content).toBe('string');
   });
 });

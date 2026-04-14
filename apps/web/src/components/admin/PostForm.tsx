@@ -25,6 +25,7 @@ import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
 import { CreateTagDialogForm } from './CreateTagDialogForm';
 import { MarkdownEditor } from './MarkdownEditor';
+import { PostGenerationAssistant } from './PostGenerationAssistant';
 import { TagCheckboxGroup } from './TagCheckboxGroup';
 
 // Use the Zod INPUT type (pre-transform) for the form's internal state.
@@ -137,6 +138,11 @@ export function PostForm({ mode, post }: PostFormProps) {
   });
 
   const titleField = register('title');
+  const [assistantTitle, assistantSlug, assistantExcerpt, assistantContent, assistantTagIds] =
+    useWatch({
+      control,
+      name: ['title', 'slug', 'excerpt', 'content', 'tagIds'],
+    });
 
   function syncAutoSlug(nextTitle: string) {
     if (!autoSlug) return;
@@ -183,6 +189,22 @@ export function PostForm({ mode, post }: PostFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* AI generation assistant — create mode only */}
+      {mode === 'create' && (
+        <PostGenerationAssistant
+          setValue={setValue}
+          allTags={allTags}
+          currentValues={{
+            title: assistantTitle ?? '',
+            slug: assistantSlug ?? '',
+            excerpt: assistantExcerpt ?? '',
+            content: assistantContent ?? '',
+            tagIds: assistantTagIds ?? [],
+          }}
+          onTagsApplied={(tagIds) => setValue('tagIds', tagIds)}
+        />
+      )}
+
       {/* Title */}
       <div className="space-y-2">
         <Label htmlFor="title" className="text-zinc-300 text-sm">
@@ -263,7 +285,7 @@ export function PostForm({ mode, post }: PostFormProps) {
           {...register('excerpt')}
           placeholder="Breve resumo do post..."
           rows={3}
-          className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none overflow-y-auto [field-sizing:fixed] focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
+          className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none overflow-y-auto field-sizing-fixed focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
         {errors.excerpt && <p className="text-xs text-red-400">{errors.excerpt.message}</p>}
       </div>

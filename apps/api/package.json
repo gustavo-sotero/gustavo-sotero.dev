@@ -17,12 +17,14 @@
     "db:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.52",
     "@hono/swagger-ui": "^0.5.3",
     "@logtape/file": "^2.0.5",
     "@logtape/hono": "^2.0.5",
     "@logtape/logtape": "^2.0.5",
     "@portfolio/shared": "workspace:*",
     "@shikijs/rehype": "^3.23.0",
+    "ai": "^6.0.158",
     "bullmq": "^5.71.1",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.9",

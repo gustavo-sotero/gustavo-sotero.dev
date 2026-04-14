@@ -16,5 +16,7 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],
     // Avoid intermittent worker-fork crashes observed on some environments.
     pool: 'threads',
+    // The full web suite is unstable with parallel workers on this workspace.
+    maxWorkers: 1,
   },
 });

@@ -17,6 +17,7 @@ import { adminContactsRouter } from './routes/admin/contacts';
 import { adminEducationRouter } from './routes/admin/education';
 import { adminExperienceRouter } from './routes/admin/experience';
 import { adminJobsRouter } from './routes/admin/jobs';
+import { adminPostGenerationRouter } from './routes/admin/post-generation';
 import { adminPostsRouter } from './routes/admin/posts';
 import { adminProjectsRouter } from './routes/admin/projects';
 import { adminTagsRouter } from './routes/admin/tags';
@@ -168,6 +169,7 @@ app.route('/auth', authRouter);
 // Admin routes — protected by authAdmin + CSRF (applied globally above for /admin/*)
 const adminRouter = new Hono<AppEnv>();
 adminRouter.route('/posts', adminPostsRouter);
+adminRouter.route('/posts/generate', adminPostGenerationRouter);
 adminRouter.route('/projects', adminProjectsRouter);
 adminRouter.route('/tags', adminTagsRouter);
 adminRouter.route('/uploads', adminUploadsRouter);

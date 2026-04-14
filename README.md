@@ -105,6 +105,7 @@ Todas as rotas admin têm o prefixo `/admin`. GETs de detalhe usam `:slug`; PATC
 | Domínio de rota           | Descrição                                        |
 | ------------------------- | ------------------------------------------------ |
 | `/admin/posts`            | CMS — posts do blog                              |
+| `/admin/posts/generate/*` | Assistente IA para sugerir temas e gerar drafts efêmeros |
 | `/admin/projects`         | CMS — projetos                                   |
 | `/admin/tags`             | Gerenciamento de tags                            |
 | `/admin/experience`       | Experiências profissionais                       |
@@ -238,6 +239,14 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 
 - `RATE_LIMIT_LOCAL_FALLBACK=true` — mantém o rate limiting disponível quando o Redis está indisponível usando um fallback in-memory por processo. **Seguro apenas em instância única.** Em produção com múltiplas réplicas, use `false` para que a falha do Redis retorne `503`.
 - **Estado OAuth:** quando o Redis está indisponível, tokens de state do OAuth caem para uma store in-memory local. Seguro apenas em instância única; em múltiplas réplicas um callback roteado para outra réplica falhará com erro de state inválido.
+
+### Assistente de geração de posts com IA
+
+- `AI_POSTS_ENABLED=true` habilita as rotas `POST /admin/posts/generate/topics` e `POST /admin/posts/generate/draft`.
+- `OPENAI_API_KEY` é obrigatório quando a flag está ligada.
+- `AI_POSTS_MODEL_TOPICS`, `AI_POSTS_MODEL_DRAFT` e `AI_POSTS_TIMEOUT_MS` ajustam modelo e timeout do provider.
+
+Quando habilitado, o assistente aparece apenas em `/admin/posts/new`. Temas e drafts gerados são efêmeros: nada é salvo automaticamente, o admin precisa aplicar manualmente os campos ao formulário e o prompt de imagem é apenas copiável, não persistido.
 
 ---
 

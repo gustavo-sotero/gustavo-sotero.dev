@@ -97,6 +97,10 @@ vi.mock('./CoverMediaField', () => ({
   CoverMediaField: () => <div data-testid="cover-media-field" />,
 }));
 
+vi.mock('./PostGenerationAssistant', () => ({
+  PostGenerationAssistant: () => <div data-testid="post-generation-assistant" />,
+}));
+
 describe('PostForm', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
@@ -106,6 +110,35 @@ describe('PostForm', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('renders the AI assistant in create mode', () => {
+    render(<PostForm mode="create" />);
+
+    expect(screen.getByTestId('post-generation-assistant')).toBeInTheDocument();
+  });
+
+  it('does not render the AI assistant in edit mode', () => {
+    const existingPost = {
+      id: 99,
+      slug: 'post-existente',
+      title: 'Post existente',
+      content: 'Conteúdo existente',
+      excerpt: null,
+      coverUrl: null,
+      status: 'draft' as const,
+      scheduledAt: null,
+      renderedContent: null,
+      deletedAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      publishedAt: null,
+      tags: [],
+    };
+
+    render(<PostForm mode="edit" post={existingPost} />);
+
+    expect(screen.queryByTestId('post-generation-assistant')).not.toBeInTheDocument();
   });
 
   it('does not navigate when create mutation fails', async () => {

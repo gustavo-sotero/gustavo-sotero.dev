@@ -1,3 +1,9 @@
+import {
+  AI_POST_DEFAULT_SUGGESTIONS,
+  AI_POST_MAX_BRIEFING_CHARS,
+  AI_POST_MAX_SUGGESTIONS,
+  AI_POST_MIN_SUGGESTIONS,
+} from '@portfolio/shared/constants/ai-posts';
 import { z } from 'zod';
 
 /**
@@ -68,6 +74,22 @@ export const runtimeOnlyFields = {
 
   // Admin profile
   ADMIN_DISPLAY_NAME: z.string().min(1).max(100).default('Admin'),
+
+  // AI post generation
+  AI_POSTS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  OPENAI_API_KEY: z.string().optional(),
+  AI_POSTS_MODEL_TOPICS: z.string().default('gpt-4o-mini'),
+  AI_POSTS_MODEL_DRAFT: z.string().default('gpt-4o-mini'),
+  AI_POSTS_TIMEOUT_MS: z.coerce.number().default(30_000),
+  AI_POSTS_MAX_SUGGESTIONS: z.coerce
+    .number()
+    .min(AI_POST_MIN_SUGGESTIONS)
+    .max(AI_POST_MAX_SUGGESTIONS)
+    .default(AI_POST_DEFAULT_SUGGESTIONS),
+  AI_POSTS_MAX_BRIEFING_CHARS: z.coerce.number().min(1).default(AI_POST_MAX_BRIEFING_CHARS),
 };
 
 export const apiRuntimeFields = {

@@ -191,7 +191,7 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
           {...register('description')}
           placeholder="Breve descrição do projeto..."
           rows={2}
-          className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none overflow-y-auto [field-sizing:fixed] focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
+          className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 resize-none overflow-y-auto field-sizing-fixed focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
       </div>
 
