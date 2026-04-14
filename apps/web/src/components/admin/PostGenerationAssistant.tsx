@@ -9,6 +9,7 @@ import {
 } from '@portfolio/shared';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowLeft,
   ChevronDown,
   ChevronRight,
@@ -306,6 +307,27 @@ export function PostGenerationAssistant({
                 </div>
               </div>
             )}
+
+          {!isLoadingConfig && configState?.status === 'catalog-unavailable' && (
+            <div className="pt-4 rounded-md border border-orange-700/40 bg-orange-500/5 px-3 py-3">
+              <div className="flex items-start gap-2 text-sm text-orange-200">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p>
+                    O catálogo do OpenRouter está temporariamente indisponível. A geração continua
+                    usando o último par de modelos validado salvo no admin.
+                  </p>
+                  <Link
+                    href="/admin/settings/ai-post-generation"
+                    className="inline-flex items-center gap-1 text-xs text-orange-300 hover:text-orange-200 underline underline-offset-2"
+                  >
+                    Revisar configuração
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Main assistant body (only when config is ready or catalog-unavailable) ── */}
           {!isLoadingConfig &&

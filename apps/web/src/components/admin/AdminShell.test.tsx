@@ -1,9 +1,9 @@
 /**
  * Navigation-level coverage for AdminShell.
  *
- * Asserts that /admin/uploads is declared in the admin sidebar navigation.
+ * Asserts that critical admin routes stay declared in the sidebar navigation.
  * This provides a regression guard: if the NAV_ITEMS list is accidentally
- * modified to remove the uploads route, this test fails before it reaches CI.
+ * modified to remove a route, this test fails before it reaches CI.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -77,6 +77,14 @@ describe('AdminShell navigation', () => {
     expect(link).toHaveAttribute('href', '/admin/uploads');
   });
 
+  it('renders a link to the AI settings page', () => {
+    render(<AdminShell>content</AdminShell>);
+
+    const link = screen.getByRole('link', { name: /assistente ia/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/admin/settings/ai-post-generation');
+  });
+
   it('renders links to all expected top-level admin routes', () => {
     render(<AdminShell>content</AdminShell>);
 
@@ -90,6 +98,7 @@ describe('AdminShell navigation', () => {
       '/admin/analytics',
       '/admin/tags',
       '/admin/comments',
+      '/admin/settings/ai-post-generation',
     ];
 
     for (const href of requiredHrefs) {

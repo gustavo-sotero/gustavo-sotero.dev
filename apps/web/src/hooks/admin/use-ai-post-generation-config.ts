@@ -35,13 +35,7 @@ export interface AiPostGenerationModelsParams {
   forceRefresh?: boolean;
 }
 
-/**
- * Query hook for the paginated, searchable list of eligible OpenRouter models.
- *
- * Calls GET /admin/posts/generate/models — admin-only.
- * Supports search (`q`), pagination, and force-refresh of the catalog cache.
- */
-export function useAiPostGenerationModels(params?: AiPostGenerationModelsParams) {
+export function buildAiPostGenerationModelsPath(params?: AiPostGenerationModelsParams): string {
   const { page = 1, perPage = 20, q, forceRefresh } = params ?? {};
 
   const searchParams = new URLSearchParams();
@@ -50,12 +44,23 @@ export function useAiPostGenerationModels(params?: AiPostGenerationModelsParams)
   if (q) searchParams.set('q', q);
   if (forceRefresh) searchParams.set('forceRefresh', 'true');
 
+  return `/admin/posts/generate/models?${searchParams.toString()}`;
+}
+
+export function getAiPostGenerationModels(params?: AiPostGenerationModelsParams) {
+  return apiGetPaginated<AiPostGenerationModelSummary>(buildAiPostGenerationModelsPath(params));
+}
+
+/**
+ * Query hook for the paginated, searchable list of eligible OpenRouter models.
+ *
+ * Calls GET /admin/posts/generate/models — admin-only.
+ * Supports search (`q`), pagination, and force-refresh of the catalog cache.
+ */
+export function useAiPostGenerationModels(params?: AiPostGenerationModelsParams) {
   return useQuery<PaginatedResponse<AiPostGenerationModelSummary>>({
     queryKey: adminKeys.aiPostGenerationModels(params),
-    queryFn: () =>
-      apiGetPaginated<AiPostGenerationModelSummary>(
-        `/admin/posts/generate/models?${searchParams.toString()}`
-      ),
+    queryFn: () => getAiPostGenerationModels(params),
   });
 }
 

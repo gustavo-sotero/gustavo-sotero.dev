@@ -8,11 +8,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const useAiPostGenerationConfigMock = vi.fn();
 const useAiPostGenerationModelsMock = vi.fn();
 const useUpdateAiPostGenerationConfigMock = vi.fn();
+const getAiPostGenerationModelsMock = vi.fn();
+const fetchQueryMock = vi.fn();
 
 vi.mock('@/hooks/admin/use-ai-post-generation-config', () => ({
   useAiPostGenerationConfig: () => useAiPostGenerationConfigMock(),
   useAiPostGenerationModels: (params: unknown) => useAiPostGenerationModelsMock(params),
   useUpdateAiPostGenerationConfig: () => useUpdateAiPostGenerationConfigMock(),
+  getAiPostGenerationModels: (params: unknown) => getAiPostGenerationModelsMock(params),
+}));
+
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    fetchQuery: fetchQueryMock,
+  }),
 }));
 
 // Stub out low-level UI libraries
@@ -21,12 +30,14 @@ vi.mock('@/components/ui/button', () => ({
     children,
     onClick,
     disabled,
+    ...rest
   }: {
     children: React.ReactNode;
     onClick?: () => void;
     disabled?: boolean;
+    [key: string]: unknown;
   }) => (
-    <button type="button" onClick={onClick} disabled={disabled}>
+    <button type="button" onClick={onClick} disabled={disabled} {...rest}>
       {children}
     </button>
   ),
@@ -99,26 +110,74 @@ const CATALOG_UNAVAILABLE_STATE = {
 };
 
 const ELIGIBLE_MODELS = [
-  { id: 'openai/gpt-4o', name: 'GPT-4o', contextLength: 128000, supportsStructuredOutputs: true },
+  {
+    id: 'openai/gpt-4o',
+    providerFamily: 'openai',
+    name: 'GPT-4o',
+    description: 'Modelo multimodal da OpenAI com boa aderência a JSON schema.',
+    contextLength: 128000,
+    maxCompletionTokens: 16384,
+    inputPrice: '0.0000025',
+    outputPrice: '0.00001',
+    supportsStructuredOutputs: true,
+    expirationDate: null,
+    isDeprecated: false,
+  },
   {
     id: 'anthropic/claude-3-5-sonnet',
+    providerFamily: 'anthropic',
     name: 'Claude 3.5 Sonnet',
+    description: 'Modelo equilibrado para raciocínio e geração longa.',
     contextLength: 200000,
+    maxCompletionTokens: 8192,
+    inputPrice: '0.000003',
+    outputPrice: '0.000015',
     supportsStructuredOutputs: true,
+    expirationDate: null,
+    isDeprecated: false,
   },
 ];
 
-const EMPTY_MODELS_RESPONSE = { data: [], meta: { page: 1, perPage: 20, total: 0, totalPages: 0 } };
+const SECOND_PAGE_MODELS = [
+  {
+    id: 'google/gemini-2.5-pro',
+    providerFamily: 'google',
+    name: 'Gemini 2.5 Pro',
+    description: 'Janela ampla para drafts mais densos.',
+    contextLength: 1000000,
+    maxCompletionTokens: 65536,
+    inputPrice: '0.00000125',
+    outputPrice: '0.000005',
+    supportsStructuredOutputs: true,
+    expirationDate: null,
+    isDeprecated: false,
+  },
+];
+
+const EMPTY_MODELS_RESPONSE = { data: [], meta: { page: 1, perPage: 8, total: 0, totalPages: 1 } };
 const MODELS_RESPONSE = {
   data: ELIGIBLE_MODELS,
-  meta: { page: 1, perPage: 50, total: 2, totalPages: 1 },
+  meta: { page: 1, perPage: 8, total: 9, totalPages: 2 },
+};
+const MODELS_RESPONSE_PAGE_2 = {
+  data: SECOND_PAGE_MODELS,
+  meta: { page: 2, perPage: 8, total: 9, totalPages: 2 },
 };
 
 const muteMock = vi.fn();
 
 function setupDefaultMocks() {
-  useAiPostGenerationModelsMock.mockReturnValue({ data: MODELS_RESPONSE, isLoading: false });
+  useAiPostGenerationModelsMock.mockImplementation((params?: { page?: number }) => ({
+    data: params?.page === 2 ? MODELS_RESPONSE_PAGE_2 : MODELS_RESPONSE,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+  }));
   useUpdateAiPostGenerationConfigMock.mockReturnValue({ mutate: muteMock, isPending: false });
+  getAiPostGenerationModelsMock.mockResolvedValue(MODELS_RESPONSE);
+  fetchQueryMock.mockImplementation(({ queryFn }: { queryFn: () => Promise<unknown> }) =>
+    queryFn()
+  );
 }
 
 function renderPanel() {
@@ -215,6 +274,94 @@ describe('AiPostGenerationSettingsPanel', () => {
     expect(screen.getAllByText('Claude 3.5 Sonnet').length).toBeGreaterThan(0);
   });
 
+  it('renders provider, description, pricing, and current admin metadata for saved models', () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: READY_CONFIG_STATE,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPanel();
+
+    expect(screen.getAllByText(/openai/i).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/Modelo multimodal da OpenAI com boa aderência a JSON schema/i).length
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Entrada US\$/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Atualizado por admin/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tópicos ativos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Rascunho ativo/i)).toBeInTheDocument();
+  });
+
+  it('supports pagination for the topic selector', async () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: READY_CONFIG_STATE,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modelo de tópicos: próxima página' }));
+
+    await waitFor(() => {
+      expect(
+        useAiPostGenerationModelsMock.mock.calls.some(
+          ([params]) => params?.page === 2 && params?.perPage === 8
+        )
+      ).toBe(true);
+    });
+    expect(screen.getByText('Gemini 2.5 Pro')).toBeInTheDocument();
+  });
+
+  it('forces a catalog refresh when the refresh button is clicked', async () => {
+    const refetchMock = vi.fn().mockResolvedValue(undefined);
+
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: READY_CONFIG_STATE,
+      isLoading: false,
+      isError: false,
+      refetch: refetchMock,
+    });
+
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: /Atualizar catálogo/i }));
+
+    await waitFor(() => {
+      expect(fetchQueryMock).toHaveBeenCalledTimes(2);
+    });
+    expect(getAiPostGenerationModelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, perPage: 8, forceRefresh: true })
+    );
+    expect(refetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('revalidates config status even when a catalog refresh request fails', async () => {
+    const refetchMock = vi.fn().mockResolvedValue(undefined);
+
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: CATALOG_UNAVAILABLE_STATE,
+      isLoading: false,
+      isError: false,
+      refetch: refetchMock,
+    });
+    fetchQueryMock
+      .mockRejectedValueOnce(new Error('catalog down'))
+      .mockResolvedValueOnce(MODELS_RESPONSE);
+
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: /Atualizar catálogo/i }));
+
+    await waitFor(() => {
+      expect(fetchQueryMock).toHaveBeenCalledTimes(2);
+      expect(refetchMock).toHaveBeenCalledOnce();
+    });
+  });
+
   it('save button is disabled when both model selections are empty', () => {
     useAiPostGenerationConfigMock.mockReturnValue({
       data: EMPTY_CONFIG_STATE,
@@ -290,6 +437,28 @@ describe('AiPostGenerationSettingsPanel', () => {
 
     expect(screen.getByText('Catálogo indisponível')).toBeInTheDocument();
     expect(screen.getByText(/temporariamente indispon/i)).toBeInTheDocument();
+  });
+
+  it('shows a catalog load error and disables saving when model queries fail', () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: READY_CONFIG_STATE,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    useAiPostGenerationModelsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+      isError: true,
+    });
+
+    renderPanel();
+
+    expect(
+      screen.getByText(/Não foi possível carregar a listagem de modelos/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Salvar configuração/i })).toBeDisabled();
   });
 
   // ── Loading state ──────────────────────────────────────────────────────────

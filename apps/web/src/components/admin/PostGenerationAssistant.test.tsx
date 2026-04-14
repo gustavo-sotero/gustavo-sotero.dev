@@ -592,7 +592,7 @@ describe('PostGenerationAssistant', () => {
         status: 'catalog-unavailable',
         config: { topicsModelId: 'openai/gpt-4o', draftModelId: 'openai/gpt-4o' },
         featureEnabled: true,
-        issues: [],
+        issues: ['Catálogo temporariamente indisponível.'],
         updatedAt: null,
         updatedBy: null,
         catalogFetchedAt: null,
@@ -603,6 +603,8 @@ describe('PostGenerationAssistant', () => {
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
 
+    expect(screen.getByText(/último par de modelos validado/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Revisar configuração/i })).toBeInTheDocument();
     // Category select must be visible — generation is allowed in catalog-unavailable
     expect(screen.getByTestId('category-select')).toBeInTheDocument();
   });

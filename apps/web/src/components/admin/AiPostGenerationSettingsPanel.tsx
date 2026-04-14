@@ -1,5 +1,7 @@
 'use client';
 
+import type { AiPostGenerationModelSummary } from '@portfolio/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
   AlertTriangle,
@@ -15,11 +17,57 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { adminKeys } from '@/hooks/admin/query-keys';
 import {
+  getAiPostGenerationModels,
   useAiPostGenerationConfig,
   useAiPostGenerationModels,
   useUpdateAiPostGenerationConfig,
 } from '@/hooks/admin/use-ai-post-generation-config';
+
+const MODELS_PER_PAGE = 8;
+
+function formatContextLength(contextLength: number | null): string | null {
+  if (!contextLength) {
+    return null;
+  }
+
+  if (contextLength >= 1_000_000) {
+    return `${(contextLength / 1_000_000).toFixed(1).replace('.0', '')}M ctx`;
+  }
+
+  return `${Math.round(contextLength / 1_000)}k ctx`;
+}
+
+function formatPricePerMillion(pricePerToken: string | null, label: string): string | null {
+  if (!pricePerToken) {
+    return null;
+  }
+
+  const parsed = Number(pricePerToken);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  const perMillion = parsed * 1_000_000;
+  const formatted = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: perMillion < 1 ? 3 : 2,
+    maximumFractionDigits: perMillion < 1 ? 3 : 2,
+  }).format(perMillion);
+
+  return `${label} ${formatted}/M`;
+}
+
+function SavedModelCard({ label, modelId }: { label: string; modelId: string }) {
+  return (
+    <div className="rounded-md border border-zinc-800/80 bg-zinc-950/40 px-3 py-3">
+      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">{label}</p>
+      <p className="mt-1 break-all font-mono text-xs text-zinc-300">{modelId}</p>
+    </div>
+  );
+}
 
 // ── Status indicator ──────────────────────────────────────────────────────────
 
@@ -74,8 +122,14 @@ interface ModelSelectorProps {
   onChange: (v: string) => void;
   searchQuery: string;
   onSearchChange: (v: string) => void;
-  models: { id: string; name: string; contextLength: number | null }[];
+  page: number;
+  onPageChange: (page: number) => void;
+  models: AiPostGenerationModelSummary[];
+  total: number;
+  totalPages: number;
   isLoadingModels: boolean;
+  isFetchingModels: boolean;
+  isErrorModels: boolean;
 }
 
 function ModelSelector({
@@ -84,12 +138,23 @@ function ModelSelector({
   onChange,
   searchQuery,
   onSearchChange,
+  page,
+  onPageChange,
   models,
+  total,
+  totalPages,
   isLoadingModels,
+  isFetchingModels,
+  isErrorModels,
 }: ModelSelectorProps) {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-zinc-300">{label}</Label>
+      <div className="flex items-center justify-between gap-3">
+        <Label className="text-sm font-medium text-zinc-300">{label}</Label>
+        <span className="text-[11px] text-zinc-500">
+          {total} modelo{total === 1 ? '' : 's'} elegíveis
+        </span>
+      </div>
 
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
@@ -102,7 +167,11 @@ function ModelSelector({
         />
       </div>
 
-      {isLoadingModels ? (
+      {isErrorModels ? (
+        <div className="rounded-md border border-red-800/40 bg-red-500/5 px-3 py-3 text-xs text-red-300">
+          Não foi possível carregar esta fatia do catálogo agora.
+        </div>
+      ) : isLoadingModels ? (
         <div className="space-y-1.5">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-9 w-full bg-zinc-800/60 rounded" />
@@ -122,22 +191,81 @@ function ModelSelector({
                 key={m.id}
                 type="button"
                 onClick={() => onChange(m.id)}
-                className={`w-full flex items-start justify-between gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-zinc-800/60 ${
+                className={`w-full px-3 py-2.5 text-left text-sm transition-colors hover:bg-zinc-800/60 ${
                   value === m.id ? 'bg-emerald-500/10 text-emerald-300' : 'text-zinc-300'
                 }`}
               >
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{m.name}</p>
-                  <p className="text-xs font-mono text-zinc-500 truncate">{m.id}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-zinc-100">{m.name}</p>
+                      <span className="rounded-full border border-zinc-700/70 bg-zinc-800/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-400">
+                        {m.providerFamily}
+                      </span>
+                    </div>
+                    <p className="mt-1 break-all font-mono text-[11px] text-zinc-500">{m.id}</p>
+                    <p className="mt-2 text-xs leading-5 text-zinc-400">
+                      {m.description || 'Sem descrição detalhada no catálogo.'}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-zinc-500">
+                      {formatContextLength(m.contextLength) && (
+                        <span className="rounded-full border border-zinc-800 bg-zinc-950/70 px-2 py-1">
+                          {formatContextLength(m.contextLength)}
+                        </span>
+                      )}
+                      {m.maxCompletionTokens && (
+                        <span className="rounded-full border border-zinc-800 bg-zinc-950/70 px-2 py-1">
+                          saída máx. {Math.round(m.maxCompletionTokens / 1000)}k
+                        </span>
+                      )}
+                      {formatPricePerMillion(m.inputPrice, 'Entrada') && (
+                        <span className="rounded-full border border-zinc-800 bg-zinc-950/70 px-2 py-1">
+                          {formatPricePerMillion(m.inputPrice, 'Entrada')}
+                        </span>
+                      )}
+                      {formatPricePerMillion(m.outputPrice, 'Saída') && (
+                        <span className="rounded-full border border-zinc-800 bg-zinc-950/70 px-2 py-1">
+                          {formatPricePerMillion(m.outputPrice, 'Saída')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                {m.contextLength && (
-                  <span className="shrink-0 text-xs text-zinc-600 mt-0.5 tabular-nums">
-                    {(m.contextLength / 1000).toFixed(0)}k ctx
-                  </span>
-                )}
               </button>
             ))
           )}
+        </div>
+      )}
+
+      {totalPages > 1 && !isErrorModels && (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-zinc-800/70 bg-zinc-950/30 px-3 py-2">
+          <p className="text-xs text-zinc-500">
+            Página {page} de {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1 || isLoadingModels || isFetchingModels}
+              className="h-7 border-zinc-700 bg-zinc-900 px-2.5 text-xs text-zinc-300 hover:bg-zinc-800"
+              aria-label={`${label}: página anterior`}
+            >
+              Anterior
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages || isLoadingModels || isFetchingModels}
+              className="h-7 border-zinc-700 bg-zinc-900 px-2.5 text-xs text-zinc-300 hover:bg-zinc-800"
+              aria-label={`${label}: próxima página`}
+            >
+              Próxima
+            </Button>
+          </div>
         </div>
       )}
 
@@ -153,6 +281,7 @@ function ModelSelector({
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function AiPostGenerationSettingsPanel() {
+  const queryClient = useQueryClient();
   const {
     data: configState,
     isLoading: isLoadingConfig,
@@ -164,17 +293,25 @@ export function AiPostGenerationSettingsPanel() {
   const [draftModelId, setDraftModelId] = useState('');
   const [topicsSearch, setTopicsSearch] = useState('');
   const [draftSearch, setDraftSearch] = useState('');
+  const [topicsPage, setTopicsPage] = useState(1);
+  const [draftPage, setDraftPage] = useState(1);
+  const [isRefreshingCatalog, setIsRefreshingCatalog] = useState(false);
   const deferredTopicsSearch = useDeferredValue(topicsSearch);
   const deferredDraftSearch = useDeferredValue(draftSearch);
 
-  const topicsModelsQuery = useAiPostGenerationModels({
+  const topicsModelsParams = {
+    page: topicsPage,
+    perPage: MODELS_PER_PAGE,
     q: deferredTopicsSearch || undefined,
-    perPage: 50,
-  });
-  const draftModelsQuery = useAiPostGenerationModels({
+  };
+  const draftModelsParams = {
+    page: draftPage,
+    perPage: MODELS_PER_PAGE,
     q: deferredDraftSearch || undefined,
-    perPage: 50,
-  });
+  };
+
+  const topicsModelsQuery = useAiPostGenerationModels(topicsModelsParams);
+  const draftModelsQuery = useAiPostGenerationModels(draftModelsParams);
 
   const { mutate: save, isPending: isSaving } = useUpdateAiPostGenerationConfig();
 
@@ -183,6 +320,30 @@ export function AiPostGenerationSettingsPanel() {
   const savedDraftModel = configState?.config?.draftModelId ?? '';
   const effectiveTopics = topicsModelId || savedTopicsModel;
   const effectiveDraft = draftModelId || savedDraftModel;
+  const hasCatalogError = topicsModelsQuery.isError || draftModelsQuery.isError;
+
+  async function handleRefreshCatalog() {
+    setIsRefreshingCatalog(true);
+
+    try {
+      await Promise.allSettled([
+        queryClient.fetchQuery({
+          queryKey: adminKeys.aiPostGenerationModels(topicsModelsParams),
+          queryFn: () => getAiPostGenerationModels({ ...topicsModelsParams, forceRefresh: true }),
+        }),
+        queryClient.fetchQuery({
+          queryKey: adminKeys.aiPostGenerationModels(draftModelsParams),
+          queryFn: () => getAiPostGenerationModels({ ...draftModelsParams, forceRefresh: true }),
+        }),
+      ]);
+
+      // The config badge depends on catalog validation, so refresh it after
+      // the catalog queries settle to avoid stale `catalog-unavailable` UI.
+      await refetch();
+    } finally {
+      setIsRefreshingCatalog(false);
+    }
+  }
 
   function handleSave() {
     if (!effectiveTopics || !effectiveDraft) return;
@@ -241,10 +402,20 @@ export function AiPostGenerationSettingsPanel() {
                   })}
                 </p>
               )}
+              {configState?.updatedBy && (
+                <p className="text-xs text-zinc-600 mt-1">Atualizado por {configState.updatedBy}</p>
+              )}
             </div>
           </div>
           <StatusBadge status={configState?.status ?? 'not-configured'} />
         </div>
+
+        {configState?.config && (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <SavedModelCard label="Tópicos ativos" modelId={configState.config.topicsModelId} />
+            <SavedModelCard label="Rascunho ativo" modelId={configState.config.draftModelId} />
+          </div>
+        )}
 
         {configState?.status !== 'disabled' &&
           configState?.issues &&
@@ -275,12 +446,41 @@ export function AiPostGenerationSettingsPanel() {
 
       {!isDisabled && (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-5 space-y-5">
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-200 mb-0.5">Modelos ativos</h2>
-            <p className="text-xs text-zinc-500">
-              Selecione modelos do catálogo OpenRouter que suportam saída estruturada.
-            </p>
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-200 mb-0.5">Modelos ativos</h2>
+              <p className="text-xs text-zinc-500">
+                Selecione modelos do catálogo OpenRouter que suportam saída estruturada.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshCatalog}
+              disabled={isRefreshingCatalog}
+              className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+            >
+              <RefreshCw
+                className={`mr-1.5 h-3.5 w-3.5 ${isRefreshingCatalog ? 'animate-spin' : ''}`}
+              />
+              Atualizar catálogo
+            </Button>
           </div>
+
+          {configState?.status === 'catalog-unavailable' && (
+            <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-4 py-3 text-sm text-orange-200">
+              O catálogo do OpenRouter está indisponível no momento. Você ainda pode revisar a
+              configuração salva, mas uma nova gravação só deve ser feita após atualizar o catálogo.
+            </div>
+          )}
+
+          {hasCatalogError && (
+            <div className="rounded-lg border border-red-800/50 bg-red-500/5 px-4 py-3 text-sm text-red-200">
+              Não foi possível carregar a listagem de modelos agora. Tente atualizar o catálogo
+              antes de salvar uma nova configuração.
+            </div>
+          )}
 
           <div className="grid gap-5 md:grid-cols-2">
             <ModelSelector
@@ -288,9 +488,18 @@ export function AiPostGenerationSettingsPanel() {
               value={effectiveTopics}
               onChange={setTopicsModelId}
               searchQuery={topicsSearch}
-              onSearchChange={setTopicsSearch}
+              onSearchChange={(value) => {
+                setTopicsSearch(value);
+                setTopicsPage(1);
+              }}
+              page={topicsPage}
+              onPageChange={setTopicsPage}
               models={topicsModelsQuery.data?.data ?? []}
+              total={topicsModelsQuery.data?.meta.total ?? 0}
+              totalPages={topicsModelsQuery.data?.meta.totalPages ?? 1}
               isLoadingModels={topicsModelsQuery.isLoading}
+              isFetchingModels={topicsModelsQuery.isFetching || isRefreshingCatalog}
+              isErrorModels={topicsModelsQuery.isError}
             />
 
             <ModelSelector
@@ -298,9 +507,18 @@ export function AiPostGenerationSettingsPanel() {
               value={effectiveDraft}
               onChange={setDraftModelId}
               searchQuery={draftSearch}
-              onSearchChange={setDraftSearch}
+              onSearchChange={(value) => {
+                setDraftSearch(value);
+                setDraftPage(1);
+              }}
+              page={draftPage}
+              onPageChange={setDraftPage}
               models={draftModelsQuery.data?.data ?? []}
+              total={draftModelsQuery.data?.meta.total ?? 0}
+              totalPages={draftModelsQuery.data?.meta.totalPages ?? 1}
               isLoadingModels={draftModelsQuery.isLoading}
+              isFetchingModels={draftModelsQuery.isFetching || isRefreshingCatalog}
+              isErrorModels={draftModelsQuery.isError}
             />
           </div>
 
@@ -310,7 +528,13 @@ export function AiPostGenerationSettingsPanel() {
             </p>
             <Button
               onClick={handleSave}
-              disabled={isSaving || !effectiveTopics || !effectiveDraft}
+              disabled={
+                isSaving ||
+                isRefreshingCatalog ||
+                hasCatalogError ||
+                !effectiveTopics ||
+                !effectiveDraft
+              }
               size="sm"
               className="bg-emerald-600 hover:bg-emerald-500 text-white"
             >
