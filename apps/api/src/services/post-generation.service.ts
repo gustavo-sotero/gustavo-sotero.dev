@@ -188,19 +188,25 @@ function normalizeDraftResponse(raw: GenerateDraftResponse): GenerateDraftRespon
 }
 
 function normalizeContent(raw: string): string {
-  // Strip wrapping triple-backtick markdown fences the model sometimes adds
-  return raw
-    .replace(/^```(?:markdown)?\n?/i, '')
-    .replace(/\n?```\s*$/i, '')
-    .trim()
-    .replace(/\r\n/g, '\n');
+  const normalized = raw.replace(/\r\n/g, '\n').trim();
+  const lines = normalized.split('\n');
+  const firstLine = lines[0]?.trim() ?? '';
+  const lastLine = lines.at(-1)?.trim() ?? '';
+
+  // Unwrap only explicit markdown wrappers so legitimate leading/trailing
+  // code fences (for example ```mermaid at the start of the draft) stay intact.
+  if (/^```(?:markdown|md)\s*$/i.test(firstLine) && lastLine === '```') {
+    return lines.slice(1, -1).join('\n').trim();
+  }
+
+  return normalized;
 }
 
-const DISALLOWED_INLINE_HTML_RE =
-  /<(?:\/?(?:a|article|aside|blockquote|br|code|details|div|em|figcaption|figure|footer|h[1-6]|header|hr|iframe|img|li|main|nav|ol|p|pre|section|span|strong|summary|svg|table|tbody|td|th|thead|tr|ul)\b|!--|!doctype\b)/i;
+const DISALLOWED_INLINE_HTML_RE = /<\/?[a-z][\w:-]*(?:\s[^<>]*)?>|<!--|<!doctype\b/i;
 
 function containsDisallowedInlineHtml(content: string): boolean {
   let inCodeFence = false;
+  const outsideCodeFenceLines: string[] = [];
 
   for (const line of content.split('\n')) {
     const trimmed = line.trim();
@@ -210,21 +216,26 @@ function containsDisallowedInlineHtml(content: string): boolean {
       continue;
     }
 
-    if (!inCodeFence && DISALLOWED_INLINE_HTML_RE.test(trimmed)) {
-      return true;
+    if (!inCodeFence) {
+      outsideCodeFenceLines.push(line);
     }
   }
 
-  return false;
+  return DISALLOWED_INLINE_HTML_RE.test(outsideCodeFenceLines.join('\n'));
 }
 
 function deduplicateTags(tags: string[]): string[] {
   const seen = new Set<string>();
   return tags.filter((t) => {
-    const key = t.toLowerCase().trim();
+    const trimmed = t.trim();
+    if (!trimmed) {
+      return false;
+    }
+
+    const key = generateSlug(trimmed);
     if (seen.has(key)) return false;
     seen.add(key);
-    return key.length > 0;
+    return true;
   });
 }
 

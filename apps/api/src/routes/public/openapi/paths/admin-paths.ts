@@ -275,7 +275,7 @@ export const adminPaths = {
                 success: false,
                 error: {
                   code: 'SERVICE_UNAVAILABLE',
-                  message: 'AI post generation is not enabled on this instance.',
+                  message: 'A geração de posts com IA não está habilitada nesta instância.',
                 },
               },
             },
@@ -436,7 +436,7 @@ export const adminPaths = {
                 success: false,
                 error: {
                   code: 'SERVICE_UNAVAILABLE',
-                  message: 'AI generated an incomplete response. Please try again.',
+                  message: 'A IA gerou uma resposta incompleta. Tente novamente.',
                 },
               },
             },

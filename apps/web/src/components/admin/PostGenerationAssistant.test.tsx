@@ -163,6 +163,17 @@ const SUGGESTION_FIXTURE = {
   rationale: 'Porque sim.',
 };
 
+const SECOND_SUGGESTION_FIXTURE = {
+  suggestionId: 's2',
+  category: 'backend-arquitetura' as const,
+  proposedTitle: 'Outbox não é justificativa para tudo',
+  angle: 'Quando consistência eventual vale o custo',
+  summary: 'Resumo do segundo tema.',
+  targetReader: 'Engenheiro backend sênior',
+  suggestedTagNames: ['TypeScript'],
+  rationale: 'Outro recorte editorial.',
+};
+
 const DRAFT_FIXTURE = {
   title: 'Post Gerado',
   slug: 'post-gerado',
@@ -346,6 +357,52 @@ describe('PostGenerationAssistant', () => {
       rejectedAngles: string[];
     };
     expect(secondCallArgs.rejectedAngles).toContain(SUGGESTION_FIXTURE.angle);
+  });
+
+  it('clears rejected angles when returning to topics before selecting a different suggestion', async () => {
+    mutateAsyncTopicsMock.mockResolvedValueOnce({
+      suggestions: [SUGGESTION_FIXTURE, SECOND_SUGGESTION_FIXTURE],
+    });
+    mutateAsyncDraftMock
+      .mockResolvedValueOnce(DRAFT_FIXTURE)
+      .mockResolvedValueOnce({ ...DRAFT_FIXTURE, title: 'Draft regenerado' })
+      .mockResolvedValueOnce({ ...DRAFT_FIXTURE, title: 'Draft do segundo tema' });
+
+    renderAssistant();
+    fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+    fireEvent.change(screen.getByTestId('category-select'), {
+      target: { value: 'backend-arquitetura' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Sugerir temas/i }));
+
+    await waitFor(() => screen.getByTestId('topic-0'));
+    fireEvent.click(screen.getByTestId('topic-0'));
+    await waitFor(() => screen.getByTestId('draft-review'));
+
+    fireEvent.click(screen.getByTestId('regenerate-draft'));
+    await waitFor(() => {
+      expect(mutateAsyncDraftMock).toHaveBeenCalledTimes(2);
+    });
+
+    fireEvent.click(screen.getByTestId('back-to-topics'));
+    await waitFor(() => {
+      expect(screen.getByTestId('topic-list')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('topic-1'));
+
+    await waitFor(() => {
+      expect(mutateAsyncDraftMock).toHaveBeenCalledTimes(3);
+    });
+
+    const thirdCallArgs = mutateAsyncDraftMock.mock.calls[2]?.[0] as {
+      rejectedAngles: string[];
+      selectedSuggestion: { suggestionId: string };
+    };
+    expect(thirdCallArgs.selectedSuggestion.suggestionId).toBe(
+      SECOND_SUGGESTION_FIXTURE.suggestionId
+    );
+    expect(thirdCallArgs.rejectedAngles).toEqual([]);
   });
 
   it('applies mermaid markdown to the form without altering the draft content', async () => {

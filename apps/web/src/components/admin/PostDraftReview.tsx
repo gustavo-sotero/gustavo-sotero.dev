@@ -1,6 +1,6 @@
 'use client';
 
-import type { GenerateDraftResponse, Tag } from '@portfolio/shared';
+import { type GenerateDraftResponse, generateSlug, type Tag } from '@portfolio/shared';
 import { ArrowLeft, Check, Clipboard, ClipboardCheck, RefreshCcw, Wand2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -44,25 +44,70 @@ function resolveTagNames(
   suggestedNames: string[],
   allTags: Tag[]
 ): { matchedIds: number[]; unmatchedNames: string[] } {
+  const tagLookup = buildTagLookup(allTags);
   const matchedIds: number[] = [];
   const unmatchedNames: string[] = [];
+  const matchedIdSet = new Set<number>();
+  const unmatchedNameSet = new Set<string>();
 
   for (const name of suggestedNames) {
-    const normalised = name.toLowerCase().trim().replace(/\s+/g, '-');
-    const found = allTags.find(
-      (t) =>
-        t.name.toLowerCase() === name.toLowerCase() ||
-        t.slug === normalised ||
-        t.name.toLowerCase().replace(/\s+/g, '-') === normalised
-    );
+    const trimmedName = name.trim();
+    const found = findMatchingTag(trimmedName, tagLookup);
     if (found) {
-      matchedIds.push(found.id);
+      if (!matchedIdSet.has(found.id)) {
+        matchedIdSet.add(found.id);
+        matchedIds.push(found.id);
+      }
     } else {
-      unmatchedNames.push(name);
+      const unmatchedKey = normalizeTagKey(trimmedName) || trimmedName.toLowerCase();
+      if (trimmedName && !unmatchedNameSet.has(unmatchedKey)) {
+        unmatchedNameSet.add(unmatchedKey);
+        unmatchedNames.push(trimmedName);
+      }
     }
   }
 
   return { matchedIds, unmatchedNames };
+}
+
+function buildTagLookup(allTags: Tag[]): Map<string, Tag> {
+  const lookup = new Map<string, Tag>();
+
+  for (const tag of allTags) {
+    const exactNameKey = tag.name.trim().toLowerCase();
+    const slugKey = normalizeTagKey(tag.slug);
+    const generatedNameKey = normalizeTagKey(tag.name);
+
+    if (exactNameKey) {
+      lookup.set(exactNameKey, tag);
+    }
+    if (slugKey) {
+      lookup.set(slugKey, tag);
+    }
+    if (generatedNameKey) {
+      lookup.set(generatedNameKey, tag);
+    }
+  }
+
+  return lookup;
+}
+
+function findMatchingTag(name: string, tagLookup: Map<string, Tag>): Tag | undefined {
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    return undefined;
+  }
+
+  return tagLookup.get(trimmedName.toLowerCase()) ?? tagLookup.get(normalizeTagKey(trimmedName));
+}
+
+function normalizeTagKey(value: string): string {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return '';
+  }
+
+  return generateSlug(trimmedValue);
 }
 
 function FieldApplyButton({
@@ -110,6 +155,7 @@ export function PostDraftReview({
   const [applied, setApplied] = useState<Partial<Record<ApplyableField | 'all', true>>>({});
   const [imageCopied, setImageCopied] = useState(false);
 
+  const tagLookup = buildTagLookup(allTags);
   const { matchedIds, unmatchedNames } = resolveTagNames(draft.suggestedTagNames, allTags);
   const overwriteState = {
     title: hasOverwrite(currentValues.title, draft.title),
@@ -286,11 +332,7 @@ export function PostDraftReview({
           </div>
           <div className="flex flex-wrap gap-1">
             {draft.suggestedTagNames.map((name) => {
-              const isMatched = allTags.some(
-                (t) =>
-                  t.name.toLowerCase() === name.toLowerCase() ||
-                  t.slug === name.toLowerCase().replace(/\s+/g, '-')
-              );
+              const isMatched = !!findMatchingTag(name, tagLookup);
               return (
                 <Badge
                   key={name}

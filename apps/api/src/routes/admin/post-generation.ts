@@ -79,7 +79,7 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
         c,
         503,
         'SERVICE_UNAVAILABLE',
-        'AI provider timed out. Try again in a few seconds.'
+        'O provedor de IA demorou demais para responder. Tente novamente em alguns segundos.'
       );
     }
     if (err.kind === 'refusal') {
@@ -87,7 +87,7 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
         c,
         503,
         'SERVICE_UNAVAILABLE',
-        'AI provider refused the request. Adjust your briefing and try again.'
+        'A IA recusou a solicitação. Ajuste o briefing e tente novamente.'
       );
     }
     if (err.kind === 'validation') {
@@ -95,10 +95,15 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
         c,
         503,
         'SERVICE_UNAVAILABLE',
-        'AI generated an incomplete response. Please try again.'
+        'A IA gerou uma resposta incompleta. Tente novamente.'
       );
     }
-    return errorResponse(c, 503, 'SERVICE_UNAVAILABLE', 'AI provider is unavailable.');
+    return errorResponse(
+      c,
+      503,
+      'SERVICE_UNAVAILABLE',
+      'O provedor de IA está indisponível no momento.'
+    );
   }
 
   const anyErr = err as Error & { code?: string };
@@ -107,7 +112,7 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
       c,
       503,
       'SERVICE_UNAVAILABLE',
-      'AI post generation is not enabled on this instance.'
+      'A geração de posts com IA não está habilitada nesta instância.'
     );
   }
 

@@ -341,6 +341,66 @@ describe('post-generation.service', () => {
       expect(result.content).not.toMatch(/```\s*$/);
     });
 
+    it('preserves a leading mermaid fence when the draft starts with a diagram', async () => {
+      const rawContent =
+        '```mermaid\ngraph TD\n  A[API] --> B[Worker]\n```\n\n## Trade-offs\n\nConteúdo longo o suficiente para não falhar na validação mínima de cem caracteres totais e manter o bloco Mermaid no início do markdown.';
+
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post com Mermaid inicial',
+          slug: 'post-com-mermaid-inicial',
+          excerpt: 'Resumo.',
+          content: rawContent,
+          suggestedTagNames: [],
+          imagePrompt: 'illustration',
+          notes: null,
+        },
+        durationMs: 2000,
+        inputTokens: 320,
+        outputTokens: 410,
+      });
+
+      const result = await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      expect(result.content.startsWith('```mermaid')).toBe(true);
+      expect(result.content).toContain('A[API] --> B[Worker]');
+    });
+
+    it('preserves a trailing fenced block when the draft ends with code', async () => {
+      const rawContent =
+        "## Encerramento\n\nConteúdo longo o suficiente para ultrapassar a validação mínima antes de um bloco final de código.\n\n```typescript\nawait queue.add('notify', payload);\n```";
+
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post com código final',
+          slug: 'post-com-codigo-final',
+          excerpt: 'Resumo.',
+          content: rawContent,
+          suggestedTagNames: [],
+          imagePrompt: 'illustration',
+          notes: null,
+        },
+        durationMs: 1900,
+        inputTokens: 280,
+        outputTokens: 360,
+      });
+
+      const result = await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      expect(result.content).toContain('```typescript');
+      expect(result.content.trim().endsWith('```')).toBe(true);
+    });
+
     it('preserves mermaid code fences in markdown content', async () => {
       const mermaidContent =
         '## Fluxo\n\n```mermaid\ngraph TD\n  A[API] --> B[Worker]\n  B --> C[PostgreSQL]\n```\n\nConteúdo adicional suficiente para ultrapassar a validação mínima e garantir que o markdown com diagrama continue intacto.';
@@ -387,6 +447,60 @@ describe('post-generation.service', () => {
         durationMs: 1600,
         inputTokens: 220,
         outputTokens: 180,
+      });
+
+      await expect(
+        generatePostDraft({
+          category: 'backend-arquitetura',
+          briefing: null,
+          selectedSuggestion: VALID_SUGGESTION,
+          rejectedAngles: [],
+        })
+      ).rejects.toMatchObject({ kind: 'validation' });
+    });
+
+    it('rejects inline script tags outside fenced code blocks', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Fluxo\n\n<script>alert("xss")</script>\n\nConteúdo adicional suficiente para ultrapassar a validação mínima de tamanho do draft e cobrir esse cenário de teste.',
+          suggestedTagNames: [],
+          imagePrompt: 'illustration',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 200,
+        outputTokens: 160,
+      });
+
+      await expect(
+        generatePostDraft({
+          category: 'backend-arquitetura',
+          briefing: null,
+          selectedSuggestion: VALID_SUGGESTION,
+          rejectedAngles: [],
+        })
+      ).rejects.toMatchObject({ kind: 'validation' });
+    });
+
+    it('rejects multiline HTML tags outside fenced code blocks', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Fluxo\n\n<div\n  class="mermaid"\n  data-content="graph TD; A-->B;"\n></div>\n\nConteúdo adicional suficiente para ultrapassar a validação mínima de tamanho do draft e cobrir esse cenário de tag HTML multilinha.',
+          suggestedTagNames: [],
+          imagePrompt: 'illustration',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 210,
+        outputTokens: 170,
       });
 
       await expect(
@@ -465,6 +579,33 @@ describe('post-generation.service', () => {
           rejectedAngles: [],
         })
       ).rejects.toMatchObject({ kind: 'refusal' });
+    });
+
+    it('deduplicates suggested tag names using slug normalization', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar a deduplicação slug-aware de tags sugeridas pelo modelo.',
+          suggestedTagNames: ['Arquitetura Assíncrona', 'arquitetura assincrona', 'BullMQ'],
+          imagePrompt: 'illustration',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 220,
+        outputTokens: 180,
+      });
+
+      const result = await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      expect(result.suggestedTagNames).toEqual(['Arquitetura Assíncrona', 'BullMQ']);
     });
   });
 });

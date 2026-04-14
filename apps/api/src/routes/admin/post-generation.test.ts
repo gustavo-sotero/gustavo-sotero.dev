@@ -215,6 +215,9 @@ describe('admin post-generation routes', () => {
       // biome-ignore lint/suspicious/noExplicitAny: test assertion
       const body = (await res.json()) as any;
       expect(body.error.code).toBe('SERVICE_UNAVAILABLE');
+      expect(body.error.message).toBe(
+        'A geração de posts com IA não está habilitada nesta instância.'
+      );
     });
 
     it('returns 503 on provider timeout', async () => {
@@ -230,6 +233,11 @@ describe('admin post-generation routes', () => {
       });
 
       expect(res.status).toBe(503);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.error.message).toBe(
+        'O provedor de IA demorou demais para responder. Tente novamente em alguns segundos.'
+      );
     });
 
     it('returns 503 on provider refusal', async () => {
@@ -301,6 +309,9 @@ describe('admin post-generation routes', () => {
       });
 
       expect(res.status).toBe(503);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.error.message).toBe('A IA gerou uma resposta incompleta. Tente novamente.');
     });
   });
 });

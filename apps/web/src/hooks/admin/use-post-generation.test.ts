@@ -97,7 +97,7 @@ describe('useGeneratePostTopics', () => {
     apiPostMock.mockResolvedValueOnce({ data: null });
 
     await expect(callMutationFn(useGeneratePostTopics, TOPICS_REQUEST)).rejects.toThrow(
-      'Empty response from topics endpoint'
+      'A resposta de sugestões veio vazia. Tente novamente.'
     );
   });
 
@@ -139,7 +139,7 @@ describe('useGeneratePostDraft', () => {
     apiPostMock.mockResolvedValueOnce({ data: null });
 
     await expect(callMutationFn(useGeneratePostDraft, DRAFT_REQUEST)).rejects.toThrow(
-      'Empty response from draft endpoint'
+      'A resposta do draft veio vazia. Tente novamente.'
     );
   });
 

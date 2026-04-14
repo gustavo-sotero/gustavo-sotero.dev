@@ -102,6 +102,30 @@ export function PostGenerationAssistant({
   const topicsMutation = useGeneratePostTopics();
   const draftMutation = useGeneratePostDraft();
 
+  function handleCategoryChange(nextCategory: AiPostCategory) {
+    setCategory((currentCategory) => {
+      if (currentCategory && currentCategory !== nextCategory) {
+        setExcludedIdeas([]);
+        setRejectedAngles([]);
+      }
+      return nextCategory;
+    });
+  }
+
+  function restoreTopics(
+    topics: TopicSuggestion[],
+    topicCategory: AiPostCategory,
+    topicBriefing: string
+  ) {
+    setRejectedAngles([]);
+    setState({
+      step: 'topicsReady',
+      topics,
+      category: topicCategory,
+      briefing: topicBriefing,
+    });
+  }
+
   async function handleGenerateTopics(overrideExcludedIdeas?: string[]) {
     if (!category) return;
     // Use provided override to avoid stale-closure issues on regenerate
@@ -183,13 +207,7 @@ export function PostGenerationAssistant({
 
   function handleBackToTopics() {
     if (state.step === 'draftReady' || state.step === 'generatingDraft') {
-      // Restore the topic list already fetched — no extra API call needed
-      setState({
-        step: 'topicsReady',
-        topics: state.topics,
-        category: state.category,
-        briefing: state.briefing,
-      });
+      restoreTopics(state.topics, state.category, state.briefing);
     } else {
       setState({ step: 'idle' });
     }
@@ -247,7 +265,10 @@ export function PostGenerationAssistant({
             <div className="pt-4 space-y-4">
               <div className="space-y-2">
                 <Label className="text-zinc-300 text-sm">Categoria editorial</Label>
-                <Select value={category} onValueChange={(v) => setCategory(v as AiPostCategory)}>
+                <Select
+                  value={category}
+                  onValueChange={(v) => handleCategoryChange(v as AiPostCategory)}
+                >
                   <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-emerald-500/40">
                     <SelectValue placeholder="Escolha uma categoria..." />
                   </SelectTrigger>
@@ -301,17 +322,12 @@ export function PostGenerationAssistant({
                   {state.topics && state.topics.length > 0 && (
                     <button
                       type="button"
-                      onClick={() =>
-                        setState({
-                          step: 'topicsReady',
-                          // biome-ignore lint/style/noNonNullAssertion: guarded by state.topics check above
-                          topics: state.topics!,
-                          // biome-ignore lint/style/noNonNullAssertion: guarded by state.topics check above
-                          category: state.category!,
-                          // biome-ignore lint/style/noNonNullAssertion: guarded by state.topics check above
-                          briefing: state.briefing!,
-                        })
-                      }
+                      onClick={() => {
+                        if (!state.topics || !state.category || state.briefing === undefined) {
+                          return;
+                        }
+                        restoreTopics(state.topics, state.category, state.briefing);
+                      }}
                       className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
                     >
                       <ArrowLeft className="h-3 w-3" />

@@ -19,7 +19,9 @@ export function useGeneratePostTopics() {
   return useMutation<GenerateTopicsResponse, unknown, GenerateTopicsRequest>({
     mutationFn: async (data) => {
       const res = await apiPost<GenerateTopicsResponse>('/admin/posts/generate/topics', data);
-      if (!res?.data) throw new Error('Empty response from topics endpoint');
+      if (!res?.data) {
+        throw new Error('A resposta de sugestões veio vazia. Tente novamente.');
+      }
       return res.data;
     },
   });
@@ -35,7 +37,9 @@ export function useGeneratePostDraft() {
   return useMutation<GenerateDraftResponse, unknown, GenerateDraftRequest>({
     mutationFn: async (data) => {
       const res = await apiPost<GenerateDraftResponse>('/admin/posts/generate/draft', data);
-      if (!res?.data) throw new Error('Empty response from draft endpoint');
+      if (!res?.data) {
+        throw new Error('A resposta do draft veio vazia. Tente novamente.');
+      }
       return res.data;
     },
   });

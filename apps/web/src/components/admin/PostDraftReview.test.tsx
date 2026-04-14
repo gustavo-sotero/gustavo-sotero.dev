@@ -40,6 +40,15 @@ const TAGS = [
     isHighlighted: false,
     createdAt: '2026-01-01T00:00:00.000Z',
   },
+  {
+    id: 2,
+    name: 'Arquitetura Assíncrona',
+    slug: 'arquitetura-assincrona',
+    category: 'other' as const,
+    iconKey: null,
+    isHighlighted: false,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
 ];
 
 const DRAFT = {
@@ -51,6 +60,22 @@ const DRAFT = {
   suggestedTagNames: ['TypeScript', 'Redis'],
   imagePrompt: 'Minimalist dark illustration',
   notes: null,
+};
+
+const DRAFT_WITH_DUPLICATE_TAG_MATCHES = {
+  ...DRAFT,
+  suggestedTagNames: ['TypeScript', 'typescript', 'Redis'],
+};
+
+const DRAFT_WITH_SLUG_VARIANT_TAG = {
+  ...DRAFT,
+  suggestedTagNames: ['Arquitetura Assincrona'],
+};
+
+const DRAFT_WITH_MERMAID_CONTENT = {
+  ...DRAFT,
+  content:
+    '## Fluxo\n\n```mermaid\ngraph TD\n  A[API] --> B[Worker]\n```\n\nConteúdo adicional para manter o markdown bruto durante a aplicação por campo.',
 };
 
 describe('PostDraftReview', () => {
@@ -114,6 +139,87 @@ describe('PostDraftReview', () => {
     fireEvent.click(screen.getByRole('button', { name: /Aplicar tags/i }));
 
     expect(onApplyField).toHaveBeenCalledWith('tagIds', [1]);
+  });
+
+  it('deduplicates tag IDs when multiple suggested names resolve to the same catalog tag', () => {
+    const onApplyAll = vi.fn();
+    const onApplyField = vi.fn();
+
+    render(
+      <PostDraftReview
+        draft={DRAFT_WITH_DUPLICATE_TAG_MATCHES}
+        allTags={TAGS}
+        currentValues={{}}
+        onApplyAll={onApplyAll}
+        onApplyField={onApplyField}
+        onRegenerate={vi.fn()}
+        onBackToTopics={vi.fn()}
+        onDiscard={vi.fn()}
+        isRegenerating={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Aplicar tudo ao formulário/i }));
+    expect(onApplyAll).toHaveBeenCalledWith({
+      title: DRAFT_WITH_DUPLICATE_TAG_MATCHES.title,
+      slug: DRAFT_WITH_DUPLICATE_TAG_MATCHES.slug,
+      excerpt: DRAFT_WITH_DUPLICATE_TAG_MATCHES.excerpt,
+      content: DRAFT_WITH_DUPLICATE_TAG_MATCHES.content,
+      tagIds: [1],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Aplicar tags/i }));
+    expect(onApplyField).toHaveBeenCalledWith('tagIds', [1]);
+  });
+
+  it('matches suggested tag names using shared slug normalization', () => {
+    const onApplyField = vi.fn();
+
+    render(
+      <PostDraftReview
+        draft={DRAFT_WITH_SLUG_VARIANT_TAG}
+        allTags={TAGS}
+        currentValues={{}}
+        onApplyAll={vi.fn()}
+        onApplyField={onApplyField}
+        onRegenerate={vi.fn()}
+        onBackToTopics={vi.fn()}
+        onDiscard={vi.fn()}
+        isRegenerating={false}
+      />
+    );
+
+    expect(
+      screen.queryByText(
+        /Tags riscadas não existem no catálogo\. Crie-as manualmente para aplicar\./i
+      )
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Aplicar tags/i }));
+
+    expect(onApplyField).toHaveBeenCalledWith('tagIds', [2]);
+  });
+
+  it('applies the generated markdown content field without altering mermaid blocks', () => {
+    const onApplyField = vi.fn();
+
+    render(
+      <PostDraftReview
+        draft={DRAFT_WITH_MERMAID_CONTENT}
+        allTags={TAGS}
+        currentValues={{}}
+        onApplyAll={vi.fn()}
+        onApplyField={onApplyField}
+        onRegenerate={vi.fn()}
+        onBackToTopics={vi.fn()}
+        onDiscard={vi.fn()}
+        isRegenerating={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Aplicar conteúdo/i }));
+
+    expect(onApplyField).toHaveBeenCalledWith('content', DRAFT_WITH_MERMAID_CONTENT.content);
   });
 
   it('warns when applying the draft would overwrite prefilled form fields', () => {
