@@ -90,6 +90,7 @@ describe('worker queue names', () => {
       'data-retention',
       'post-publish',
       'ai-post-draft-generation',
+      'ai-post-topic-generation',
     ]);
     for (const name of names) {
       expect(expected).toContain(name);

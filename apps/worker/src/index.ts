@@ -10,6 +10,10 @@ import {
   type AiPostDraftJobData,
   processAiPostDraftGeneration,
 } from './jobs/ai-post-draft-generation';
+import {
+  type AiPostTopicJobData,
+  processAiPostTopicGeneration,
+} from './jobs/ai-post-topic-generation';
 import { type AnalyticsEventPayload, processAnalytics } from './jobs/analytics';
 import { type ImageOptimizePayload, processImageOptimize } from './jobs/imageOptimize';
 import { type PostPublishJobData, processPostPublish } from './jobs/postPublish';
@@ -19,6 +23,7 @@ import { closeCacheRedis } from './lib/cache';
 import { processOutboxEvents } from './lib/outbox-relay';
 import {
   aiPostDraftGenerationQueue,
+  aiPostTopicGenerationQueue,
   analyticsQueue,
   imageDlqQueue,
   imageQueue,
@@ -240,6 +245,36 @@ aiPostDraftWorker.on('error', (err) => {
   logger.error('AI draft generation worker error', { error: err.message });
 });
 
+// ── AI Post Topic Generation Worker ──────────────────────────────────────────
+const aiPostTopicWorker = new Worker<AiPostTopicJobData>(
+  'ai-post-topic-generation',
+  async (job) => {
+    await processAiPostTopicGeneration(job);
+  },
+  {
+    connection: workerConnection,
+    concurrency: 2,
+  }
+);
+
+aiPostTopicWorker.on('completed', (job) => {
+  logger.info('AI topic generation job completed', { jobId: job.id, runId: job.data.runId });
+});
+
+aiPostTopicWorker.on('failed', (job, err) => {
+  if (!job) return;
+  logger.error('AI topic generation job failed', {
+    jobId: job.id,
+    runId: job.data.runId,
+    attempt: job.attemptsMade,
+    error: err.message,
+  });
+});
+
+aiPostTopicWorker.on('error', (err) => {
+  logger.error('AI topic generation worker error', { error: err.message });
+});
+
 logger.info('All workers ready', {
   queues: [
     'telegram-notifications',
@@ -248,6 +283,7 @@ logger.info('All workers ready', {
     'data-retention',
     'post-publish',
     'ai-post-draft-generation',
+    'ai-post-topic-generation',
   ],
 });
 
@@ -274,7 +310,12 @@ async function runOutboxRelay(): Promise<void> {
   if (relayInFlight) return;
   relayInFlight = true;
   try {
-    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
+    await processOutboxEvents(
+      imageQueue,
+      postPublishQueue,
+      aiPostDraftGenerationQueue,
+      aiPostTopicGenerationQueue
+    );
   } finally {
     relayInFlight = false;
   }
@@ -309,6 +350,7 @@ async function shutdown(signal: string): Promise<void> {
     retentionWorker.close(),
     postPublishWorker.close(),
     aiPostDraftWorker.close(),
+    aiPostTopicWorker.close(),
   ]);
 
   // Close Queue instances (each holds its own ioredis connection)
@@ -321,6 +363,7 @@ async function shutdown(signal: string): Promise<void> {
     retentionQueue.close(),
     postPublishQueue.close(),
     aiPostDraftGenerationQueue.close(),
+    aiPostTopicGenerationQueue.close(),
     closeCacheRedis(),
   ]);
 

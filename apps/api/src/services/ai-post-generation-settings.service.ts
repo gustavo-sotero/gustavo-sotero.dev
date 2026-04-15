@@ -1,6 +1,7 @@
 import type {
   AiPostGenerationConfig,
   AiPostGenerationConfigState,
+  ProviderRoutingConfig,
   UpdateAiPostGenerationConfig,
 } from '@portfolio/shared';
 import { env } from '../config/env';
@@ -55,6 +56,8 @@ export async function getAiPostGenerationConfigState(): Promise<AiPostGeneration
   const config: AiPostGenerationConfig = {
     topicsModelId: row.topicsModelId,
     draftModelId: row.draftModelId,
+    topicsRouting: row.topicsRouting as ProviderRoutingConfig | null | undefined,
+    draftRouting: row.draftRouting as ProviderRoutingConfig | null | undefined,
   };
 
   // Validate current selection against OpenRouter catalog
@@ -180,6 +183,8 @@ export async function saveAiPostGenerationConfig(
   await upsertAiPostGenerationSettings({
     topicsModelId: input.topicsModelId,
     draftModelId: input.draftModelId,
+    topicsRouting: input.topicsRouting ?? null,
+    draftRouting: input.draftRouting ?? null,
     updatedBy,
   });
 
@@ -249,5 +254,107 @@ export async function resolveActiveAiPostGenerationConfig(): Promise<AiPostGener
   return {
     topicsModelId: row.topicsModelId,
     draftModelId: row.draftModelId,
+    topicsRouting: row.topicsRouting as ProviderRoutingConfig | null | undefined,
+    draftRouting: row.draftRouting as ProviderRoutingConfig | null | undefined,
+  };
+}
+
+// ── Operation-specific config resolution ─────────────────────────────────────
+
+/**
+ * Resolve only the topics model for topic generation.
+ *
+ * Decoupled from draft model validity so topic generation does not fail
+ * because of an unrelated draft model configuration issue.
+ *
+ * Throws with `code` set to signal the caller what went wrong:
+ *  - `DISABLED`        — feature is off
+ *  - `NOT_CONFIGURED`  — no topics model saved yet
+ *  - `INVALID_CONFIG`  — saved topics model fails catalog validation
+ */
+export async function resolveActiveAiTopicGenerationConfig(): Promise<
+  Pick<AiPostGenerationConfig, 'topicsModelId' | 'topicsRouting'>
+> {
+  if (!env.AI_POSTS_ENABLED) {
+    throw Object.assign(new Error('AI post generation is disabled'), { code: 'DISABLED' });
+  }
+
+  const row = await findAiPostGenerationSettings();
+
+  if (!row?.topicsModelId) {
+    throw Object.assign(new Error('Topics model is not configured'), { code: 'NOT_CONFIGURED' });
+  }
+
+  // Best-effort catalog validation — proceed if catalog is unavailable.
+  try {
+    const topicsValid = await validateModelId(row.topicsModelId);
+    if (!topicsValid) {
+      throw Object.assign(new Error('Topics model ID is invalid or unavailable'), {
+        code: 'INVALID_CONFIG',
+      });
+    }
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === 'DISABLED' || code === 'NOT_CONFIGURED' || code === 'INVALID_CONFIG') {
+      throw err;
+    }
+    logger.warn(
+      'Catalog unavailable during topic config resolution — proceeding with saved config',
+      { error: (err as Error).message }
+    );
+  }
+
+  return {
+    topicsModelId: row.topicsModelId,
+    topicsRouting: row.topicsRouting as ProviderRoutingConfig | null | undefined,
+  };
+}
+
+/**
+ * Resolve only the draft model for draft generation.
+ *
+ * Decoupled from topics model validity so draft generation does not fail
+ * because of an unrelated topics model configuration issue.
+ *
+ * Throws with `code` set to signal the caller what went wrong:
+ *  - `DISABLED`        — feature is off
+ *  - `NOT_CONFIGURED`  — no draft model saved yet
+ *  - `INVALID_CONFIG`  — saved draft model fails catalog validation
+ */
+export async function resolveActiveAiDraftGenerationConfig(): Promise<
+  Pick<AiPostGenerationConfig, 'draftModelId' | 'draftRouting'>
+> {
+  if (!env.AI_POSTS_ENABLED) {
+    throw Object.assign(new Error('AI post generation is disabled'), { code: 'DISABLED' });
+  }
+
+  const row = await findAiPostGenerationSettings();
+
+  if (!row?.draftModelId) {
+    throw Object.assign(new Error('Draft model is not configured'), { code: 'NOT_CONFIGURED' });
+  }
+
+  // Best-effort catalog validation — proceed if catalog is unavailable.
+  try {
+    const draftValid = await validateModelId(row.draftModelId);
+    if (!draftValid) {
+      throw Object.assign(new Error('Draft model ID is invalid or unavailable'), {
+        code: 'INVALID_CONFIG',
+      });
+    }
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === 'DISABLED' || code === 'NOT_CONFIGURED' || code === 'INVALID_CONFIG') {
+      throw err;
+    }
+    logger.warn(
+      'Catalog unavailable during draft config resolution — proceeding with saved config',
+      { error: (err as Error).message }
+    );
+  }
+
+  return {
+    draftModelId: row.draftModelId,
+    draftRouting: row.draftRouting as ProviderRoutingConfig | null | undefined,
   };
 }

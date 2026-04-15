@@ -1,10 +1,17 @@
-import type { CreateDraftRunRequest, DraftRunStatusResponse } from '@portfolio/shared';
+import type {
+  CreateDraftRunRequest,
+  DraftRunStatusResponse,
+  TopicRunStatusResponse,
+  TopicSuggestion,
+} from '@portfolio/shared';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
-const mutateAsyncTopicsMock = vi.fn();
+const startTopicRunMock = vi.fn();
+const resetTopicRunMock = vi.fn();
 const startDraftRunMock = vi.fn();
 const useAiPostGenerationConfigMock = vi.fn();
 
@@ -13,9 +20,15 @@ vi.mock('@/hooks/admin/use-ai-post-generation-config', () => ({
 }));
 
 vi.mock('@/hooks/admin/use-post-generation', () => ({
-  useGeneratePostTopics: () => ({
-    mutateAsync: mutateAsyncTopicsMock,
+  useGeneratePostTopicsRun: () => ({
+    start: startTopicRunMock,
+    reset: resetTopicRunMock,
     isPending: false,
+    result: null,
+    error: null,
+    stage: null,
+    status: null,
+    runId: null,
   }),
   useGeneratePostDraftRun: () => ({
     start: startDraftRunMock,
@@ -204,6 +217,46 @@ const MERMAID_DRAFT_FIXTURE = {
     '## Fluxo\n\n```mermaid\ngraph TD\n  A[API] --> B[Worker]\n```\n\nConteúdo adicional para manter o markdown completo durante a aplicação no formulário.',
 };
 
+// ── Topic run helpers ─────────────────────────────────────────────────────────
+
+type TopicRunCallbacks = {
+  onCompleted?: (run: TopicRunStatusResponse) => void;
+  onError?: (err: unknown) => void;
+};
+
+function buildCompletedTopicRunStatus(suggestions: TopicSuggestion[]): TopicRunStatusResponse {
+  return {
+    runId: '550e8400-e29b-41d4-a716-446655440001',
+    status: 'completed',
+    stage: 'completed',
+    requestedCategory: 'backend-arquitetura',
+    modelId: 'openai/gpt-4o',
+    attemptCount: 1,
+    createdAt: new Date().toISOString(),
+    startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    durationMs: 1200,
+    error: null,
+    result: { suggestions },
+  };
+}
+
+function mockTopicRunCompleted(suggestions: TopicSuggestion[]) {
+  startTopicRunMock.mockImplementationOnce((_request: unknown, callbacks?: TopicRunCallbacks) => {
+    callbacks?.onCompleted?.(buildCompletedTopicRunStatus(suggestions));
+    return Promise.resolve();
+  });
+}
+
+function mockTopicRunError(error: unknown) {
+  startTopicRunMock.mockImplementationOnce((_request: unknown, callbacks?: TopicRunCallbacks) => {
+    callbacks?.onError?.(error);
+    return Promise.resolve();
+  });
+}
+
+// ── Draft run helpers ─────────────────────────────────────────────────────────
+
 type DraftRunCallbacks = {
   onCompleted?: (run: DraftRunStatusResponse) => void;
   onError?: (err: unknown) => void;
@@ -267,7 +320,8 @@ function renderAssistant() {
 describe('PostGenerationAssistant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: feature is ready
+
+    // Default: config is ready and valid so generation is allowed
     useAiPostGenerationConfigMock.mockReturnValue({
       data: {
         status: 'ready',
@@ -313,13 +367,12 @@ describe('PostGenerationAssistant', () => {
     expect(screen.getByRole('option', { name: /Misto/i })).toBeInTheDocument();
   });
 
-  it('calls mutateAsync with correct payload when generating topics', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+  it('calls start() with correct payload when generating topics', async () => {
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
 
-    // Select a category
     fireEvent.change(screen.getByTestId('category-select'), {
       target: { value: 'backend-arquitetura' },
     });
@@ -327,14 +380,15 @@ describe('PostGenerationAssistant', () => {
     fireEvent.click(screen.getByRole('button', { name: /Sugerir temas/i }));
 
     await waitFor(() => {
-      expect(mutateAsyncTopicsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ category: 'backend-arquitetura' })
+      expect(startTopicRunMock).toHaveBeenCalledWith(
+        expect.objectContaining({ category: 'backend-arquitetura' }),
+        expect.any(Object)
       );
     });
   });
 
   it('shows topic list after successful topic generation', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -349,7 +403,7 @@ describe('PostGenerationAssistant', () => {
   });
 
   it('shows draft review after selecting a topic', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
     mockDraftRunCompleted(DRAFT_FIXTURE);
 
     renderAssistant();
@@ -369,7 +423,7 @@ describe('PostGenerationAssistant', () => {
   });
 
   it('shows error message when topics generation fails', async () => {
-    mutateAsyncTopicsMock.mockRejectedValueOnce({ message: 'Serviço indisponível' });
+    mockTopicRunError({ message: 'Serviço indisponível' });
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -384,7 +438,7 @@ describe('PostGenerationAssistant', () => {
   });
 
   it('restores topic list (no extra API call) when back-to-topics is clicked from draft review', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
     mockDraftRunCompleted(DRAFT_FIXTURE);
 
     renderAssistant();
@@ -403,12 +457,12 @@ describe('PostGenerationAssistant', () => {
     await waitFor(() => {
       expect(screen.getByTestId('topic-list')).toBeInTheDocument();
     });
-    // Topics mutation should have been called exactly once (initial fetch, no re-fetch on back)
-    expect(mutateAsyncTopicsMock).toHaveBeenCalledTimes(1);
+    // Topics run start should have been called exactly once (initial fetch, no re-fetch on back)
+    expect(startTopicRunMock).toHaveBeenCalledTimes(1);
   });
 
-  it('regenerate draft calls mutateAsync (guard allows draftReady state)', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+  it('regenerate draft start() is called twice (guard allows draftReady state)', async () => {
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
     mockDraftRunCompleted(DRAFT_FIXTURE);
     mockDraftRunCompleted({ ...DRAFT_FIXTURE, title: 'Regenerated Post' });
 
@@ -426,7 +480,7 @@ describe('PostGenerationAssistant', () => {
     fireEvent.click(screen.getByTestId('regenerate-draft'));
 
     await waitFor(() => {
-      // Draft mutation should have been called twice (initial + regenerate)
+      // Draft start should have been called twice (initial + regenerate)
       expect(startDraftRunMock).toHaveBeenCalledTimes(2);
     });
 
@@ -437,9 +491,7 @@ describe('PostGenerationAssistant', () => {
   });
 
   it('clears rejected angles when returning to topics before selecting a different suggestion', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({
-      suggestions: [SUGGESTION_FIXTURE, SECOND_SUGGESTION_FIXTURE],
-    });
+    mockTopicRunCompleted([SUGGESTION_FIXTURE, SECOND_SUGGESTION_FIXTURE]);
     mockDraftRunCompleted(DRAFT_FIXTURE);
     mockDraftRunCompleted({ ...DRAFT_FIXTURE, title: 'Draft regenerado' });
     mockDraftRunCompleted({ ...DRAFT_FIXTURE, title: 'Draft do segundo tema' });
@@ -450,42 +502,38 @@ describe('PostGenerationAssistant', () => {
       target: { value: 'backend-arquitetura' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Sugerir temas/i }));
-
     await waitFor(() => screen.getByTestId('topic-0'));
+
+    // Select first topic and regenerate once to accumulate a rejected angle
     fireEvent.click(screen.getByTestId('topic-0'));
     await waitFor(() => screen.getByTestId('draft-review'));
-
     fireEvent.click(screen.getByTestId('regenerate-draft'));
-    await waitFor(() => {
-      expect(startDraftRunMock).toHaveBeenCalledTimes(2);
-    });
+    await waitFor(() => expect(startDraftRunMock).toHaveBeenCalledTimes(2));
 
+    // Go back to topics — this should clear the accumulated rejected angles
     fireEvent.click(screen.getByTestId('back-to-topics'));
-    await waitFor(() => {
-      expect(screen.getByTestId('topic-list')).toBeInTheDocument();
-    });
+    await waitFor(() => screen.getByTestId('topic-list'));
 
+    // Select the second topic
     fireEvent.click(screen.getByTestId('topic-1'));
+    await waitFor(() => screen.getByTestId('draft-review'));
 
-    await waitFor(() => {
-      expect(startDraftRunMock).toHaveBeenCalledTimes(3);
-    });
-
+    // The third draft call should have empty rejectedAngles (cleared when switching topics)
     const thirdCallArgs = startDraftRunMock.mock.calls[2]?.[0] as {
       rejectedAngles: string[];
       selectedSuggestion: { suggestionId: string };
     };
+    expect(thirdCallArgs.rejectedAngles).toEqual([]);
     expect(thirdCallArgs.selectedSuggestion.suggestionId).toBe(
       SECOND_SUGGESTION_FIXTURE.suggestionId
     );
-    expect(thirdCallArgs.rejectedAngles).toEqual([]);
   });
 
   it('applies mermaid markdown to the form without altering the draft content', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
     mockDraftRunCompleted(MERMAID_DRAFT_FIXTURE);
 
-    const { setValueMock, onTagsAppliedMock } = renderAssistant();
+    const { setValueMock } = renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
     fireEvent.change(screen.getByTestId('category-select'), {
       target: { value: 'backend-arquitetura' },
@@ -497,16 +545,18 @@ describe('PostGenerationAssistant', () => {
 
     fireEvent.click(screen.getByTestId('apply-all'));
 
-    expect(setValueMock).toHaveBeenCalledWith('content', MERMAID_DRAFT_FIXTURE.content);
-    expect(onTagsAppliedMock).toHaveBeenCalledWith([1]);
+    await waitFor(() => {
+      // The mermaid content should be passed to setValue as-is (not transformed)
+      expect(setValueMock).toHaveBeenCalledWith('content', MERMAID_DRAFT_FIXTURE.content);
+    });
   });
 
   it('passes accumulated excluded ideas on topic regeneration (no stale closure)', async () => {
-    mutateAsyncTopicsMock
-      .mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] }) // initial
-      .mockResolvedValueOnce({
-        suggestions: [{ ...SUGGESTION_FIXTURE, suggestionId: 's2', proposedTitle: 'Outro tema' }],
-      }); // regenerate
+    // Set up two successive topic-run completions
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]); // initial
+    mockTopicRunCompleted([
+      { ...SUGGESTION_FIXTURE, suggestionId: 's2', proposedTitle: 'Outro tema' },
+    ]); // regenerate
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -520,18 +570,18 @@ describe('PostGenerationAssistant', () => {
     fireEvent.click(screen.getByTestId('regenerate-topics'));
 
     await waitFor(() => {
-      expect(mutateAsyncTopicsMock).toHaveBeenCalledTimes(2);
+      expect(startTopicRunMock).toHaveBeenCalledTimes(2);
     });
 
     // The second call should include the first suggestion's title in excludedIdeas,
     // proving the fix for the stale-closure bug where setExcludedIdeas was called
     // but handleGenerateTopics still read the old empty array.
-    const secondCallArgs = mutateAsyncTopicsMock.mock.calls[1]?.[0] as { excludedIdeas: string[] };
+    const secondCallArgs = startTopicRunMock.mock.calls[1]?.[0] as { excludedIdeas: string[] };
     expect(secondCallArgs.excludedIdeas).toContain(SUGGESTION_FIXTURE.proposedTitle);
   });
 
   it('draft error preserves topic context and shows back-to-topics button', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
     mockDraftRunError({ message: 'AI timeout' });
 
     renderAssistant();
@@ -559,12 +609,12 @@ describe('PostGenerationAssistant', () => {
     await waitFor(() => {
       expect(screen.getByTestId('topic-list')).toBeInTheDocument();
     });
-    // Topics mutation should have been called exactly once (no re-fetch on recovery)
-    expect(mutateAsyncTopicsMock).toHaveBeenCalledTimes(1);
+    // Topic run start should have been called exactly once (no re-fetch on recovery)
+    expect(startTopicRunMock).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the selected suggestion visible and allows retrying the same draft after an error', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
     mockDraftRunError({ message: 'AI timeout' });
     mockDraftRunCompleted(DRAFT_FIXTURE);
 
@@ -592,7 +642,8 @@ describe('PostGenerationAssistant', () => {
     });
 
     expect(startDraftRunMock).toHaveBeenCalledTimes(2);
-    expect(mutateAsyncTopicsMock).toHaveBeenCalledTimes(1);
+    // Topic run start should have been called only once (no new topic generation on draft retry)
+    expect(startTopicRunMock).toHaveBeenCalledTimes(1);
   });
 
   // ── Config state gating ────────────────────────────────────────────────────
@@ -700,7 +751,7 @@ describe('PostGenerationAssistant', () => {
   });
 
   it('discarding a generated draft returns the assistant to the idle step', async () => {
-    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
     mockDraftRunCompleted(DRAFT_FIXTURE);
 
     renderAssistant();

@@ -29,7 +29,9 @@ vi.mock('./openrouter-models.service', () => ({
 
 import {
   getAiPostGenerationConfigState,
+  resolveActiveAiDraftGenerationConfig,
   resolveActiveAiPostGenerationConfig,
+  resolveActiveAiTopicGenerationConfig,
   saveAiPostGenerationConfig,
 } from './ai-post-generation-settings.service';
 
@@ -128,6 +130,8 @@ describe('ai-post-generation-settings.service', () => {
       expect(upsertAiPostGenerationSettingsMock).toHaveBeenCalledWith({
         topicsModelId: 'openai/gpt-4o',
         draftModelId: 'openai/gpt-4o',
+        topicsRouting: null,
+        draftRouting: null,
         updatedBy: 'admin',
       });
       expect(state.status).toBe('ready');
@@ -214,6 +218,133 @@ describe('ai-post-generation-settings.service', () => {
       const config = await resolveActiveAiPostGenerationConfig();
 
       expect(config.topicsModelId).toBe('openai/gpt-4o');
+    });
+  });
+
+  // ── resolveActiveAiTopicGenerationConfig ───────────────────────────────────
+
+  describe('resolveActiveAiTopicGenerationConfig', () => {
+    it('returns topics model and routing when config is ready', async () => {
+      const config = await resolveActiveAiTopicGenerationConfig();
+
+      expect(config.topicsModelId).toBe('openai/gpt-4o');
+    });
+
+    it('succeeds even when the draft model is invalid (decoupled from draft config)', async () => {
+      // Only topics model is valid — draft model is not (should NOT matter here)
+      validateModelIdMock.mockImplementation((modelId: string) =>
+        Promise.resolve(modelId === 'openai/gpt-4o')
+      );
+      findAiPostGenerationSettingsMock.mockResolvedValue({
+        ...SAVED_ROW,
+        topicsModelId: 'openai/gpt-4o',
+        draftModelId: 'invalid/draft-model',
+      });
+
+      const config = await resolveActiveAiTopicGenerationConfig();
+
+      expect(config.topicsModelId).toBe('openai/gpt-4o');
+    });
+
+    it('throws DISABLED when feature is off', async () => {
+      envMock.AI_POSTS_ENABLED = false;
+
+      await expect(resolveActiveAiTopicGenerationConfig()).rejects.toMatchObject({
+        code: 'DISABLED',
+      });
+    });
+
+    it('throws NOT_CONFIGURED when no row exists', async () => {
+      findAiPostGenerationSettingsMock.mockResolvedValue(null);
+
+      await expect(resolveActiveAiTopicGenerationConfig()).rejects.toMatchObject({
+        code: 'NOT_CONFIGURED',
+      });
+    });
+
+    it('throws NOT_CONFIGURED when topicsModelId is null', async () => {
+      findAiPostGenerationSettingsMock.mockResolvedValue({
+        ...SAVED_ROW,
+        topicsModelId: null,
+      });
+
+      await expect(resolveActiveAiTopicGenerationConfig()).rejects.toMatchObject({
+        code: 'NOT_CONFIGURED',
+      });
+    });
+
+    it('throws INVALID_CONFIG when topics model fails catalog validation', async () => {
+      validateModelIdMock.mockResolvedValue(false);
+
+      await expect(resolveActiveAiTopicGenerationConfig()).rejects.toMatchObject({
+        code: 'INVALID_CONFIG',
+      });
+    });
+
+    it('proceeds with saved config when catalog is unavailable', async () => {
+      validateModelIdMock.mockRejectedValue(new Error('network error'));
+
+      const config = await resolveActiveAiTopicGenerationConfig();
+
+      expect(config.topicsModelId).toBe('openai/gpt-4o');
+    });
+  });
+
+  // ── resolveActiveAiDraftGenerationConfig ───────────────────────────────────
+
+  describe('resolveActiveAiDraftGenerationConfig', () => {
+    it('returns draft model and routing when config is ready', async () => {
+      const config = await resolveActiveAiDraftGenerationConfig();
+
+      expect(config.draftModelId).toBe('openai/gpt-4o');
+    });
+
+    it('succeeds even when the topics model is invalid (decoupled from topics config)', async () => {
+      // Only draft model is valid — topics model is not (should NOT matter here)
+      validateModelIdMock.mockImplementation((modelId: string) =>
+        Promise.resolve(modelId === 'openai/gpt-4o')
+      );
+      findAiPostGenerationSettingsMock.mockResolvedValue({
+        ...SAVED_ROW,
+        topicsModelId: 'invalid/topics-model',
+        draftModelId: 'openai/gpt-4o',
+      });
+
+      const config = await resolveActiveAiDraftGenerationConfig();
+
+      expect(config.draftModelId).toBe('openai/gpt-4o');
+    });
+
+    it('throws DISABLED when feature is off', async () => {
+      envMock.AI_POSTS_ENABLED = false;
+
+      await expect(resolveActiveAiDraftGenerationConfig()).rejects.toMatchObject({
+        code: 'DISABLED',
+      });
+    });
+
+    it('throws NOT_CONFIGURED when no row exists', async () => {
+      findAiPostGenerationSettingsMock.mockResolvedValue(null);
+
+      await expect(resolveActiveAiDraftGenerationConfig()).rejects.toMatchObject({
+        code: 'NOT_CONFIGURED',
+      });
+    });
+
+    it('throws INVALID_CONFIG when draft model fails catalog validation', async () => {
+      validateModelIdMock.mockResolvedValue(false);
+
+      await expect(resolveActiveAiDraftGenerationConfig()).rejects.toMatchObject({
+        code: 'INVALID_CONFIG',
+      });
+    });
+
+    it('proceeds with saved config when catalog is unavailable', async () => {
+      validateModelIdMock.mockRejectedValue(new Error('network error'));
+
+      const config = await resolveActiveAiDraftGenerationConfig();
+
+      expect(config.draftModelId).toBe('openai/gpt-4o');
     });
   });
 });

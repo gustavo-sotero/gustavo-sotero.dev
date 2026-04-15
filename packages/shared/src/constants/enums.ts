@@ -48,5 +48,6 @@ export const OutboxEventType = {
   IMAGE_OPTIMIZE: 'image-optimize',
   SCHEDULED_POST_PUBLISH: 'scheduled-post-publish',
   AI_POST_DRAFT_GENERATE_REQUESTED: 'ai-post-draft-generate-requested',
+  AI_POST_TOPIC_RUN_REQUESTED: 'ai-post-topic-run-requested',
 } as const;
 export type OutboxEventType = (typeof OutboxEventType)[keyof typeof OutboxEventType];

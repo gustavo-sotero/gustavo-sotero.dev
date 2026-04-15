@@ -1,4 +1,4 @@
-import { AiGenerationError } from '@portfolio/shared';
+import { AiGenerationError, type ProviderRoutingConfig } from '@portfolio/shared';
 import { extractProviderGenerationId } from '@portfolio/shared/lib/aiProviderGeneration';
 import { generateObject, NoObjectGeneratedError } from 'ai';
 import type { ZodSchema } from 'zod';
@@ -15,6 +15,7 @@ export interface GenerateStructuredObjectOptions<TSchema extends ZodSchema> {
   schema: TSchema;
   operation: string;
   metadata?: Record<string, unknown>;
+  providerRouting?: ProviderRoutingConfig;
 }
 
 export interface GenerateStructuredObjectResult<T> {
@@ -30,7 +31,7 @@ export { AiGenerationError };
 export async function generateStructuredObject<TSchema extends ZodSchema>(
   options: GenerateStructuredObjectOptions<TSchema>
 ): Promise<GenerateStructuredObjectResult<import('zod').infer<TSchema>>> {
-  const { model: modelId, system, prompt, schema, operation, metadata } = options;
+  const { model: modelId, system, prompt, schema, operation, metadata, providerRouting } = options;
   const openrouter = getOpenRouterProvider();
   const start = Date.now();
   const inputSizeApprox = system.length + prompt.length;
@@ -41,7 +42,9 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
 
   try {
     const result = await generateObject({
-      model: openrouter(modelId, { provider: { require_parameters: true } }),
+      model: openrouter(modelId, {
+        provider: { require_parameters: true, ...(providerRouting ?? {}) },
+      }),
       schema,
       system,
       prompt,

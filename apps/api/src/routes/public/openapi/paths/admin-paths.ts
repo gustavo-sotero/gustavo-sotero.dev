@@ -842,6 +842,208 @@ export const adminPaths = {
     },
   },
 
+  '/admin/posts/generate/topic-runs': {
+    post: {
+      tags: ['Admin - Posts'],
+      summary: 'Create async topic run',
+      description:
+        'Enqueues an async topic generation run. Returns immediately with a run ID and recommended poll interval. Poll GET /admin/posts/generate/topic-runs/:id until status is `completed` or terminal. Admin-only, CSRF-protected, rate limited to 5 requests per minute.',
+      operationId: 'adminCreatePostTopicRun',
+      security: [{ cookieAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['category', 'excludedIdeas'],
+              properties: {
+                category: {
+                  type: 'string',
+                  enum: AI_POST_REQUESTED_CATEGORIES,
+                  description: 'Editorial category for topic generation.',
+                },
+                briefing: {
+                  type: 'string',
+                  nullable: true,
+                  maxLength: AI_POST_MAX_BRIEFING_CHARS,
+                  description: 'Optional author guidance (angles, audience, constraints).',
+                },
+                limit: {
+                  type: 'integer',
+                  minimum: AI_POST_MIN_SUGGESTIONS,
+                  maximum: AI_POST_MAX_SUGGESTIONS,
+                  default: AI_POST_DEFAULT_SUGGESTIONS,
+                  description: 'Number of topic suggestions to generate.',
+                },
+                excludedIdeas: {
+                  type: 'array',
+                  maxItems: AI_POST_MAX_EXCLUDED_ITEMS,
+                  items: { type: 'string', maxLength: AI_POST_MAX_EXCLUDED_TEXT_CHARS },
+                  description: 'Titles from previous generations to avoid.',
+                },
+              },
+            },
+            example: {
+              category: 'backend-arquitetura',
+              briefing: 'Foco em sistemas distribuídos e trade-offs de consistência.',
+              limit: 4,
+              excludedIdeas: ['Introdução ao Docker'],
+            },
+          },
+        },
+      },
+      responses: {
+        202: {
+          description: 'Topic run accepted.',
+          content: {
+            'application/json': {
+              example: {
+                success: true,
+                data: {
+                  runId: 'd9e2f3a0-5678-4bcd-aef0-000000000002',
+                  status: 'queued',
+                  stage: 'queued',
+                  pollAfterMs: 1000,
+                  createdAt: '2026-04-14T12:00:00.000Z',
+                },
+              },
+            },
+          },
+        },
+        400: { $ref: '#/components/responses/ValidationError' },
+        401: { $ref: '#/components/responses/Unauthorized' },
+        403: { $ref: '#/components/responses/Forbidden' },
+        422: {
+          description: 'Feature disabled or model not configured.',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                error: { code: 'DISABLED', message: 'AI post generation is disabled.' },
+              },
+            },
+          },
+        },
+        429: { $ref: '#/components/responses/RateLimited' },
+        500: { $ref: '#/components/responses/InternalError' },
+      },
+    },
+  },
+
+  '/admin/posts/generate/topic-runs/{id}': {
+    get: {
+      tags: ['Admin - Posts'],
+      summary: 'Get async topic run status',
+      description:
+        'Returns the current state of an async topic generation run. Poll this endpoint after creating a run until status is `completed`, `failed`, or `timed_out`. When `completed`, the `result` field contains the full suggestions list.',
+      operationId: 'adminGetPostTopicRunStatus',
+      security: [{ cookieAuth: [] }],
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Run ID returned by POST /admin/posts/generate/topic-runs.',
+          example: 'd9e2f3a0-5678-4bcd-aef0-000000000002',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Run state.',
+          content: {
+            'application/json': {
+              examples: {
+                running: {
+                  summary: 'Run in progress',
+                  value: {
+                    success: true,
+                    data: {
+                      runId: 'd9e2f3a0-5678-4bcd-aef0-000000000002',
+                      status: 'running',
+                      stage: 'requesting-provider',
+                      requestedCategory: 'backend-arquitetura',
+                      modelId: 'openai/gpt-4o-mini',
+                      attemptCount: 1,
+                      createdAt: '2026-04-14T12:00:00.000Z',
+                      startedAt: '2026-04-14T12:00:01.000Z',
+                      finishedAt: null,
+                      durationMs: null,
+                      error: null,
+                      result: null,
+                    },
+                  },
+                },
+                completed: {
+                  summary: 'Run completed successfully',
+                  value: {
+                    success: true,
+                    data: {
+                      runId: 'd9e2f3a0-5678-4bcd-aef0-000000000002',
+                      status: 'completed',
+                      stage: 'completed',
+                      requestedCategory: 'backend-arquitetura',
+                      modelId: 'openai/gpt-4o-mini',
+                      attemptCount: 1,
+                      createdAt: '2026-04-14T12:00:00.000Z',
+                      startedAt: '2026-04-14T12:00:01.000Z',
+                      finishedAt: '2026-04-14T12:00:08.000Z',
+                      durationMs: 7000,
+                      error: null,
+                      result: {
+                        suggestions: [
+                          {
+                            suggestionId: 'abc1',
+                            category: 'backend-arquitetura',
+                            proposedTitle: 'Filas vs. Chamadas Síncronas',
+                            angle: 'Trade-offs de acoplamento',
+                            summary: 'Quando usar BullMQ e quando uma HTTP direta resolve melhor.',
+                            targetReader: 'Engenheiro backend com 2-5 anos',
+                            suggestedTagNames: ['BullMQ', 'Redis'],
+                            rationale: 'Tema recorrente em PT-BR.',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+                failed: {
+                  summary: 'Run failed',
+                  value: {
+                    success: true,
+                    data: {
+                      runId: 'd9e2f3a0-5678-4bcd-aef0-000000000002',
+                      status: 'failed',
+                      stage: 'failed',
+                      requestedCategory: 'backend-arquitetura',
+                      modelId: 'openai/gpt-4o-mini',
+                      attemptCount: 2,
+                      createdAt: '2026-04-14T12:00:00.000Z',
+                      startedAt: '2026-04-14T12:00:01.000Z',
+                      finishedAt: '2026-04-14T12:00:12.000Z',
+                      durationMs: 11000,
+                      error: {
+                        kind: 'provider',
+                        code: '503',
+                        message: 'Provider unavailable after retries.',
+                      },
+                      result: null,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: { $ref: '#/components/responses/Unauthorized' },
+        403: { $ref: '#/components/responses/Forbidden' },
+        404: { $ref: '#/components/responses/NotFound' },
+        500: { $ref: '#/components/responses/InternalError' },
+      },
+    },
+  },
+
   // ── Admin Projects ──────────────────────────────────────────────────────────
   '/admin/projects': {
     get: {

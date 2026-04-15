@@ -1,5 +1,6 @@
 export * from './ai-post-generation-draft-runs';
 export * from './ai-post-generation-settings';
+export * from './ai-post-generation-topic-runs';
 export * from './analytics';
 export * from './comments';
 export * from './contacts';

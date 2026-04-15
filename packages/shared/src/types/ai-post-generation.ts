@@ -6,11 +6,14 @@ import type {
 import type {
   CreateDraftRunRequest,
   CreateDraftRunResponse,
+  CreateTopicRunRequest,
+  CreateTopicRunResponse,
   DraftRunStatusResponse,
   GenerateDraftRequest,
   GenerateDraftResponse,
   GenerateTopicsRequest,
   GenerateTopicsResponse,
+  TopicRunStatusResponse,
   TopicSuggestion,
 } from '../schemas/ai-post-generation';
 
@@ -20,10 +23,13 @@ export type {
   AiPostRequestedCategory,
   CreateDraftRunRequest,
   CreateDraftRunResponse,
+  CreateTopicRunRequest,
+  CreateTopicRunResponse,
   DraftRunStatusResponse,
   GenerateDraftRequest,
   GenerateDraftResponse,
   GenerateTopicsRequest,
   GenerateTopicsResponse,
+  TopicRunStatusResponse,
   TopicSuggestion,
 };

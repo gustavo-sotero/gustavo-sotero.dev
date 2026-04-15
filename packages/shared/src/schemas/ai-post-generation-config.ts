@@ -1,5 +1,24 @@
 import { z } from 'zod';
 
+// ── Provider routing config ───────────────────────────────────────────────────
+
+/**
+ * Subset of OpenRouter's provider routing options that can be persisted per
+ * operation. All fields are optional — only the ones set are forwarded to the
+ * provider when making a generation call.
+ */
+export const providerRoutingConfigSchema = z
+  .object({
+    order: z.array(z.string()).optional(),
+    allow_fallbacks: z.boolean().optional(),
+    sort: z.string().optional(),
+    preferred_max_latency: z.number().int().positive().optional(),
+    preferred_min_throughput: z.number().int().positive().optional(),
+  })
+  .nullable();
+
+export type ProviderRoutingConfig = z.infer<typeof providerRoutingConfigSchema>;
+
 // ── Config status ─────────────────────────────────────────────────────────────
 
 export const aiPostGenerationStatusSchema = z.enum([
@@ -17,6 +36,8 @@ export type AiPostGenerationStatus = z.infer<typeof aiPostGenerationStatusSchema
 export const aiPostGenerationConfigSchema = z.object({
   topicsModelId: z.string().min(1),
   draftModelId: z.string().min(1),
+  topicsRouting: providerRoutingConfigSchema.optional(),
+  draftRouting: providerRoutingConfigSchema.optional(),
 });
 
 export type AiPostGenerationConfig = z.infer<typeof aiPostGenerationConfigSchema>;
@@ -40,6 +61,8 @@ export type AiPostGenerationConfigState = z.infer<typeof aiPostGenerationConfigS
 export const updateAiPostGenerationConfigSchema = z.object({
   topicsModelId: z.string().min(1, 'Modelo para tópicos é obrigatório'),
   draftModelId: z.string().min(1, 'Modelo para rascunho é obrigatório'),
+  topicsRouting: providerRoutingConfigSchema.optional(),
+  draftRouting: providerRoutingConfigSchema.optional(),
 });
 
 export type UpdateAiPostGenerationConfig = z.infer<typeof updateAiPostGenerationConfigSchema>;

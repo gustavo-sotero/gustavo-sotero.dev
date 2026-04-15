@@ -241,6 +241,7 @@ export async function generateTopicSuggestions(
       schema: generateTopicsOutputSchema,
       operation: 'topics',
       metadata: { category: normalizedReq.category },
+      providerRouting: activeConfig.topicsRouting,
     });
 
     return normalizeTopicsResponse(
@@ -281,6 +282,7 @@ export async function generatePostDraft(req: GenerateDraftRequest): Promise<Gene
       schema: generateDraftOutputSchema,
       operation: 'draft',
       metadata: { category: normalizedReq.category },
+      providerRouting: activeConfig.draftRouting,
     });
 
     return normalizeDraftResponse(result.object as GenerateDraftResponse, persistedTags);

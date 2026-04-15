@@ -38,10 +38,13 @@ vi.mock('@tanstack/react-query', () => ({
 
 import {
   useCreateDraftRun,
+  useCreateTopicRun,
   useDraftRunStatus,
   useGeneratePostDraft,
   useGeneratePostDraftRun,
   useGeneratePostTopics,
+  useGeneratePostTopicsRun,
+  useTopicRunStatus,
 } from './use-post-generation';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -102,6 +105,15 @@ const CREATE_RUN_REQUEST = {
   selectedSuggestion: VALID_SUGGESTION,
   rejectedAngles: [],
 };
+
+const CREATE_TOPIC_RUN_REQUEST = {
+  category: 'backend-arquitetura' as const,
+  briefing: null,
+  limit: 4,
+  excludedIdeas: [],
+};
+
+const TOPIC_RUN_ID = '550e8400-e29b-41d4-a716-446655440001';
 
 const RUN_ID = '550e8400-e29b-41d4-a716-446655440000';
 
@@ -392,6 +404,223 @@ describe('useGeneratePostDraftRun', () => {
     });
 
     expect(result.current.runId).toBe(RUN_ID);
+
+    act(() => {
+      result.current.reset();
+    });
+
+    expect(result.current.runId).toBeNull();
+  });
+});
+
+// ── useCreateTopicRun ─────────────────────────────────────────────────────────
+
+const CREATE_TOPIC_RUN_RESPONSE = {
+  runId: TOPIC_RUN_ID,
+  status: 'queued' as const,
+  stage: 'queued' as const,
+  pollAfterMs: 1000,
+  createdAt: new Date().toISOString(),
+};
+
+const TOPIC_RUN_STATUS_QUEUED = {
+  runId: TOPIC_RUN_ID,
+  status: 'running' as const,
+  stage: 'requesting-provider' as const,
+  requestedCategory: 'backend-arquitetura',
+  modelId: 'openai/gpt-4o',
+  attemptCount: 1,
+  createdAt: new Date().toISOString(),
+  startedAt: new Date().toISOString(),
+  finishedAt: null,
+  durationMs: null,
+  error: null,
+  result: null,
+};
+
+const TOPIC_RUN_STATUS_COMPLETED = {
+  ...TOPIC_RUN_STATUS_QUEUED,
+  status: 'completed' as const,
+  stage: 'completed' as const,
+  finishedAt: new Date().toISOString(),
+  durationMs: 5000,
+  result: { suggestions: [VALID_SUGGESTION] },
+};
+
+describe('useCreateTopicRun', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls POST /admin/posts/generate/topic-runs with the request payload', async () => {
+    apiPostMock.mockResolvedValueOnce({ data: CREATE_TOPIC_RUN_RESPONSE });
+
+    await callMutationFn(useCreateTopicRun, CREATE_TOPIC_RUN_REQUEST);
+
+    expect(apiPostMock).toHaveBeenCalledWith(
+      '/admin/posts/generate/topic-runs',
+      CREATE_TOPIC_RUN_REQUEST
+    );
+  });
+
+  it('returns the run creation response from the envelope', async () => {
+    apiPostMock.mockResolvedValueOnce({ data: CREATE_TOPIC_RUN_RESPONSE });
+
+    const result = await callMutationFn(useCreateTopicRun, CREATE_TOPIC_RUN_REQUEST);
+
+    expect(result).toEqual(CREATE_TOPIC_RUN_RESPONSE);
+  });
+
+  it('throws when the response has no data', async () => {
+    apiPostMock.mockResolvedValueOnce({ data: null });
+
+    await expect(callMutationFn(useCreateTopicRun, CREATE_TOPIC_RUN_REQUEST)).rejects.toThrow(
+      'Falha ao iniciar a geração assíncrona de temas.'
+    );
+  });
+});
+
+// ── useTopicRunStatus ─────────────────────────────────────────────────────────
+
+describe('useTopicRunStatus', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('is disabled when runId is null', () => {
+    const result = useTopicRunStatus(null);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    expect((result as any).enabled).toBe(false);
+  });
+
+  it('is enabled when a runId is provided', () => {
+    const result = useTopicRunStatus(TOPIC_RUN_ID);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    expect((result as any).enabled).toBe(true);
+  });
+
+  it('fetches run status via GET /admin/posts/generate/topic-runs/:id', async () => {
+    apiGetMock.mockResolvedValueOnce({ data: TOPIC_RUN_STATUS_QUEUED });
+
+    const result = useTopicRunStatus(TOPIC_RUN_ID);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    const data = await (result as any).queryFn();
+
+    expect(apiGetMock).toHaveBeenCalledWith(`/admin/posts/generate/topic-runs/${TOPIC_RUN_ID}`);
+    expect(data).toEqual(TOPIC_RUN_STATUS_QUEUED);
+  });
+
+  it('throws when the response has no data', async () => {
+    apiGetMock.mockResolvedValueOnce({ data: null });
+
+    const result = useTopicRunStatus(TOPIC_RUN_ID);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    await expect((result as any).queryFn()).rejects.toThrow(
+      'Falha ao buscar status do run de temas.'
+    );
+  });
+
+  it('stops polling (returns false) when status is completed', () => {
+    const result = useTopicRunStatus(TOPIC_RUN_ID, 1000);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    const interval = (result as any).refetchInterval({
+      state: { data: { ...TOPIC_RUN_STATUS_COMPLETED, status: 'completed' } },
+    });
+    expect(interval).toBe(false);
+  });
+
+  it('stops polling (returns false) when status is failed', () => {
+    const result = useTopicRunStatus(TOPIC_RUN_ID, 1000);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    const interval = (result as any).refetchInterval({
+      state: { data: { ...TOPIC_RUN_STATUS_QUEUED, status: 'failed' } },
+    });
+    expect(interval).toBe(false);
+  });
+
+  it('stops polling (returns false) when status is timed_out', () => {
+    const result = useTopicRunStatus(TOPIC_RUN_ID, 1000);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    const interval = (result as any).refetchInterval({
+      state: { data: { ...TOPIC_RUN_STATUS_QUEUED, status: 'timed_out' } },
+    });
+    expect(interval).toBe(false);
+  });
+
+  it('continues polling at the initial cadence while the run is younger than 20s', () => {
+    const result = useTopicRunStatus(TOPIC_RUN_ID, 500);
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    const interval = (result as any).refetchInterval({
+      state: { data: { ...TOPIC_RUN_STATUS_QUEUED, createdAt: new Date().toISOString() } },
+    });
+    expect(typeof interval).toBe('number');
+    expect(interval).toBe(500);
+  });
+
+  it('backs off polling after the run has been active for more than 20s', () => {
+    const result = useTopicRunStatus(TOPIC_RUN_ID, 500);
+    const oldCreatedAt = new Date(Date.now() - 21_000).toISOString();
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    const interval = (result as any).refetchInterval({
+      state: { data: { ...TOPIC_RUN_STATUS_QUEUED, createdAt: oldCreatedAt } },
+    });
+    expect(interval).toBe(2000);
+  });
+});
+
+// ── useGeneratePostTopicsRun ──────────────────────────────────────────────────
+
+describe('useGeneratePostTopicsRun', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('exposes start() / reset() / runId in initial state', () => {
+    const { result } = renderHook(() => useGeneratePostTopicsRun());
+
+    expect(result.current.runId).toBeNull();
+    expect(typeof result.current.start).toBe('function');
+    expect(typeof result.current.reset).toBe('function');
+    expect(result.current.isPending).toBe(false);
+  });
+
+  it('sets runId after start() resolves', async () => {
+    apiPostMock.mockResolvedValueOnce({ data: CREATE_TOPIC_RUN_RESPONSE });
+
+    const { result } = renderHook(() => useGeneratePostTopicsRun());
+
+    await act(async () => {
+      await result.current.start(CREATE_TOPIC_RUN_REQUEST);
+    });
+
+    expect(result.current.runId).toBe(TOPIC_RUN_ID);
+  });
+
+  it('calls POST /topic-runs with the provided request on start()', async () => {
+    apiPostMock.mockResolvedValueOnce({ data: CREATE_TOPIC_RUN_RESPONSE });
+
+    const { result } = renderHook(() => useGeneratePostTopicsRun());
+
+    await act(async () => {
+      await result.current.start(CREATE_TOPIC_RUN_REQUEST);
+    });
+
+    expect(apiPostMock).toHaveBeenCalledWith(
+      '/admin/posts/generate/topic-runs',
+      CREATE_TOPIC_RUN_REQUEST
+    );
+  });
+
+  it('clears runId after reset()', async () => {
+    apiPostMock.mockResolvedValueOnce({ data: CREATE_TOPIC_RUN_RESPONSE });
+
+    const { result } = renderHook(() => useGeneratePostTopicsRun());
+
+    await act(async () => {
+      await result.current.start(CREATE_TOPIC_RUN_REQUEST);
+    });
+
+    expect(result.current.runId).toBe(TOPIC_RUN_ID);
 
     act(() => {
       result.current.reset();

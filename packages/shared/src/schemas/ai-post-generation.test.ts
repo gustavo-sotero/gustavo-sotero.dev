@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   createDraftRunRequestSchema,
   createDraftRunResponseSchema,
+  createTopicRunRequestSchema,
+  createTopicRunResponseSchema,
   draftRunStatusResponseSchema,
   generateDraftRequestSchema,
   generateDraftResponseSchema,
   generateTopicsRequestSchema,
   generateTopicsResponseSchema,
+  topicRunStatusResponseSchema,
   topicSuggestionSchema,
 } from './ai-post-generation';
 
@@ -380,6 +383,154 @@ describe('ai-post-generation schemas', () => {
 
     it('rejects invalid status value', () => {
       const result = draftRunStatusResponseSchema.safeParse({
+        ...base,
+        status: 'in-flight',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ── createTopicRunRequestSchema ───────────────────────────────────────────
+
+  describe('createTopicRunRequestSchema', () => {
+    it('accepts a valid topic run request', () => {
+      const result = createTopicRunRequestSchema.safeParse({
+        category: 'backend-arquitetura',
+        briefing: null,
+        limit: 4,
+        excludedIdeas: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts misto category', () => {
+      const result = createTopicRunRequestSchema.safeParse({
+        category: 'misto',
+        briefing: 'Foco em backend',
+        limit: 3,
+        excludedIdeas: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects unknown category', () => {
+      const result = createTopicRunRequestSchema.safeParse({
+        category: 'invalid-category',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ── createTopicRunResponseSchema ──────────────────────────────────────────
+
+  describe('createTopicRunResponseSchema', () => {
+    it('validates 202 response body', () => {
+      const result = createTopicRunResponseSchema.safeParse({
+        runId: '550e8400-e29b-41d4-a716-446655440002',
+        status: 'queued',
+        stage: 'queued',
+        pollAfterMs: 1000,
+        createdAt: new Date().toISOString(),
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects non-uuid runId', () => {
+      const result = createTopicRunResponseSchema.safeParse({
+        runId: 'not-a-uuid',
+        status: 'queued',
+        stage: 'queued',
+        pollAfterMs: 1000,
+        createdAt: new Date().toISOString(),
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ── topicRunStatusResponseSchema ──────────────────────────────────────────
+
+  describe('topicRunStatusResponseSchema', () => {
+    const base = {
+      runId: '550e8400-e29b-41d4-a716-446655440002',
+      status: 'queued' as const,
+      stage: 'queued' as const,
+      requestedCategory: 'backend-arquitetura',
+      modelId: null,
+      attemptCount: 0,
+      createdAt: new Date().toISOString(),
+      startedAt: null,
+      finishedAt: null,
+      durationMs: null,
+      error: null,
+      result: null,
+    };
+
+    it('validates queued state', () => {
+      expect(topicRunStatusResponseSchema.safeParse(base).success).toBe(true);
+    });
+
+    it('validates completed state with result payload', () => {
+      const result = topicRunStatusResponseSchema.safeParse({
+        ...base,
+        status: 'completed',
+        stage: 'completed',
+        modelId: 'openai/gpt-4o',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 3800,
+        result: {
+          suggestions: [
+            {
+              suggestionId: 's1',
+              category: 'backend-arquitetura',
+              proposedTitle: 'Tema 1',
+              angle: 'Ângulo 1',
+              summary: 'Resumo 1',
+              targetReader: 'Dev',
+              suggestedTagNames: ['TypeScript'],
+              rationale: 'Motivo 1',
+            },
+            {
+              suggestionId: 's2',
+              category: 'backend-arquitetura',
+              proposedTitle: 'Tema 2',
+              angle: 'Ângulo 2',
+              summary: 'Resumo 2',
+              targetReader: 'Dev',
+              suggestedTagNames: ['Bun'],
+              rationale: 'Motivo 2',
+            },
+            {
+              suggestionId: 's3',
+              category: 'backend-arquitetura',
+              proposedTitle: 'Tema 3',
+              angle: 'Ângulo 3',
+              summary: 'Resumo 3',
+              targetReader: 'Dev',
+              suggestedTagNames: ['Redis'],
+              rationale: 'Motivo 3',
+            },
+          ],
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('validates failed state with error payload', () => {
+      const result = topicRunStatusResponseSchema.safeParse({
+        ...base,
+        status: 'failed',
+        stage: 'requesting-provider',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 30000,
+        error: { kind: 'timeout', code: null, message: 'Provider timed out' },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects invalid status value', () => {
+      const result = topicRunStatusResponseSchema.safeParse({
         ...base,
         status: 'in-flight',
       });

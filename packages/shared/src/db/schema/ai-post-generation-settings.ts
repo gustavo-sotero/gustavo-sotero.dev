@@ -1,4 +1,4 @@
-import { pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
 
 /**
  * Singleton configuration row for the AI post generation feature.
@@ -11,6 +11,8 @@ export const aiPostGenerationSettings = pgTable('ai_post_generation_settings', {
   scope: varchar('scope', { length: 32 }).primaryKey().default('global'),
   topicsModelId: varchar('topics_model_id', { length: 255 }),
   draftModelId: varchar('draft_model_id', { length: 255 }),
+  topicsRouting: jsonb('topics_routing'),
+  draftRouting: jsonb('draft_routing'),
   updatedBy: varchar('updated_by', { length: 255 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true })

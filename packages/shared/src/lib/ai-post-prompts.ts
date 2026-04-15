@@ -5,8 +5,12 @@
  * (async draft job) can use the same editorial content without duplication.
  */
 
-import type { AiPostRequestedCategory } from '../constants/ai-posts';
-import type { GenerateDraftRequest } from '../schemas/ai-post-generation';
+import {
+  AI_POST_CATEGORY_META,
+  AI_POST_MAX_TOPIC_TAG_NAMES,
+  type AiPostRequestedCategory,
+} from '../constants/ai-posts';
+import type { GenerateDraftRequest, GenerateTopicsRequest } from '../schemas/ai-post-generation';
 
 export const STYLE_EXEMPLARS: readonly string[] = [
   `## Fila não é solução mágica — é troca
@@ -191,6 +195,30 @@ Tags sugeridas: ${s.suggestedTagNames.join(', ')}`
 
   parts.push(
     `Produza o draft completo com os campos: title, slug (URL-safe, PT-BR), excerpt (máx 500 caracteres), content (Markdown), suggestedTagNames (máx 8, nomes naturais com maiúsculas/espaços, somente tags diretamente relevantes ao tema — sem tags genéricas), imagePrompt (PT-BR, veja regras acima), linkedinPost (PT-BR, veja regras acima — use exatamente o placeholder {{POST_URL}} para o link do blog, com hashtags obrigatórias no final), notes (nullable — use para qualquer aviso editorial).`
+  );
+
+  return parts.join('\n\n');
+}
+
+function categoryLabel(category: string): string {
+  return AI_POST_CATEGORY_META[category as AiPostRequestedCategory]?.label ?? category;
+}
+
+export function buildTopicsUserPrompt(req: GenerateTopicsRequest): string {
+  const parts: string[] = [];
+
+  if (req.briefing) {
+    parts.push(`Briefing do autor:\n${req.briefing}`);
+  }
+
+  if (req.excludedIdeas.length > 0) {
+    parts.push(
+      `Ângulos a evitar (usados em gerações anteriores):\n${req.excludedIdeas.map((e) => `- ${e}`).join('\n')}`
+    );
+  }
+
+  parts.push(
+    `Gere exatamente ${req.limit} sugestões de tema para a categoria "${categoryLabel(req.category)}".\nCada sugestão deve ter suggestionId único (string curta), proposedTitle, angle, summary (2-3 frases), targetReader, suggestedTagNames (máx ${AI_POST_MAX_TOPIC_TAG_NAMES}) e rationale (1 frase curta).`
   );
 
   return parts.join('\n\n');

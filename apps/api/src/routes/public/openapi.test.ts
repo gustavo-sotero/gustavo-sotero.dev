@@ -308,9 +308,12 @@ describe('openapi routes', () => {
     const draftPost = body.paths['/admin/posts/generate/draft']?.post;
     const draftRunsPost = body.paths['/admin/posts/generate/draft-runs']?.post;
     const draftRunStatusGet = body.paths['/admin/posts/generate/draft-runs/{id}']?.get;
+    const topicRunsPost = body.paths['/admin/posts/generate/topic-runs']?.post;
+    const topicRunStatusGet = body.paths['/admin/posts/generate/topic-runs/{id}']?.get;
     const topicsSchema = topicsPost?.requestBody?.content?.['application/json']?.schema;
     const draftSchema = draftPost?.requestBody?.content?.['application/json']?.schema;
     const draftRunsSchema = draftRunsPost?.requestBody?.content?.['application/json']?.schema;
+    const topicRunsSchema = topicRunsPost?.requestBody?.content?.['application/json']?.schema;
     const topicsSuccess = topicsPost?.responses?.['200']?.content?.['application/json']?.example;
     const draftSuccess = draftPost?.responses?.['200']?.content?.['application/json']?.example;
     const draftRunsAccepted =
@@ -319,6 +322,14 @@ describe('openapi routes', () => {
       draftRunStatusGet?.responses?.['200']?.content?.['application/json']?.examples?.completed
         ?.value;
     const draftRunCompletedResult = draftRunCompleted?.data?.result as
+      | Record<string, unknown>
+      | undefined;
+    const topicRunsAccepted =
+      topicRunsPost?.responses?.['202']?.content?.['application/json']?.example;
+    const topicRunCompleted =
+      topicRunStatusGet?.responses?.['200']?.content?.['application/json']?.examples?.completed
+        ?.value;
+    const topicRunCompletedResult = topicRunCompleted?.data?.result as
       | Record<string, unknown>
       | undefined;
 
@@ -369,5 +380,21 @@ describe('openapi routes', () => {
       'https://gustavo-sotero.dev/blog/'
     );
     expect(String(draftRunCompletedResult?.linkedinPost)).toMatch(/#\w+/);
+
+    // ── topic-runs OpenAPI parity ──────────────────────────────────────────────
+    expect(topicRunsPost?.description).toContain('topic-runs');
+    expect(topicRunsSchema?.properties?.category?.enum).toContain('backend-arquitetura');
+    expect(topicRunsSchema?.properties?.limit?.default).toBe(4);
+    expect(topicRunsSchema?.properties?.limit?.minimum).toBe(3);
+    expect(topicRunsSchema?.properties?.limit?.maximum).toBe(5);
+    expect(topicRunsSchema?.properties?.excludedIdeas?.maxItems).toBe(10);
+    expect(topicRunsAccepted?.data?.status).toBe('queued');
+    expect(typeof topicRunsAccepted?.data?.runId).toBe('string');
+    expect(topicRunCompleted?.data?.status).toBe('completed');
+    expect(topicRunCompleted?.data?.requestedCategory).toBe('backend-arquitetura');
+    expect(Array.isArray(topicRunCompletedResult?.suggestions)).toBe(true);
+    expect((topicRunCompletedResult?.suggestions as unknown[])?.[0]).toHaveProperty(
+      'proposedTitle'
+    );
   });
 });

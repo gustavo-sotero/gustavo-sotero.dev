@@ -41,6 +41,15 @@ export function aiPostDraftRunJobId(runId: string): string {
 }
 
 /**
+ * Deterministic job ID for an AI post topic generation run.
+ * Using the runId (UUID from the ai_post_generation_topic_runs table) ensures
+ * BullMQ deduplicates duplicate outbox deliveries.
+ */
+export function aiPostTopicRunJobId(runId: string): string {
+  return `ai-topic-run-${runId}`;
+}
+
+/**
  * Legacy job ID format used before the colon-separator was removed.
  * Kept only for compatibility lookup during the transition window:
  * existing delayed jobs in Redis may still carry this format.

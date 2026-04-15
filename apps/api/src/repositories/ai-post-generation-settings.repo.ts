@@ -1,3 +1,4 @@
+import type { ProviderRoutingConfig } from '@portfolio/shared';
 import { aiPostGenerationSettings } from '@portfolio/shared/db/schema';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
@@ -12,6 +13,8 @@ import { db } from '../config/db';
 export interface UpsertAiPostGenerationSettingsInput {
   topicsModelId: string;
   draftModelId: string;
+  topicsRouting?: ProviderRoutingConfig | null;
+  draftRouting?: ProviderRoutingConfig | null;
   updatedBy: string;
 }
 
@@ -38,6 +41,8 @@ export async function upsertAiPostGenerationSettings(input: UpsertAiPostGenerati
       scope: 'global',
       topicsModelId: input.topicsModelId,
       draftModelId: input.draftModelId,
+      topicsRouting: input.topicsRouting ?? null,
+      draftRouting: input.draftRouting ?? null,
       updatedBy: input.updatedBy,
     })
     .onConflictDoUpdate({
@@ -45,6 +50,8 @@ export async function upsertAiPostGenerationSettings(input: UpsertAiPostGenerati
       set: {
         topicsModelId: input.topicsModelId,
         draftModelId: input.draftModelId,
+        topicsRouting: input.topicsRouting ?? null,
+        draftRouting: input.draftRouting ?? null,
         updatedBy: input.updatedBy,
         updatedAt: new Date(),
       },

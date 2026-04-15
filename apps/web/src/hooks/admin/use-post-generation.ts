@@ -3,13 +3,19 @@
 import type {
   CreateDraftRunRequest,
   CreateDraftRunResponse,
+  CreateTopicRunRequest,
+  CreateTopicRunResponse,
   DraftRunStatusResponse,
   GenerateDraftRequest,
   GenerateDraftResponse,
   GenerateTopicsRequest,
   GenerateTopicsResponse,
+  TopicRunStatusResponse,
 } from '@portfolio/shared';
-import { AI_POST_DRAFT_RUN_INITIAL_POLL_MS } from '@portfolio/shared';
+import {
+  AI_POST_DRAFT_RUN_INITIAL_POLL_MS,
+  AI_POST_TOPIC_RUN_INITIAL_POLL_MS,
+} from '@portfolio/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPost } from '@/lib/api';
@@ -183,5 +189,133 @@ export function useGeneratePostDraftRun() {
         ? statusQuery.data.error
         : null,
     stage: currentStage,
+  };
+}
+
+// ── Async topic run ───────────────────────────────────────────────────────────
+
+/**
+ * Mutation that creates an async topic run (POST /topic-runs → 202).
+ * Returns the run ID and initial status immediately.
+ */
+export function useCreateTopicRun() {
+  return useMutation<CreateTopicRunResponse, unknown, CreateTopicRunRequest>({
+    mutationFn: async (data) => {
+      const res = await apiPost<CreateTopicRunResponse>('/admin/posts/generate/topic-runs', data);
+      if (!res?.data) {
+        throw new Error('Falha ao iniciar a geração assíncrona de temas.');
+      }
+      return res.data;
+    },
+  });
+}
+
+/**
+ * Polling query for a topic run status.
+ *
+ * Polls every `intervalMs` while the run is in a non-terminal state.
+ * Stops automatically when status is 'completed', 'failed', or 'timed_out'.
+ */
+export function useTopicRunStatus(
+  runId: string | null,
+  intervalMs = AI_POST_TOPIC_RUN_INITIAL_POLL_MS
+) {
+  return useQuery<TopicRunStatusResponse, unknown>({
+    queryKey: ['topic-run-status', runId],
+    queryFn: async () => {
+      const res = await apiGet<TopicRunStatusResponse>(`/admin/posts/generate/topic-runs/${runId}`);
+      if (!res?.data) throw new Error('Falha ao buscar status do run de temas.');
+      return res.data;
+    },
+    enabled: !!runId,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return intervalMs;
+      if (isTerminalStatus(data.status)) return false;
+      const elapsed = Date.now() - new Date(data.createdAt).getTime();
+      return elapsed > SLOW_POLLING_AFTER_MS ? SLOW_POLLING_INTERVAL_MS : intervalMs;
+    },
+    staleTime: 0,
+  });
+}
+
+/**
+ * Composed hook: creates a topic run, polls until terminal, then returns the
+ * completed topic suggestions.
+ *
+ * Usage:
+ *   const { start, status, result, error, isPending } = useGeneratePostTopicsRun();
+ *   await start(request, { onCompleted: (run) => ... });
+ */
+export function useGeneratePostTopicsRun() {
+  const [runId, setRunId] = useState<string | null>(null);
+  const [initialPollAfterMs, setInitialPollAfterMs] = useState(AI_POST_TOPIC_RUN_INITIAL_POLL_MS);
+  const [runSnapshot, setRunSnapshot] = useState<Pick<
+    CreateTopicRunResponse,
+    'runId' | 'status' | 'stage'
+  > | null>(null);
+  const createMutation = useCreateTopicRun();
+  const statusQuery = useTopicRunStatus(runId, initialPollAfterMs);
+  const onSettledRef = useRef<((run: TopicRunStatusResponse) => void) | null>(null);
+  const onErrorRef = useRef<((err: unknown) => void) | null>(null);
+
+  // Notify callbacks when terminal state reached
+  useEffect(() => {
+    const run = statusQuery.data;
+    if (!run) return;
+    if (run.status === 'completed') {
+      onSettledRef.current?.(run);
+      onSettledRef.current = null;
+    } else if (run.status === 'failed' || run.status === 'timed_out') {
+      onErrorRef.current?.(new Error(run.error?.message ?? 'Geração de temas falhou.'));
+      onErrorRef.current = null;
+    }
+  }, [statusQuery.data]);
+
+  const start = useCallback(
+    async (
+      request: CreateTopicRunRequest,
+      callbacks?: {
+        onCompleted?: (run: TopicRunStatusResponse) => void;
+        onError?: (err: unknown) => void;
+      }
+    ): Promise<void> => {
+      onSettledRef.current = callbacks?.onCompleted ?? null;
+      onErrorRef.current = callbacks?.onError ?? null;
+      const run = await createMutation.mutateAsync(request);
+      setInitialPollAfterMs(run.pollAfterMs);
+      setRunSnapshot({ runId: run.runId, status: run.status, stage: run.stage });
+      setRunId(run.runId);
+    },
+    [createMutation]
+  );
+
+  const reset = useCallback(() => {
+    setRunId(null);
+    setInitialPollAfterMs(AI_POST_TOPIC_RUN_INITIAL_POLL_MS);
+    setRunSnapshot(null);
+    onSettledRef.current = null;
+    onErrorRef.current = null;
+  }, []);
+
+  const currentStatus = statusQuery.data?.status ?? runSnapshot?.status ?? null;
+  const currentStage = statusQuery.data?.stage ?? runSnapshot?.stage ?? null;
+
+  return {
+    start,
+    reset,
+    runId,
+    status: currentStatus,
+    stage: currentStage,
+    run: statusQuery.data,
+    isPending: createMutation.isPending || (!!runId && !isTerminalStatus(currentStatus)),
+    result:
+      statusQuery.data?.status === 'completed'
+        ? (statusQuery.data.result as GenerateTopicsResponse | null)
+        : null,
+    error:
+      statusQuery.data?.status === 'failed' || statusQuery.data?.status === 'timed_out'
+        ? statusQuery.data.error
+        : null,
   };
 }

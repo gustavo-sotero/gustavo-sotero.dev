@@ -14,6 +14,8 @@ import {
   AI_POST_MIN_DRAFT_CONTENT_CHARS,
   AI_POST_MIN_SUGGESTIONS,
   AI_POST_REQUESTED_CATEGORIES,
+  AI_POST_TOPIC_RUN_STAGES,
+  AI_POST_TOPIC_RUN_STATUSES,
 } from '../constants/ai-posts';
 
 const requiredString = z.string().trim().min(1, 'Campo obrigatório');
@@ -200,3 +202,53 @@ export const draftRunStatusResponseSchema = z.object({
 });
 
 export type DraftRunStatusResponse = z.infer<typeof draftRunStatusResponseSchema>;
+
+// ── Topic Run API schemas ─────────────────────────────────────────────────────
+
+/**
+ * POST /admin/posts/generate/topic-runs — input body.
+ * Same business payload as the synchronous topics endpoint.
+ */
+export const createTopicRunRequestSchema = generateTopicsRequestSchema;
+export type CreateTopicRunRequest = GenerateTopicsRequest;
+
+/**
+ * POST /admin/posts/generate/topic-runs — 202 response body.
+ */
+export const createTopicRunResponseSchema = z.object({
+  runId: z.string().uuid(),
+  status: z.enum(AI_POST_TOPIC_RUN_STATUSES),
+  stage: z.enum(AI_POST_TOPIC_RUN_STAGES),
+  /** Recommended initial poll interval in ms. */
+  pollAfterMs: z.number().int().positive(),
+  createdAt: z.string(),
+});
+
+export type CreateTopicRunResponse = z.infer<typeof createTopicRunResponseSchema>;
+
+/**
+ * GET /admin/posts/generate/topic-runs/:id — response body.
+ */
+export const topicRunStatusResponseSchema = z.object({
+  runId: z.string().uuid(),
+  status: z.enum(AI_POST_TOPIC_RUN_STATUSES),
+  stage: z.enum(AI_POST_TOPIC_RUN_STAGES),
+  requestedCategory: z.enum(AI_POST_REQUESTED_CATEGORIES),
+  modelId: z.string().nullable(),
+  attemptCount: z.number().int(),
+  createdAt: z.string(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+  durationMs: z.number().int().nullable(),
+  error: z
+    .object({
+      kind: z.string(),
+      code: z.string().nullable(),
+      message: z.string(),
+    })
+    .nullable(),
+  /** Present only when status === 'completed'. */
+  result: generateTopicsResponseSchema.nullable(),
+});
+
+export type TopicRunStatusResponse = z.infer<typeof topicRunStatusResponseSchema>;

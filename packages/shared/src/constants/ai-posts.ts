@@ -85,6 +85,38 @@ export type AiPostDraftRunStage = (typeof AI_POST_DRAFT_RUN_STAGES)[number];
 /** Initial poll interval (ms) recommended by the server after run creation. */
 export const AI_POST_DRAFT_RUN_INITIAL_POLL_MS = 1000;
 
+// ── Topic Run constants ───────────────────────────────────────────────────────
+
+export const AI_POST_TOPIC_RUN_STATUSES = [
+  'queued',
+  'running',
+  'validating',
+  'completed',
+  'failed',
+  'timed_out',
+] as const;
+
+export type AiPostTopicRunStatus = (typeof AI_POST_TOPIC_RUN_STATUSES)[number];
+
+export const AI_POST_TOPIC_RUN_STAGES = [
+  'queued',
+  'resolving-config',
+  'building-prompt',
+  'requesting-provider',
+  'normalizing-output',
+  'canonicalizing-tags',
+  'validating-output',
+  'persisting-result',
+  'completed',
+  'failed',
+  'timed-out',
+] as const;
+
+export type AiPostTopicRunStage = (typeof AI_POST_TOPIC_RUN_STAGES)[number];
+
+/** Initial poll interval (ms) recommended by the server after topic run creation. */
+export const AI_POST_TOPIC_RUN_INITIAL_POLL_MS = 1000;
+
 // ── Category metadata ─────────────────────────────────────────────────────────
 
 export interface AiPostCategoryMeta {

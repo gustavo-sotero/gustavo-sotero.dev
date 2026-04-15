@@ -10,6 +10,8 @@ const {
   listEligibleModelsPaginatedMock,
   createDraftRunMock,
   getDraftRunStatusMock,
+  createTopicRunMock,
+  getTopicRunStatusMock,
 } = vi.hoisted(() => ({
   generateTopicSuggestionsMock: vi.fn(),
   generatePostDraftMock: vi.fn(),
@@ -18,6 +20,8 @@ const {
   listEligibleModelsPaginatedMock: vi.fn(),
   createDraftRunMock: vi.fn(),
   getDraftRunStatusMock: vi.fn(),
+  createTopicRunMock: vi.fn(),
+  getTopicRunStatusMock: vi.fn(),
 }));
 
 vi.mock('../../services/post-generation.service', () => ({
@@ -37,6 +41,11 @@ vi.mock('../../services/openrouter-models.service', () => ({
 vi.mock('../../services/ai-post-generation-draft-runs.service', () => ({
   createDraftRun: createDraftRunMock,
   getDraftRunStatus: getDraftRunStatusMock,
+}));
+
+vi.mock('../../services/ai-post-generation-topic-runs.service', () => ({
+  createTopicRun: createTopicRunMock,
+  getTopicRunStatus: getTopicRunStatusMock,
 }));
 
 vi.mock('../../middleware/auth', () => ({
@@ -770,6 +779,170 @@ describe('admin post-generation routes', () => {
       const body = (await res.json()) as any;
       expect(body.data.status).toBe('failed');
       expect(body.data.error.kind).toBe('timeout');
+    });
+  });
+
+  // ── POST /topic-runs ─────────────────────────────────────────────────────────────────
+
+  describe('POST /topic-runs', () => {
+    const TOPIC_RUN_ID = '550e8400-e29b-41d4-a716-446655440001';
+
+    it('returns 202 with runId on successful topic run creation', async () => {
+      createTopicRunMock.mockResolvedValueOnce({
+        runId: TOPIC_RUN_ID,
+        status: 'queued',
+        stage: 'queued',
+        pollAfterMs: 3000,
+        createdAt: new Date().toISOString(),
+      });
+
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/topic-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(VALID_TOPICS_BODY),
+      });
+
+      expect(res.status).toBe(202);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.success).toBe(true);
+      expect(body.data.runId).toBe(TOPIC_RUN_ID);
+      expect(body.data.status).toBe('queued');
+      expect(createTopicRunMock).toHaveBeenCalledOnce();
+    });
+
+    it('returns 400 when request body is invalid', async () => {
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/topic-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: 'invalid-cat' }),
+      });
+
+      expect(res.status).toBe(400);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 503 on timeout from service', async () => {
+      createTopicRunMock.mockRejectedValueOnce(new AiGenerationError('timeout', 'timed out'));
+
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/topic-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(VALID_TOPICS_BODY),
+      });
+
+      expect(res.status).toBe(503);
+    });
+
+    it('accepts misto as a valid category', async () => {
+      createTopicRunMock.mockResolvedValueOnce({
+        runId: TOPIC_RUN_ID,
+        status: 'queued',
+        stage: 'queued',
+        pollAfterMs: 3000,
+        createdAt: new Date().toISOString(),
+      });
+
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/topic-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_TOPICS_BODY, category: 'misto' }),
+      });
+
+      expect(res.status).toBe(202);
+    });
+  });
+
+  // ── GET /topic-runs/:id ───────────────────────────────────────────────────────────────
+
+  describe('GET /topic-runs/:id', () => {
+    const TOPIC_RUN_ID = '550e8400-e29b-41d4-a716-446655440001';
+
+    it('returns 404 when run is not found', async () => {
+      getTopicRunStatusMock.mockResolvedValueOnce(null);
+
+      const app = buildApp();
+      const res = await app.request(`/admin/posts/generate/topic-runs/${TOPIC_RUN_ID}`);
+
+      expect(res.status).toBe(404);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('returns 200 with queued run status', async () => {
+      getTopicRunStatusMock.mockResolvedValueOnce({
+        runId: TOPIC_RUN_ID,
+        status: 'queued',
+        stage: 'queued',
+        requestedCategory: 'backend-arquitetura',
+        modelId: null,
+        attemptCount: 0,
+        createdAt: new Date().toISOString(),
+        startedAt: null,
+        finishedAt: null,
+        durationMs: null,
+        error: null,
+        result: null,
+      });
+
+      const app = buildApp();
+      const res = await app.request(`/admin/posts/generate/topic-runs/${TOPIC_RUN_ID}`);
+
+      expect(res.status).toBe(200);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.success).toBe(true);
+      expect(body.data.runId).toBe(TOPIC_RUN_ID);
+      expect(body.data.status).toBe('queued');
+    });
+
+    it('returns 200 with completed run including result payload', async () => {
+      getTopicRunStatusMock.mockResolvedValueOnce({
+        runId: TOPIC_RUN_ID,
+        status: 'completed',
+        stage: 'completed',
+        requestedCategory: 'backend-arquitetura',
+        modelId: 'openai/gpt-4o',
+        attemptCount: 1,
+        createdAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 5000,
+        error: null,
+        result: {
+          suggestions: [
+            {
+              suggestionId: 's1',
+              category: 'backend-arquitetura',
+              proposedTitle: 'Fila nao e solucao magica',
+              angle: 'Trade-offs',
+              summary: 'Resumo.',
+              targetReader: 'Dev',
+              suggestedTagNames: ['BullMQ'],
+              rationale: 'Motivo.',
+            },
+          ],
+        },
+      });
+
+      const app = buildApp();
+      const res = await app.request(`/admin/posts/generate/topic-runs/${TOPIC_RUN_ID}`);
+
+      expect(res.status).toBe(200);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.data.status).toBe('completed');
+      expect(body.data.result).not.toBeNull();
+      expect(body.data.result.suggestions).toHaveLength(1);
     });
   });
 });

@@ -8,15 +8,18 @@
  *  GET  /admin/posts/generate/config                - Get current config state
  *  PUT  /admin/posts/generate/config                - Save active model pair (validated)
  *  GET  /admin/posts/generate/models                - List eligible OpenRouter models (paginated)
- *  POST /admin/posts/generate/topics                - Generate topic suggestions (synchronous)
+ *  POST /admin/posts/generate/topics                - Generate topic suggestions (synchronous, legacy)
+ *  POST /admin/posts/generate/topic-runs            - Create async topic run -> 202
+ *  GET  /admin/posts/generate/topic-runs/:id        - Poll topic run status
  *  POST /admin/posts/generate/draft                 - Generate draft synchronously (kept for compat)
  *  POST /admin/posts/generate/draft-runs            - Create async draft run -> 202
- *  GET  /admin/posts/generate/draft-runs/:id        - Poll run status
+ *  GET  /admin/posts/generate/draft-runs/:id        - Poll draft run status
  */
 
 import {
   aiPostGenerationModelsQuerySchema,
   createDraftRunRequestSchema,
+  createTopicRunRequestSchema,
   generateDraftRequestSchema,
   generateTopicsRequestSchema,
   updateAiPostGenerationConfigSchema,
@@ -34,6 +37,10 @@ import {
   getAiPostGenerationConfigState,
   saveAiPostGenerationConfig,
 } from '../../services/ai-post-generation-settings.service';
+import {
+  createTopicRun,
+  getTopicRunStatus,
+} from '../../services/ai-post-generation-topic-runs.service';
 import { listEligibleModelsPaginated } from '../../services/openrouter-models.service';
 import {
   generatePostDraft,
@@ -102,6 +109,27 @@ adminPostGenerationRouter.post('/topics', topicsRateLimit, async (c) => {
   } catch (err) {
     return handleGenerationError(c, err);
   }
+});
+
+adminPostGenerationRouter.post('/topic-runs', topicsRateLimit, async (c) => {
+  const bv = await parseAndValidateBody(c, createTopicRunRequestSchema);
+  if (!bv.ok) return bv.response;
+  const adminGithubId = c.get('adminId') ?? 'unknown';
+  try {
+    const result = await createTopicRun(bv.data, adminGithubId);
+    return c.json({ success: true, data: result }, 202);
+  } catch (err) {
+    return handleGenerationError(c, err);
+  }
+});
+
+adminPostGenerationRouter.get('/topic-runs/:id', async (c) => {
+  const runId = c.req.param('id');
+  const status = await getTopicRunStatus(runId);
+  if (!status) {
+    return errorResponse(c, 404, 'NOT_FOUND', 'Run não encontrado.');
+  }
+  return successResponse(c, status);
 });
 
 adminPostGenerationRouter.post('/draft', draftRateLimit, async (c) => {

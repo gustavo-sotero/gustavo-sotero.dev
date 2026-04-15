@@ -20,6 +20,8 @@
 import {
   aiPostDraftGenerateRequestedOutboxPayloadSchema,
   aiPostDraftRunJobId,
+  aiPostTopicRunJobId,
+  aiPostTopicRunRequestedOutboxPayloadSchema,
   imageOptimizeJobId,
   imageOptimizeOutboxPayloadSchema,
   OutboxEventType,
@@ -171,7 +173,8 @@ export function resetOutboxRelayStateForTests(): void {
 export async function processOutboxEvents(
   imageQueue: Queue,
   postPublishQueue: Queue,
-  aiPostDraftGenerationQueue: Queue
+  aiPostDraftGenerationQueue: Queue,
+  aiPostTopicGenerationQueue: Queue
 ): Promise<void> {
   let events: (typeof outbox.$inferSelect)[];
 
@@ -283,6 +286,29 @@ export async function processOutboxEvents(
           { runId },
           {
             jobId: aiPostDraftRunJobId(runId),
+            attempts: 2,
+            backoff: { type: 'exponential', delay: 2000 },
+          }
+        );
+      } else if (event.eventType === OutboxEventType.AI_POST_TOPIC_RUN_REQUESTED) {
+        const payloadResult = aiPostTopicRunRequestedOutboxPayloadSchema.safeParse(event.payload);
+
+        if (!payloadResult.success) {
+          throw Object.assign(
+            new Error(
+              `Invalid ai-post-topic-run-requested payload: ${payloadResult.error.message}`
+            ),
+            { failureClass: 'INVALID_PAYLOAD' as RelayFailureClass }
+          );
+        }
+
+        const { runId } = payloadResult.data;
+
+        await aiPostTopicGenerationQueue.add(
+          OutboxEventType.AI_POST_TOPIC_RUN_REQUESTED,
+          { runId },
+          {
+            jobId: aiPostTopicRunJobId(runId),
             attempts: 2,
             backoff: { type: 'exponential', delay: 2000 },
           }

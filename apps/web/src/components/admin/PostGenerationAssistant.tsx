@@ -29,7 +29,10 @@ import { useState } from 'react';
 import type { UseFormSetValue } from 'react-hook-form';
 import type { z } from 'zod';
 import { useAiPostGenerationConfig } from '@/hooks/admin/use-ai-post-generation-config';
-import { useGeneratePostDraftRun, useGeneratePostTopics } from '@/hooks/admin/use-post-generation';
+import {
+  useGeneratePostDraftRun,
+  useGeneratePostTopicsRun,
+} from '@/hooks/admin/use-post-generation';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
@@ -115,6 +118,17 @@ const DRAFT_STAGE_LABELS: Record<string, string> = {
   'persisting-result': 'Salvando resultado...',
 };
 
+const TOPIC_STAGE_LABELS: Record<string, string> = {
+  queued: 'Solicitação recebida...',
+  'resolving-config': 'Verificando configuração...',
+  'building-prompt': 'Construindo prompt...',
+  'requesting-provider': 'Aguardando resposta do modelo de IA...',
+  'normalizing-output': 'Normalizando resultado...',
+  'canonicalizing-tags': 'Processando tags...',
+  'validating-output': 'Validando sugestões...',
+  'persisting-result': 'Salvando resultado...',
+};
+
 export function PostGenerationAssistant({
   setValue,
   allTags,
@@ -128,7 +142,7 @@ export function PostGenerationAssistant({
   const [excludedIdeas, setExcludedIdeas] = useState<string[]>([]);
   const [rejectedAngles, setRejectedAngles] = useState<string[]>([]);
 
-  const topicsMutation = useGeneratePostTopics();
+  const topicsRunHook = useGeneratePostTopicsRun();
   const draftRunHook = useGeneratePostDraftRun();
   const { data: configState, isLoading: isLoadingConfig } = useAiPostGenerationConfig();
 
@@ -222,15 +236,37 @@ export function PostGenerationAssistant({
     if (!category) return;
     // Use provided override to avoid stale-closure issues on regenerate
     const effectiveExcluded = overrideExcludedIdeas ?? excludedIdeas;
+    const capturedCategory = category;
+    const capturedBriefing = briefing;
     setState({ step: 'generatingTopics' });
     try {
-      const result = await topicsMutation.mutateAsync({
-        category,
-        briefing: briefing || null,
-        limit: AI_POST_DEFAULT_SUGGESTIONS,
-        excludedIdeas: effectiveExcluded,
+      await new Promise<void>((resolve, reject) => {
+        void topicsRunHook.start(
+          {
+            category: capturedCategory,
+            briefing: capturedBriefing || null,
+            limit: AI_POST_DEFAULT_SUGGESTIONS,
+            excludedIdeas: effectiveExcluded,
+          },
+          {
+            onCompleted: (run) => {
+              const topicsResult = run.result as { suggestions: TopicSuggestion[] } | null;
+              if (!topicsResult?.suggestions?.length) {
+                reject(new Error('Nenhum tema foi gerado. Tente novamente.'));
+                return;
+              }
+              setState({
+                step: 'topicsReady',
+                topics: topicsResult.suggestions,
+                category: capturedCategory,
+                briefing: capturedBriefing,
+              });
+              resolve();
+            },
+            onError: reject,
+          }
+        );
       });
-      setState({ step: 'topicsReady', topics: result.suggestions, category, briefing });
     } catch (err) {
       const { message, kind } = extractErrorMessage(err);
       setState({ step: 'error', message, kind });
@@ -301,6 +337,7 @@ export function PostGenerationAssistant({
     setState({ step: 'idle' });
     setExcludedIdeas([]);
     setRejectedAngles([]);
+    topicsRunHook.reset();
     draftRunHook.reset();
   }
 
@@ -538,9 +575,16 @@ export function PostGenerationAssistant({
 
                 {/* Loading states */}
                 {state.step === 'generatingTopics' && (
-                  <div className="pt-4 flex items-center gap-2 text-sm text-zinc-400">
-                    <RefreshCcw className="h-4 w-4 animate-spin" />
-                    Gerando sugestões de temas...
+                  <div className="pt-4 flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                      <RefreshCcw className="h-4 w-4 animate-spin" />
+                      Gerando sugestões de temas...
+                    </div>
+                    {topicsRunHook.stage && (
+                      <p className="text-xs text-zinc-500 pl-6">
+                        {TOPIC_STAGE_LABELS[topicsRunHook.stage] ?? topicsRunHook.stage}
+                      </p>
+                    )}
                   </div>
                 )}
                 {state.step === 'generatingDraft' && (

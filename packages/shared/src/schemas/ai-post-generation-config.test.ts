@@ -5,6 +5,7 @@ import {
   aiPostGenerationModelSummarySchema,
   aiPostGenerationModelsQuerySchema,
   aiPostGenerationStatusSchema,
+  providerRoutingConfigSchema,
   updateAiPostGenerationConfigSchema,
 } from './ai-post-generation-config';
 
@@ -181,6 +182,72 @@ describe('ai-post-generation-config schemas', () => {
       });
 
       expect(valid.q).toBe('claude');
+    });
+  });
+
+  describe('providerRoutingConfigSchema', () => {
+    it('accepts null (no routing preferences)', () => {
+      expect(providerRoutingConfigSchema.safeParse(null).success).toBe(true);
+    });
+
+    it('accepts an empty object (all fields optional)', () => {
+      expect(providerRoutingConfigSchema.safeParse({}).success).toBe(true);
+    });
+
+    it('accepts a fully populated routing config', () => {
+      const result = providerRoutingConfigSchema.safeParse({
+        order: ['openai', 'anthropic'],
+        allow_fallbacks: true,
+        sort: 'latency',
+        preferred_max_latency: 5000,
+        preferred_min_throughput: 100,
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts partial routing config with only order and allow_fallbacks', () => {
+      const result = providerRoutingConfigSchema.safeParse({
+        order: ['openai'],
+        allow_fallbacks: false,
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects negative preferred_max_latency', () => {
+      const result = providerRoutingConfigSchema.safeParse({
+        preferred_max_latency: -1,
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects zero preferred_min_throughput', () => {
+      const result = providerRoutingConfigSchema.safeParse({
+        preferred_min_throughput: 0,
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects non-integer preferred_max_latency', () => {
+      const result = providerRoutingConfigSchema.safeParse({
+        preferred_max_latency: 1.5,
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('config schema accepts topicsRouting and draftRouting', () => {
+      const result = aiPostGenerationConfigSchema.safeParse({
+        topicsModelId: 'openai/gpt-4o',
+        draftModelId: 'anthropic/claude-sonnet-4-5',
+        topicsRouting: { order: ['openai'], allow_fallbacks: true },
+        draftRouting: null,
+      });
+
+      expect(result.success).toBe(true);
     });
   });
 });

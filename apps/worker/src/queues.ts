@@ -46,3 +46,7 @@ export const postPublishQueue = new Queue('post-publish', {
 export const aiPostDraftGenerationQueue = new Queue('ai-post-draft-generation', {
   connection: baseConnection,
 });
+
+export const aiPostTopicGenerationQueue = new Queue('ai-post-topic-generation', {
+  connection: baseConnection,
+});
