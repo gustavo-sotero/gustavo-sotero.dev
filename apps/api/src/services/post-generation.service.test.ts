@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
-const { generateStructuredObjectMock, resolveActiveConfigMock, envMock } = vi.hoisted(() => ({
+const {
+  generateStructuredObjectMock,
+  resolveActiveConfigMock,
+  findAllTagsForNormalizationMock,
+  envMock,
+} = vi.hoisted(() => ({
   generateStructuredObjectMock: vi.fn(),
   resolveActiveConfigMock: vi.fn(),
+  findAllTagsForNormalizationMock: vi.fn(),
   envMock: {
     AI_POSTS_TIMEOUT_MS: 30_000,
     AI_POSTS_MAX_SUGGESTIONS: 4,
@@ -15,6 +21,10 @@ vi.mock('../config/env', () => ({ env: envMock }));
 
 vi.mock('./ai-post-generation-settings.service', () => ({
   resolveActiveAiPostGenerationConfig: resolveActiveConfigMock,
+}));
+
+vi.mock('../repositories/tags.repo', () => ({
+  findAllTagsForNormalization: findAllTagsForNormalizationMock,
 }));
 
 vi.mock('../lib/ai/generateStructuredObject', async () => {
@@ -48,6 +58,7 @@ describe('post-generation.service', () => {
       topicsModelId: 'openai/gpt-4o',
       draftModelId: 'openai/gpt-4o',
     });
+    findAllTagsForNormalizationMock.mockResolvedValue([]);
     envMock.AI_POSTS_MAX_SUGGESTIONS = 4;
     envMock.AI_POSTS_MAX_BRIEFING_CHARS = 1_000;
   });
@@ -748,6 +759,37 @@ describe('post-generation.service', () => {
       });
 
       expect(result.suggestedTagNames).toEqual(['TypeScript', 'AWS', 'PostgreSQL']);
+    });
+
+    it('prefers persisted tag casing when canonicalizing suggestions', async () => {
+      findAllTagsForNormalizationMock.mockResolvedValueOnce([
+        { name: 'Postgres (custom)', slug: 'postgres-custom' },
+      ]);
+
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que o backend usa o catálogo persistido como fonte de verdade para a superfície das tags.',
+          suggestedTagNames: ['postgres-custom'],
+          imagePrompt: 'illustration',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 200,
+        outputTokens: 350,
+      });
+
+      const result = await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      expect(result.suggestedTagNames).toEqual(['Postgres (custom)']);
     });
 
     it('uses the persisted draft model (draftModelId) from config — not the topics model', async () => {

@@ -14,6 +14,14 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPost } from '@/lib/api';
 
+const TERMINAL_STATUSES = ['completed', 'failed', 'timed_out'] as const;
+const SLOW_POLLING_AFTER_MS = 20_000;
+const SLOW_POLLING_INTERVAL_MS = 2_000;
+
+function isTerminalStatus(status: string | null | undefined): boolean {
+  return TERMINAL_STATUSES.includes(status as (typeof TERMINAL_STATUSES)[number]);
+}
+
 /**
  * Mutation hook to generate topic suggestions from the AI assistant.
  *
@@ -78,7 +86,6 @@ export function useDraftRunStatus(
   runId: string | null,
   intervalMs = AI_POST_DRAFT_RUN_INITIAL_POLL_MS
 ) {
-  const TERMINAL_STATUSES = ['completed', 'failed', 'timed_out'] as const;
   return useQuery<DraftRunStatusResponse, unknown>({
     queryKey: ['draft-run-status', runId],
     queryFn: async () => {
@@ -90,11 +97,9 @@ export function useDraftRunStatus(
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return intervalMs;
-      if (TERMINAL_STATUSES.includes(data.status as (typeof TERMINAL_STATUSES)[number]))
-        return false;
-      // Adaptive backoff: slower polling after 10s
+      if (isTerminalStatus(data.status)) return false;
       const elapsed = Date.now() - new Date(data.createdAt).getTime();
-      return elapsed > 10_000 ? 2_000 : intervalMs;
+      return elapsed > SLOW_POLLING_AFTER_MS ? SLOW_POLLING_INTERVAL_MS : intervalMs;
     },
     staleTime: 0,
   });
@@ -110,20 +115,15 @@ export function useDraftRunStatus(
  */
 export function useGeneratePostDraftRun() {
   const [runId, setRunId] = useState<string | null>(null);
-  const [pollIntervalMs, setPollIntervalMs] = useState(AI_POST_DRAFT_RUN_INITIAL_POLL_MS);
+  const [initialPollAfterMs, setInitialPollAfterMs] = useState(AI_POST_DRAFT_RUN_INITIAL_POLL_MS);
+  const [runSnapshot, setRunSnapshot] = useState<Pick<
+    CreateDraftRunResponse,
+    'runId' | 'status' | 'stage'
+  > | null>(null);
   const createMutation = useCreateDraftRun();
-  const statusQuery = useDraftRunStatus(runId, pollIntervalMs);
+  const statusQuery = useDraftRunStatus(runId, initialPollAfterMs);
   const onSettledRef = useRef<((run: DraftRunStatusResponse) => void) | null>(null);
   const onErrorRef = useRef<((err: unknown) => void) | null>(null);
-
-  const runStage = statusQuery.data?.stage;
-
-  // Adaptive polling: increase interval when waiting on provider
-  useEffect(() => {
-    if (runStage === 'requesting-provider') {
-      setPollIntervalMs(2_000);
-    }
-  }, [runStage]);
 
   // Notify callbacks when terminal state reached
   useEffect(() => {
@@ -148,8 +148,9 @@ export function useGeneratePostDraftRun() {
     ): Promise<void> => {
       onSettledRef.current = callbacks?.onCompleted ?? null;
       onErrorRef.current = callbacks?.onError ?? null;
-      setPollIntervalMs(AI_POST_DRAFT_RUN_INITIAL_POLL_MS);
       const run = await createMutation.mutateAsync(request);
+      setInitialPollAfterMs(run.pollAfterMs);
+      setRunSnapshot({ runId: run.runId, status: run.status, stage: run.stage });
       setRunId(run.runId);
     },
     [createMutation]
@@ -157,22 +158,22 @@ export function useGeneratePostDraftRun() {
 
   const reset = useCallback(() => {
     setRunId(null);
-    setPollIntervalMs(AI_POST_DRAFT_RUN_INITIAL_POLL_MS);
+    setInitialPollAfterMs(AI_POST_DRAFT_RUN_INITIAL_POLL_MS);
+    setRunSnapshot(null);
     onSettledRef.current = null;
     onErrorRef.current = null;
   }, []);
+
+  const currentStatus = statusQuery.data?.status ?? runSnapshot?.status ?? null;
+  const currentStage = statusQuery.data?.stage ?? runSnapshot?.stage ?? null;
 
   return {
     start,
     reset,
     runId,
-    status: statusQuery.data,
-    isPending:
-      createMutation.isPending ||
-      (!!runId &&
-        statusQuery.data?.status !== 'completed' &&
-        statusQuery.data?.status !== 'failed' &&
-        statusQuery.data?.status !== 'timed_out'),
+    status: currentStatus,
+    run: statusQuery.data,
+    isPending: createMutation.isPending || (!!runId && !isTerminalStatus(currentStatus)),
     draft:
       statusQuery.data?.status === 'completed'
         ? (statusQuery.data.result as GenerateDraftResponse | null)
@@ -181,6 +182,6 @@ export function useGeneratePostDraftRun() {
       statusQuery.data?.status === 'failed' || statusQuery.data?.status === 'timed_out'
         ? statusQuery.data.error
         : null,
-    stage: statusQuery.data?.stage ?? null,
+    stage: currentStage,
   };
 }

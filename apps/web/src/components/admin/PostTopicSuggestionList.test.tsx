@@ -47,6 +47,7 @@ describe('PostTopicSuggestionList', () => {
 
     expect(screen.getByText(/Trade-offs de filas em produção/i)).toBeInTheDocument();
     expect(screen.getByText(/Engenheiros backend com 2-5 anos/i)).toBeInTheDocument();
+    expect(screen.getByText(/Backend & Arquitetura/i)).toBeInTheDocument();
     expect(
       screen.getByText(/Tema recorrente que ajuda a filtrar hype de arquitetura\./i)
     ).toBeInTheDocument();

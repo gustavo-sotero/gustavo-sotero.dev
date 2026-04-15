@@ -270,6 +270,7 @@ describe('ai-post-generation schemas', () => {
       status: 'queued' as const,
       stage: 'queued' as const,
       requestedCategory: 'misto',
+      selectedSuggestionCategory: null,
       concreteCategory: null,
       modelId: null,
       attemptCount: 0,
@@ -290,6 +291,7 @@ describe('ai-post-generation schemas', () => {
         ...base,
         status: 'completed',
         stage: 'completed',
+        selectedSuggestionCategory: 'backend-arquitetura',
         concreteCategory: 'backend-arquitetura',
         modelId: 'openai/gpt-4o',
         startedAt: new Date().toISOString(),
@@ -314,12 +316,21 @@ describe('ai-post-generation schemas', () => {
         ...base,
         status: 'failed',
         stage: 'requesting-provider',
+        selectedSuggestionCategory: null,
         startedAt: new Date().toISOString(),
         finishedAt: new Date().toISOString(),
         durationMs: 30000,
         error: { kind: 'timeout', code: null, message: 'Provider timed out' },
       });
       expect(result.success).toBe(true);
+    });
+
+    it('rejects non-concrete selectedSuggestionCategory values', () => {
+      const result = draftRunStatusResponseSchema.safeParse({
+        ...base,
+        selectedSuggestionCategory: 'misto',
+      });
+      expect(result.success).toBe(false);
     });
 
     it('rejects invalid status value', () => {

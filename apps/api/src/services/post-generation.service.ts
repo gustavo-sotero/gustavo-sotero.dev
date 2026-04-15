@@ -1,4 +1,8 @@
-import type { GenerateDraftRequest, GenerateTopicsRequest } from '@portfolio/shared';
+import type {
+  GenerateDraftRequest,
+  GenerateTopicsRequest,
+  PersistedTagForNormalization,
+} from '@portfolio/shared';
 import {
   AI_POST_CATEGORY_META,
   AI_POST_DEFAULT_SUGGESTIONS,
@@ -26,6 +30,7 @@ import type {
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { AiGenerationError, generateStructuredObject } from '../lib/ai/generateStructuredObject';
+import { findAllTagsForNormalization } from '../repositories/tags.repo';
 import { resolveActiveAiPostGenerationConfig } from './ai-post-generation-settings.service';
 
 const logger = getLogger('services', 'post-generation');
@@ -60,7 +65,10 @@ function categoryLabel(category: string): string {
 
 // ── Output normalization ──────────────────────────────────────────────────────
 
-function normalizeSuggestion(s: TopicSuggestion): TopicSuggestion {
+function normalizeSuggestion(
+  s: TopicSuggestion,
+  persistedTags: PersistedTagForNormalization[] = []
+): TopicSuggestion {
   return {
     ...s,
     suggestionId: s.suggestionId.trim() || crypto.randomUUID().slice(0, 8),
@@ -69,7 +77,7 @@ function normalizeSuggestion(s: TopicSuggestion): TopicSuggestion {
     summary: s.summary.trim(),
     targetReader: s.targetReader.trim(),
     rationale: s.rationale.trim(),
-    suggestedTagNames: canonicalizeSuggestedTagNames(s.suggestedTagNames).slice(
+    suggestedTagNames: canonicalizeSuggestedTagNames(s.suggestedTagNames, persistedTags).slice(
       0,
       AI_POST_MAX_TOPIC_TAG_NAMES
     ),
@@ -78,9 +86,12 @@ function normalizeSuggestion(s: TopicSuggestion): TopicSuggestion {
 
 function normalizeTopicsResponse(
   raw: GenerateTopicsResponse,
-  limit: number
+  limit: number,
+  persistedTags: PersistedTagForNormalization[] = []
 ): GenerateTopicsResponse {
-  const unique = deduplicateSuggestions(raw.suggestions.map(normalizeSuggestion));
+  const unique = deduplicateSuggestions(
+    raw.suggestions.map((suggestion) => normalizeSuggestion(suggestion, persistedTags))
+  );
   const parsed = generateTopicsResponseSchema.safeParse({ suggestions: unique.slice(0, limit) });
   if (!parsed.success) {
     throw new AiGenerationError(
@@ -91,7 +102,10 @@ function normalizeTopicsResponse(
   return parsed.data;
 }
 
-function normalizeDraftResponse(raw: GenerateDraftResponse): GenerateDraftResponse {
+function normalizeDraftResponse(
+  raw: GenerateDraftResponse,
+  persistedTags: PersistedTagForNormalization[] = []
+): GenerateDraftResponse {
   const title = raw.title.trim();
   const slug = generateSlug(raw.slug.trim() || title);
   const excerpt = raw.excerpt.trim();
@@ -105,10 +119,10 @@ function normalizeDraftResponse(raw: GenerateDraftResponse): GenerateDraftRespon
   }
 
   const imagePrompt = raw.imagePrompt.trim() || buildFallbackImagePrompt(title);
-  const suggestedTagNames = canonicalizeSuggestedTagNames(raw.suggestedTagNames).slice(
-    0,
-    AI_POST_MAX_DRAFT_TAG_NAMES
-  );
+  const suggestedTagNames = canonicalizeSuggestedTagNames(
+    raw.suggestedTagNames,
+    persistedTags
+  ).slice(0, AI_POST_MAX_DRAFT_TAG_NAMES);
   const notes = raw.notes?.trim() ?? null;
 
   const parsed = generateDraftResponseSchema.safeParse({
@@ -161,11 +175,14 @@ function normalizeTopicsRequest(req: GenerateTopicsRequest): GenerateTopicsReque
   };
 }
 
-function normalizeDraftRequest(req: GenerateDraftRequest): GenerateDraftRequest {
+function normalizeDraftRequest(
+  req: GenerateDraftRequest,
+  persistedTags: PersistedTagForNormalization[] = []
+): GenerateDraftRequest {
   return {
     ...req,
     briefing: normalizeBriefing(req.briefing),
-    selectedSuggestion: normalizeSuggestion(req.selectedSuggestion),
+    selectedSuggestion: normalizeSuggestion(req.selectedSuggestion, persistedTags),
     rejectedAngles: req.rejectedAngles.map((angle) => angle.trim()).filter(Boolean),
   };
 }
@@ -202,7 +219,10 @@ function logValidationFailure(
 export async function generateTopicSuggestions(
   req: GenerateTopicsRequest
 ): Promise<GenerateTopicsResponse> {
-  const activeConfig = await resolveActiveAiPostGenerationConfig();
+  const [activeConfig, persistedTags] = await Promise.all([
+    resolveActiveAiPostGenerationConfig(),
+    findAllTagsForNormalization(),
+  ]);
   const normalizedReq = normalizeTopicsRequest(req);
   const model = activeConfig.topicsModelId;
 
@@ -216,7 +236,11 @@ export async function generateTopicSuggestions(
       metadata: { category: normalizedReq.category },
     });
 
-    return normalizeTopicsResponse(result.object as GenerateTopicsResponse, normalizedReq.limit);
+    return normalizeTopicsResponse(
+      result.object as GenerateTopicsResponse,
+      normalizedReq.limit,
+      persistedTags
+    );
   } catch (err) {
     if (err instanceof AiGenerationError && err.kind === 'validation') {
       logValidationFailure('topics', normalizedReq.category, model, err.message);
@@ -235,8 +259,11 @@ export async function generateTopicSuggestions(
  * Throws a generic Error if the feature is disabled.
  */
 export async function generatePostDraft(req: GenerateDraftRequest): Promise<GenerateDraftResponse> {
-  const activeConfig = await resolveActiveAiPostGenerationConfig();
-  const normalizedReq = normalizeDraftRequest(req);
+  const [activeConfig, persistedTags] = await Promise.all([
+    resolveActiveAiPostGenerationConfig(),
+    findAllTagsForNormalization(),
+  ]);
+  const normalizedReq = normalizeDraftRequest(req, persistedTags);
   const model = activeConfig.draftModelId;
 
   try {
@@ -249,7 +276,7 @@ export async function generatePostDraft(req: GenerateDraftRequest): Promise<Gene
       metadata: { category: normalizedReq.category },
     });
 
-    return normalizeDraftResponse(result.object as GenerateDraftResponse);
+    return normalizeDraftResponse(result.object as GenerateDraftResponse, persistedTags);
   } catch (err) {
     if (err instanceof AiGenerationError && err.kind === 'validation') {
       logValidationFailure('draft', normalizedReq.category, model, err.message);

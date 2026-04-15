@@ -198,6 +198,11 @@ export async function findTagByName(name: string) {
   return row ?? null;
 }
 
+/** Minimal tag projection for AI tag canonicalization. */
+export async function findAllTagsForNormalization() {
+  return db.select({ name: tags.name, slug: tags.slug }).from(tags).orderBy(asc(tags.name));
+}
+
 /** Check if a slug is available, optionally excluding an ID. */
 export async function tagSlugExists(slug: string, excludeId?: number): Promise<boolean> {
   const conditions: SQL[] = [eq(tags.slug, slug)];

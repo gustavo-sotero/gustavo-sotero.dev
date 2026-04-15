@@ -18,12 +18,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
 
 const {
+  dbSelectMock,
   dbUpdateMock,
   updateSetMock,
   updateWhereMock,
   returningMock,
   generateStructuredObjectMock,
 } = vi.hoisted(() => ({
+  dbSelectMock: vi.fn(),
   dbUpdateMock: vi.fn(),
   updateSetMock: vi.fn(),
   updateWhereMock: vi.fn(),
@@ -38,6 +40,7 @@ updateSetMock.mockImplementation(() => ({ where: updateWhereMock }));
 
 vi.mock('../config/db', () => ({
   db: {
+    select: dbSelectMock,
     update: dbUpdateMock,
   },
 }));
@@ -57,9 +60,11 @@ vi.mock('../lib/ai/generateStructuredObject', () => ({
 
 vi.mock('@portfolio/shared/db/schema', () => ({
   aiPostDraftRuns: { id: Symbol('id'), status: Symbol('status') },
+  tags: { name: Symbol('name'), slug: Symbol('slug') },
 }));
 
 vi.mock('drizzle-orm', () => ({
+  asc: vi.fn((field) => ({ field, op: 'asc' })),
   eq: vi.fn((field, value) => ({ field, value, op: 'eq' })),
   and: vi.fn((...conds) => ({ conds, op: 'and' })),
 }));
@@ -72,10 +77,11 @@ import { processAiPostDraftGeneration } from './ai-post-draft-generation';
 
 const RUN_ID = '550e8400-e29b-41d4-a716-446655440000';
 
-function buildJob(runId = RUN_ID, attemptsMade = 0): Job<{ runId: string }> {
+function buildJob(runId = RUN_ID, attemptsMade = 0, attempts = 1): Job<{ runId: string }> {
   return {
     id: 'job-test-1',
     attemptsMade,
+    opts: { attempts },
     data: { runId },
   } as Job<{ runId: string }>;
 }
@@ -128,6 +134,11 @@ describe('processAiPostDraftGeneration', () => {
     dbUpdateMock.mockImplementation(() => ({ set: updateSetMock }));
     updateSetMock.mockImplementation(() => ({ where: updateWhereMock }));
     updateWhereMock.mockResolvedValue(undefined);
+    dbSelectMock.mockReturnValue({
+      from: vi.fn(() => ({
+        orderBy: vi.fn().mockResolvedValue([]),
+      })),
+    });
   });
 
   afterEach(() => {
@@ -163,6 +174,7 @@ describe('processAiPostDraftGeneration', () => {
     const setArg = updateSetMock.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(setArg).toMatchObject({
       status: 'failed',
+      errorKind: 'config',
       errorCode: 'NO_MODEL_ID',
     });
   });
@@ -195,6 +207,13 @@ describe('processAiPostDraftGeneration', () => {
     });
     expect(lastSetArg.resultPayload).toBeTruthy();
 
+    expect(
+      updateSetMock.mock.calls.some((call) => {
+        const arg = call[0] as Record<string, unknown>;
+        return arg.status === 'validating';
+      })
+    ).toBe(true);
+
     // resultPayload should contain canonicalized tag names
     const payload = lastSetArg.resultPayload as Record<string, unknown>;
     expect(Array.isArray(payload.suggestedTagNames)).toBe(true);
@@ -225,7 +244,7 @@ describe('processAiPostDraftGeneration', () => {
     expect(errorSetArg?.errorKind).toBe('timeout');
   });
 
-  it('persists failed status and re-throws on transient provider error', async () => {
+  it('re-queues retryable provider failures when another attempt remains', async () => {
     updateWhereMock.mockImplementationOnce(() => ({
       returning: returningMock,
     }));
@@ -235,7 +254,31 @@ describe('processAiPostDraftGeneration', () => {
       new AiGenerationError('provider', 'Upstream 503')
     );
 
-    await expect(processAiPostDraftGeneration(buildJob())).rejects.toBeInstanceOf(
+    await expect(processAiPostDraftGeneration(buildJob(RUN_ID, 0, 2))).rejects.toBeInstanceOf(
+      AiGenerationError
+    );
+
+    const retrySetArg = updateSetMock.mock.calls.find((call: unknown[]) => {
+      const arg = call[0] as Record<string, unknown>;
+      return arg.status === 'queued';
+    })?.[0] as Record<string, unknown> | undefined;
+
+    expect(retrySetArg?.status).toBe('queued');
+    expect(retrySetArg?.stage).toBe('queued');
+    expect(retrySetArg?.errorKind).toBeNull();
+  });
+
+  it('persists failed status after the final provider retry is exhausted', async () => {
+    updateWhereMock.mockImplementationOnce(() => ({
+      returning: returningMock,
+    }));
+    returningMock.mockResolvedValueOnce([makeClaimedRun()]);
+
+    generateStructuredObjectMock.mockRejectedValueOnce(
+      new AiGenerationError('provider', 'Upstream 503')
+    );
+
+    await expect(processAiPostDraftGeneration(buildJob(RUN_ID, 1, 2))).rejects.toBeInstanceOf(
       AiGenerationError
     );
 
@@ -319,5 +362,35 @@ describe('processAiPostDraftGeneration', () => {
     // The first set call (claim) should include attemptCount = attemptsMade + 1
     const claimSetArg = updateSetMock.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(claimSetArg?.attemptCount).toBe(3);
+  });
+
+  it('prefers persisted tag names when canonicalizing result payload tags', async () => {
+    updateWhereMock.mockImplementationOnce(() => ({
+      returning: returningMock,
+    }));
+    returningMock.mockResolvedValueOnce([makeClaimedRun()]);
+    dbSelectMock.mockReturnValueOnce({
+      from: vi.fn(() => ({
+        orderBy: vi
+          .fn()
+          .mockResolvedValue([{ name: 'Postgres (custom)', slug: 'postgres-custom' }]),
+      })),
+    });
+
+    generateStructuredObjectMock.mockResolvedValueOnce({
+      object: {
+        ...VALID_AI_OBJECT,
+        suggestedTagNames: ['postgres-custom'],
+      },
+      durationMs: 3200,
+      inputTokens: 500,
+      outputTokens: 800,
+    });
+
+    await processAiPostDraftGeneration(buildJob());
+
+    const lastSetArg = updateSetMock.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    const payload = lastSetArg.resultPayload as { suggestedTagNames?: string[] };
+    expect(payload.suggestedTagNames).toEqual(['Postgres (custom)']);
   });
 });

@@ -104,6 +104,7 @@ function extractErrorMessage(err: unknown): { message: string; kind: string } {
 }
 
 const DRAFT_STAGE_LABELS: Record<string, string> = {
+  queued: 'Solicitacao recebida...',
   'resolving-config': 'Verificando configuração...',
   'building-prompt': 'Construindo prompt...',
   'requesting-provider': 'Aguardando resposta do modelo de IA...',

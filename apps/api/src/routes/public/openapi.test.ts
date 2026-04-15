@@ -285,16 +285,42 @@ describe('openapi routes', () => {
               }
             >;
           };
+          get?: {
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    examples?: Record<
+                      string,
+                      { value?: { success?: boolean; data?: Record<string, unknown> } }
+                    >;
+                  };
+                };
+              }
+            >;
+          };
         }
       >;
     };
 
     const topicsPost = body.paths['/admin/posts/generate/topics']?.post;
     const draftPost = body.paths['/admin/posts/generate/draft']?.post;
+    const draftRunsPost = body.paths['/admin/posts/generate/draft-runs']?.post;
+    const draftRunStatusGet = body.paths['/admin/posts/generate/draft-runs/{id}']?.get;
     const topicsSchema = topicsPost?.requestBody?.content?.['application/json']?.schema;
     const draftSchema = draftPost?.requestBody?.content?.['application/json']?.schema;
+    const draftRunsSchema = draftRunsPost?.requestBody?.content?.['application/json']?.schema;
     const topicsSuccess = topicsPost?.responses?.['200']?.content?.['application/json']?.example;
     const draftSuccess = draftPost?.responses?.['200']?.content?.['application/json']?.example;
+    const draftRunsAccepted =
+      draftRunsPost?.responses?.['202']?.content?.['application/json']?.example;
+    const draftRunCompleted =
+      draftRunStatusGet?.responses?.['200']?.content?.['application/json']?.examples?.completed
+        ?.value;
+    const draftRunCompletedResult = draftRunCompleted?.data?.result as
+      | Record<string, unknown>
+      | undefined;
 
     expect(topicsPost?.description).toContain('ephemeral');
     expect(topicsSchema?.properties?.category?.enum).toContain('backend-arquitetura');
@@ -315,5 +341,21 @@ describe('openapi routes', () => {
     expect(Array.isArray(draftSuccess?.data?.suggestedTagNames)).toBe(true);
     expect(typeof draftSuccess?.data?.imagePrompt).toBe('string');
     expect(typeof draftSuccess?.data?.content).toBe('string');
+
+    expect(draftRunsPost?.description).toContain('run ID');
+    expect(draftRunsSchema?.properties?.category?.enum).toContain('misto');
+    expect(draftRunsSchema?.required).toContain('selectedSuggestion');
+    expect(draftRunsSchema?.properties?.selectedSuggestion?.required).toContain('proposedTitle');
+    expect(draftRunsSchema?.properties?.selectedSuggestion?.required).toContain(
+      'suggestedTagNames'
+    );
+    expect(
+      draftRunsSchema?.properties?.selectedSuggestion?.properties?.suggestedTagNames?.maxItems
+    ).toBe(6);
+    expect(draftRunsAccepted?.data?.status).toBe('queued');
+    expect(draftRunsAccepted?.data?.stage).toBe('queued');
+    expect(draftRunCompleted?.data?.selectedSuggestionCategory).toBe('dados-filas-consistencia');
+    expect(Array.isArray(draftRunCompletedResult?.suggestedTagNames)).toBe(true);
+    expect(typeof draftRunCompletedResult?.imagePrompt).toBe('string');
   });
 });

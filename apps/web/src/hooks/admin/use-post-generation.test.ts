@@ -116,6 +116,7 @@ const RUN_STATUS_QUEUED = {
   status: 'running' as const,
   stage: 'requesting-provider' as const,
   requestedCategory: 'backend-arquitetura',
+  selectedSuggestionCategory: 'backend-arquitetura',
   concreteCategory: 'backend-arquitetura',
   modelId: 'openai/gpt-4o',
   attemptCount: 1,
@@ -315,14 +316,24 @@ describe('useDraftRunStatus', () => {
     expect(interval).toBe(false);
   });
 
-  it('continues polling when status is running within 10s', () => {
+  it('continues polling at the initial cadence while the run is younger than 20s', () => {
     const result = useDraftRunStatus(RUN_ID, 500);
     // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
     const interval = (result as any).refetchInterval({
       state: { data: { ...RUN_STATUS_QUEUED, createdAt: new Date().toISOString() } },
     });
     expect(typeof interval).toBe('number');
-    expect(interval).toBeGreaterThan(0);
+    expect(interval).toBe(500);
+  });
+
+  it('backs off polling after the run has been active for more than 20s', () => {
+    const result = useDraftRunStatus(RUN_ID, 500);
+    const oldCreatedAt = new Date(Date.now() - 21_000).toISOString();
+    // biome-ignore lint/suspicious/noExplicitAny: test helper accessing mocked internals
+    const interval = (result as any).refetchInterval({
+      state: { data: { ...RUN_STATUS_QUEUED, createdAt: oldCreatedAt } },
+    });
+    expect(interval).toBe(2000);
   });
 });
 

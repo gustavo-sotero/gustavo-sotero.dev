@@ -40,8 +40,8 @@ export async function createDraftRun(
   const requestedCategory = request.category;
   const concreteCategory = request.selectedSuggestion.category;
 
-  const [run] = await db.transaction(async (tx) => {
-    const inserted = await tx
+  const run = await db.transaction(async (tx) => {
+    const insertedRun = await tx
       .insert(aiPostDraftRuns)
       .values({
         status: 'queued',
@@ -54,23 +54,27 @@ export async function createDraftRun(
         attemptCount: 0,
       })
       .returning()
-      .then((rows) => rows[0]!);
+      .then((rows) => rows[0]);
+
+    if (!insertedRun) {
+      throw new Error('Nao foi possivel criar o run de geracao de draft.');
+    }
 
     await tx.insert(outbox).values({
       eventType: OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
-      payload: { runId: inserted.id },
+      payload: { runId: insertedRun.id },
       status: 'pending',
     });
 
-    return [inserted];
+    return insertedRun;
   });
 
   return {
-    runId: run!.id,
+    runId: run.id,
     status: 'queued',
     stage: 'queued',
     pollAfterMs: AI_POST_DRAFT_RUN_INITIAL_POLL_MS,
-    createdAt: run!.createdAt.toISOString(),
+    createdAt: run.createdAt.toISOString(),
   };
 }
 
@@ -106,13 +110,17 @@ function formatDraftRunStatus(run: AiPostDraftRun): DraftRunStatusResponse {
     : null;
 
   const stage = run.stage as DraftRunStatusResponse['stage'];
+  const requestedCategory = run.requestedCategory as DraftRunStatusResponse['requestedCategory'];
+  const selectedSuggestionCategory =
+    (run.concreteCategory as DraftRunStatusResponse['selectedSuggestionCategory']) ?? null;
 
   return {
     runId: run.id,
     status: run.status,
     stage,
-    requestedCategory: run.requestedCategory,
-    concreteCategory: run.concreteCategory ?? null,
+    requestedCategory,
+    selectedSuggestionCategory,
+    concreteCategory: selectedSuggestionCategory,
     modelId: run.modelId ?? null,
     attemptCount: run.attemptCount,
     createdAt: run.createdAt.toISOString(),

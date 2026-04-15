@@ -24,21 +24,53 @@ import {
   generateDraftResponseSchema,
   generateSlug,
   normalizeContent,
+  type PersistedTagForNormalization,
 } from '@portfolio/shared';
-import { aiPostDraftRuns } from '@portfolio/shared/db/schema';
+import { aiPostDraftRuns, tags } from '@portfolio/shared/db/schema';
 import type { Job } from 'bullmq';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { getLogger } from '../config/logger';
 import { generateStructuredObject } from '../lib/ai/generateStructuredObject';
 
 const logger = getLogger('worker', 'jobs', 'ai-post-draft-generation');
 
-async function setStage(runId: string, stage: AiPostDraftRunStage): Promise<void> {
-  await db
-    .update(aiPostDraftRuns)
-    .set({ stage, lastHeartbeatAt: new Date(), updatedAt: new Date() })
-    .where(eq(aiPostDraftRuns.id, runId));
+type ActiveRunStatus = 'running' | 'validating';
+
+async function setStage(
+  runId: string,
+  stage: AiPostDraftRunStage,
+  status?: ActiveRunStatus
+): Promise<void> {
+  const update: Partial<typeof aiPostDraftRuns.$inferInsert> = {
+    stage,
+    lastHeartbeatAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  if (status) {
+    update.status = status;
+  }
+
+  await db.update(aiPostDraftRuns).set(update).where(eq(aiPostDraftRuns.id, runId));
+}
+
+async function loadPersistedTagsForNormalization(): Promise<PersistedTagForNormalization[]> {
+  return db.select({ name: tags.name, slug: tags.slug }).from(tags).orderBy(asc(tags.name));
+}
+
+function classifyJobError(error: unknown): 'config' | 'internal' {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/OPENROUTER_API_KEY|model ID|modelId/i.test(message)) {
+    return 'config';
+  }
+
+  return 'internal';
+}
+
+function shouldRetryProviderFailure(job: Job<AiPostDraftJobData>, errorKind: string): boolean {
+  const configuredAttempts = job.opts?.attempts ?? 1;
+  return errorKind === 'provider' && (job.attemptsMade ?? 0) + 1 < configuredAttempts;
 }
 
 export interface AiPostDraftJobData {
@@ -63,6 +95,9 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       lastHeartbeatAt: now,
       updatedAt: now,
       attemptCount: (job.attemptsMade ?? 0) + 1,
+      errorKind: null,
+      errorCode: null,
+      errorMessage: null,
     })
     .where(
       and(
@@ -88,7 +123,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
         stage: 'failed',
         finishedAt: new Date(),
         updatedAt: new Date(),
-        errorKind: 'provider',
+        errorKind: 'config',
         errorCode: 'NO_MODEL_ID',
         errorMessage: 'Run created without a resolved model ID.',
       })
@@ -135,7 +170,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
     });
 
     // ── Stage: normalizing-output ────────────────────────────────────────────
-    await setStage(runId, 'normalizing-output');
+    await setStage(runId, 'normalizing-output', 'validating');
 
     const raw = result.object;
     const title = raw.title.trim();
@@ -152,14 +187,18 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
 
     const imagePrompt = raw.imagePrompt.trim() || buildFallbackImagePrompt(title);
     const notes = raw.notes?.trim() ?? null;
+    const persistedTags = await loadPersistedTagsForNormalization();
 
     // ── Stage: canonicalizing-tags ───────────────────────────────────────────
-    await setStage(runId, 'canonicalizing-tags');
+    await setStage(runId, 'canonicalizing-tags', 'validating');
 
-    const suggestedTagNames = canonicalizeSuggestedTagNames(raw.suggestedTagNames).slice(0, 8);
+    const suggestedTagNames = canonicalizeSuggestedTagNames(
+      raw.suggestedTagNames,
+      persistedTags
+    ).slice(0, 8);
 
     // ── Stage: validating-output ─────────────────────────────────────────────
-    await setStage(runId, 'validating-output');
+    await setStage(runId, 'validating-output', 'validating');
 
     const parsed = generateDraftResponseSchema.safeParse({
       title,
@@ -179,7 +218,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
     }
 
     // ── Stage: persisting-result ─────────────────────────────────────────────
-    await setStage(runId, 'persisting-result');
+    await setStage(runId, 'persisting-result', 'validating');
 
     const finishedAt = new Date();
     await db
@@ -204,9 +243,40 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
     const finishedAt = new Date();
     const aiErr = err instanceof AiGenerationError ? err : null;
 
-    const errorKind = aiErr?.kind ?? 'provider';
+    const errorKind = aiErr?.kind ?? classifyJobError(err);
     const errorCode = aiErr ? null : ((err as Error & { code?: string })?.code ?? null);
     const errorMessage = err instanceof Error ? err.message : String(err);
+
+    if (shouldRetryProviderFailure(job, errorKind)) {
+      await db
+        .update(aiPostDraftRuns)
+        .set({
+          status: 'queued',
+          stage: 'queued',
+          finishedAt: null,
+          updatedAt: finishedAt,
+          lastHeartbeatAt: finishedAt,
+          errorKind: null,
+          errorCode: null,
+          errorMessage: null,
+        })
+        .where(eq(aiPostDraftRuns.id, runId))
+        .catch((dbErr) => {
+          logger.error('AI draft job: failed to persist retry state', {
+            ...jobMeta,
+            error: dbErr instanceof Error ? dbErr.message : String(dbErr),
+          });
+        });
+
+      logger.warn('AI draft generation job scheduled for retry', {
+        ...jobMeta,
+        attempt: (job.attemptsMade ?? 0) + 1,
+        maxAttempts: job.opts?.attempts ?? 1,
+        error: errorMessage,
+      });
+
+      throw err;
+    }
 
     const status = errorKind === 'timeout' ? ('timed_out' as const) : ('failed' as const);
     const stage = errorKind === 'timeout' ? ('timed-out' as const) : ('failed' as const);

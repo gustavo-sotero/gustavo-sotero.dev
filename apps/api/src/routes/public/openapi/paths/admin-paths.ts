@@ -629,13 +629,35 @@ export const adminPaths = {
                 },
                 selectedSuggestion: {
                   type: 'object',
-                  required: ['title', 'hook', 'category'],
+                  required: [
+                    'suggestionId',
+                    'category',
+                    'proposedTitle',
+                    'angle',
+                    'summary',
+                    'targetReader',
+                    'suggestedTagNames',
+                    'rationale',
+                  ],
                   description: 'The topic suggestion selected by the admin.',
                   properties: {
-                    title: { type: 'string', example: 'Filas vs. Chamadas Síncronas' },
-                    hook: {
+                    suggestionId: { type: 'string', example: 'topic-01' },
+                    proposedTitle: {
                       type: 'string',
-                      example: 'Quando usar BullMQ e quando usar uma chamada HTTP direta.',
+                      example: 'Filas vs. Chamadas Sincronas',
+                    },
+                    angle: {
+                      type: 'string',
+                      example:
+                        'Quando usar BullMQ e quando uma chamada HTTP direta resolve melhor.',
+                    },
+                    summary: {
+                      type: 'string',
+                      example: 'Um recorte pratico sobre latencia, acoplamento e resiliencia.',
+                    },
+                    targetReader: {
+                      type: 'string',
+                      example: 'Engenheiros backend que operam workloads em producao.',
                     },
                     category: {
                       type: 'string',
@@ -643,12 +665,16 @@ export const adminPaths = {
                       description: 'Concrete category resolved from the topic suggestion.',
                       example: 'dados-filas-consistencia',
                     },
-                    tags: {
+                    suggestedTagNames: {
                       type: 'array',
+                      maxItems: AI_POST_MAX_TOPIC_TAG_NAMES,
                       items: { type: 'string' },
                       example: ['BullMQ', 'Redis', 'Node.js'],
                     },
-                    briefing: { type: 'string', example: '' },
+                    rationale: {
+                      type: 'string',
+                      example: 'Tema forte para demonstrar trade-offs arquiteturais reais.',
+                    },
                   },
                 },
               },
@@ -730,6 +756,7 @@ export const adminPaths = {
                       status: 'running',
                       stage: 'requesting-provider',
                       requestedCategory: 'misto',
+                      selectedSuggestionCategory: 'dados-filas-consistencia',
                       concreteCategory: 'dados-filas-consistencia',
                       modelId: 'anthropic/claude-3-5-haiku',
                       attemptCount: 1,
@@ -751,6 +778,7 @@ export const adminPaths = {
                       status: 'completed',
                       stage: 'completed',
                       requestedCategory: 'misto',
+                      selectedSuggestionCategory: 'dados-filas-consistencia',
                       concreteCategory: 'dados-filas-consistencia',
                       modelId: 'anthropic/claude-3-5-haiku',
                       attemptCount: 1,
@@ -761,10 +789,13 @@ export const adminPaths = {
                       error: null,
                       result: {
                         title: 'Filas vs. Chamadas Síncronas',
+                        slug: 'filas-vs-chamadas-sincronas',
                         excerpt: 'Quando usar BullMQ e quando uma HTTP direta resolve melhor.',
                         content: '## Introdução\n...',
-                        suggestedTags: ['BullMQ', 'Redis', 'Node.js'],
-                        category: 'dados-filas-consistencia',
+                        suggestedTagNames: ['BullMQ', 'Redis', 'Node.js'],
+                        imagePrompt:
+                          'Minimalist dark background illustration of async queues and direct calls, flat design, tech aesthetic, no text, square format',
+                        notes: null,
                       },
                     },
                   },
@@ -778,6 +809,7 @@ export const adminPaths = {
                       status: 'failed',
                       stage: 'failed',
                       requestedCategory: 'misto',
+                      selectedSuggestionCategory: null,
                       concreteCategory: null,
                       modelId: 'anthropic/claude-3-5-haiku',
                       attemptCount: 2,
@@ -786,7 +818,7 @@ export const adminPaths = {
                       finishedAt: '2026-04-14T12:00:12.000Z',
                       durationMs: 11000,
                       error: {
-                        kind: 'provider_error',
+                        kind: 'provider',
                         code: '503',
                         message: 'Provider unavailable after retries.',
                       },

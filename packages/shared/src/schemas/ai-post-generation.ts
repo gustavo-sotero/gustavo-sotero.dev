@@ -176,8 +176,10 @@ export const draftRunStatusResponseSchema = z.object({
   runId: z.string().uuid(),
   status: z.enum(AI_POST_DRAFT_RUN_STATUSES),
   stage: z.enum(AI_POST_DRAFT_RUN_STAGES),
-  requestedCategory: z.string(),
-  concreteCategory: z.string().nullable(),
+  requestedCategory: z.enum(AI_POST_REQUESTED_CATEGORIES),
+  selectedSuggestionCategory: z.enum(AI_POST_CONCRETE_CATEGORIES).nullable(),
+  /** @deprecated Use `selectedSuggestionCategory`. Kept for compatibility. */
+  concreteCategory: z.enum(AI_POST_CONCRETE_CATEGORIES).nullable(),
   modelId: z.string().nullable(),
   attemptCount: z.number().int(),
   createdAt: z.string(),
