@@ -6,6 +6,10 @@ import { parseRedisUrl } from '@portfolio/shared/lib/redis';
 import { Worker } from 'bullmq';
 import { client as pgClient } from './config/db';
 import { env } from './config/env';
+import {
+  type AiPostDraftJobData,
+  processAiPostDraftGeneration,
+} from './jobs/ai-post-draft-generation';
 import { type AnalyticsEventPayload, processAnalytics } from './jobs/analytics';
 import { type ImageOptimizePayload, processImageOptimize } from './jobs/imageOptimize';
 import { type PostPublishJobData, processPostPublish } from './jobs/postPublish';
@@ -14,6 +18,7 @@ import { processTelegram, type TelegramJobPayload } from './jobs/telegram';
 import { closeCacheRedis } from './lib/cache';
 import { processOutboxEvents } from './lib/outbox-relay';
 import {
+  aiPostDraftGenerationQueue,
   analyticsQueue,
   imageDlqQueue,
   imageQueue,
@@ -205,6 +210,36 @@ await retentionQueue
     });
   });
 
+// ── AI Post Draft Generation Worker ──────────────────────────────────────────
+const aiPostDraftWorker = new Worker<AiPostDraftJobData>(
+  'ai-post-draft-generation',
+  async (job) => {
+    await processAiPostDraftGeneration(job);
+  },
+  {
+    connection: workerConnection,
+    concurrency: 2,
+  }
+);
+
+aiPostDraftWorker.on('completed', (job) => {
+  logger.info('AI draft generation job completed', { jobId: job.id, runId: job.data.runId });
+});
+
+aiPostDraftWorker.on('failed', (job, err) => {
+  if (!job) return;
+  logger.error('AI draft generation job failed', {
+    jobId: job.id,
+    runId: job.data.runId,
+    attempt: job.attemptsMade,
+    error: err.message,
+  });
+});
+
+aiPostDraftWorker.on('error', (err) => {
+  logger.error('AI draft generation worker error', { error: err.message });
+});
+
 logger.info('All workers ready', {
   queues: [
     'telegram-notifications',
@@ -212,6 +247,7 @@ logger.info('All workers ready', {
     'image-optimize',
     'data-retention',
     'post-publish',
+    'ai-post-draft-generation',
   ],
 });
 
@@ -238,7 +274,7 @@ async function runOutboxRelay(): Promise<void> {
   if (relayInFlight) return;
   relayInFlight = true;
   try {
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
   } finally {
     relayInFlight = false;
   }
@@ -272,6 +308,7 @@ async function shutdown(signal: string): Promise<void> {
     imageWorker.close(),
     retentionWorker.close(),
     postPublishWorker.close(),
+    aiPostDraftWorker.close(),
   ]);
 
   // Close Queue instances (each holds its own ioredis connection)
@@ -283,6 +320,7 @@ async function shutdown(signal: string): Promise<void> {
     imageDlqQueue.close(),
     retentionQueue.close(),
     postPublishQueue.close(),
+    aiPostDraftGenerationQueue.close(),
     closeCacheRedis(),
   ]);
 

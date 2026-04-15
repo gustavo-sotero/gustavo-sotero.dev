@@ -1,11 +1,16 @@
 'use client';
 
-import type { AiPostCategory, createPostSchema, Tag, TopicSuggestion } from '@portfolio/shared';
+import type {
+  AiPostRequestedCategory,
+  createPostSchema,
+  Tag,
+  TopicSuggestion,
+} from '@portfolio/shared';
 import {
-  AI_POST_CATEGORIES,
   AI_POST_CATEGORY_META,
   AI_POST_DEFAULT_SUGGESTIONS,
   AI_POST_MAX_BRIEFING_CHARS,
+  AI_POST_REQUESTED_CATEGORIES,
 } from '@portfolio/shared';
 import {
   AlertCircle,
@@ -14,6 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
+  Loader2,
   RefreshCcw,
   Settings,
   Sparkles,
@@ -23,7 +29,7 @@ import { useState } from 'react';
 import type { UseFormSetValue } from 'react-hook-form';
 import type { z } from 'zod';
 import { useAiPostGenerationConfig } from '@/hooks/admin/use-ai-post-generation-config';
-import { useGeneratePostDraft, useGeneratePostTopics } from '@/hooks/admin/use-post-generation';
+import { useGeneratePostDraftRun, useGeneratePostTopics } from '@/hooks/admin/use-post-generation';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
@@ -46,11 +52,16 @@ export interface PostGenerationAssistantProps {
 type AssistantState =
   | { step: 'idle' }
   | { step: 'generatingTopics' }
-  | { step: 'topicsReady'; topics: TopicSuggestion[]; category: AiPostCategory; briefing: string }
+  | {
+      step: 'topicsReady';
+      topics: TopicSuggestion[];
+      category: AiPostRequestedCategory;
+      briefing: string;
+    }
   | {
       step: 'generatingDraft';
       selected: TopicSuggestion;
-      category: AiPostCategory;
+      category: AiPostRequestedCategory;
       briefing: string;
       /** Preserved so "back to topics" can restore without a new API call. */
       topics: TopicSuggestion[];
@@ -58,7 +69,7 @@ type AssistantState =
   | {
       step: 'draftReady';
       selected: TopicSuggestion;
-      category: AiPostCategory;
+      category: AiPostRequestedCategory;
       briefing: string;
       draft: import('@portfolio/shared').GenerateDraftResponse;
       /** Preserved so "back to topics" can restore without a new API call. */
@@ -70,7 +81,7 @@ type AssistantState =
       kind: string;
       /** Present when error occurred during draft generation — allows returning to topic list. */
       topics?: TopicSuggestion[];
-      category?: AiPostCategory;
+      category?: AiPostRequestedCategory;
       briefing?: string;
     };
 
@@ -92,6 +103,16 @@ function extractErrorMessage(err: unknown): { message: string; kind: string } {
   return { message: 'Erro inesperado. Tente novamente.', kind: 'unknown' };
 }
 
+const DRAFT_STAGE_LABELS: Record<string, string> = {
+  'resolving-config': 'Verificando configuração...',
+  'building-prompt': 'Construindo prompt...',
+  'requesting-provider': 'Aguardando resposta do modelo de IA...',
+  'normalizing-output': 'Normalizando resultado...',
+  'canonicalizing-tags': 'Processando tags...',
+  'validating-output': 'Validando draft...',
+  'persisting-result': 'Salvando resultado...',
+};
+
 export function PostGenerationAssistant({
   setValue,
   allTags,
@@ -99,17 +120,17 @@ export function PostGenerationAssistant({
   onTagsApplied,
 }: PostGenerationAssistantProps) {
   const [expanded, setExpanded] = useState(false);
-  const [category, setCategory] = useState<AiPostCategory | ''>('');
+  const [category, setCategory] = useState<AiPostRequestedCategory | ''>('');
   const [briefing, setBriefing] = useState('');
   const [state, setState] = useState<AssistantState>({ step: 'idle' });
   const [excludedIdeas, setExcludedIdeas] = useState<string[]>([]);
   const [rejectedAngles, setRejectedAngles] = useState<string[]>([]);
 
   const topicsMutation = useGeneratePostTopics();
-  const draftMutation = useGeneratePostDraft();
+  const draftRunHook = useGeneratePostDraftRun();
   const { data: configState, isLoading: isLoadingConfig } = useAiPostGenerationConfig();
 
-  function handleCategoryChange(nextCategory: AiPostCategory) {
+  function handleCategoryChange(nextCategory: AiPostRequestedCategory) {
     setCategory((currentCategory) => {
       if (currentCategory && currentCategory !== nextCategory) {
         setExcludedIdeas([]);
@@ -121,7 +142,7 @@ export function PostGenerationAssistant({
 
   function restoreTopics(
     topics: TopicSuggestion[],
-    topicCategory: AiPostCategory,
+    topicCategory: AiPostRequestedCategory,
     topicBriefing: string
   ) {
     setRejectedAngles([]);
@@ -167,25 +188,37 @@ export function PostGenerationAssistant({
       topics: currentTopics,
     });
     try {
-      const draft = await draftMutation.mutateAsync({
-        category: currentCategory,
-        briefing: currentBriefing || null,
-        selectedSuggestion: topic,
-        // Use provided override to avoid stale-closure issues on regenerate
-        rejectedAngles: overrideRejectedAngles ?? rejectedAngles,
-      });
-      // Guard: only transition if we're still in the generatingDraft step
-      // (the user may have navigated away while the request was in flight)
-      setState((prev) => {
-        if (prev.step !== 'generatingDraft') return prev;
-        return {
-          step: 'draftReady',
-          selected: topic,
-          category: currentCategory,
-          briefing: currentBriefing,
-          draft,
-          topics: currentTopics,
-        };
+      await new Promise<void>((resolve, reject) => {
+        draftRunHook.start(
+          {
+            category: currentCategory,
+            briefing: currentBriefing || null,
+            selectedSuggestion: topic,
+            rejectedAngles: overrideRejectedAngles ?? rejectedAngles,
+          },
+          {
+            onCompleted: (run) => {
+              const draft = run.result as import('@portfolio/shared').GenerateDraftResponse;
+              if (!draft) {
+                reject(new Error('O draft gerado está vazio. Tente novamente.'));
+                return;
+              }
+              setState((prev) => {
+                if (prev.step !== 'generatingDraft') return prev;
+                return {
+                  step: 'draftReady',
+                  selected: topic,
+                  category: currentCategory,
+                  briefing: currentBriefing,
+                  draft,
+                  topics: currentTopics,
+                };
+              });
+              resolve();
+            },
+            onError: reject,
+          }
+        );
       });
     } catch (err) {
       const { message, kind } = extractErrorMessage(err);
@@ -233,6 +266,7 @@ export function PostGenerationAssistant({
     setState({ step: 'idle' });
     setExcludedIdeas([]);
     setRejectedAngles([]);
+    draftRunHook.reset();
   }
 
   const isLoading = state.step === 'generatingTopics' || state.step === 'generatingDraft';
@@ -340,13 +374,13 @@ export function PostGenerationAssistant({
                       <Label className="text-zinc-300 text-sm">Categoria editorial</Label>
                       <Select
                         value={category}
-                        onValueChange={(v) => handleCategoryChange(v as AiPostCategory)}
+                        onValueChange={(v) => handleCategoryChange(v as AiPostRequestedCategory)}
                       >
                         <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-emerald-500/40">
                           <SelectValue placeholder="Escolha uma categoria..." />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-900 border-zinc-800">
-                          {AI_POST_CATEGORIES.map((cat) => (
+                          {AI_POST_REQUESTED_CATEGORIES.map((cat) => (
                             <SelectItem
                               key={cat}
                               value={cat}
@@ -437,9 +471,16 @@ export function PostGenerationAssistant({
                   </div>
                 )}
                 {state.step === 'generatingDraft' && (
-                  <div className="pt-4 flex items-center gap-2 text-sm text-zinc-400">
-                    <RefreshCcw className="h-4 w-4 animate-spin" />
-                    Gerando draft do post...
+                  <div className="pt-4 flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-sm text-zinc-400">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Gerando draft do post...
+                    </div>
+                    {draftRunHook.stage && (
+                      <p className="text-xs text-zinc-500 pl-6">
+                        {DRAFT_STAGE_LABELS[draftRunHook.stage] ?? draftRunHook.stage}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -490,7 +531,7 @@ export function PostGenerationAssistant({
                     onRegenerate={handleRegenerateDraft}
                     onBackToTopics={handleBackToTopics}
                     onDiscard={handleReset}
-                    isRegenerating={draftMutation.isPending}
+                    isRegenerating={draftRunHook.isPending}
                   />
                 )}
               </>

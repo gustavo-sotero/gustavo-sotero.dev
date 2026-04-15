@@ -1,6 +1,7 @@
 'use client';
 
 import type { TopicSuggestion } from '@portfolio/shared';
+import { AI_POST_CATEGORY_META } from '@portfolio/shared';
 import { ArrowLeft, RefreshCcw, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
@@ -82,6 +83,12 @@ export function PostTopicSuggestionList({
               <span className="text-zinc-400">Por que vale:</span> {topic.rationale}
             </p>
             <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge
+                variant="outline"
+                className="text-xs px-1.5 py-0 bg-emerald-950/40 text-emerald-400 border-emerald-700/40"
+              >
+                {AI_POST_CATEGORY_META[topic.category]?.label ?? topic.category}
+              </Badge>
               {topic.suggestedTagNames.slice(0, 4).map((tag) => (
                 <Badge
                   key={tag}

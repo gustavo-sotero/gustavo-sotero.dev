@@ -18,6 +18,8 @@
  */
 
 import {
+  aiPostDraftGenerateRequestedOutboxPayloadSchema,
+  aiPostDraftRunJobId,
   imageOptimizeJobId,
   imageOptimizeOutboxPayloadSchema,
   OutboxEventType,
@@ -168,7 +170,8 @@ export function resetOutboxRelayStateForTests(): void {
 
 export async function processOutboxEvents(
   imageQueue: Queue,
-  postPublishQueue: Queue
+  postPublishQueue: Queue,
+  aiPostDraftGenerationQueue: Queue
 ): Promise<void> {
   let events: (typeof outbox.$inferSelect)[];
 
@@ -259,6 +262,31 @@ export async function processOutboxEvents(
           scheduledAt,
           eventId: event.id,
         });
+      } else if (event.eventType === OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED) {
+        const payloadResult = aiPostDraftGenerateRequestedOutboxPayloadSchema.safeParse(
+          event.payload
+        );
+
+        if (!payloadResult.success) {
+          throw Object.assign(
+            new Error(
+              `Invalid ai-post-draft-generate-requested payload: ${payloadResult.error.message}`
+            ),
+            { failureClass: 'INVALID_PAYLOAD' as RelayFailureClass }
+          );
+        }
+
+        const { runId } = payloadResult.data;
+
+        await aiPostDraftGenerationQueue.add(
+          OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
+          { runId },
+          {
+            jobId: aiPostDraftRunJobId(runId),
+            attempts: 2,
+            backoff: { type: 'exponential', delay: 2000 },
+          }
+        );
       } else {
         // Unknown event type — throw so the event enters the retry/failure path
         // rather than being silently consumed. This surfaces domain contract drift.

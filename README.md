@@ -105,7 +105,7 @@ Todas as rotas admin têm o prefixo `/admin`. GETs de detalhe usam `:slug`; PATC
 | Domínio de rota           | Descrição                                        |
 | ------------------------- | ------------------------------------------------ |
 | `/admin/posts`            | CMS — posts do blog                              |
-| `/admin/posts/generate/*` | Assistente IA para sugerir temas e gerar drafts efêmeros |
+| `/admin/posts/generate/*` | Assistente IA para sugerir temas e gerar drafts (assíncronos, persistidos) |
 | `/admin/projects`         | CMS — projetos                                   |
 | `/admin/tags`             | Gerenciamento de tags                            |
 | `/admin/experience`       | Experiências profissionais                       |
@@ -242,12 +242,13 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 
 ### Assistente de geração de posts com IA
 
-- `AI_POSTS_ENABLED=true` habilita as rotas `POST /admin/posts/generate/topics` e `POST /admin/posts/generate/draft`.
+- `AI_POSTS_ENABLED=true` habilita as rotas `POST /admin/posts/generate/topics` e os endpoints assíncronos `POST /admin/posts/generate/draft-runs` / `GET /admin/posts/generate/draft-runs/:id`.
+- O endpoint legado síncrono `POST /admin/posts/generate/draft` segue disponível para compatibilidade.
 - `OPENROUTER_API_KEY` é obrigatório quando a flag está ligada. Obtenha em [openrouter.ai/keys](https://openrouter.ai/keys).
 - `AI_POSTS_TIMEOUT_MS` ajusta o timeout do provider.
 - Os modelos ativos (**topics** e **draft**) são configurados via painel admin em `/admin/settings/ai-post-generation` e armazenados no banco de dados. Não são mais configurados por variável de ambiente.
 
-Quando habilitado, o assistente aparece apenas em `/admin/posts/new`. Temas e drafts gerados são efêmeros: nada é salvo automaticamente, o admin precisa aplicar manualmente os campos ao formulário e o prompt de imagem é apenas copiável, não persistido.
+Quando habilitado, o assistente aparece em `/admin/posts/new`. O fluxo assíncrono (`/draft-runs`) cria um registro persistido no banco de dados e executa a geração em background via BullMQ worker, possibilitando polling de progresso por estágio. O admin precisa aplicar manualmente os campos gerados ao formulário — nada é salvo no rascunho de post automaticamente.
 
 ---
 

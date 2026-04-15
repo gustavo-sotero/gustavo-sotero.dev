@@ -8,12 +8,16 @@ const {
   getAiPostGenerationConfigStateMock,
   saveAiPostGenerationConfigMock,
   listEligibleModelsPaginatedMock,
+  createDraftRunMock,
+  getDraftRunStatusMock,
 } = vi.hoisted(() => ({
   generateTopicSuggestionsMock: vi.fn(),
   generatePostDraftMock: vi.fn(),
   getAiPostGenerationConfigStateMock: vi.fn(),
   saveAiPostGenerationConfigMock: vi.fn(),
   listEligibleModelsPaginatedMock: vi.fn(),
+  createDraftRunMock: vi.fn(),
+  getDraftRunStatusMock: vi.fn(),
 }));
 
 vi.mock('../../services/post-generation.service', () => ({
@@ -28,6 +32,11 @@ vi.mock('../../services/ai-post-generation-settings.service', () => ({
 
 vi.mock('../../services/openrouter-models.service', () => ({
   listEligibleModelsPaginated: listEligibleModelsPaginatedMock,
+}));
+
+vi.mock('../../services/ai-post-generation-draft-runs.service', () => ({
+  createDraftRun: createDraftRunMock,
+  getDraftRunStatus: getDraftRunStatusMock,
 }));
 
 vi.mock('../../middleware/auth', () => ({
@@ -545,6 +554,213 @@ describe('admin post-generation routes', () => {
       // biome-ignore lint/suspicious/noExplicitAny: test assertion
       const body = (await res.json()) as any;
       expect(body.error.message).toBe('A IA gerou uma resposta incompleta. Tente novamente.');
+    });
+  });
+
+  // ── POST /draft-runs ────────────────────────────────────────────────────────
+
+  describe('POST /draft-runs', () => {
+    const RUN_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+    it('returns 202 with runId on successful draft run creation', async () => {
+      createDraftRunMock.mockResolvedValueOnce({
+        runId: RUN_ID,
+        status: 'queued',
+        stage: 'queued',
+        pollAfterMs: 3000,
+        createdAt: new Date().toISOString(),
+      });
+
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/draft-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(VALID_DRAFT_BODY),
+      });
+
+      expect(res.status).toBe(202);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.success).toBe(true);
+      expect(body.data.runId).toBe(RUN_ID);
+      expect(body.data.status).toBe('queued');
+      expect(createDraftRunMock).toHaveBeenCalledOnce();
+    });
+
+    it('returns 400 when request body is invalid', async () => {
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/draft-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: 'invalid-cat' }),
+      });
+
+      expect(res.status).toBe(400);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+      expect(createDraftRunMock).not.toHaveBeenCalled();
+    });
+
+    it('returns 503 when service throws DISABLED error', async () => {
+      createDraftRunMock.mockRejectedValueOnce(
+        Object.assign(new Error('disabled'), { code: 'DISABLED' })
+      );
+
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/draft-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(VALID_DRAFT_BODY),
+      });
+
+      expect(res.status).toBe(503);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.error.code).toBe('SERVICE_UNAVAILABLE');
+    });
+
+    it('returns 503 on timeout from service', async () => {
+      createDraftRunMock.mockRejectedValueOnce(new AiGenerationError('timeout', 'timed out'));
+
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/draft-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(VALID_DRAFT_BODY),
+      });
+
+      expect(res.status).toBe(503);
+    });
+
+    it('accepts misto as a valid category', async () => {
+      createDraftRunMock.mockResolvedValueOnce({
+        runId: RUN_ID,
+        status: 'queued',
+        stage: 'queued',
+        pollAfterMs: 3000,
+        createdAt: new Date().toISOString(),
+      });
+
+      const app = buildApp();
+      const res = await app.request('/admin/posts/generate/draft-runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...VALID_DRAFT_BODY, category: 'misto' }),
+      });
+
+      expect(res.status).toBe(202);
+    });
+  });
+
+  // ── GET /draft-runs/:id ─────────────────────────────────────────────────────
+
+  describe('GET /draft-runs/:id', () => {
+    const RUN_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+    it('returns 404 when run is not found', async () => {
+      getDraftRunStatusMock.mockResolvedValueOnce(null);
+
+      const app = buildApp();
+      const res = await app.request(`/admin/posts/generate/draft-runs/${RUN_ID}`);
+
+      expect(res.status).toBe(404);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('returns 200 with queued run status', async () => {
+      getDraftRunStatusMock.mockResolvedValueOnce({
+        runId: RUN_ID,
+        status: 'queued',
+        stage: 'queued',
+        requestedCategory: 'backend-arquitetura',
+        concreteCategory: null,
+        modelId: null,
+        attemptCount: 0,
+        createdAt: new Date().toISOString(),
+        startedAt: null,
+        finishedAt: null,
+        durationMs: null,
+        error: null,
+        result: null,
+      });
+
+      const app = buildApp();
+      const res = await app.request(`/admin/posts/generate/draft-runs/${RUN_ID}`);
+
+      expect(res.status).toBe(200);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.success).toBe(true);
+      expect(body.data.runId).toBe(RUN_ID);
+      expect(body.data.status).toBe('queued');
+    });
+
+    it('returns 200 with completed run including result payload', async () => {
+      getDraftRunStatusMock.mockResolvedValueOnce({
+        runId: RUN_ID,
+        status: 'completed',
+        stage: 'completed',
+        requestedCategory: 'backend-arquitetura',
+        concreteCategory: 'backend-arquitetura',
+        modelId: 'openai/gpt-4o',
+        attemptCount: 1,
+        createdAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 4200,
+        error: null,
+        result: {
+          title: 'Post Title',
+          slug: 'post-title',
+          excerpt: 'Short summary.',
+          content: '## Intro\n\nContent.',
+          suggestedTagNames: ['TypeScript'],
+          imagePrompt: 'dark illustration',
+          notes: null,
+        },
+      });
+
+      const app = buildApp();
+      const res = await app.request(`/admin/posts/generate/draft-runs/${RUN_ID}`);
+
+      expect(res.status).toBe(200);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.data.status).toBe('completed');
+      expect(body.data.result).not.toBeNull();
+      expect(body.data.result.title).toBe('Post Title');
+    });
+
+    it('returns 200 with failed run including error details', async () => {
+      getDraftRunStatusMock.mockResolvedValueOnce({
+        runId: RUN_ID,
+        status: 'failed',
+        stage: 'failed',
+        requestedCategory: 'backend-arquitetura',
+        concreteCategory: 'backend-arquitetura',
+        modelId: 'openai/gpt-4o',
+        attemptCount: 2,
+        createdAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 30000,
+        error: { kind: 'timeout', code: null, message: 'Provider timed out' },
+        result: null,
+      });
+
+      const app = buildApp();
+      const res = await app.request(`/admin/posts/generate/draft-runs/${RUN_ID}`);
+
+      expect(res.status).toBe(200);
+      // biome-ignore lint/suspicious/noExplicitAny: test assertion
+      const body = (await res.json()) as any;
+      expect(body.data.status).toBe('failed');
+      expect(body.data.error.kind).toBe('timeout');
     });
   });
 });

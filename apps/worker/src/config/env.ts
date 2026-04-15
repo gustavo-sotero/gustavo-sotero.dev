@@ -13,6 +13,9 @@ const workerEnvSchema = z.object({
   TELEGRAM_CHAT_ID: z.string().min(1),
   IP_HASH_SALT: z.string().min(16),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  // AI post generation (optional — worker skips AI jobs if absent)
+  OPENROUTER_API_KEY: z.string().min(1).optional(),
+  AI_POSTS_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
 });
 
 const parsed = workerEnvSchema.safeParse(process.env);

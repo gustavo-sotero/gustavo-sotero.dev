@@ -1,4 +1,9 @@
-import { imageOptimizeJobId, OutboxEventType, scheduledPostPublishJobId } from '@portfolio/shared';
+import {
+  aiPostDraftRunJobId,
+  imageOptimizeJobId,
+  OutboxEventType,
+  scheduledPostPublishJobId,
+} from '@portfolio/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -10,6 +15,7 @@ const {
   imageQueueAddMock,
   postPublishQueueAddMock,
   postPublishQueueGetJobMock,
+  aiPostDraftQueueAddMock,
   loggerInfoMock,
   loggerWarnMock,
   loggerErrorMock,
@@ -20,6 +26,7 @@ const {
   imageQueueAddMock: vi.fn(),
   postPublishQueueAddMock: vi.fn(),
   postPublishQueueGetJobMock: vi.fn(),
+  aiPostDraftQueueAddMock: vi.fn(),
   loggerInfoMock: vi.fn(),
   loggerWarnMock: vi.fn(),
   loggerErrorMock: vi.fn(),
@@ -94,7 +101,8 @@ function makeQueues() {
     add: postPublishQueueAddMock,
     getJob: postPublishQueueGetJobMock,
   } as never;
-  return { imageQueue, postPublishQueue };
+  const aiPostDraftGenerationQueue = { add: aiPostDraftQueueAddMock } as never;
+  return { imageQueue, postPublishQueue, aiPostDraftGenerationQueue };
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -148,8 +156,8 @@ describe('processOutboxEvents', () => {
     });
     imageQueueAddMock.mockResolvedValue(undefined);
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(imageQueueAddMock).toHaveBeenCalledWith(
       OutboxEventType.IMAGE_OPTIMIZE,
@@ -180,8 +188,8 @@ describe('processOutboxEvents', () => {
     postPublishQueueGetJobMock.mockResolvedValueOnce(undefined);
     postPublishQueueAddMock.mockResolvedValue(undefined);
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(postPublishQueueGetJobMock).toHaveBeenCalledWith(scheduledPostPublishJobId(7));
     expect(postPublishQueueAddMock).toHaveBeenCalledWith(
@@ -205,8 +213,8 @@ describe('processOutboxEvents', () => {
       })),
     });
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // Should NOT have marked as processed
     expect(dbUpdateSetMock).not.toHaveBeenCalledWith(
@@ -235,8 +243,8 @@ describe('processOutboxEvents', () => {
       })),
     });
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // Must mark as failed on the final attempt
     expect(dbUpdateSetMock).toHaveBeenCalledWith(
@@ -255,9 +263,11 @@ describe('processOutboxEvents', () => {
       })),
     });
 
-    const { imageQueue, postPublishQueue } = makeQueues();
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
     // Must not throw — relay logs and returns gracefully
-    await expect(processOutboxEvents(imageQueue, postPublishQueue)).resolves.toBeUndefined();
+    await expect(
+      processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue)
+    ).resolves.toBeUndefined();
     expect(imageQueueAddMock).not.toHaveBeenCalled();
   });
 
@@ -276,10 +286,10 @@ describe('processOutboxEvents', () => {
       })),
     });
 
-    const { imageQueue, postPublishQueue } = makeQueues();
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
 
-    await processOutboxEvents(imageQueue, postPublishQueue);
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(loggerWarnMock).toHaveBeenCalledTimes(1);
     expect(loggerWarnMock).toHaveBeenCalledWith(
@@ -314,10 +324,10 @@ describe('processOutboxEvents', () => {
         })),
       });
 
-    const { imageQueue, postPublishQueue } = makeQueues();
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
 
-    await processOutboxEvents(imageQueue, postPublishQueue);
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(loggerWarnMock).toHaveBeenCalledTimes(1);
     expect(loggerInfoMock).toHaveBeenCalledWith(
@@ -327,8 +337,8 @@ describe('processOutboxEvents', () => {
 
   it('does nothing when there are no pending events', async () => {
     // Default setup already returns empty list
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(imageQueueAddMock).not.toHaveBeenCalled();
     expect(postPublishQueueAddMock).not.toHaveBeenCalled();
@@ -352,8 +362,8 @@ describe('processOutboxEvents', () => {
       })),
     });
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // Queue must NOT have been invoked — payload validation blocked the publish
     expect(imageQueueAddMock).not.toHaveBeenCalled();
@@ -383,8 +393,8 @@ describe('processOutboxEvents', () => {
       })),
     });
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(postPublishQueueAddMock).not.toHaveBeenCalled();
     expect(loggerErrorMock).toHaveBeenCalledWith(
@@ -411,8 +421,8 @@ describe('processOutboxEvents', () => {
     });
     imageQueueAddMock.mockRejectedValue(new Error('Redis connection refused'));
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(loggerErrorMock).toHaveBeenCalledWith(
       'Outbox relay: failed to process event',
@@ -443,8 +453,8 @@ describe('processOutboxEvents', () => {
     });
     postPublishQueueAddMock.mockRejectedValue(new Error('BullMQ unavailable'));
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(loggerErrorMock).toHaveBeenCalledWith(
       'Outbox relay: failed to process event',
@@ -476,8 +486,8 @@ describe('processOutboxEvents', () => {
       .mockRejectedValueOnce(new Error('DB write timeout')) // outbox processed update
       .mockResolvedValue(undefined); // attempt increment update
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // Queue publish DID happen
     expect(imageQueueAddMock).toHaveBeenCalledOnce();
@@ -506,8 +516,8 @@ describe('processOutboxEvents', () => {
     });
     imageQueueAddMock.mockRejectedValue(new Error('Queue unreachable'));
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // Outbox row must be marked as finally failed
     expect(dbUpdateSetMock).toHaveBeenCalledWith(
@@ -556,8 +566,8 @@ describe('processOutboxEvents', () => {
       .mockRejectedValueOnce(new Error('DB write timeout'))
       .mockResolvedValue(undefined);
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // failureClass must be OUTBOX_STATUS_UPDATE_FAILURE, not QUEUE_PUBLISH_FAILURE
     expect(loggerErrorMock).toHaveBeenCalledWith(
@@ -594,8 +604,8 @@ describe('processOutboxEvents', () => {
       })),
     });
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(loggerWarnMock).not.toHaveBeenCalledWith(
       'Outbox relay: upload marked as failed after terminal relay failure',
@@ -622,8 +632,8 @@ describe('processOutboxEvents', () => {
     });
     imageQueueAddMock.mockRejectedValue(new Error('Queue error'));
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     expect(loggerErrorMock).toHaveBeenCalledWith(
       'Outbox relay: failed to process event',
@@ -662,8 +672,8 @@ describe('processOutboxEvents', () => {
     };
     postPublishQueueGetJobMock.mockResolvedValueOnce(existingJob);
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // Must have queried for existing job first
     expect(postPublishQueueGetJobMock).toHaveBeenCalledWith(scheduledPostPublishJobId(11));
@@ -702,8 +712,8 @@ describe('processOutboxEvents', () => {
     postPublishQueueGetJobMock.mockResolvedValueOnce(existingJob);
     postPublishQueueAddMock.mockResolvedValue(undefined);
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // Must have removed the old job
     expect(removeMock).toHaveBeenCalledOnce();
@@ -742,8 +752,8 @@ describe('processOutboxEvents', () => {
     const existingJob = { getState: vi.fn().mockResolvedValue('active'), remove: removeMock };
     postPublishQueueGetJobMock.mockResolvedValueOnce(existingJob);
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // Must NOT attempt to remove an active (locked) job
     expect(removeMock).not.toHaveBeenCalled();
@@ -782,8 +792,8 @@ describe('processOutboxEvents', () => {
     };
     postPublishQueueGetJobMock.mockResolvedValueOnce(existingJob);
 
-    const { imageQueue, postPublishQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
 
     // changeDelay threw → relay must NOT mark event as processed
     expect(dbUpdateSetMock).not.toHaveBeenCalledWith(
@@ -794,6 +804,121 @@ describe('processOutboxEvents', () => {
       expect.objectContaining({ attempts: event.attempts + 1 })
     );
     // Failure class: QUEUE_PUBLISH_FAILURE (queue operation failed, not payload validation)
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      'Outbox relay: failed to process event',
+      expect.objectContaining({ failureClass: 'QUEUE_PUBLISH_FAILURE' })
+    );
+  });
+});
+
+// ── AI post draft generate requested ─────────────────────────────────────────
+
+describe('AI_POST_DRAFT_GENERATE_REQUESTED outbox events', () => {
+  const RUN_ID = '550e8400-e29b-41d4-a716-446655440001';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetOutboxRelayStateForTests();
+    // Default: db.update chain resolves
+    dbUpdateSetMock.mockReturnValue({ where: dbUpdateSetWhereMock });
+    dbUpdateSetWhereMock.mockResolvedValue(undefined);
+  });
+
+  it('enqueues to aiPostDraftGenerationQueue with deterministic jobId', async () => {
+    const event = makeEvent({
+      id: 'outbox-ai-1',
+      eventType: OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
+      payload: { runId: RUN_ID },
+    });
+
+    dbSelectMock.mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue([event]),
+          })),
+        })),
+      })),
+    });
+    aiPostDraftQueueAddMock.mockResolvedValue(undefined);
+
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
+
+    // Must have enqueued to the AI draft queue — not image or post-publish
+    expect(aiPostDraftQueueAddMock).toHaveBeenCalledOnce();
+    expect(aiPostDraftQueueAddMock).toHaveBeenCalledWith(
+      OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
+      { runId: RUN_ID },
+      expect.objectContaining({ jobId: aiPostDraftRunJobId(RUN_ID) })
+    );
+    expect(imageQueueAddMock).not.toHaveBeenCalled();
+    expect(postPublishQueueAddMock).not.toHaveBeenCalled();
+
+    // Outbox event must be marked processed
+    expect(dbUpdateSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'processed' }));
+  });
+
+  it('does NOT enqueue when payload is missing runId (invalid payload)', async () => {
+    const event = makeEvent({
+      id: 'outbox-ai-2',
+      eventType: OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
+      payload: { someOtherField: 'oops' },
+    });
+
+    dbSelectMock.mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue([event]),
+          })),
+        })),
+      })),
+    });
+
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
+
+    // Queue must NOT be called — payload validation should have blocked it
+    expect(aiPostDraftQueueAddMock).not.toHaveBeenCalled();
+
+    // Relay must log the error
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      'Outbox relay: failed to process event',
+      expect.objectContaining({ failureClass: 'INVALID_PAYLOAD' })
+    );
+  });
+
+  it('increments attempts when queue.add rejects (transient failure)', async () => {
+    const event = makeEvent({
+      id: 'outbox-ai-3',
+      eventType: OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
+      payload: { runId: RUN_ID },
+      attempts: 1,
+    });
+
+    dbSelectMock.mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue([event]),
+          })),
+        })),
+      })),
+    });
+    aiPostDraftQueueAddMock.mockRejectedValue(new Error('Redis unavailable'));
+
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
+    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
+
+    // Must NOT mark as processed
+    expect(dbUpdateSetMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'processed' })
+    );
+    // Must increment attempts
+    expect(dbUpdateSetMock).toHaveBeenCalledWith(
+      expect.objectContaining({ attempts: event.attempts + 1 })
+    );
     expect(loggerErrorMock).toHaveBeenCalledWith(
       'Outbox relay: failed to process event',
       expect.objectContaining({ failureClass: 'QUEUE_PUBLISH_FAILURE' })

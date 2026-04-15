@@ -1,15 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createDraftRunRequestSchema,
+  createDraftRunResponseSchema,
+  draftRunStatusResponseSchema,
   generateDraftRequestSchema,
   generateDraftResponseSchema,
   generateTopicsRequestSchema,
   generateTopicsResponseSchema,
+  topicSuggestionSchema,
 } from './ai-post-generation';
 
 describe('ai-post-generation schemas', () => {
   // ── generateTopicsRequestSchema ───────────────────────────────────────────
 
   describe('generateTopicsRequestSchema', () => {
+    it('accepts valid request with misto category', () => {
+      const result = generateTopicsRequestSchema.safeParse({
+        category: 'misto',
+        briefing: null,
+        limit: 4,
+        excludedIdeas: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
     it('accepts valid request', () => {
       const result = generateTopicsRequestSchema.safeParse({
         category: 'backend-arquitetura',
@@ -156,6 +170,163 @@ describe('ai-post-generation schemas', () => {
         notes: null,
       });
 
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ── topicSuggestionSchema ─────────────────────────────────────────────────
+
+  describe('topicSuggestionSchema', () => {
+    const validSuggestion = {
+      suggestionId: 's1',
+      category: 'backend-arquitetura',
+      proposedTitle: 'Título',
+      angle: 'Ângulo',
+      summary: 'Resumo',
+      targetReader: 'Dev',
+      suggestedTagNames: ['TypeScript'],
+      rationale: 'Motivo',
+    };
+
+    it('accepts valid concrete category', () => {
+      expect(topicSuggestionSchema.safeParse(validSuggestion).success).toBe(true);
+    });
+
+    it('rejects misto category — must never be returned by the AI', () => {
+      const result = topicSuggestionSchema.safeParse({ ...validSuggestion, category: 'misto' });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects unknown category', () => {
+      const result = topicSuggestionSchema.safeParse({ ...validSuggestion, category: 'unknown' });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ── createDraftRunRequestSchema ───────────────────────────────────────────
+
+  describe('createDraftRunRequestSchema', () => {
+    const validSuggestion = {
+      suggestionId: 'abc1',
+      category: 'backend-arquitetura',
+      proposedTitle: 'Tema',
+      angle: 'Ângulo',
+      summary: 'Resumo',
+      targetReader: 'Dev',
+      suggestedTagNames: ['TypeScript'],
+      rationale: 'Motivo',
+    };
+
+    it('accepts valid request for misto category', () => {
+      const result = createDraftRunRequestSchema.safeParse({
+        category: 'misto',
+        briefing: 'brevíssimo brief',
+        selectedSuggestion: validSuggestion,
+        rejectedAngles: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects request with invalid category', () => {
+      const result = createDraftRunRequestSchema.safeParse({
+        category: 'not-a-category',
+        selectedSuggestion: validSuggestion,
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ── createDraftRunResponseSchema ──────────────────────────────────────────
+
+  describe('createDraftRunResponseSchema', () => {
+    it('validates 202 response body', () => {
+      const result = createDraftRunResponseSchema.safeParse({
+        runId: '550e8400-e29b-41d4-a716-446655440000',
+        status: 'queued',
+        stage: 'queued',
+        pollAfterMs: 3000,
+        createdAt: new Date().toISOString(),
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects non-uuid runId', () => {
+      const result = createDraftRunResponseSchema.safeParse({
+        runId: 'not-a-uuid',
+        status: 'queued',
+        stage: 'queued',
+        pollAfterMs: 3000,
+        createdAt: new Date().toISOString(),
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ── draftRunStatusResponseSchema ──────────────────────────────────────────
+
+  describe('draftRunStatusResponseSchema', () => {
+    const base = {
+      runId: '550e8400-e29b-41d4-a716-446655440000',
+      status: 'queued' as const,
+      stage: 'queued' as const,
+      requestedCategory: 'misto',
+      concreteCategory: null,
+      modelId: null,
+      attemptCount: 0,
+      createdAt: new Date().toISOString(),
+      startedAt: null,
+      finishedAt: null,
+      durationMs: null,
+      error: null,
+      result: null,
+    };
+
+    it('validates queued state', () => {
+      expect(draftRunStatusResponseSchema.safeParse(base).success).toBe(true);
+    });
+
+    it('validates completed state with result payload', () => {
+      const result = draftRunStatusResponseSchema.safeParse({
+        ...base,
+        status: 'completed',
+        stage: 'completed',
+        concreteCategory: 'backend-arquitetura',
+        modelId: 'openai/gpt-4o',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 4200,
+        result: {
+          title: 'Post Title',
+          slug: 'post-title',
+          excerpt: 'Short summary of the post.',
+          content:
+            '## Intro\n\nSome content here that is long enough to meet the minimum character requirement for blog post content.',
+          suggestedTagNames: ['TypeScript'],
+          imagePrompt: 'dark tech illustration',
+          notes: null,
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('validates failed state with error payload', () => {
+      const result = draftRunStatusResponseSchema.safeParse({
+        ...base,
+        status: 'failed',
+        stage: 'requesting-provider',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 30000,
+        error: { kind: 'timeout', code: null, message: 'Provider timed out' },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects invalid status value', () => {
+      const result = draftRunStatusResponseSchema.safeParse({
+        ...base,
+        status: 'in-flight',
+      });
       expect(result.success).toBe(false);
     });
   });

@@ -76,6 +76,10 @@ describe('worker queue names', () => {
     expect(names).toContain('post-publish');
   });
 
+  it('registers ai-post-draft-generation queue', () => {
+    expect(names).toContain('ai-post-draft-generation');
+  });
+
   it('registers no unexpected queues', () => {
     const expected = new Set([
       'telegram-notifications',
@@ -85,6 +89,7 @@ describe('worker queue names', () => {
       'image-optimize-dlq',
       'data-retention',
       'post-publish',
+      'ai-post-draft-generation',
     ]);
     for (const name of names) {
       expect(expected).toContain(name);

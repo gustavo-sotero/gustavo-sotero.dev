@@ -691,6 +691,65 @@ describe('post-generation.service', () => {
       ).rejects.toMatchObject({ code: 'NOT_CONFIGURED' });
     });
 
+    it('uses misto-specific system prompt instructions when category is misto', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Misto Válido',
+          slug: 'post-misto-valido',
+          excerpt: 'Resumo de um post de categoria mista.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e cobrir o teste de categoria misto com detalhamento adequado.',
+          suggestedTagNames: ['TypeScript'],
+          imagePrompt: 'dark illustration',
+          notes: null,
+        },
+        durationMs: 2000,
+        inputTokens: 400,
+        outputTokens: 700,
+      });
+
+      await generatePostDraft({
+        category: 'misto',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      expect(generateStructuredObjectMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          system: expect.stringContaining("nunca retorne 'misto' como categoria do item"),
+        })
+      );
+    });
+
+    it('canonicalizes raw tag names returned by the provider', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que tags brutas do provedor são canonizadas corretamente.',
+          // Raw names the provider might return — should be canonicalized
+          suggestedTagNames: ['typescript', 'aws', 'postgresql'],
+          imagePrompt: 'illustration',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 200,
+        outputTokens: 350,
+      });
+
+      const result = await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      expect(result.suggestedTagNames).toEqual(['TypeScript', 'AWS', 'PostgreSQL']);
+    });
+
     it('uses the persisted draft model (draftModelId) from config — not the topics model', async () => {
       resolveActiveConfigMock.mockResolvedValue({
         topicsModelId: 'openai/gpt-4o',

@@ -7,6 +7,7 @@ import {
   AI_POST_MAX_SUGGESTIONS,
   AI_POST_MAX_TOPIC_TAG_NAMES,
   AI_POST_MIN_SUGGESTIONS,
+  AI_POST_REQUESTED_CATEGORIES,
 } from '@portfolio/shared';
 
 /**
@@ -317,8 +318,9 @@ export const adminPaths = {
               properties: {
                 category: {
                   type: 'string',
-                  enum: [...AI_POST_CATEGORIES],
-                  description: 'Editorial category that orients the AI prompt.',
+                  enum: [...AI_POST_REQUESTED_CATEGORIES],
+                  description:
+                    "Editorial category that orients the AI prompt. Use 'misto' to request suggestions from any category.",
                   example: 'dados-filas-consistencia',
                 },
                 briefing: {
@@ -441,9 +443,9 @@ export const adminPaths = {
   '/admin/posts/generate/draft': {
     post: {
       tags: ['Admin - Posts'],
-      summary: 'Generate AI post draft',
+      summary: 'Generate AI post draft (synchronous, legacy)',
       description:
-        'Generates a full editorial draft from an approved topic suggestion. Admin-only, CSRF-protected, ephemeral, and rate limited to 5 requests per minute.',
+        'Generates a full editorial draft synchronously. Kept for compatibility. Prefer POST /admin/posts/generate/draft-runs for production use. Admin-only, CSRF-protected, rate limited to 5 requests per minute.',
       operationId: 'adminGeneratePostDraft',
       security: [{ cookieAuth: [] }],
       requestBody: {
@@ -456,8 +458,9 @@ export const adminPaths = {
               properties: {
                 category: {
                   type: 'string',
-                  enum: [...AI_POST_CATEGORIES],
-                  description: 'Editorial category that orients the AI prompt.',
+                  enum: [...AI_POST_REQUESTED_CATEGORIES],
+                  description:
+                    "Category originally requested (may be 'misto' when topics came from mixed generation).",
                   example: 'dados-filas-consistencia',
                 },
                 briefing: {
@@ -596,6 +599,209 @@ export const adminPaths = {
             },
           },
         },
+      },
+    },
+  },
+
+  // ── Async Draft Runs ─────────────────────────────────────────────────────────
+  '/admin/posts/generate/draft-runs': {
+    post: {
+      tags: ['Admin - Posts'],
+      summary: 'Create async AI post draft run',
+      description:
+        'Enqueues an async draft generation run. Returns immediately with a run ID and recommended poll interval. Poll GET /admin/posts/generate/draft-runs/:id until status is `completed` or terminal. Admin-only, CSRF-protected, rate limited to 5 requests per minute.',
+      operationId: 'adminCreatePostDraftRun',
+      security: [{ cookieAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['category', 'selectedSuggestion'],
+              properties: {
+                category: {
+                  type: 'string',
+                  enum: [...AI_POST_REQUESTED_CATEGORIES],
+                  description:
+                    "Editorial category originally requested. Use 'misto' when topics came from mixed generation.",
+                  example: 'misto',
+                },
+                selectedSuggestion: {
+                  type: 'object',
+                  required: ['title', 'hook', 'category'],
+                  description: 'The topic suggestion selected by the admin.',
+                  properties: {
+                    title: { type: 'string', example: 'Filas vs. Chamadas Síncronas' },
+                    hook: {
+                      type: 'string',
+                      example: 'Quando usar BullMQ e quando usar uma chamada HTTP direta.',
+                    },
+                    category: {
+                      type: 'string',
+                      enum: [...AI_POST_CATEGORIES],
+                      description: 'Concrete category resolved from the topic suggestion.',
+                      example: 'dados-filas-consistencia',
+                    },
+                    tags: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      example: ['BullMQ', 'Redis', 'Node.js'],
+                    },
+                    briefing: { type: 'string', example: '' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        202: {
+          description: 'Run accepted and queued.',
+          content: {
+            'application/json': {
+              example: {
+                success: true,
+                data: {
+                  runId: 'c7d3f1a0-1234-4abc-9def-000000000001',
+                  status: 'queued',
+                  stage: 'queued',
+                  pollAfterMs: 1000,
+                  createdAt: '2026-04-14T12:00:00.000Z',
+                },
+              },
+            },
+          },
+        },
+        400: {
+          description: 'Validation error.',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                error: {
+                  code: 'VALIDATION_ERROR',
+                  message: 'Campo obrigatório ausente.',
+                  details: [{ field: 'selectedSuggestion.title', message: 'Required' }],
+                },
+              },
+            },
+          },
+        },
+        401: { $ref: '#/components/responses/Unauthorized' },
+        403: { $ref: '#/components/responses/Forbidden' },
+        429: { $ref: '#/components/responses/RateLimited' },
+        500: { $ref: '#/components/responses/InternalError' },
+      },
+    },
+  },
+
+  '/admin/posts/generate/draft-runs/{id}': {
+    get: {
+      tags: ['Admin - Posts'],
+      summary: 'Get async draft run status',
+      description:
+        'Returns the current state of an async draft generation run. Poll this endpoint after creating a run until status is `completed`, `failed`, or `timed_out`. When `completed`, the `result` field contains the full draft.',
+      operationId: 'adminGetPostDraftRunStatus',
+      security: [{ cookieAuth: [] }],
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+          description: 'Run ID returned by POST /admin/posts/generate/draft-runs.',
+          example: 'c7d3f1a0-1234-4abc-9def-000000000001',
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Run state.',
+          content: {
+            'application/json': {
+              examples: {
+                running: {
+                  summary: 'Run in progress',
+                  value: {
+                    success: true,
+                    data: {
+                      runId: 'c7d3f1a0-1234-4abc-9def-000000000001',
+                      status: 'running',
+                      stage: 'requesting-provider',
+                      requestedCategory: 'misto',
+                      concreteCategory: 'dados-filas-consistencia',
+                      modelId: 'anthropic/claude-3-5-haiku',
+                      attemptCount: 1,
+                      createdAt: '2026-04-14T12:00:00.000Z',
+                      startedAt: '2026-04-14T12:00:01.000Z',
+                      finishedAt: null,
+                      durationMs: null,
+                      error: null,
+                      result: null,
+                    },
+                  },
+                },
+                completed: {
+                  summary: 'Run completed successfully',
+                  value: {
+                    success: true,
+                    data: {
+                      runId: 'c7d3f1a0-1234-4abc-9def-000000000001',
+                      status: 'completed',
+                      stage: 'completed',
+                      requestedCategory: 'misto',
+                      concreteCategory: 'dados-filas-consistencia',
+                      modelId: 'anthropic/claude-3-5-haiku',
+                      attemptCount: 1,
+                      createdAt: '2026-04-14T12:00:00.000Z',
+                      startedAt: '2026-04-14T12:00:01.000Z',
+                      finishedAt: '2026-04-14T12:00:28.000Z',
+                      durationMs: 27000,
+                      error: null,
+                      result: {
+                        title: 'Filas vs. Chamadas Síncronas',
+                        excerpt: 'Quando usar BullMQ e quando uma HTTP direta resolve melhor.',
+                        content: '## Introdução\n...',
+                        suggestedTags: ['BullMQ', 'Redis', 'Node.js'],
+                        category: 'dados-filas-consistencia',
+                      },
+                    },
+                  },
+                },
+                failed: {
+                  summary: 'Run failed',
+                  value: {
+                    success: true,
+                    data: {
+                      runId: 'c7d3f1a0-1234-4abc-9def-000000000001',
+                      status: 'failed',
+                      stage: 'failed',
+                      requestedCategory: 'misto',
+                      concreteCategory: null,
+                      modelId: 'anthropic/claude-3-5-haiku',
+                      attemptCount: 2,
+                      createdAt: '2026-04-14T12:00:00.000Z',
+                      startedAt: '2026-04-14T12:00:01.000Z',
+                      finishedAt: '2026-04-14T12:00:12.000Z',
+                      durationMs: 11000,
+                      error: {
+                        kind: 'provider_error',
+                        code: '503',
+                        message: 'Provider unavailable after retries.',
+                      },
+                      result: null,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: { $ref: '#/components/responses/Unauthorized' },
+        403: { $ref: '#/components/responses/Forbidden' },
+        404: { $ref: '#/components/responses/NotFound' },
+        500: { $ref: '#/components/responses/InternalError' },
       },
     },
   },

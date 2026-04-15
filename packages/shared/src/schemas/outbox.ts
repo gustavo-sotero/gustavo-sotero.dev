@@ -22,7 +22,18 @@ export const scheduledPostPublishOutboxPayloadSchema = z.object({
   scheduledAt: z.string().datetime(),
 });
 
+/**
+ * Payload schema for the `ai-post-draft-generate-requested` outbox event.
+ * Intentionally minimal — the worker always re-reads the run record from DB.
+ */
+export const aiPostDraftGenerateRequestedOutboxPayloadSchema = z.object({
+  runId: z.string().uuid(),
+});
+
 export type ImageOptimizeOutboxPayload = z.infer<typeof imageOptimizeOutboxPayloadSchema>;
 export type ScheduledPostPublishOutboxPayload = z.infer<
   typeof scheduledPostPublishOutboxPayloadSchema
+>;
+export type AiPostDraftGenerateRequestedOutboxPayload = z.infer<
+  typeof aiPostDraftGenerateRequestedOutboxPayloadSchema
 >;

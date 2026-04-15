@@ -443,7 +443,7 @@ export const ICON_CATALOG: Readonly<IconCatalogEntry[]> = [
     name: 'GitHub Actions',
     category: 'tool',
     iconKey: 'si:SiGithubactions',
-    aliases: ['ci/cd', 'cicd', 'github actions', 'github ci', 'gha'],
+    aliases: ['github actions', 'github ci', 'gha'],
   },
   {
     name: 'Drizzle ORM',
@@ -497,7 +497,7 @@ export const ICON_CATALOG: Readonly<IconCatalogEntry[]> = [
     name: 'BullMQ',
     category: 'tool',
     iconKey: 'lucide:Zap',
-    aliases: ['bull', 'queue', 'bullmq queue'],
+    aliases: ['bull', 'bullmq queue'],
   },
   {
     name: 'ESLint',

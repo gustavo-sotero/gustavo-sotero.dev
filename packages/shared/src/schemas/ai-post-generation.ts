@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import {
-  AI_POST_CATEGORIES,
+  AI_POST_CONCRETE_CATEGORIES,
   AI_POST_DEFAULT_SUGGESTIONS,
+  AI_POST_DRAFT_RUN_STAGES,
+  AI_POST_DRAFT_RUN_STATUSES,
   AI_POST_MAX_BRIEFING_CHARS,
   AI_POST_MAX_DRAFT_TAG_NAMES,
   AI_POST_MAX_EXCERPT_CHARS,
@@ -11,6 +13,7 @@ import {
   AI_POST_MAX_TOPIC_TAG_NAMES,
   AI_POST_MIN_DRAFT_CONTENT_CHARS,
   AI_POST_MIN_SUGGESTIONS,
+  AI_POST_REQUESTED_CATEGORIES,
 } from '../constants/ai-posts';
 
 const requiredString = z.string().trim().min(1, 'Campo obrigatório');
@@ -19,7 +22,8 @@ const plainRequiredString = z.string().min(1);
 // ── Topic suggestion request ──────────────────────────────────────────────────
 
 export const generateTopicsRequestSchema = z.object({
-  category: z.enum(AI_POST_CATEGORIES),
+  /** Accepts misto in addition to the five concrete categories. */
+  category: z.enum(AI_POST_REQUESTED_CATEGORIES),
   briefing: z
     .string()
     .max(
@@ -44,10 +48,12 @@ export const generateTopicsRequestSchema = z.object({
 export type GenerateTopicsRequest = z.infer<typeof generateTopicsRequestSchema>;
 
 // ── Topic suggestion (single item) ───────────────────────────────────────────
+// category must be a concrete value — never 'misto'
 
 export const topicSuggestionSchema = z.object({
   suggestionId: requiredString,
-  category: z.enum(AI_POST_CATEGORIES),
+  /** Always a concrete category — never 'misto'. */
+  category: z.enum(AI_POST_CONCRETE_CATEGORIES),
   proposedTitle: requiredString,
   angle: requiredString,
   summary: requiredString,
@@ -72,7 +78,8 @@ export type GenerateTopicsResponse = z.infer<typeof generateTopicsResponseSchema
 // ── Draft generation request ──────────────────────────────────────────────────
 
 export const generateDraftRequestSchema = z.object({
-  category: z.enum(AI_POST_CATEGORIES),
+  /** The category originally requested (may be 'misto' when topics came from mixed generation). */
+  category: z.enum(AI_POST_REQUESTED_CATEGORIES),
   briefing: z
     .string()
     .max(
@@ -82,6 +89,7 @@ export const generateDraftRequestSchema = z.object({
     .transform((v) => v.trim())
     .nullable()
     .default(null),
+  /** The selected topic — carries its own concrete category. */
   selectedSuggestion: topicSuggestionSchema,
   rejectedAngles: z
     .array(requiredString.max(AI_POST_MAX_EXCLUDED_TEXT_CHARS))
@@ -111,7 +119,8 @@ export type GenerateDraftResponse = z.infer<typeof generateDraftResponseSchema>;
 
 export const topicSuggestionOutputSchema = z.object({
   suggestionId: plainRequiredString,
-  category: z.enum(AI_POST_CATEGORIES),
+  /** The model must return a concrete category. */
+  category: z.enum(AI_POST_CONCRETE_CATEGORIES),
   proposedTitle: plainRequiredString,
   angle: plainRequiredString,
   summary: plainRequiredString,
@@ -136,3 +145,54 @@ export const generateDraftOutputSchema = z.object({
   imagePrompt: plainRequiredString,
   notes: plainRequiredString.nullable(),
 });
+
+// ── Draft Run API schemas ─────────────────────────────────────────────────────
+
+/**
+ * POST /admin/posts/generate/draft-runs — input body.
+ * Same business payload as the synchronous draft endpoint.
+ */
+export const createDraftRunRequestSchema = generateDraftRequestSchema;
+export type CreateDraftRunRequest = GenerateDraftRequest;
+
+/**
+ * POST /admin/posts/generate/draft-runs — 202 response body.
+ */
+export const createDraftRunResponseSchema = z.object({
+  runId: z.string().uuid(),
+  status: z.enum(AI_POST_DRAFT_RUN_STATUSES),
+  stage: z.enum(AI_POST_DRAFT_RUN_STAGES),
+  /** Recommended initial poll interval in ms. */
+  pollAfterMs: z.number().int().positive(),
+  createdAt: z.string(),
+});
+
+export type CreateDraftRunResponse = z.infer<typeof createDraftRunResponseSchema>;
+
+/**
+ * GET /admin/posts/generate/draft-runs/:id — response body.
+ */
+export const draftRunStatusResponseSchema = z.object({
+  runId: z.string().uuid(),
+  status: z.enum(AI_POST_DRAFT_RUN_STATUSES),
+  stage: z.enum(AI_POST_DRAFT_RUN_STAGES),
+  requestedCategory: z.string(),
+  concreteCategory: z.string().nullable(),
+  modelId: z.string().nullable(),
+  attemptCount: z.number().int(),
+  createdAt: z.string(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+  durationMs: z.number().int().nullable(),
+  error: z
+    .object({
+      kind: z.string(),
+      code: z.string().nullable(),
+      message: z.string(),
+    })
+    .nullable(),
+  /** Present only when status === 'completed'. */
+  result: generateDraftResponseSchema.nullable(),
+});
+
+export type DraftRunStatusResponse = z.infer<typeof draftRunStatusResponseSchema>;

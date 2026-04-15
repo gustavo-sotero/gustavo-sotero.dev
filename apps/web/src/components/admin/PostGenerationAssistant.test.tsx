@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
 const mutateAsyncTopicsMock = vi.fn();
-const mutateAsyncDraftMock = vi.fn();
+const startDraftRunMock = vi.fn();
 const useAiPostGenerationConfigMock = vi.fn();
 
 vi.mock('@/hooks/admin/use-ai-post-generation-config', () => ({
@@ -16,9 +16,15 @@ vi.mock('@/hooks/admin/use-post-generation', () => ({
     mutateAsync: mutateAsyncTopicsMock,
     isPending: false,
   }),
-  useGeneratePostDraft: () => ({
-    mutateAsync: mutateAsyncDraftMock,
+  useGeneratePostDraftRun: () => ({
+    start: startDraftRunMock,
+    reset: vi.fn(),
     isPending: false,
+    draft: null,
+    error: null,
+    stage: null,
+    status: null,
+    runId: null,
   }),
 }));
 
@@ -290,7 +296,10 @@ describe('PostGenerationAssistant', () => {
 
   it('shows draft review after selecting a topic', async () => {
     mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
-    mutateAsyncDraftMock.mockResolvedValueOnce(DRAFT_FIXTURE);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: DRAFT_FIXTURE })
+    );
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -325,7 +334,10 @@ describe('PostGenerationAssistant', () => {
 
   it('restores topic list (no extra API call) when back-to-topics is clicked from draft review', async () => {
     mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
-    mutateAsyncDraftMock.mockResolvedValueOnce(DRAFT_FIXTURE);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: DRAFT_FIXTURE })
+    );
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -349,9 +361,14 @@ describe('PostGenerationAssistant', () => {
 
   it('regenerate draft calls mutateAsync (guard allows draftReady state)', async () => {
     mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
-    mutateAsyncDraftMock
-      .mockResolvedValueOnce(DRAFT_FIXTURE) // initial draft
-      .mockResolvedValueOnce({ ...DRAFT_FIXTURE, title: 'Regenerated Post' }); // regenerated
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: DRAFT_FIXTURE })
+    ); // initial draft
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: { ...DRAFT_FIXTURE, title: 'Regenerated Post' } })
+    ); // regenerated
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -368,10 +385,10 @@ describe('PostGenerationAssistant', () => {
 
     await waitFor(() => {
       // Draft mutation should have been called twice (initial + regenerate)
-      expect(mutateAsyncDraftMock).toHaveBeenCalledTimes(2);
+      expect(startDraftRunMock).toHaveBeenCalledTimes(2);
     });
 
-    const secondCallArgs = mutateAsyncDraftMock.mock.calls[1]?.[0] as {
+    const secondCallArgs = startDraftRunMock.mock.calls[1]?.[0] as {
       rejectedAngles: string[];
     };
     expect(secondCallArgs.rejectedAngles).toContain(SUGGESTION_FIXTURE.angle);
@@ -381,10 +398,18 @@ describe('PostGenerationAssistant', () => {
     mutateAsyncTopicsMock.mockResolvedValueOnce({
       suggestions: [SUGGESTION_FIXTURE, SECOND_SUGGESTION_FIXTURE],
     });
-    mutateAsyncDraftMock
-      .mockResolvedValueOnce(DRAFT_FIXTURE)
-      .mockResolvedValueOnce({ ...DRAFT_FIXTURE, title: 'Draft regenerado' })
-      .mockResolvedValueOnce({ ...DRAFT_FIXTURE, title: 'Draft do segundo tema' });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: DRAFT_FIXTURE })
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: { ...DRAFT_FIXTURE, title: 'Draft regenerado' } })
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: { ...DRAFT_FIXTURE, title: 'Draft do segundo tema' } })
+    );
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -399,7 +424,7 @@ describe('PostGenerationAssistant', () => {
 
     fireEvent.click(screen.getByTestId('regenerate-draft'));
     await waitFor(() => {
-      expect(mutateAsyncDraftMock).toHaveBeenCalledTimes(2);
+      expect(startDraftRunMock).toHaveBeenCalledTimes(2);
     });
 
     fireEvent.click(screen.getByTestId('back-to-topics'));
@@ -410,10 +435,10 @@ describe('PostGenerationAssistant', () => {
     fireEvent.click(screen.getByTestId('topic-1'));
 
     await waitFor(() => {
-      expect(mutateAsyncDraftMock).toHaveBeenCalledTimes(3);
+      expect(startDraftRunMock).toHaveBeenCalledTimes(3);
     });
 
-    const thirdCallArgs = mutateAsyncDraftMock.mock.calls[2]?.[0] as {
+    const thirdCallArgs = startDraftRunMock.mock.calls[2]?.[0] as {
       rejectedAngles: string[];
       selectedSuggestion: { suggestionId: string };
     };
@@ -425,7 +450,10 @@ describe('PostGenerationAssistant', () => {
 
   it('applies mermaid markdown to the form without altering the draft content', async () => {
     mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
-    mutateAsyncDraftMock.mockResolvedValueOnce(MERMAID_DRAFT_FIXTURE);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: MERMAID_DRAFT_FIXTURE })
+    );
 
     const { setValueMock, onTagsAppliedMock } = renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -474,7 +502,10 @@ describe('PostGenerationAssistant', () => {
 
   it('draft error preserves topic context and shows back-to-topics button', async () => {
     mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
-    mutateAsyncDraftMock.mockRejectedValueOnce({ message: 'AI timeout' });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onError({ message: 'AI timeout' })
+    );
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
@@ -611,7 +642,10 @@ describe('PostGenerationAssistant', () => {
 
   it('discarding a generated draft returns the assistant to the idle step', async () => {
     mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
-    mutateAsyncDraftMock.mockResolvedValueOnce(DRAFT_FIXTURE);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    startDraftRunMock.mockImplementationOnce((_: unknown, c: any) =>
+      c.onCompleted({ result: DRAFT_FIXTURE })
+    );
 
     renderAssistant();
     fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));

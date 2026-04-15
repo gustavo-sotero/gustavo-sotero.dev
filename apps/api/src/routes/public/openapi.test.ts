@@ -306,7 +306,8 @@ describe('openapi routes', () => {
     expect(Array.isArray(topicsSuccess?.data?.suggestions)).toBe(true);
     expect((topicsSuccess?.data?.suggestions as unknown[]).length).toBeGreaterThanOrEqual(3);
 
-    expect(draftPost?.description).toContain('ephemeral');
+    // Legacy sync draft endpoint — description should reference the async runs route
+    expect(draftPost?.description).toContain('draft-runs');
     expect(draftSchema?.required).toContain('selectedSuggestion');
     expect(
       draftSchema?.properties?.selectedSuggestion?.properties?.suggestedTagNames?.maxItems

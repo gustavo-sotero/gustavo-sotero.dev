@@ -77,6 +77,17 @@ export const postPublishQueue = new Queue(
   })
 );
 
+/** Queue for async AI post draft generation jobs. */
+export const aiPostDraftGenerationQueue = new Queue(
+  'ai-post-draft-generation',
+  makeQueueOpts({
+    attempts: 2,
+    backoff: { type: 'exponential', delay: 2000 },
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 100 },
+  })
+);
+
 // ── Enqueue helpers ───────────────────────────────────────────────────────────
 
 export interface TelegramNotificationData {

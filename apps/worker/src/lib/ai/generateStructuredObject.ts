@@ -5,22 +5,14 @@ import { env } from '../../config/env';
 import { getLogger } from '../../config/logger';
 import { getOpenRouterProvider } from './provider';
 
-export { AiGenerationError } from '@portfolio/shared';
-
-const logger = getLogger('ai', 'generate');
+const logger = getLogger('worker', 'ai', 'generate');
 
 export interface GenerateStructuredObjectOptions<TSchema extends ZodSchema> {
-  /** Model identifier (e.g. 'gpt-4o-mini') */
   model: string;
-  /** System prompt */
   system: string;
-  /** User prompt */
   prompt: string;
-  /** Zod schema for structured output validation */
   schema: TSchema;
-  /** Operation name for logging */
   operation: string;
-  /** Extra structured fields to include in logs */
   metadata?: Record<string, unknown>;
 }
 
@@ -31,13 +23,8 @@ export interface GenerateStructuredObjectResult<T> {
   outputTokens: number | undefined;
 }
 
-/**
- * Wraps the AI SDK `generateObject` call with:
- *  - configurable timeout from env
- *  - structured logging (operation, model, duration, token usage, errors)
- *  - explicit refusal handling
- *  - normalised error surface: always throws an Error with a clear message
- */
+export { AiGenerationError };
+
 export async function generateStructuredObject<TSchema extends ZodSchema>(
   options: GenerateStructuredObjectOptions<TSchema>
 ): Promise<GenerateStructuredObjectResult<import('zod').infer<TSchema>>> {
@@ -47,7 +34,8 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
   const inputSizeApprox = system.length + prompt.length;
 
   const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), env.AI_POSTS_TIMEOUT_MS);
+  const timeoutMs = env.AI_POSTS_TIMEOUT_MS;
+  const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
 
   try {
     const result = await generateObject({
@@ -59,8 +47,6 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
     });
 
     const durationMs = Date.now() - start;
-    const inputTokens = result.usage?.inputTokens;
-    const outputTokens = result.usage?.outputTokens;
 
     logger.info('AI generation succeeded', {
       operation,
@@ -71,17 +57,16 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
       refusal: false,
       validationFailure: false,
       inputSizeApprox,
-      outputSizeApprox: approximateSize(result.object),
-      inputTokens,
-      outputTokens,
+      inputTokens: result.usage?.inputTokens,
+      outputTokens: result.usage?.outputTokens,
       ...metadata,
     });
 
     return {
       object: result.object as import('zod').infer<TSchema>,
       durationMs,
-      inputTokens,
-      outputTokens,
+      inputTokens: result.usage?.inputTokens,
+      outputTokens: result.usage?.outputTokens,
     };
   } catch (err) {
     const durationMs = Date.now() - start;
@@ -93,8 +78,6 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
         durationMs,
         success: false,
         timeout: true,
-        refusal: false,
-        validationFailure: false,
         inputSizeApprox,
         ...metadata,
       });
@@ -119,9 +102,6 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
         validationFailure: !isRefusal,
         finishReason,
         inputSizeApprox,
-        outputSizeApprox: err.text?.length ?? 0,
-        inputTokens: err.usage?.inputTokens,
-        outputTokens: err.usage?.outputTokens,
         ...metadata,
       });
 
@@ -136,9 +116,6 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
       model: modelId,
       durationMs,
       success: false,
-      timeout: false,
-      refusal: false,
-      validationFailure: false,
       inputSizeApprox,
       error: (err as Error).message,
       ...metadata,
@@ -149,14 +126,3 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
     clearTimeout(timeoutId);
   }
 }
-
-function approximateSize(value: unknown): number | undefined {
-  try {
-    return JSON.stringify(value).length;
-  } catch {
-    return undefined;
-  }
-}
-
-// AiGenerationError and AiGenerationErrorKind are now in @portfolio/shared.
-// Re-exported at the top of this file for backward compatibility.

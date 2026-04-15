@@ -42,3 +42,7 @@ export const retentionQueue = new Queue('data-retention', {
 export const postPublishQueue = new Queue('post-publish', {
   connection: baseConnection,
 });
+
+export const aiPostDraftGenerationQueue = new Queue('ai-post-draft-generation', {
+  connection: baseConnection,
+});

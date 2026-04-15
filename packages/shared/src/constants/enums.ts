@@ -47,5 +47,6 @@ export type TagCategory = (typeof TagCategory)[keyof typeof TagCategory];
 export const OutboxEventType = {
   IMAGE_OPTIMIZE: 'image-optimize',
   SCHEDULED_POST_PUBLISH: 'scheduled-post-publish',
+  AI_POST_DRAFT_GENERATE_REQUESTED: 'ai-post-draft-generate-requested',
 } as const;
 export type OutboxEventType = (typeof OutboxEventType)[keyof typeof OutboxEventType];

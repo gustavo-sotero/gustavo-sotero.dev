@@ -1,6 +1,11 @@
 'use client';
 
-import { type GenerateDraftResponse, generateSlug, type Tag } from '@portfolio/shared';
+import {
+  canonicalizeTagName,
+  type GenerateDraftResponse,
+  generateSlug,
+  type Tag,
+} from '@portfolio/shared';
 import { ArrowLeft, Check, Clipboard, ClipboardCheck, RefreshCcw, Wand2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -52,7 +57,7 @@ function resolveTagNames(
 
   for (const name of suggestedNames) {
     const trimmedName = name.trim();
-    const found = findMatchingTag(trimmedName, tagLookup);
+    const found = findMatchingTag(trimmedName, tagLookup, allTags);
     if (found) {
       if (!matchedIdSet.has(found.id)) {
         matchedIdSet.add(found.id);
@@ -92,13 +97,30 @@ function buildTagLookup(allTags: Tag[]): Map<string, Tag> {
   return lookup;
 }
 
-function findMatchingTag(name: string, tagLookup: Map<string, Tag>): Tag | undefined {
+function findMatchingTag(
+  name: string,
+  tagLookup: Map<string, Tag>,
+  allTags: Tag[]
+): Tag | undefined {
   const trimmedName = name.trim();
   if (!trimmedName) {
     return undefined;
   }
 
-  return tagLookup.get(trimmedName.toLowerCase()) ?? tagLookup.get(normalizeTagKey(trimmedName));
+  // 1. Exact name or slug match
+  const directMatch =
+    tagLookup.get(trimmedName.toLowerCase()) ?? tagLookup.get(normalizeTagKey(trimmedName));
+  if (directMatch) return directMatch;
+
+  // 2. Canonical name match — resolves AI casing variants (e.g. "nextjs" → "Next.js")
+  const canonicalName = canonicalizeTagName(trimmedName, allTags);
+  if (canonicalName !== trimmedName) {
+    const canonicalMatch =
+      tagLookup.get(canonicalName.toLowerCase()) ?? tagLookup.get(normalizeTagKey(canonicalName));
+    if (canonicalMatch) return canonicalMatch;
+  }
+
+  return undefined;
 }
 
 function normalizeTagKey(value: string): string {
@@ -332,7 +354,7 @@ export function PostDraftReview({
           </div>
           <div className="flex flex-wrap gap-1">
             {draft.suggestedTagNames.map((name) => {
-              const isMatched = !!findMatchingTag(name, tagLookup);
+              const isMatched = !!findMatchingTag(name, tagLookup, allTags);
               return (
                 <Badge
                   key={name}
