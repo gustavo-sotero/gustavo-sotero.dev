@@ -59,6 +59,8 @@ const DRAFT = {
     '## Introdução\n\nConteúdo suficientemente longo para renderizar o preview com contexto real no review do draft.',
   suggestedTagNames: ['TypeScript', 'Redis'],
   imagePrompt: 'Minimalist dark illustration',
+  linkedinPost:
+    'Post sobre TypeScript e Redis. https://gustavo-sotero.dev/blog/post-gerado\n\n#TypeScript #Redis #Nodejs',
   notes: null,
 };
 
@@ -323,7 +325,11 @@ describe('PostDraftReview', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /^Copiar$/i }));
+    // Two 'Copiar' buttons: index 0 = image prompt, index 1 = LinkedIn
+    const copyButtons = screen.getAllByRole('button', { name: /^Copiar$/i });
+    const imagePromptBtn = copyButtons.at(0);
+    if (!imagePromptBtn) throw new Error('Expected image prompt copy button');
+    fireEvent.click(imagePromptBtn);
 
     await waitFor(() => {
       expect(writeTextMock).toHaveBeenCalledWith(DRAFT.imagePrompt);
@@ -333,6 +339,47 @@ describe('PostDraftReview', () => {
     expect(
       screen.getByText(
         /Use este prompt em um gerador externo\. Ele não preenche a capa automaticamente nem altera o coverUrl do post\./i
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('copies the LinkedIn post text to the clipboard and shows feedback', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(global.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextMock },
+    });
+
+    render(
+      <PostDraftReview
+        draft={DRAFT}
+        allTags={TAGS}
+        currentValues={{}}
+        onApplyAll={vi.fn()}
+        onApplyField={vi.fn()}
+        onRegenerate={vi.fn()}
+        onBackToTopics={vi.fn()}
+        onDiscard={vi.fn()}
+        isRegenerating={false}
+      />
+    );
+
+    expect(screen.getByText(/Texto para LinkedIn/i)).toBeInTheDocument();
+
+    // Two 'Copiar' buttons: index 0 = image prompt, index 1 = LinkedIn
+    const copyButtons = screen.getAllByRole('button', { name: /^Copiar$/i });
+    const linkedinBtn = copyButtons.at(1);
+    if (!linkedinBtn) throw new Error('Expected LinkedIn copy button');
+    fireEvent.click(linkedinBtn);
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith(DRAFT.linkedinPost);
+    });
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Texto para LinkedIn copiado');
+    expect(
+      screen.getByText(
+        /Copie e cole diretamente no LinkedIn\. Não altera nenhum campo do formulário do post\./i
       )
     ).toBeInTheDocument();
   });

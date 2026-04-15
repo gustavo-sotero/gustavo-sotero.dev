@@ -167,7 +167,24 @@ describe('ai-post-generation schemas', () => {
           'Conteúdo longo o suficiente para não cair na validação de tamanho mínimo, mas com título e slug inválidos.',
         suggestedTagNames: ['TypeScript'],
         imagePrompt: '',
+        linkedinPost: '',
         notes: null,
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects draft responses without linkedinPost field', () => {
+      const result = generateDraftResponseSchema.safeParse({
+        title: 'Título válido',
+        slug: 'titulo-valido',
+        excerpt: 'Resumo válido',
+        content:
+          'Conteúdo longo o suficiente para não cair na validação de tamanho mínimo e verificar que linkedinPost é obrigatório.',
+        suggestedTagNames: ['TypeScript'],
+        imagePrompt: 'Ilustração minimalista',
+        notes: null,
+        // linkedinPost deliberately omitted
       });
 
       expect(result.success).toBe(false);
@@ -304,7 +321,9 @@ describe('ai-post-generation schemas', () => {
           content:
             '## Intro\n\nSome content here that is long enough to meet the minimum character requirement for blog post content.',
           suggestedTagNames: ['TypeScript'],
-          imagePrompt: 'dark tech illustration',
+          imagePrompt: 'Ilustração técnica minimalista em fundo escuro',
+          linkedinPost:
+            'Post sobre TypeScript e arquitetura backend.\n\nhttps://gustavo-sotero.dev/blog/post-title\n\n#TypeScript #Backend #Nodejs',
           notes: null,
         },
       });

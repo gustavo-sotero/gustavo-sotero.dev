@@ -572,7 +572,9 @@ export const adminPaths = {
                     "## O custo não desaparece\n\nQuando você empurra trabalho para uma fila, troca simplicidade síncrona por complexidade operacional.\n\n## Quando faz sentido\n\nUse fila quando o tempo de resposta ao usuário realmente importa e o processamento pode ser refeito com segurança.\n\n```typescript\nawait queue.add('send-email', payload);\n```",
                   suggestedTagNames: ['BullMQ', 'Redis', 'Arquitetura', 'Consistência'],
                   imagePrompt:
-                    'Minimalist dark background illustration of asynchronous job queues and trade-offs, flat design, tech aesthetic, no text, square format',
+                    'Ilustração minimalista de fundo escuro representando filas assíncronas e tradeoffs, flat design, estética técnica, formato quadrado',
+                  linkedinPost:
+                    'Filas não eliminam complexidade — elas a redistribuem. Antes de adicionar BullMQ ao stack, vale perguntar: o processamento síncrono realmente não resolve?\n\nNovo post no blog: https://gustavo-sotero.dev/blog/fila-nao-e-solucao-magica-e-troca\n\n#BullMQ #Redis #Arquitetura #BackendDev',
                   notes:
                     'Validar se o exemplo de código deve mencionar DLQ explicitamente para o público-alvo.',
                 },
@@ -794,7 +796,9 @@ export const adminPaths = {
                         content: '## Introdução\n...',
                         suggestedTagNames: ['BullMQ', 'Redis', 'Node.js'],
                         imagePrompt:
-                          'Minimalist dark background illustration of async queues and direct calls, flat design, tech aesthetic, no text, square format',
+                          'Ilustra\u00e7\u00e3o minimalista de fundo escuro representando filas ass\u00edncronas e chamadas diretas, flat design, est\u00e9tica t\u00e9cnica, formato quadrado',
+                        linkedinPost:
+                          'Filas vs. chamadas s\u00edncronas \u2014 a escolha certa depende do tradeoff que voc\u00ea est\u00e1 disposto a aceitar.\n\nNovo post no blog: https://gustavo-sotero.dev/blog/filas-vs-chamadas-sincronas\n\n#BullMQ #Redis #Nodejs',
                         notes: null,
                       },
                     },

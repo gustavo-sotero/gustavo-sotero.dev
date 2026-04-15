@@ -122,6 +122,7 @@ const VALID_AI_OBJECT = {
     '## Introdução\n\nFilas e RPC são ferramentas complementares, não concorrentes. Entender seus trade-offs é essencial para projetar sistemas resilientes. Neste post, exploramos os critérios decisivos para escolher entre cada abordagem.\n\n## Quando usar filas\n\nFilas são ideais para tarefas demoradas, tolerantes a latência e que precisam de retry automático.',
   suggestedTagNames: ['TypeScript', 'bullmq', 'nodejs'],
   imagePrompt: 'Dark illustration of queues and arrows in a modern tech aesthetic',
+  linkedinPost: 'Novo post sobre filas vs RPC. {{POST_URL}}\n\n#TypeScript #BullMQ #Nodejs',
   notes: null,
 };
 
@@ -219,6 +220,9 @@ describe('processAiPostDraftGeneration', () => {
     // resultPayload should contain canonicalized tag names
     const payload = lastSetArg.resultPayload as Record<string, unknown>;
     expect(Array.isArray(payload.suggestedTagNames)).toBe(true);
+    // linkedinPost: placeholder replaced, canonical URL present
+    expect(typeof payload.linkedinPost).toBe('string');
+    expect(payload.linkedinPost as string).toContain('https://gustavo-sotero.dev/blog/');
   });
 
   it('persists timed_out status and re-throws on AiGenerationError timeout', async () => {
@@ -396,5 +400,31 @@ describe('processAiPostDraftGeneration', () => {
     const lastSetArg = updateSetMock.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     const payload = lastSetArg.resultPayload as { suggestedTagNames?: string[] };
     expect(payload.suggestedTagNames).toEqual(['Postgres (custom)']);
+  });
+
+  it('uses PT-BR fallback imagePrompt when provider returns an empty imagePrompt', async () => {
+    updateWhereMock.mockImplementationOnce(() => ({
+      returning: returningMock,
+    }));
+    returningMock.mockResolvedValueOnce([makeClaimedRun()]);
+
+    generateStructuredObjectMock.mockResolvedValueOnce({
+      object: {
+        ...VALID_AI_OBJECT,
+        imagePrompt: '   ', // empty after trim
+      },
+      durationMs: 3000,
+      inputTokens: 480,
+      outputTokens: 750,
+    });
+
+    await processAiPostDraftGeneration(buildJob());
+
+    const lastSetArg = updateSetMock.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    const payload = lastSetArg.resultPayload as { imagePrompt?: string };
+    expect(typeof payload.imagePrompt).toBe('string');
+    expect(payload.imagePrompt).toMatch(/ilustra[çc][aã]o|minimalista|fundo|escuro/i);
+    // Must contain the post title to confirm it came from buildFallbackImagePrompt
+    expect(payload.imagePrompt).toContain(VALID_AI_OBJECT.title);
   });
 });

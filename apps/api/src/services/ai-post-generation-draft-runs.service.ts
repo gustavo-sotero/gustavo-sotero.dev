@@ -14,12 +14,50 @@ import type {
   CreateDraftRunResponse,
   DraftRunStatusResponse,
 } from '@portfolio/shared';
-import { AI_POST_DRAFT_RUN_INITIAL_POLL_MS, OutboxEventType } from '@portfolio/shared';
+import {
+  AI_POST_DRAFT_RUN_INITIAL_POLL_MS,
+  canonicalizeSuggestedTagNames,
+  generateDraftResponseSchema,
+  OutboxEventType,
+  type PersistedTagForNormalization,
+} from '@portfolio/shared';
 import type { AiPostDraftRun } from '@portfolio/shared/db/schema';
-import { aiPostDraftRuns, outbox } from '@portfolio/shared/db/schema';
-import { eq } from 'drizzle-orm';
+import { aiPostDraftRuns, outbox, tags } from '@portfolio/shared/db/schema';
+import { asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { resolveActiveAiPostGenerationConfig } from './ai-post-generation-settings.service';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function loadPersistedTagsForNormalization(): Promise<PersistedTagForNormalization[]> {
+  return db.select({ name: tags.name, slug: tags.slug }).from(tags).orderBy(asc(tags.name));
+}
+
+/**
+ * Normalise the draft request before persisting so the worker operates on
+ * clean data regardless of which caller produced the payload.
+ */
+function normalizeRequestPayload(
+  request: CreateDraftRunRequest,
+  persistedTags: PersistedTagForNormalization[]
+): CreateDraftRunRequest {
+  const s = request.selectedSuggestion;
+  const normalizedTagNames = canonicalizeSuggestedTagNames(s.suggestedTagNames, persistedTags);
+  return {
+    ...request,
+    briefing: request.briefing?.trim() || null,
+    rejectedAngles: request.rejectedAngles.map((a) => a.trim()).filter(Boolean),
+    selectedSuggestion: {
+      ...s,
+      proposedTitle: s.proposedTitle.trim(),
+      angle: s.angle.trim(),
+      summary: s.summary.trim(),
+      targetReader: s.targetReader.trim(),
+      rationale: s.rationale.trim(),
+      suggestedTagNames: normalizedTagNames,
+    },
+  };
+}
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
@@ -35,10 +73,14 @@ export async function createDraftRun(
 ): Promise<CreateDraftRunResponse> {
   // Pre-flight: ensure the feature is configured before accepting the run.
   // This surfaces config errors synchronously rather than failing silently in the worker.
-  const activeConfig = await resolveActiveAiPostGenerationConfig();
+  const [activeConfig, persistedTags] = await Promise.all([
+    resolveActiveAiPostGenerationConfig(),
+    loadPersistedTagsForNormalization(),
+  ]);
 
-  const requestedCategory = request.category;
-  const concreteCategory = request.selectedSuggestion.category;
+  const normalizedRequest = normalizeRequestPayload(request, persistedTags);
+  const requestedCategory = normalizedRequest.category;
+  const concreteCategory = normalizedRequest.selectedSuggestion.category;
 
   const run = await db.transaction(async (tx) => {
     const insertedRun = await tx
@@ -48,7 +90,7 @@ export async function createDraftRun(
         stage: 'queued',
         requestedCategory,
         concreteCategory,
-        requestPayload: request as unknown as Record<string, unknown>,
+        requestPayload: normalizedRequest as unknown as Record<string, unknown>,
         modelId: activeConfig.draftModelId,
         createdBy,
         attemptCount: 0,
@@ -128,6 +170,18 @@ function formatDraftRunStatus(run: AiPostDraftRun): DraftRunStatusResponse {
     finishedAt: run.finishedAt?.toISOString() ?? null,
     durationMs,
     error,
-    result: run.resultPayload as DraftRunStatusResponse['result'],
+    result: resolveResult(run.resultPayload),
   };
+}
+
+/**
+ * Revalidates the persisted result payload against the current draft schema.
+ * Returns null for missing, invalid, or historically incomplete payloads
+ * (e.g. rows written before the linkedinPost field was introduced).
+ */
+function resolveResult(rawPayload: unknown): DraftRunStatusResponse['result'] {
+  if (rawPayload == null) return null;
+  const parsed = generateDraftResponseSchema.safeParse(rawPayload);
+  if (!parsed.success) return null;
+  return parsed.data;
 }

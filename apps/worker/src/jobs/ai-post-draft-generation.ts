@@ -24,6 +24,7 @@ import {
   generateDraftResponseSchema,
   generateSlug,
   normalizeContent,
+  normalizeLinkedInPost,
   type PersistedTagForNormalization,
 } from '@portfolio/shared';
 import { aiPostDraftRuns, tags } from '@portfolio/shared/db/schema';
@@ -202,6 +203,12 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       persistedTags
     ).slice(0, 8);
 
+    const linkedinPost = normalizeLinkedInPost(
+      raw.linkedinPost?.trim() ?? '',
+      slug,
+      suggestedTagNames
+    );
+
     // ── Stage: validating-output ─────────────────────────────────────────────
     await setStage(runId, 'validating-output', 'validating');
 
@@ -212,6 +219,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       content,
       suggestedTagNames,
       imagePrompt,
+      linkedinPost,
       notes,
     });
 

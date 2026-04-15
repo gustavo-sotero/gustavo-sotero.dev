@@ -20,6 +20,7 @@ import {
   generateTopicsOutputSchema,
   generateTopicsResponseSchema,
   normalizeContent,
+  normalizeLinkedInPost,
 } from '@portfolio/shared';
 import { generateSlug } from '@portfolio/shared/lib/slug';
 import type {
@@ -124,6 +125,11 @@ function normalizeDraftResponse(
     persistedTags
   ).slice(0, AI_POST_MAX_DRAFT_TAG_NAMES);
   const notes = raw.notes?.trim() ?? null;
+  const linkedinPost = normalizeLinkedInPost(
+    raw.linkedinPost?.trim() ?? '',
+    slug,
+    suggestedTagNames
+  );
 
   const parsed = generateDraftResponseSchema.safeParse({
     title,
@@ -132,6 +138,7 @@ function normalizeDraftResponse(
     content,
     suggestedTagNames,
     imagePrompt,
+    linkedinPost,
     notes,
   });
   if (!parsed.success) {

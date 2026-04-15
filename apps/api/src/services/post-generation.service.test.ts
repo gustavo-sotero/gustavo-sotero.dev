@@ -296,6 +296,7 @@ describe('post-generation.service', () => {
             '## Introdução\n\nFila não é solução mágica.\n\n```typescript\nconst queue = new Queue();\n```\n\nTexto longo o suficiente para passar a validação mínima de 100 chars.',
           suggestedTagNames: ['BullMQ', 'Redis', 'bullmq'],
           imagePrompt: 'Minimalist dark illustration of a queue data structure',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 3000,
@@ -315,6 +316,11 @@ describe('post-generation.service', () => {
       // Deduplication: 'BullMQ' and 'bullmq' are the same
       expect(result.suggestedTagNames).toHaveLength(2);
       expect(result.imagePrompt).toBeTruthy();
+      // linkedinPost: placeholder replaced with canonical URL, hashtags appended
+      expect(result.linkedinPost).toContain(
+        'https://gustavo-sotero.dev/blog/fila-nao-e-solucao-magica'
+      );
+      expect(result.linkedinPost).toMatch(/#\w+/);
     });
 
     it('tells the model to use Mermaid only when a diagram adds real value', async () => {
@@ -327,6 +333,7 @@ describe('post-generation.service', () => {
             '## Introdução\n\nFila não é solução mágica.\n\n```typescript\nconst queue = new Queue();\n```\n\nTexto longo o suficiente para passar a validação mínima de 100 chars.',
           suggestedTagNames: ['BullMQ', 'Redis'],
           imagePrompt: 'Minimalist dark illustration of a queue data structure',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1800,
@@ -358,6 +365,7 @@ describe('post-generation.service', () => {
             'Conteúdo longo o suficiente para não falhar na validação mínima de cem caracteres totais aqui nesta string de teste.',
           suggestedTagNames: [],
           imagePrompt: 'dark illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 2000,
@@ -387,6 +395,7 @@ describe('post-generation.service', () => {
           content: rawContent,
           suggestedTagNames: [],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 2000,
@@ -417,6 +426,7 @@ describe('post-generation.service', () => {
           content: rawContent,
           suggestedTagNames: [],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 2000,
@@ -447,6 +457,7 @@ describe('post-generation.service', () => {
           content: rawContent,
           suggestedTagNames: [],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1900,
@@ -477,6 +488,7 @@ describe('post-generation.service', () => {
           content: mermaidContent,
           suggestedTagNames: ['BullMQ'],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1800,
@@ -506,6 +518,7 @@ describe('post-generation.service', () => {
             '## Fluxo\n\n<div class="mermaid">graph TD; A-->B</div>\n\nConteúdo adicional suficiente para ultrapassar a validação mínima de tamanho do draft e cobrir esse cenário de teste.',
           suggestedTagNames: [],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1600,
@@ -533,6 +546,7 @@ describe('post-generation.service', () => {
             '## Fluxo\n\n<script>alert("xss")</script>\n\nConteúdo adicional suficiente para ultrapassar a validação mínima de tamanho do draft e cobrir esse cenário de teste.',
           suggestedTagNames: [],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1500,
@@ -560,6 +574,7 @@ describe('post-generation.service', () => {
             '## Fluxo\n\n<div\n  class="mermaid"\n  data-content="graph TD; A-->B;"\n></div>\n\nConteúdo adicional suficiente para ultrapassar a validação mínima de tamanho do draft e cobrir esse cenário de tag HTML multilinha.',
           suggestedTagNames: [],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1500,
@@ -587,6 +602,7 @@ describe('post-generation.service', () => {
             '## Exemplo\n\n```html\n<div class="mermaid">graph TD; A-->B</div>\n```\n\nConteúdo adicional suficiente para ultrapassar a validação mínima de tamanho do draft e garantir que HTML em código continue permitido.',
           suggestedTagNames: [],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1700,
@@ -613,6 +629,7 @@ describe('post-generation.service', () => {
           content: 'Curto.',
           suggestedTagNames: [],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1500,
@@ -655,6 +672,7 @@ describe('post-generation.service', () => {
             '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar a deduplicação slug-aware de tags sugeridas pelo modelo.',
           suggestedTagNames: ['Arquitetura Assíncrona', 'arquitetura assincrona', 'BullMQ'],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1500,
@@ -712,6 +730,7 @@ describe('post-generation.service', () => {
             '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e cobrir o teste de categoria misto com detalhamento adequado.',
           suggestedTagNames: ['TypeScript'],
           imagePrompt: 'dark illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 2000,
@@ -744,6 +763,7 @@ describe('post-generation.service', () => {
           // Raw names the provider might return — should be canonicalized
           suggestedTagNames: ['typescript', 'aws', 'postgresql'],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1500,
@@ -775,6 +795,7 @@ describe('post-generation.service', () => {
             '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que o backend usa o catálogo persistido como fonte de verdade para a superfície das tags.',
           suggestedTagNames: ['postgres-custom'],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1500,
@@ -807,6 +828,7 @@ describe('post-generation.service', () => {
             '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que o modelo de rascunho é o correto.',
           suggestedTagNames: ['Node.js'],
           imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
           notes: null,
         },
         durationMs: 1200,
@@ -824,6 +846,137 @@ describe('post-generation.service', () => {
       expect(generateStructuredObjectMock).toHaveBeenCalledWith(
         expect.objectContaining({ model: 'anthropic/claude-sonnet-4-5' })
       );
+    });
+
+    it('sends IMAGE_PROMPT_RULES with PT-BR and minimalism/elegance/format/thumb instructions in the system prompt', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que o system prompt contém as regras de imagePrompt em PT-BR.',
+          suggestedTagNames: ['TypeScript'],
+          imagePrompt: 'Ilustração minimalista de fundo escuro',
+          linkedinPost: '{{POST_URL}}',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 200,
+        outputTokens: 400,
+      });
+
+      await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      const callArg = generateStructuredObjectMock.mock.calls[0]?.[0] as
+        | { system?: string }
+        | undefined;
+      expect(callArg?.system).toMatch(/PT-BR|português/i);
+      expect(callArg?.system).toMatch(/minimalista/i);
+      expect(callArg?.system).toMatch(/elegante/i);
+      expect(callArg?.system).toMatch(/1:1|4:3/);
+      expect(callArg?.system).toMatch(/thumb/i);
+    });
+
+    it('sends LINKEDIN_POST_RULES with {{POST_URL}} placeholder and mandatory hashtag instructions in the system prompt', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que as regras de linkedinPost estão no system prompt.',
+          suggestedTagNames: ['TypeScript'],
+          imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 200,
+        outputTokens: 400,
+      });
+
+      await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      const callArg = generateStructuredObjectMock.mock.calls[0]?.[0] as
+        | { system?: string }
+        | undefined;
+      expect(callArg?.system).toContain('{{POST_URL}}');
+      expect(callArg?.system).toMatch(/hashtag/i);
+    });
+
+    it('includes {{POST_URL}} placeholder and hashtag requirement in the user prompt for linkedinPost', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que o user prompt detalha o linkedinPost com placeholder e hashtags obrigatórias.',
+          suggestedTagNames: ['TypeScript'],
+          imagePrompt: 'illustration',
+          linkedinPost: '{{POST_URL}}',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 200,
+        outputTokens: 400,
+      });
+
+      await generatePostDraft({
+        category: 'backend-arquitetura',
+        briefing: null,
+        selectedSuggestion: VALID_SUGGESTION,
+        rejectedAngles: [],
+      });
+
+      const callArg = generateStructuredObjectMock.mock.calls[0]?.[0] as
+        | { prompt?: string }
+        | undefined;
+      expect(callArg?.prompt).toContain('{{POST_URL}}');
+      expect(callArg?.prompt).toMatch(/hashtag/i);
+    });
+  });
+
+  describe('generateTopicSuggestions — prompt coherence', () => {
+    it('includes tag coherence rules in the topics system prompt', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          suggestions: [
+            VALID_SUGGESTION,
+            { ...VALID_SUGGESTION, suggestionId: 'abc2', proposedTitle: 'Segundo tema' },
+            { ...VALID_SUGGESTION, suggestionId: 'abc3', proposedTitle: 'Terceiro tema' },
+          ],
+        },
+        durationMs: 1200,
+        inputTokens: 100,
+        outputTokens: 300,
+      });
+
+      await generateTopicSuggestions({
+        category: 'backend-arquitetura',
+        briefing: null,
+        limit: 4,
+        excludedIdeas: [],
+      });
+
+      const callArg = generateStructuredObjectMock.mock.calls[0]?.[0] as
+        | { system?: string }
+        | undefined;
+      // System prompt must reinforce tag coherence: only directly relevant tags, no generic ones
+      expect(callArg?.system).toMatch(/tags? diretamente relevante|gen[eé]rica|sem.*slug/i);
+      // Must allow natural display names (uppercase + spaces)
+      expect(callArg?.system).toMatch(/maiúscula|espa[çc]o/i);
     });
   });
 });

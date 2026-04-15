@@ -252,6 +252,14 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 
 Quando habilitado, o assistente aparece em `/admin/posts/new`. O fluxo assíncrono (`/draft-runs`) cria um registro persistido no banco de dados e executa a geração em background via BullMQ worker, possibilitando polling de progresso por estágio. O admin precisa aplicar manualmente os campos gerados ao formulário — nada é salvo no rascunho de post automaticamente.
 
+O payload de draft gerado contém:
+
+- `title`, `slug`, `excerpt`, `content` — aplicáveis diretamente ao formulário.
+- `suggestedTagNames` — lista de nomes de tags canonicalizados antes de chegar ao review; tags desconhecidas são exibidas separadamente mas não são aplicadas automaticamente.
+- `imagePrompt` — texto em **PT-BR** descrevendo a imagem a ser gerada (simples, minimalista, elegante, formato 1:1 ou 4:3, uso como thumb). Exibido como **copy-only** na review; não preenche `coverUrl` automaticamente.
+- `linkedinPost` — texto curto em PT-BR pronto para publicar no LinkedIn, com gancho inicial, link canônico obrigatório para o post no blog (`https://gustavo-sotero.dev/blog/{slug}`) e 3–5 hashtags temáticas ao final. Exibido como **copy-only** na review; não preenche nenhum campo do formulário automaticamente.
+- `notes` — avisos editoriais opcionais da IA (nullable).
+
 ---
 
 ## Decisões Arquiteturais de Confiabilidade

@@ -509,6 +509,8 @@ describe('admin post-generation routes', () => {
         content: '## Intro\n\nConteúdo.',
         suggestedTagNames: ['TypeScript'],
         imagePrompt: 'dark illustration',
+        linkedinPost:
+          'Post sobre TypeScript. https://gustavo-sotero.dev/blog/post-gerado\n\n#TypeScript #Backend #Nodejs',
         notes: null,
       };
       generatePostDraftMock.mockResolvedValueOnce(expected);
@@ -525,6 +527,7 @@ describe('admin post-generation routes', () => {
       const body = (await res.json()) as any;
       expect(body.success).toBe(true);
       expect(body.data.title).toBe('Post Gerado');
+      expect(body.data.linkedinPost).toContain('https://gustavo-sotero.dev/blog/post-gerado');
     });
 
     it('returns 400 for missing selectedSuggestion', async () => {
@@ -706,6 +709,7 @@ describe('admin post-generation routes', () => {
         status: 'completed',
         stage: 'completed',
         requestedCategory: 'backend-arquitetura',
+        selectedSuggestionCategory: 'backend-arquitetura',
         concreteCategory: 'backend-arquitetura',
         modelId: 'openai/gpt-4o',
         attemptCount: 1,
@@ -720,7 +724,10 @@ describe('admin post-generation routes', () => {
           excerpt: 'Short summary.',
           content: '## Intro\n\nContent.',
           suggestedTagNames: ['TypeScript'],
-          imagePrompt: 'dark illustration',
+          imagePrompt:
+            'Ilustração minimalista de fundo escuro representando TypeScript, flat design, formato quadrado',
+          linkedinPost:
+            'Post sobre TypeScript. https://gustavo-sotero.dev/blog/post-title\n\n#TypeScript #Backend #Nodejs',
           notes: null,
         },
       });

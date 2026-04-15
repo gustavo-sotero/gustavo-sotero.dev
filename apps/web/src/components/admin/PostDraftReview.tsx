@@ -176,6 +176,7 @@ export function PostDraftReview({
 }: PostDraftReviewProps) {
   const [applied, setApplied] = useState<Partial<Record<ApplyableField | 'all', true>>>({});
   const [imageCopied, setImageCopied] = useState(false);
+  const [linkedinCopied, setLinkedinCopied] = useState(false);
 
   const tagLookup = buildTagLookup(allTags);
   const { matchedIds, unmatchedNames } = resolveTagNames(draft.suggestedTagNames, allTags);
@@ -221,6 +222,17 @@ export function PostDraftReview({
       setImageCopied(true);
       toast.success('Prompt de imagem copiado');
       setTimeout(() => setImageCopied(false), 2000);
+    } catch {
+      toast.error('Não foi possível copiar');
+    }
+  }
+
+  async function copyLinkedinPost() {
+    try {
+      await navigator.clipboard.writeText(draft.linkedinPost);
+      setLinkedinCopied(true);
+      toast.success('Texto para LinkedIn copiado');
+      setTimeout(() => setLinkedinCopied(false), 2000);
     } catch {
       toast.error('Não foi possível copiar');
     }
@@ -414,6 +426,33 @@ export function PostDraftReview({
         <p className="text-xs text-zinc-600 leading-relaxed">
           Use este prompt em um gerador externo. Ele não preenche a capa automaticamente nem altera
           o coverUrl do post.
+        </p>
+      </div>
+
+      {/* LinkedIn post */}
+      <div className="rounded-md border border-zinc-800 bg-zinc-900/60 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-zinc-400">Texto para LinkedIn</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={copyLinkedinPost}
+            className="text-xs text-zinc-500 hover:text-zinc-300 h-6 px-2 gap-1.5"
+          >
+            {linkedinCopied ? (
+              <ClipboardCheck className="h-3 w-3 text-emerald-400" />
+            ) : (
+              <Clipboard className="h-3 w-3" />
+            )}
+            {linkedinCopied ? 'Copiado' : 'Copiar'}
+          </Button>
+        </div>
+        <p className="text-xs text-zinc-500 leading-relaxed whitespace-pre-line">
+          {draft.linkedinPost}
+        </p>
+        <p className="text-xs text-zinc-600 leading-relaxed">
+          Copie e cole diretamente no LinkedIn. Não altera nenhum campo do formulário do post.
         </p>
       </div>
 

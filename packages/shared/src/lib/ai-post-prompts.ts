@@ -102,13 +102,25 @@ Cada sugestão ou draft gerado DEVE ser atribuído a uma categoria concreta (nun
  * Formatting rules for the imagePrompt output field.
  */
 export const IMAGE_PROMPT_RULES = `Regras para o campo imagePrompt:
-- Texto em inglês (para melhor compatibilidade com geradores de imagem)
-- Imagem simples, minimalista, elegante
-- Formato quadrado ou 4:3, adequada para thumbnail
-- Sem texto na imagem
+- Texto em português (PT-BR)
+- Imagem simples, minimalista e elegante
+- Formato quadrado 1:1 ou 4:3, adequada para uso como thumb
+- Texto na imagem é opcional; use apenas quando fizer sentido visual e reforçar a ideia central da composição
 - Sem excesso de elementos
 - Estilo: flat design, técnico/digital, fundo escuro
-- Exemplo de estrutura: "Minimalist dark background illustration of [concept], flat design, tech aesthetic, no text, square format"`;
+- Exemplo de estrutura: "Ilustração minimalista de fundo escuro representando [conceito], flat design, estética técnica, formato quadrado"`;
+
+/**
+ * Editorial rules for the linkedinPost output field.
+ */
+export const LINKEDIN_POST_RULES = `Regras para o campo linkedinPost:
+- Texto curto em PT-BR, pronto para copiar no LinkedIn
+- Gancho inicial direto — primeira frase deve capturar atenção imediatamente
+- Fechamento leve, sem exagero
+- O texto DEVE conter exatamente o placeholder literal {{POST_URL}} como link para o post no blog — não invente uma URL
+- As hashtags são obrigatórias: inclua entre 3 e 5 hashtags relevantes ao tema na última linha
+- Hashtags devem ser temáticas e específicas — evite hashtags genéricas como #tech ou #dev
+- Hashtags podem ser alinhadas às tags sugeridas do post, adaptadas ao formato LinkedIn`;
 
 // ── Prompt builders ───────────────────────────────────────────────────────────
 
@@ -127,6 +139,8 @@ ${exemplarsBlock}
 
 ${IMAGE_PROMPT_RULES}
 
+${LINKEDIN_POST_RULES}
+
 Sua tarefa: escrever um draft completo de post técnico de blog.
 O conteúdo deve ser substantivo, direto ao ponto, com exemplos de código quando relevante.
 Tamanho alvo: 600-1200 palavras para o post.
@@ -143,7 +157,13 @@ ${categoryBlock}
 Sua tarefa: sugerir temas de posts para o blog técnico.
 Cada sugestão deve ter ângulo original, proposta clara e utilidade real para o leitor-alvo.
 Evite temas genéricos como "o que é Docker" ou "introdução a X".
-Prefira recortes específicos: um tradeoff, uma decisão de engenharia, um erro comum.`;
+Prefira recortes específicos: um tradeoff, uma decisão de engenharia, um erro comum.
+
+Regras para suggestedTagNames:
+- Inclua apenas tags diretamente relevantes ao tema proposto
+- Evite tags genéricas desconectadas do conteúdo (ex: "Backend", "Programação", "Desenvolvimento")
+- Nomes de tags podem usar maiúsculas e espaços — não é necessário retornar slugs
+- Prefira tecnologias, padrões e conceitos específicos do tema`;
 }
 
 export function buildDraftUserPrompt(req: GenerateDraftRequest): string {
@@ -170,7 +190,7 @@ Tags sugeridas: ${s.suggestedTagNames.join(', ')}`
   }
 
   parts.push(
-    `Produza o draft completo com os campos: title, slug (URL-safe, PT-BR), excerpt (máx 500 caracteres), content (Markdown), suggestedTagNames (máx 8), imagePrompt (inglês), notes (nullable — use para qualquer aviso editorial).`
+    `Produza o draft completo com os campos: title, slug (URL-safe, PT-BR), excerpt (máx 500 caracteres), content (Markdown), suggestedTagNames (máx 8, nomes naturais com maiúsculas/espaços, somente tags diretamente relevantes ao tema — sem tags genéricas), imagePrompt (PT-BR, veja regras acima), linkedinPost (PT-BR, veja regras acima — use exatamente o placeholder {{POST_URL}} para o link do blog, com hashtags obrigatórias no final), notes (nullable — use para qualquer aviso editorial).`
   );
 
   return parts.join('\n\n');
