@@ -340,7 +340,11 @@ describe('openapi routes', () => {
     ).toBe(6);
     expect(Array.isArray(draftSuccess?.data?.suggestedTagNames)).toBe(true);
     expect(typeof draftSuccess?.data?.imagePrompt).toBe('string');
+    expect(String(draftSuccess?.data?.imagePrompt)).toMatch(/ilustra|minimalista|thumb|1:1|4:3/i);
     expect(typeof draftSuccess?.data?.content).toBe('string');
+    expect(typeof draftSuccess?.data?.linkedinPost).toBe('string');
+    expect(String(draftSuccess?.data?.linkedinPost)).toContain('https://gustavo-sotero.dev/blog/');
+    expect(String(draftSuccess?.data?.linkedinPost)).toMatch(/#\w+/);
 
     expect(draftRunsPost?.description).toContain('run ID');
     expect(draftRunsSchema?.properties?.category?.enum).toContain('misto');
@@ -357,5 +361,13 @@ describe('openapi routes', () => {
     expect(draftRunCompleted?.data?.selectedSuggestionCategory).toBe('dados-filas-consistencia');
     expect(Array.isArray(draftRunCompletedResult?.suggestedTagNames)).toBe(true);
     expect(typeof draftRunCompletedResult?.imagePrompt).toBe('string');
+    expect(String(draftRunCompletedResult?.imagePrompt)).toMatch(
+      /ilustra|minimalista|thumb|1:1|4:3/i
+    );
+    expect(typeof draftRunCompletedResult?.linkedinPost).toBe('string');
+    expect(String(draftRunCompletedResult?.linkedinPost)).toContain(
+      'https://gustavo-sotero.dev/blog/'
+    );
+    expect(String(draftRunCompletedResult?.linkedinPost)).toMatch(/#\w+/);
   });
 });

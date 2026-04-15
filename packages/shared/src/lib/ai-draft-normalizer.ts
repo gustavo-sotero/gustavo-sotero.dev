@@ -4,8 +4,10 @@
  */
 
 import { DEVELOPER_PUBLIC_PROFILE } from '../constants/developerProfile';
+import { AiGenerationError } from './ai-error';
 
 const DISALLOWED_INLINE_HTML_RE = /<\/?[a-z][\w:-]*(?:\s[^<>]*)?>|<!--|<!doctype\b/i;
+const ABSOLUTE_URL_RE = /https?:\/\/[^\s)]+/giu;
 
 /**
  * Normalises raw content from the AI provider:
@@ -58,7 +60,7 @@ export function containsDisallowedInlineHtml(content: string): boolean {
  * Text is in PT-BR to align with the editorial language of the blog.
  */
 export function buildFallbackImagePrompt(title: string): string {
-  return `Ilustração minimalista de fundo escuro representando "${title}", flat design, estética técnica, formato quadrado`;
+  return `Ilustração simples, minimalista e elegante em fundo escuro representando "${title}", estética técnica em flat design, composição para thumb em formato 1:1 ou 4:3, com texto opcional apenas se reforçar a ideia central.`;
 }
 
 /**
@@ -103,6 +105,16 @@ function extractHashtagsFromText(text: string): string[] {
   return matches ?? [];
 }
 
+function normalizeLinkedInBody(text: string): string {
+  return text
+    .replaceAll(LINKEDIN_POST_URL_PLACEHOLDER, '')
+    .replace(ABSOLUTE_URL_RE, '')
+    .replace(/#[\w\u00C0-\u024F]+/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /**
  * Normalises the linkedinPost field of an AI-generated draft:
  *
@@ -122,18 +134,15 @@ export function normalizeLinkedInPost(
   normalizedSlug: string,
   suggestedTagNames: string[]
 ): string {
+  const trimmedRaw = raw.replace(/\r\n/g, '\n').trim();
+  if (!trimmedRaw) {
+    throw new AiGenerationError('validation', 'Generated draft is missing linkedinPost content');
+  }
+
   const canonicalUrl = buildCanonicalPostUrl(normalizedSlug);
 
   // 1. Resolve the post URL placeholder.
-  let text: string;
-  if (raw.includes(LINKEDIN_POST_URL_PLACEHOLDER)) {
-    text = raw.replace(LINKEDIN_POST_URL_PLACEHOLDER, canonicalUrl);
-  } else if (!raw.includes(canonicalUrl)) {
-    // Append URL on its own line if neither placeholder nor URL is present
-    text = `${raw.trimEnd()}\n\n${canonicalUrl}`;
-  } else {
-    text = raw;
-  }
+  const text = trimmedRaw.replaceAll(LINKEDIN_POST_URL_PLACEHOLDER, canonicalUrl);
 
   // 2. Extract and normalise existing hashtags.
   const existingHashtags = extractHashtagsFromText(text);
@@ -163,11 +172,13 @@ export function normalizeLinkedInPost(
 
   // 4. Trim to maximum allowed count.
   const finalHashtags = deduped.slice(0, LINKEDIN_MAX_HASHTAGS);
+  if (finalHashtags.length === 0) {
+    throw new AiGenerationError('validation', 'Generated draft is missing LinkedIn hashtags');
+  }
 
-  // 5. Strip all existing hashtags from the text body and re-append normalised set.
-  const bodyWithoutHashtags = text.replace(/#[\w\u00C0-\u024F]+/g, '').trimEnd();
-  // Clean up any trailing whitespace/punctuation left after hashtag removal
-  const cleanBody = bodyWithoutHashtags.replace(/\s+$/, '');
+  // 5. Remove every absolute URL from the body, then re-append exactly one
+  // canonical URL in a stable location before the final hashtag line.
+  const cleanBody = normalizeLinkedInBody(text);
 
-  return `${cleanBody}\n\n${finalHashtags.join(' ')}`.trim();
+  return [cleanBody, canonicalUrl, finalHashtags.join(' ')].filter(Boolean).join('\n\n').trim();
 }

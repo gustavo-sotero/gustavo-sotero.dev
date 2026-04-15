@@ -427,4 +427,32 @@ describe('processAiPostDraftGeneration', () => {
     // Must contain the post title to confirm it came from buildFallbackImagePrompt
     expect(payload.imagePrompt).toContain(VALID_AI_OBJECT.title);
   });
+
+  it('fails with validation kind when linkedinPost is blank', async () => {
+    updateWhereMock.mockImplementationOnce(() => ({
+      returning: returningMock,
+    }));
+    returningMock.mockResolvedValueOnce([makeClaimedRun()]);
+
+    generateStructuredObjectMock.mockResolvedValueOnce({
+      object: {
+        ...VALID_AI_OBJECT,
+        linkedinPost: '   ',
+      },
+      durationMs: 2100,
+      inputTokens: 360,
+      outputTokens: 540,
+    });
+
+    await expect(processAiPostDraftGeneration(buildJob())).rejects.toBeInstanceOf(
+      AiGenerationError
+    );
+
+    const errorSetArg = updateSetMock.mock.calls.find((call: unknown[]) => {
+      const arg = call[0] as Record<string, unknown>;
+      return arg.status === 'failed';
+    })?.[0] as Record<string, unknown> | undefined;
+
+    expect(errorSetArg?.errorKind).toBe('validation');
+  });
 });

@@ -330,6 +330,32 @@ describe('ai-post-generation schemas', () => {
       expect(result.success).toBe(true);
     });
 
+    it('rejects completed state when result payload is missing linkedinPost', () => {
+      const result = draftRunStatusResponseSchema.safeParse({
+        ...base,
+        status: 'completed',
+        stage: 'completed',
+        selectedSuggestionCategory: 'backend-arquitetura',
+        concreteCategory: 'backend-arquitetura',
+        modelId: 'openai/gpt-4o',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 4200,
+        result: {
+          title: 'Post Title',
+          slug: 'post-title',
+          excerpt: 'Short summary of the post.',
+          content:
+            '## Intro\n\nSome content here that is long enough to meet the minimum character requirement for blog post content.',
+          suggestedTagNames: ['TypeScript'],
+          imagePrompt: 'Ilustração técnica minimalista em fundo escuro',
+          notes: null,
+        },
+      });
+
+      expect(result.success).toBe(false);
+    });
+
     it('validates failed state with error payload', () => {
       const result = draftRunStatusResponseSchema.safeParse({
         ...base,

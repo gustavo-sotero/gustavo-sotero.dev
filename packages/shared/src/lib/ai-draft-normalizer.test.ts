@@ -4,6 +4,7 @@ import {
   buildFallbackImagePrompt,
   normalizeLinkedInPost,
 } from './ai-draft-normalizer';
+import { AiGenerationError } from './ai-error';
 
 // ── buildCanonicalPostUrl ─────────────────────────────────────────────────────
 
@@ -22,11 +23,15 @@ describe('buildCanonicalPostUrl', () => {
 // ── buildFallbackImagePrompt ──────────────────────────────────────────────────
 
 describe('buildFallbackImagePrompt', () => {
-  it('returns a PT-BR prompt that includes the post title', () => {
+  it('returns a PT-BR prompt that includes the post title and all editorial constraints', () => {
     const prompt = buildFallbackImagePrompt('TypeScript na Prática');
     expect(prompt).toContain('TypeScript na Prática');
-    // Must be in PT-BR (contains Portuguese words)
-    expect(prompt).toMatch(/ilustração|minimalista|fundo|escuro/i);
+    expect(prompt).toMatch(/simples/i);
+    expect(prompt).toMatch(/minimalista/i);
+    expect(prompt).toMatch(/elegante/i);
+    expect(prompt).toMatch(/1:1|4:3/);
+    expect(prompt).toMatch(/thumb/i);
+    expect(prompt).toMatch(/texto opcional/i);
   });
 });
 
@@ -53,6 +58,15 @@ describe('normalizeLinkedInPost', () => {
     const raw = `Novo post. ${CANONICAL_URL}\n\n#BullMQ #Redis #Nodejs`;
     const result = normalizeLinkedInPost(raw, SLUG, []);
     expect(result.split(CANONICAL_URL)).toHaveLength(2); // exactly 1 occurrence
+  });
+
+  it('replaces any generated absolute URL with exactly one canonical URL', () => {
+    const raw =
+      'Novo post sobre filas. Leia em https://inventado.dev/post-qualquer e também em {{POST_URL}}\n\n#BullMQ #Redis #Nodejs';
+    const result = normalizeLinkedInPost(raw, SLUG, []);
+    expect(result).toContain(CANONICAL_URL);
+    expect(result).not.toContain('https://inventado.dev/post-qualquer');
+    expect(result.split(CANONICAL_URL)).toHaveLength(2);
   });
 
   it('deduplicates existing hashtags (case-insensitive)', () => {
@@ -86,10 +100,16 @@ describe('normalizeLinkedInPost', () => {
     expect(lastLine).toMatch(/^#/);
   });
 
-  it('produces a non-empty result even from an empty raw input', () => {
-    const result = normalizeLinkedInPost('', SLUG, ['TypeScript', 'Node.js', 'BullMQ']);
-    expect(result.length).toBeGreaterThan(0);
-    expect(result).toContain(CANONICAL_URL);
+  it('throws validation when linkedinPost is blank instead of fabricating copy', () => {
+    expect(() => normalizeLinkedInPost('   ', SLUG, ['TypeScript', 'Node.js', 'BullMQ'])).toThrow(
+      AiGenerationError
+    );
+  });
+
+  it('throws validation when there are no hashtags in the raw text or suggested tags', () => {
+    expect(() => normalizeLinkedInPost('Novo post. {{POST_URL}}', SLUG, [])).toThrow(
+      AiGenerationError
+    );
   });
 
   it('converts tag names with separators to valid hashtags', () => {

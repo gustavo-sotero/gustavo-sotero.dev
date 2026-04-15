@@ -365,7 +365,7 @@ describe('post-generation.service', () => {
             'Conteúdo longo o suficiente para não falhar na validação mínima de cem caracteres totais aqui nesta string de teste.',
           suggestedTagNames: [],
           imagePrompt: 'dark illustration',
-          linkedinPost: '{{POST_URL}}',
+          linkedinPost: 'Leia o novo post: {{POST_URL}}\n\n#BullMQ #Redis #Nodejs',
           notes: null,
         },
         durationMs: 2000,
@@ -395,7 +395,7 @@ describe('post-generation.service', () => {
           content: rawContent,
           suggestedTagNames: [],
           imagePrompt: 'illustration',
-          linkedinPost: '{{POST_URL}}',
+          linkedinPost: 'Leia o novo post: {{POST_URL}}\n\n#BullMQ #Redis #Nodejs',
           notes: null,
         },
         durationMs: 2000,
@@ -426,7 +426,7 @@ describe('post-generation.service', () => {
           content: rawContent,
           suggestedTagNames: [],
           imagePrompt: 'illustration',
-          linkedinPost: '{{POST_URL}}',
+          linkedinPost: 'Leia o novo post: {{POST_URL}}\n\n#BullMQ #Redis #Nodejs',
           notes: null,
         },
         durationMs: 2000,
@@ -457,7 +457,7 @@ describe('post-generation.service', () => {
           content: rawContent,
           suggestedTagNames: [],
           imagePrompt: 'illustration',
-          linkedinPost: '{{POST_URL}}',
+          linkedinPost: 'Leia o novo post: {{POST_URL}}\n\n#BullMQ #Redis #Nodejs',
           notes: null,
         },
         durationMs: 1900,
@@ -602,7 +602,7 @@ describe('post-generation.service', () => {
             '## Exemplo\n\n```html\n<div class="mermaid">graph TD; A-->B</div>\n```\n\nConteúdo adicional suficiente para ultrapassar a validação mínima de tamanho do draft e garantir que HTML em código continue permitido.',
           suggestedTagNames: [],
           imagePrompt: 'illustration',
-          linkedinPost: '{{POST_URL}}',
+          linkedinPost: 'Leia o novo post: {{POST_URL}}\n\n#BullMQ #Redis #Nodejs',
           notes: null,
         },
         durationMs: 1700,
@@ -635,6 +635,34 @@ describe('post-generation.service', () => {
         durationMs: 1500,
         inputTokens: 100,
         outputTokens: 50,
+      });
+
+      await expect(
+        generatePostDraft({
+          category: 'backend-arquitetura',
+          briefing: null,
+          selectedSuggestion: VALID_SUGGESTION,
+          rejectedAngles: [],
+        })
+      ).rejects.toMatchObject({ kind: 'validation' });
+    });
+
+    it('throws AiGenerationError with kind=validation when linkedinPost is blank', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: {
+          title: 'Post Válido',
+          slug: 'post-valido',
+          excerpt: 'Resumo.',
+          content:
+            '## Introdução\n\nConteúdo suficientemente longo para ultrapassar a validação mínima e verificar que linkedinPost vazio não vira fallback sintético.',
+          suggestedTagNames: ['BullMQ', 'Redis', 'Node.js'],
+          imagePrompt: 'illustration',
+          linkedinPost: '   ',
+          notes: null,
+        },
+        durationMs: 1500,
+        inputTokens: 140,
+        outputTokens: 90,
       });
 
       await expect(
