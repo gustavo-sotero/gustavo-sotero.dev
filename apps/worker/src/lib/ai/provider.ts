@@ -10,7 +10,9 @@ let _openrouter: ReturnType<typeof createOpenRouter> | null = null;
 export function getOpenRouterProvider(): ReturnType<typeof createOpenRouter> {
   if (!_openrouter) {
     if (!env.OPENROUTER_API_KEY) {
-      throw new Error('OPENROUTER_API_KEY is required for AI draft generation jobs');
+      throw new Error(
+        'OPENROUTER_API_KEY is required in the worker environment for AI draft generation jobs'
+      );
     }
     _openrouter = createOpenRouter({ apiKey: env.OPENROUTER_API_KEY });
   }

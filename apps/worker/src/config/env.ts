@@ -1,22 +1,41 @@
 import { z } from 'zod';
 
-const workerEnvSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
-  S3_ENDPOINT: z.string().url(),
-  S3_BUCKET: z.string().min(1),
-  S3_ACCESS_KEY: z.string().min(1),
-  S3_SECRET_KEY: z.string().min(1),
-  S3_REGION: z.string().default('auto'),
-  S3_PUBLIC_DOMAIN: z.string().min(1),
-  TELEGRAM_BOT_TOKEN: z.string().min(1),
-  TELEGRAM_CHAT_ID: z.string().min(1),
-  IP_HASH_SALT: z.string().min(16),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  // AI post generation (optional — worker skips AI jobs if absent)
-  OPENROUTER_API_KEY: z.string().min(1).optional(),
-  AI_POSTS_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
-});
+const optionalNonEmptyString = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+}, z.string().min(1).optional());
+
+export const workerEnvSchema = z
+  .object({
+    DATABASE_URL: z.string().url(),
+    REDIS_URL: z.string().url(),
+    S3_ENDPOINT: z.string().url(),
+    S3_BUCKET: z.string().min(1),
+    S3_ACCESS_KEY: z.string().min(1),
+    S3_SECRET_KEY: z.string().min(1),
+    S3_REGION: z.string().default('auto'),
+    S3_PUBLIC_DOMAIN: z.string().min(1),
+    TELEGRAM_BOT_TOKEN: z.string().min(1),
+    TELEGRAM_CHAT_ID: z.string().min(1),
+    IP_HASH_SALT: z.string().min(16),
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    AI_POSTS_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    OPENROUTER_API_KEY: optionalNonEmptyString,
+    AI_POSTS_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  })
+  .superRefine((data, ctx) => {
+    if (data.AI_POSTS_ENABLED && !data.OPENROUTER_API_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['OPENROUTER_API_KEY'],
+        message: 'OPENROUTER_API_KEY is required when AI_POSTS_ENABLED=true',
+      });
+    }
+  });
 
 const parsed = workerEnvSchema.safeParse(process.env);
 
