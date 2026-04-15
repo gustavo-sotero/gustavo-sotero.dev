@@ -644,7 +644,7 @@ export const adminPaths = {
                     suggestionId: { type: 'string', example: 'topic-01' },
                     proposedTitle: {
                       type: 'string',
-                      example: 'Filas vs. Chamadas Sincronas',
+                      example: 'Filas vs. Chamadas Síncronas',
                     },
                     angle: {
                       type: 'string',
@@ -653,11 +653,11 @@ export const adminPaths = {
                     },
                     summary: {
                       type: 'string',
-                      example: 'Um recorte pratico sobre latencia, acoplamento e resiliencia.',
+                      example: 'Um recorte prático sobre latência, acoplamento e resiliência.',
                     },
                     targetReader: {
                       type: 'string',
-                      example: 'Engenheiros backend que operam workloads em producao.',
+                      example: 'Engenheiros backend que operam workloads em produção.',
                     },
                     category: {
                       type: 'string',
@@ -809,8 +809,8 @@ export const adminPaths = {
                       status: 'failed',
                       stage: 'failed',
                       requestedCategory: 'misto',
-                      selectedSuggestionCategory: null,
-                      concreteCategory: null,
+                      selectedSuggestionCategory: 'dados-filas-consistencia',
+                      concreteCategory: 'dados-filas-consistencia',
                       modelId: 'anthropic/claude-3-5-haiku',
                       attemptCount: 2,
                       createdAt: '2026-04-14T12:00:00.000Z',
@@ -876,7 +876,6 @@ export const adminPaths = {
               required: ['title'],
               properties: {
                 title: { type: 'string' },
-                slug: { type: 'string', pattern: '^[a-z0-9-]+$' },
                 description: { type: 'string', maxLength: 500 },
                 content: { type: 'string' },
                 coverUrl: { type: 'string', format: 'uri' },

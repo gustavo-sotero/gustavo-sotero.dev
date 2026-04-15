@@ -244,6 +244,8 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 
 - `AI_POSTS_ENABLED=true` habilita as rotas `POST /admin/posts/generate/topics` e os endpoints assíncronos `POST /admin/posts/generate/draft-runs` / `GET /admin/posts/generate/draft-runs/:id`.
 - O endpoint legado síncrono `POST /admin/posts/generate/draft` segue disponível para compatibilidade.
+- A categoria `misto` pode ser usada na geração de temas para pedir sugestões de qualquer categoria editorial; cada sugestão retornada continua trazendo uma categoria concreta.
+- Tags sugeridas pela IA são canonicalizadas antes de chegar ao review, priorizando nomes já existentes no catálogo e os nomes canônicos compartilhados do monorepo.
 - `OPENROUTER_API_KEY` é obrigatório quando a flag está ligada. Obtenha em [openrouter.ai/keys](https://openrouter.ai/keys).
 - `AI_POSTS_TIMEOUT_MS` ajusta o timeout do provider.
 - Os modelos ativos (**topics** e **draft**) são configurados via painel admin em `/admin/settings/ai-post-generation` e armazenados no banco de dados. Não são mais configurados por variável de ambiente.
