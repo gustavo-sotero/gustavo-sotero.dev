@@ -83,6 +83,7 @@ type AssistantState =
       topics?: TopicSuggestion[];
       category?: AiPostRequestedCategory;
       briefing?: string;
+      selected?: TopicSuggestion;
     };
 
 function extractErrorMessage(err: unknown): { message: string; kind: string } {
@@ -104,7 +105,7 @@ function extractErrorMessage(err: unknown): { message: string; kind: string } {
 }
 
 const DRAFT_STAGE_LABELS: Record<string, string> = {
-  queued: 'Solicitacao recebida...',
+  queued: 'Solicitação recebida...',
   'resolving-config': 'Verificando configuração...',
   'building-prompt': 'Construindo prompt...',
   'requesting-provider': 'Aguardando resposta do modelo de IA...',
@@ -155,6 +156,68 @@ export function PostGenerationAssistant({
     });
   }
 
+  async function runDraftGeneration(
+    topic: TopicSuggestion,
+    draftCategory: AiPostRequestedCategory,
+    draftBriefing: string,
+    topics: TopicSuggestion[],
+    overrideRejectedAngles?: string[]
+  ) {
+    setState({
+      step: 'generatingDraft',
+      selected: topic,
+      category: draftCategory,
+      briefing: draftBriefing,
+      topics,
+    });
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        draftRunHook.start(
+          {
+            category: draftCategory,
+            briefing: draftBriefing || null,
+            selectedSuggestion: topic,
+            rejectedAngles: overrideRejectedAngles ?? rejectedAngles,
+          },
+          {
+            onCompleted: (run) => {
+              const draft = run.result as import('@portfolio/shared').GenerateDraftResponse;
+              if (!draft) {
+                reject(new Error('O draft gerado está vazio. Tente novamente.'));
+                return;
+              }
+              setState((prev) => {
+                if (prev.step !== 'generatingDraft') return prev;
+                return {
+                  step: 'draftReady',
+                  selected: topic,
+                  category: draftCategory,
+                  briefing: draftBriefing,
+                  draft,
+                  topics,
+                };
+              });
+              resolve();
+            },
+            onError: reject,
+          }
+        );
+      });
+    } catch (err) {
+      const { message, kind } = extractErrorMessage(err);
+      setState({
+        step: 'error',
+        message,
+        kind,
+        topics,
+        category: draftCategory,
+        briefing: draftBriefing,
+        selected: topic,
+      });
+    }
+  }
+
   async function handleGenerateTopics(overrideExcludedIdeas?: string[]) {
     if (!category) return;
     // Use provided override to avoid stale-closure issues on regenerate
@@ -177,62 +240,33 @@ export function PostGenerationAssistant({
   async function handleSelectTopic(topic: TopicSuggestion, overrideRejectedAngles?: string[]) {
     // Allow regeneration from draftReady as well as initial selection from topicsReady
     if (state.step !== 'topicsReady' && state.step !== 'draftReady') return;
-    const currentCategory = state.category;
-    const currentBriefing = state.briefing;
-    // Preserve the topic list so "back to topics" can restore without a new call
-    const currentTopics = state.topics;
-    setState({
-      step: 'generatingDraft',
-      selected: topic,
-      category: currentCategory,
-      briefing: currentBriefing,
-      topics: currentTopics,
-    });
-    try {
-      await new Promise<void>((resolve, reject) => {
-        draftRunHook.start(
-          {
-            category: currentCategory,
-            briefing: currentBriefing || null,
-            selectedSuggestion: topic,
-            rejectedAngles: overrideRejectedAngles ?? rejectedAngles,
-          },
-          {
-            onCompleted: (run) => {
-              const draft = run.result as import('@portfolio/shared').GenerateDraftResponse;
-              if (!draft) {
-                reject(new Error('O draft gerado está vazio. Tente novamente.'));
-                return;
-              }
-              setState((prev) => {
-                if (prev.step !== 'generatingDraft') return prev;
-                return {
-                  step: 'draftReady',
-                  selected: topic,
-                  category: currentCategory,
-                  briefing: currentBriefing,
-                  draft,
-                  topics: currentTopics,
-                };
-              });
-              resolve();
-            },
-            onError: reject,
-          }
-        );
-      });
-    } catch (err) {
-      const { message, kind } = extractErrorMessage(err);
-      // Preserve topic context so the user can return to topics without restarting
-      setState({
-        step: 'error',
-        message,
-        kind,
-        topics: currentTopics,
-        category: currentCategory,
-        briefing: currentBriefing,
-      });
+    await runDraftGeneration(
+      topic,
+      state.category,
+      state.briefing,
+      state.topics,
+      overrideRejectedAngles
+    );
+  }
+
+  async function handleRetrySelectedTopic() {
+    if (
+      state.step !== 'error' ||
+      !state.selected ||
+      !state.topics ||
+      !state.category ||
+      state.briefing === undefined
+    ) {
+      return;
     }
+
+    await runDraftGeneration(
+      state.selected,
+      state.category,
+      state.briefing,
+      state.topics,
+      rejectedAngles
+    );
   }
 
   function handleRegenerateTopics() {
@@ -429,6 +463,44 @@ export function PostGenerationAssistant({
                           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                           <span>{state.message}</span>
                         </div>
+                        {state.selected && (
+                          <div className="rounded-md border border-zinc-800 bg-zinc-950/50 px-3 py-3 space-y-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="space-y-1.5">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-sm font-medium text-zinc-200">
+                                    {state.selected.proposedTitle}
+                                  </p>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[11px] px-1.5 py-0 bg-emerald-950/40 text-emerald-400 border-emerald-700/40"
+                                  >
+                                    {AI_POST_CATEGORY_META[state.selected.category].label}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-zinc-400">{state.selected.angle}</p>
+                                <p className="text-xs text-zinc-500 leading-relaxed">
+                                  {state.selected.summary}
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  void handleRetrySelectedTopic();
+                                }}
+                                disabled={isLoading}
+                                className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+                              >
+                                <RefreshCcw className="h-3.5 w-3.5 mr-1.5" />
+                                Tentar novamente com este tema
+                              </Button>
+                            </div>
+                            <p className="text-[11px] uppercase tracking-wide text-zinc-600">
+                              Você pode tentar novamente com o mesmo tema ou escolher outro abaixo.
+                            </p>
+                          </div>
+                        )}
                         {state.topics && state.topics.length > 0 && (
                           <button
                             type="button"
@@ -495,6 +567,19 @@ export function PostGenerationAssistant({
                     isRegenerating={isLoading}
                   />
                 )}
+
+                {state.step === 'error' &&
+                  state.topics &&
+                  state.category &&
+                  state.briefing !== undefined && (
+                    <PostTopicSuggestionList
+                      topics={state.topics}
+                      onSelect={handleSelectTopic}
+                      onRegenerate={handleRegenerateTopics}
+                      onReset={handleReset}
+                      isRegenerating={isLoading}
+                    />
+                  )}
 
                 {/* Draft review */}
                 {state.step === 'draftReady' && (

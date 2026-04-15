@@ -80,6 +80,7 @@ export interface AiPostDraftJobData {
 export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>): Promise<void> {
   const { runId } = job.data;
   const jobMeta = { jobId: job.id, runId };
+  const attemptCount = (job.attemptsMade ?? 0) + 1;
 
   logger.info('AI draft generation job started', jobMeta);
 
@@ -94,7 +95,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       startedAt: now,
       lastHeartbeatAt: now,
       updatedAt: now,
-      attemptCount: (job.attemptsMade ?? 0) + 1,
+      attemptCount,
       errorKind: null,
       errorCode: null,
       errorMessage: null,
@@ -147,6 +148,9 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
     };
     rejectedAngles: string[];
   };
+  const requestedCategory = requestPayload.category;
+  const selectedSuggestionCategory = requestPayload.selectedSuggestion.category;
+  let providerGenerationId: string | null = null;
 
   try {
     // ── Stage: building-prompt ───────────────────────────────────────────────
@@ -168,6 +172,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       operation: 'draft-async',
       metadata: { category: requestPayload.category, runId },
     });
+    providerGenerationId = result.providerGenerationId;
 
     // ── Stage: normalizing-output ────────────────────────────────────────────
     await setStage(runId, 'normalizing-output', 'validating');
@@ -227,6 +232,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
         status: 'completed',
         stage: 'completed',
         resultPayload: parsed.data as unknown as Record<string, unknown>,
+        providerGenerationId,
         finishedAt,
         updatedAt: finishedAt,
         lastHeartbeatAt: finishedAt,
@@ -235,6 +241,10 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
 
     logger.info('AI draft generation job completed', {
       ...jobMeta,
+      requestedCategory,
+      selectedSuggestionCategory,
+      attemptCount,
+      providerGenerationId,
       durationMs: result.durationMs,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
@@ -270,8 +280,11 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
 
       logger.warn('AI draft generation job scheduled for retry', {
         ...jobMeta,
+        requestedCategory,
+        selectedSuggestionCategory,
         attempt: (job.attemptsMade ?? 0) + 1,
         maxAttempts: job.opts?.attempts ?? 1,
+        providerGenerationId,
         error: errorMessage,
       });
 
@@ -289,6 +302,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
         finishedAt,
         updatedAt: finishedAt,
         lastHeartbeatAt: finishedAt,
+        providerGenerationId,
         errorKind,
         errorCode,
         errorMessage,
@@ -303,6 +317,10 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
 
     logger.error('AI draft generation job failed', {
       ...jobMeta,
+      requestedCategory,
+      selectedSuggestionCategory,
+      attemptCount,
+      providerGenerationId,
       errorKind,
       errorCode,
       error: errorMessage,

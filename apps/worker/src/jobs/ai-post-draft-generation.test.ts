@@ -192,6 +192,7 @@ describe('processAiPostDraftGeneration', () => {
       durationMs: 3200,
       inputTokens: 500,
       outputTokens: 800,
+      providerGenerationId: 'gen_completed_123',
     });
 
     await processAiPostDraftGeneration(buildJob());
@@ -204,6 +205,7 @@ describe('processAiPostDraftGeneration', () => {
     expect(lastSetArg).toMatchObject({
       status: 'completed',
       stage: 'completed',
+      providerGenerationId: 'gen_completed_123',
     });
     expect(lastSetArg.resultPayload).toBeTruthy();
 
@@ -307,6 +309,7 @@ describe('processAiPostDraftGeneration', () => {
       durationMs: 2000,
       inputTokens: 400,
       outputTokens: 600,
+      providerGenerationId: 'gen_validation_456',
     });
 
     await expect(processAiPostDraftGeneration(buildJob())).rejects.toBeInstanceOf(
@@ -319,6 +322,7 @@ describe('processAiPostDraftGeneration', () => {
     })?.[0] as Record<string, unknown> | undefined;
 
     expect(errorSetArg?.errorKind).toBe('validation');
+    expect(errorSetArg?.providerGenerationId).toBe('gen_validation_456');
   });
 
   it('fails with validation kind when schema validation rejects the draft output', async () => {

@@ -1,4 +1,5 @@
 import { AiGenerationError } from '@portfolio/shared';
+import { extractProviderGenerationId } from '@portfolio/shared/lib/aiProviderGeneration';
 import { generateObject, NoObjectGeneratedError } from 'ai';
 import type { ZodSchema } from 'zod';
 import { env } from '../../config/env';
@@ -29,6 +30,7 @@ export interface GenerateStructuredObjectResult<T> {
   durationMs: number;
   inputTokens: number | undefined;
   outputTokens: number | undefined;
+  providerGenerationId: string | null;
 }
 
 /**
@@ -61,6 +63,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
     const durationMs = Date.now() - start;
     const inputTokens = result.usage?.inputTokens;
     const outputTokens = result.usage?.outputTokens;
+    const providerGenerationId = extractProviderGenerationId(result);
 
     logger.info('AI generation succeeded', {
       operation,
@@ -74,6 +77,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
       outputSizeApprox: approximateSize(result.object),
       inputTokens,
       outputTokens,
+      providerGenerationId,
       ...metadata,
     });
 
@@ -82,6 +86,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
       durationMs,
       inputTokens,
       outputTokens,
+      providerGenerationId,
     };
   } catch (err) {
     const durationMs = Date.now() - start;

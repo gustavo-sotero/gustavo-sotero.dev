@@ -88,7 +88,7 @@ adminPostGenerationRouter.get('/models', async (c) => {
       c,
       503,
       'SERVICE_UNAVAILABLE',
-      'Catalogo de modelos temporariamente indisponivel.'
+      'Catálogo de modelos temporariamente indisponível.'
     );
   }
 });
@@ -131,7 +131,7 @@ adminPostGenerationRouter.get('/draft-runs/:id', async (c) => {
   const runId = c.req.param('id');
   const status = await getDraftRunStatus(runId);
   if (!status) {
-    return errorResponse(c, 404, 'NOT_FOUND', 'Run nao encontrado.');
+    return errorResponse(c, 404, 'NOT_FOUND', 'Run não encontrado.');
   }
   return successResponse(c, status);
 });
@@ -150,7 +150,7 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
         c,
         503,
         'SERVICE_UNAVAILABLE',
-        'A IA recusou a solicitacao. Ajuste o briefing e tente novamente.'
+        'A IA recusou a solicitação. Ajuste o briefing e tente novamente.'
       );
     if (err.kind === 'validation')
       return errorResponse(
@@ -163,7 +163,7 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
       c,
       503,
       'SERVICE_UNAVAILABLE',
-      'O provedor de IA esta indisponivel no momento.'
+      'O provedor de IA está indisponível no momento.'
     );
   }
   const anyErr = err as Error & { code?: string };
@@ -179,14 +179,14 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
       c,
       503,
       'SERVICE_UNAVAILABLE',
-      'A geracao de posts com IA nao esta configurada. Configure os modelos na pagina de configuracoes.'
+      'A geração de posts com IA não está configurada. Configure os modelos na página de configurações.'
     );
   if (anyErr?.code === 'INVALID_CONFIG')
     return errorResponse(
       c,
       503,
       'SERVICE_UNAVAILABLE',
-      'A configuracao de modelos de IA e invalida. Atualize os modelos na pagina de configuracoes.'
+      'A configuração de modelos de IA é inválida. Atualize os modelos na página de configurações.'
     );
   throw err;
 }
@@ -194,20 +194,20 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
 function handleConfigSaveError(c: Parameters<typeof errorResponse>[0], err: unknown): Response {
   const anyErr = err as Error & { code?: string; issues?: string[] };
   if (anyErr?.code === 'DISABLED')
-    return errorResponse(c, 403, 'FORBIDDEN', 'A geracao de posts com IA esta desabilitada.');
+    return errorResponse(c, 403, 'FORBIDDEN', 'A geração de posts com IA está desabilitada.');
   if (anyErr?.code === 'NO_API_KEY')
     return errorResponse(
       c,
       503,
       'SERVICE_UNAVAILABLE',
-      'OPENROUTER_API_KEY nao esta configurada no servidor.'
+      'OPENROUTER_API_KEY não está configurada no servidor.'
     );
   if (anyErr?.code === 'CATALOG_UNAVAILABLE')
     return errorResponse(
       c,
       503,
       'SERVICE_UNAVAILABLE',
-      'Catalogo de modelos temporariamente indisponivel. Tente novamente em instantes.'
+      'Catálogo de modelos temporariamente indisponível. Tente novamente em instantes.'
     );
   if (anyErr?.code === 'INVALID_MODELS')
     return errorResponse(

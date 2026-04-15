@@ -104,6 +104,28 @@ describe('generateStructuredObject', () => {
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
     });
 
+    it('returns providerGenerationId from response.id when available', async () => {
+      generateObjectMock.mockResolvedValueOnce({
+        ...MOCK_AI_RESULT,
+        response: { id: 'gen_response_id' },
+      });
+
+      const result = await generateStructuredObject(BASE_OPTS);
+
+      expect(result.providerGenerationId).toBe('gen_response_id');
+    });
+
+    it('falls back to response.body.id when response.id is unavailable', async () => {
+      generateObjectMock.mockResolvedValueOnce({
+        ...MOCK_AI_RESULT,
+        response: { body: { id: 'gen_body_id' } },
+      });
+
+      const result = await generateStructuredObject(BASE_OPTS);
+
+      expect(result.providerGenerationId).toBe('gen_body_id');
+    });
+
     it('passes require_parameters: true as a provider option', async () => {
       generateObjectMock.mockResolvedValueOnce(MOCK_AI_RESULT);
 

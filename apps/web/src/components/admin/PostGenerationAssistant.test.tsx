@@ -561,6 +561,38 @@ describe('PostGenerationAssistant', () => {
     expect(mutateAsyncTopicsMock).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the selected suggestion visible and allows retrying the same draft after an error', async () => {
+    mutateAsyncTopicsMock.mockResolvedValueOnce({ suggestions: [SUGGESTION_FIXTURE] });
+    mockDraftRunError({ message: 'AI timeout' });
+    mockDraftRunCompleted(DRAFT_FIXTURE);
+
+    renderAssistant();
+    fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+    fireEvent.change(screen.getByTestId('category-select'), {
+      target: { value: 'backend-arquitetura' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Sugerir temas/i }));
+    await waitFor(() => screen.getByTestId('topic-0'));
+
+    fireEvent.click(screen.getByTestId('topic-0'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/AI timeout/i)).toBeInTheDocument();
+      expect(screen.getAllByText(SUGGESTION_FIXTURE.proposedTitle).length).toBeGreaterThanOrEqual(
+        2
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Tentar novamente com este tema/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('draft-review')).toBeInTheDocument();
+    });
+
+    expect(startDraftRunMock).toHaveBeenCalledTimes(2);
+    expect(mutateAsyncTopicsMock).toHaveBeenCalledTimes(1);
+  });
+
   // ── Config state gating ────────────────────────────────────────────────────
 
   it('shows disabled notice and blocks generation when status is disabled', () => {

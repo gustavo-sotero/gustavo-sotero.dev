@@ -57,7 +57,7 @@ export async function createDraftRun(
       .then((rows) => rows[0]);
 
     if (!insertedRun) {
-      throw new Error('Nao foi possivel criar o run de geracao de draft.');
+      throw new Error('Não foi possível criar o run de geração de draft.');
     }
 
     await tx.insert(outbox).values({
