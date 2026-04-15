@@ -174,6 +174,7 @@ function makeQueues() {
     imageQueue: { add: imageQueueAddMock } as never,
     postPublishQueue: { add: vi.fn() } as never,
     aiPostDraftGenerationQueue: { add: vi.fn() } as never,
+    aiPostTopicGenerationQueue: { add: vi.fn() } as never,
   };
 }
 
@@ -207,8 +208,14 @@ describe('upload pipeline: relay → imageOptimize state transition', () => {
 
     dbSelectMock.mockReturnValueOnce(outboxSelectChain([makeOutboxEvent()]));
 
-    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue, aiPostTopicGenerationQueue } =
+      makeQueues();
+    await processOutboxEvents(
+      imageQueue,
+      postPublishQueue,
+      aiPostDraftGenerationQueue,
+      aiPostTopicGenerationQueue
+    );
 
     // Relay must have published the job with the correct uploadId and dedup jobId
     expect(imageQueueAddMock).toHaveBeenCalledOnce();
@@ -268,8 +275,14 @@ describe('upload pipeline: relay → imageOptimize state transition', () => {
     );
     imageQueueAddMock.mockRejectedValue(new Error('Redis unavailable'));
 
-    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue } = makeQueues();
-    await processOutboxEvents(imageQueue, postPublishQueue, aiPostDraftGenerationQueue);
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue, aiPostTopicGenerationQueue } =
+      makeQueues();
+    await processOutboxEvents(
+      imageQueue,
+      postPublishQueue,
+      aiPostDraftGenerationQueue,
+      aiPostTopicGenerationQueue
+    );
 
     // Outbox marked finally failed
     expect(dbUpdateSetMock).toHaveBeenCalledWith(
