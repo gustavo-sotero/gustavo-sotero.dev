@@ -9,6 +9,7 @@ export * from './constants/errorCodes';
 export * from './lib/ai-draft-normalizer';
 export * from './lib/ai-error';
 export * from './lib/ai-post-prompts';
+export * from './lib/ai-topic-normalizer';
 export * from './lib/aiTagNormalizer';
 export * from './lib/iconResolver';
 export * from './lib/jobIds';

@@ -17,15 +17,13 @@ import {
   type AiPostTopicRunStage,
   buildTopicsSystemPrompt,
   buildTopicsUserPrompt,
-  canonicalizeSuggestedTagNames,
   type GenerateTopicsRequest,
-  generateSlug,
+  type GenerateTopicsResponse,
   generateTopicsOutputSchema,
-  generateTopicsResponseSchema,
+  normalizeTopicsResponse,
   type PersistedTagForNormalization,
   type ProviderRoutingConfig,
   providerRoutingConfigSchema,
-  type TopicSuggestion,
 } from '@portfolio/shared';
 import { aiPostTopicRuns, tags } from '@portfolio/shared/db/schema';
 import type { Job } from 'bullmq';
@@ -74,36 +72,6 @@ function classifyJobError(error: unknown): 'config' | 'internal' {
 function shouldRetryProviderFailure(job: Job<AiPostTopicJobData>, errorKind: string): boolean {
   const configuredAttempts = job.opts?.attempts ?? 1;
   return errorKind === 'provider' && (job.attemptsMade ?? 0) + 1 < configuredAttempts;
-}
-
-function deduplicateSuggestions(suggestions: TopicSuggestion[]): TopicSuggestion[] {
-  const seen = new Set<string>();
-  return suggestions.filter((s) => {
-    const key = generateSlug(s.proposedTitle);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function normalizeSuggestion(
-  s: TopicSuggestion,
-  persistedTags: PersistedTagForNormalization[]
-): TopicSuggestion {
-  const AI_POST_MAX_TOPIC_TAG_NAMES = 6;
-  return {
-    ...s,
-    suggestionId: s.suggestionId.trim() || crypto.randomUUID().slice(0, 8),
-    proposedTitle: s.proposedTitle.trim(),
-    angle: s.angle.trim(),
-    summary: s.summary.trim(),
-    targetReader: s.targetReader.trim(),
-    rationale: s.rationale.trim(),
-    suggestedTagNames: canonicalizeSuggestedTagNames(s.suggestedTagNames, persistedTags).slice(
-      0,
-      AI_POST_MAX_TOPIC_TAG_NAMES
-    ),
-  };
 }
 
 export interface AiPostTopicJobData {
@@ -207,29 +175,19 @@ export async function processAiPostTopicGeneration(job: Job<AiPostTopicJobData>)
     // ── Stage: normalizing-output ────────────────────────────────────────────
     await setStage(runId, 'normalizing-output', 'validating');
 
-    const raw = result.object as { suggestions: TopicSuggestion[] };
     const persistedTags = await loadPersistedTagsForNormalization();
 
     // ── Stage: canonicalizing-tags ───────────────────────────────────────────
     await setStage(runId, 'canonicalizing-tags', 'validating');
 
-    const normalized = deduplicateSuggestions(
-      raw.suggestions.map((s) => normalizeSuggestion(s, persistedTags))
-    );
-
     // ── Stage: validating-output ─────────────────────────────────────────────
     await setStage(runId, 'validating-output', 'validating');
 
-    const parsed = generateTopicsResponseSchema.safeParse({
-      suggestions: normalized.slice(0, limit),
-    });
-
-    if (!parsed.success) {
-      throw new AiGenerationError(
-        'validation',
-        'Generated topics did not satisfy the response contract'
-      );
-    }
+    const parsed = normalizeTopicsResponse(
+      result.object as GenerateTopicsResponse,
+      limit,
+      persistedTags
+    );
 
     // ── Stage: persisting-result ─────────────────────────────────────────────
     await setStage(runId, 'persisting-result', 'validating');
@@ -240,7 +198,7 @@ export async function processAiPostTopicGeneration(job: Job<AiPostTopicJobData>)
       .set({
         status: 'completed',
         stage: 'completed',
-        resultPayload: parsed.data as unknown as Record<string, unknown>,
+        resultPayload: parsed as unknown as Record<string, unknown>,
         providerGenerationId,
         finishedAt,
         updatedAt: finishedAt,
@@ -253,7 +211,7 @@ export async function processAiPostTopicGeneration(job: Job<AiPostTopicJobData>)
       requestedCategory,
       attemptCount,
       providerGenerationId,
-      suggestionCount: parsed.data.suggestions.length,
+      suggestionCount: parsed.suggestions.length,
       durationMs: result.durationMs,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,

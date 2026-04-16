@@ -4,29 +4,27 @@ import type {
   PersistedTagForNormalization,
 } from '@portfolio/shared';
 import {
-  AI_POST_CATEGORY_META,
-  AI_POST_DEFAULT_SUGGESTIONS,
   AI_POST_MAX_DRAFT_TAG_NAMES,
-  AI_POST_MAX_SUGGESTIONS,
-  AI_POST_MAX_TOPIC_TAG_NAMES,
   buildDraftSystemPrompt,
   buildDraftUserPrompt,
   buildFallbackImagePrompt,
   buildTopicsSystemPrompt,
+  buildTopicsUserPrompt,
   canonicalizeSuggestedTagNames,
   containsDisallowedInlineHtml,
   generateDraftOutputSchema,
   generateDraftResponseSchema,
   generateTopicsOutputSchema,
-  generateTopicsResponseSchema,
   normalizeContent,
   normalizeLinkedInPost,
+  normalizeTopicSuggestion,
+  normalizeTopicsRequest,
+  normalizeTopicsResponse,
 } from '@portfolio/shared';
 import { generateSlug } from '@portfolio/shared/lib/slug';
 import type {
   GenerateDraftResponse,
   GenerateTopicsResponse,
-  TopicSuggestion,
 } from '@portfolio/shared/types/ai-post-generation';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
@@ -40,72 +38,7 @@ import {
 const logger = getLogger('services', 'post-generation');
 const SYNC_AI_GENERATION_MAX_RETRIES = 0;
 
-// ── Prompt builders ──────────────────────────────────────────────────────────
-// buildTopicsSystemPrompt, buildDraftSystemPrompt, and buildDraftUserPrompt
-// are now shared utilities imported from @portfolio/shared at the top of this file.
-
-function buildTopicsUserPrompt(req: GenerateTopicsRequest): string {
-  const parts: string[] = [];
-
-  if (req.briefing) {
-    parts.push(`Briefing do autor:\n${req.briefing}`);
-  }
-
-  if (req.excludedIdeas.length > 0) {
-    parts.push(
-      `Ângulos a evitar (usados em gerações anteriores):\n${req.excludedIdeas.map((e) => `- ${e}`).join('\n')}`
-    );
-  }
-
-  parts.push(
-    `Gere exatamente ${req.limit} sugestões de tema para a categoria "${categoryLabel(req.category)}".\nCada sugestão deve ter suggestionId único (string curta), proposedTitle, angle, summary (2-3 frases), targetReader, suggestedTagNames (máx ${AI_POST_MAX_TOPIC_TAG_NAMES}) e rationale (1 frase curta).`
-  );
-
-  return parts.join('\n\n');
-}
-
-function categoryLabel(category: string): string {
-  return AI_POST_CATEGORY_META[category as keyof typeof AI_POST_CATEGORY_META]?.label ?? category;
-}
-
 // ── Output normalization ──────────────────────────────────────────────────────
-
-function normalizeSuggestion(
-  s: TopicSuggestion,
-  persistedTags: PersistedTagForNormalization[] = []
-): TopicSuggestion {
-  return {
-    ...s,
-    suggestionId: s.suggestionId.trim() || crypto.randomUUID().slice(0, 8),
-    proposedTitle: s.proposedTitle.trim(),
-    angle: s.angle.trim(),
-    summary: s.summary.trim(),
-    targetReader: s.targetReader.trim(),
-    rationale: s.rationale.trim(),
-    suggestedTagNames: canonicalizeSuggestedTagNames(s.suggestedTagNames, persistedTags).slice(
-      0,
-      AI_POST_MAX_TOPIC_TAG_NAMES
-    ),
-  };
-}
-
-function normalizeTopicsResponse(
-  raw: GenerateTopicsResponse,
-  limit: number,
-  persistedTags: PersistedTagForNormalization[] = []
-): GenerateTopicsResponse {
-  const unique = deduplicateSuggestions(
-    raw.suggestions.map((suggestion) => normalizeSuggestion(suggestion, persistedTags))
-  );
-  const parsed = generateTopicsResponseSchema.safeParse({ suggestions: unique.slice(0, limit) });
-  if (!parsed.success) {
-    throw new AiGenerationError(
-      'validation',
-      'Generated topics did not satisfy the response contract'
-    );
-  }
-  return parsed.data;
-}
 
 function normalizeDraftResponse(
   raw: GenerateDraftResponse,
@@ -155,45 +88,14 @@ function normalizeDraftResponse(
   return parsed.data;
 }
 
-function deduplicateSuggestions(suggestions: TopicSuggestion[]): TopicSuggestion[] {
-  const seen = new Set<string>();
-  return suggestions.filter((s) => {
-    const key = generateSlug(s.proposedTitle);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function normalizeBriefing(briefing: string | null): string | null {
-  const normalized = briefing?.trim() ?? '';
-  if (!normalized) {
-    return null;
-  }
-  return normalized.slice(0, env.AI_POSTS_MAX_BRIEFING_CHARS);
-}
-
-function normalizeTopicsRequest(req: GenerateTopicsRequest): GenerateTopicsRequest {
-  return {
-    ...req,
-    briefing: normalizeBriefing(req.briefing),
-    limit: Math.min(
-      req.limit ?? AI_POST_DEFAULT_SUGGESTIONS,
-      env.AI_POSTS_MAX_SUGGESTIONS,
-      AI_POST_MAX_SUGGESTIONS
-    ),
-    excludedIdeas: req.excludedIdeas.map((idea) => idea.trim()).filter(Boolean),
-  };
-}
-
 function normalizeDraftRequest(
   req: GenerateDraftRequest,
   persistedTags: PersistedTagForNormalization[] = []
 ): GenerateDraftRequest {
   return {
     ...req,
-    briefing: normalizeBriefing(req.briefing),
-    selectedSuggestion: normalizeSuggestion(req.selectedSuggestion, persistedTags),
+    briefing: req.briefing?.trim() || null,
+    selectedSuggestion: normalizeTopicSuggestion(req.selectedSuggestion, persistedTags),
     rejectedAngles: req.rejectedAngles.map((angle) => angle.trim()).filter(Boolean),
   };
 }
@@ -234,7 +136,10 @@ export async function generateTopicSuggestions(
     resolveActiveAiTopicGenerationConfig(),
     findAllTagsForNormalization(),
   ]);
-  const normalizedReq = normalizeTopicsRequest(req);
+  const normalizedReq = normalizeTopicsRequest(req, {
+    maxBriefingChars: env.AI_POSTS_MAX_BRIEFING_CHARS,
+    maxSuggestions: env.AI_POSTS_MAX_SUGGESTIONS,
+  });
   const model = activeConfig.topicsModelId;
 
   try {

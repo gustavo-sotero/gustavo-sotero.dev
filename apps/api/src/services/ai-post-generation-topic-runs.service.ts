@@ -17,27 +17,15 @@ import type {
 import {
   AI_POST_TOPIC_RUN_INITIAL_POLL_MS,
   generateTopicsResponseSchema,
+  normalizeTopicsRequest,
   OutboxEventType,
 } from '@portfolio/shared';
 import type { AiPostTopicRun } from '@portfolio/shared/db/schema';
 import { aiPostTopicRuns, outbox } from '@portfolio/shared/db/schema';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
+import { env } from '../config/env';
 import { resolveActiveAiTopicGenerationConfig } from './ai-post-generation-settings.service';
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Normalise the topic request before persisting so the worker operates on
- * clean data regardless of which caller produced the payload.
- */
-function normalizeRequestPayload(request: CreateTopicRunRequest): CreateTopicRunRequest {
-  return {
-    ...request,
-    briefing: request.briefing?.trim() || null,
-    excludedIdeas: request.excludedIdeas.map((s) => s.trim()).filter(Boolean),
-  };
-}
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +43,10 @@ export async function createTopicRun(
   // This surfaces config errors synchronously rather than failing silently in the worker.
   const activeConfig = await resolveActiveAiTopicGenerationConfig();
 
-  const normalizedRequest = normalizeRequestPayload(request);
+  const normalizedRequest = normalizeTopicsRequest(request, {
+    maxBriefingChars: env.AI_POSTS_MAX_BRIEFING_CHARS,
+    maxSuggestions: env.AI_POSTS_MAX_SUGGESTIONS,
+  });
 
   const run = await db.transaction(async (tx) => {
     const insertedRun = await tx

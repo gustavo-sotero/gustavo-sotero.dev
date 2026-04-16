@@ -49,7 +49,7 @@ const RUN_ID = '550e8400-e29b-41d4-a716-446655440003';
 const BASE_REQUEST = {
   category: 'backend-arquitetura' as const,
   briefing: '  foco em queues em producao  ',
-  limit: 4 as const,
+  limit: 5,
   excludedIdeas: ['  tema antigo  ', '  '],
 };
 
@@ -140,9 +140,10 @@ describe('ai-post-generation-topic-runs.service', () => {
     expect(insertedValues.status).toBe('queued');
     expect(insertedValues.stage).toBe('queued');
 
-    // Briefing whitespace trimmed, empty excluded ideas filtered
+    // Briefing whitespace trimmed, empty excluded ideas filtered, runtime cap applied
     const payload = insertedValues.requestPayload as Record<string, unknown>;
     expect(payload.briefing).toBe('foco em queues em producao');
+    expect(payload.limit).toBe(4);
     expect(payload.excludedIdeas).toEqual(['tema antigo']);
 
     expect(txInsertOutboxValuesMock).toHaveBeenCalledWith({
