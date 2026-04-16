@@ -5,15 +5,15 @@
  * - Idempotent claim guard: already-claimed run is skipped
  * - Missing modelId path: run fails with NO_MODEL_ID
  * - Successful full execution: stages → completed with resultPayload
- * - Timeout: timed_out status + re-throw
- * - Transient provider failure: failed status + re-throw (BullMQ retries)
+ * - Timeout: timed_out status + unrecoverable throw (no BullMQ retry)
+ * - Transient provider failure: queued status + re-throw (BullMQ retries)
  * - Provider retry: re-queues when another attempt remains
- * - Validation failure: schema rejects output → failed with validation kind
+ * - Validation failure: schema rejects output → failed with validation kind + no retry
  * - attemptCount recorded from job.attemptsMade
  */
 
 import { AiGenerationError } from '@portfolio/shared';
-import type { Job } from 'bullmq';
+import { type Job, UnrecoverableError } from 'bullmq';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ describe('processAiPostTopicGeneration', () => {
     expect(callArgs?.operation).toBe('topic-async');
   });
 
-  it('persists timed_out status and re-throws on AiGenerationError timeout', async () => {
+  it('persists timed_out status and stops retries on AiGenerationError timeout', async () => {
     updateWhereMock.mockImplementationOnce(() => ({
       returning: returningMock,
     }));
@@ -243,7 +243,7 @@ describe('processAiPostTopicGeneration', () => {
     );
 
     await expect(processAiPostTopicGeneration(buildJob())).rejects.toBeInstanceOf(
-      AiGenerationError
+      UnrecoverableError
     );
 
     const errorSetArg = updateSetMock.mock.calls.find((call: unknown[]) => {
@@ -280,7 +280,7 @@ describe('processAiPostTopicGeneration', () => {
     expect(retrySetArg?.errorKind).toBeNull();
   });
 
-  it('persists failed status after the final provider retry is exhausted', async () => {
+  it('persists failed status and stops retries after the final provider retry is exhausted', async () => {
     updateWhereMock.mockImplementationOnce(() => ({
       returning: returningMock,
     }));
@@ -291,7 +291,7 @@ describe('processAiPostTopicGeneration', () => {
     );
 
     await expect(processAiPostTopicGeneration(buildJob(RUN_ID, 1, 2))).rejects.toBeInstanceOf(
-      AiGenerationError
+      UnrecoverableError
     );
 
     const errorSetArg = updateSetMock.mock.calls.find((call: unknown[]) => {
@@ -303,7 +303,7 @@ describe('processAiPostTopicGeneration', () => {
     expect(errorSetArg?.errorKind).toBe('provider');
   });
 
-  it('fails with validation kind when schema validation rejects the topics output', async () => {
+  it('fails with validation kind and stops retries when the topics output is invalid', async () => {
     updateWhereMock.mockImplementationOnce(() => ({
       returning: returningMock,
     }));
@@ -324,7 +324,7 @@ describe('processAiPostTopicGeneration', () => {
     });
 
     await expect(processAiPostTopicGeneration(buildJob())).rejects.toBeInstanceOf(
-      AiGenerationError
+      UnrecoverableError
     );
 
     const errorSetArg = updateSetMock.mock.calls.find((call: unknown[]) => {
