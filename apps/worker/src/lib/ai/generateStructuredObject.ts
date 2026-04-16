@@ -1,10 +1,11 @@
 import {
   AiGenerationError,
   type ProviderRoutingConfig,
+  toOpenAiCompatibleStructuredOutputJsonSchema,
   toOpenRouterProviderRouting,
 } from '@portfolio/shared';
 import { extractProviderGenerationId } from '@portfolio/shared/lib/aiProviderGeneration';
-import { generateObject, NoObjectGeneratedError } from 'ai';
+import { generateObject, jsonSchema, NoObjectGeneratedError } from 'ai';
 import type { ZodSchema } from 'zod';
 import { env } from '../../config/env';
 import { getLogger } from '../../config/logger';
@@ -41,7 +42,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
     model: modelId,
     system,
     prompt,
-    schema,
+    schema: zodSchema,
     operation,
     metadata,
     providerRouting,
@@ -51,6 +52,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
   const openrouter = getOpenRouterProvider();
   const start = Date.now();
   const inputSizeApprox = system.length + prompt.length;
+  const structuredOutputSchema = buildStructuredOutputSchema(zodSchema);
 
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
@@ -62,7 +64,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
   try {
     const result = await generateObject({
       model: openrouter(modelId, { provider: providerOptions }),
-      schema,
+      schema: structuredOutputSchema,
       system,
       prompt,
       abortSignal: abortController.signal,
@@ -152,4 +154,21 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function buildStructuredOutputSchema<TSchema extends ZodSchema>(schema: TSchema) {
+  return jsonSchema<import('zod').infer<TSchema>>(
+    toOpenAiCompatibleStructuredOutputJsonSchema(schema),
+    {
+      validate: (value) => {
+        const parsed = schema.safeParse(value);
+
+        if (parsed.success) {
+          return { success: true as const, value: parsed.data };
+        }
+
+        return { success: false as const, error: parsed.error };
+      },
+    }
+  );
 }

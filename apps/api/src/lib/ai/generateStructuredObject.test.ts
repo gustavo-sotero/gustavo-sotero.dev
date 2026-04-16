@@ -2,38 +2,48 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
-const { envMock, generateObjectMock, fakeModelFactory, NoObjectGeneratedErrorMock } = vi.hoisted(
-  () => {
-    // Minimal fake model factory that the OpenRouter provider would return.
-    const fakeModelFactory = vi.fn((_modelId: string, _opts?: unknown) => ({
-      modelId: 'fake-model',
-    }));
+const {
+  envMock,
+  generateObjectMock,
+  jsonSchemaMock,
+  fakeModelFactory,
+  NoObjectGeneratedErrorMock,
+} = vi.hoisted(() => {
+  // Minimal fake model factory that the OpenRouter provider would return.
+  const fakeModelFactory = vi.fn((_modelId: string, _opts?: unknown) => ({
+    modelId: 'fake-model',
+  }));
+  const jsonSchemaMock = vi.fn((schema: unknown, options?: unknown) => ({
+    kind: 'json-schema',
+    schema,
+    options,
+  }));
 
-    // Minimal replica of the AI SDK's NoObjectGeneratedError with a static isInstance guard.
-    class NoObjectGeneratedErrorMock extends Error {
-      response: unknown;
-      text: string;
-      usage: { inputTokens: number; outputTokens: number };
-      constructor(finishReason?: string) {
-        super('No object generated');
-        this.name = 'NoObjectGeneratedError';
-        this.response = { finishReason };
-        this.text = '';
-        this.usage = { inputTokens: 10, outputTokens: 0 };
-      }
-      static isInstance(e: unknown): e is NoObjectGeneratedErrorMock {
-        return e instanceof NoObjectGeneratedErrorMock;
-      }
+  // Minimal replica of the AI SDK's NoObjectGeneratedError with a static isInstance guard.
+  class NoObjectGeneratedErrorMock extends Error {
+    response: unknown;
+    text: string;
+    usage: { inputTokens: number; outputTokens: number };
+    constructor(finishReason?: string) {
+      super('No object generated');
+      this.name = 'NoObjectGeneratedError';
+      this.response = { finishReason };
+      this.text = '';
+      this.usage = { inputTokens: 10, outputTokens: 0 };
     }
-
-    return {
-      envMock: { AI_POSTS_TIMEOUT_MS: 5_000 },
-      generateObjectMock: vi.fn(),
-      fakeModelFactory,
-      NoObjectGeneratedErrorMock,
-    };
+    static isInstance(e: unknown): e is NoObjectGeneratedErrorMock {
+      return e instanceof NoObjectGeneratedErrorMock;
+    }
   }
-);
+
+  return {
+    envMock: { AI_POSTS_TIMEOUT_MS: 5_000 },
+    generateObjectMock: vi.fn(),
+    jsonSchemaMock,
+    fakeModelFactory,
+    NoObjectGeneratedErrorMock,
+  };
+});
 
 vi.mock('../../config/env', () => ({ env: envMock }));
 vi.mock('../../config/logger', () => ({
@@ -44,6 +54,7 @@ vi.mock('./provider', () => ({
 }));
 vi.mock('ai', () => ({
   generateObject: (...args: unknown[]) => generateObjectMock(...args),
+  jsonSchema: (schema: unknown, options?: unknown) => jsonSchemaMock(schema, options),
   NoObjectGeneratedError: NoObjectGeneratedErrorMock,
 }));
 
@@ -145,6 +156,46 @@ describe('generateStructuredObject', () => {
       expect(generateObjectMock).toHaveBeenCalledWith(
         expect.objectContaining({ timeout: 1_234, maxRetries: 2 })
       );
+    });
+
+    it('sanitizes unsupported provider schema keywords but keeps Zod validation', async () => {
+      const constrainedSchema = z.object({
+        title: z.string().min(1).max(120),
+        suggestions: z.array(z.string().min(1).max(20)).min(2).max(5),
+      });
+
+      generateObjectMock.mockResolvedValueOnce({
+        object: { title: 'Valido', suggestions: ['um', 'dois'] },
+        usage: { inputTokens: 50, outputTokens: 10 },
+      });
+
+      await generateStructuredObject({ ...BASE_OPTS, schema: constrainedSchema });
+
+      const [providerSchema, options] = jsonSchemaMock.mock.calls[0] as [
+        Record<string, unknown>,
+        { validate: (value: unknown) => { success: boolean; value?: unknown; error?: Error } },
+      ];
+      const properties = providerSchema.properties as Record<string, Record<string, unknown>>;
+      const title = properties.title;
+      const suggestions = properties.suggestions as Record<string, unknown>;
+      const suggestionItems = suggestions.items as Record<string, unknown>;
+
+      expect(providerSchema.additionalProperties).toBe(false);
+      expect(providerSchema.required).toEqual(['title', 'suggestions']);
+      expect(title).not.toHaveProperty('minLength');
+      expect(title).not.toHaveProperty('maxLength');
+      expect(suggestions).not.toHaveProperty('minItems');
+      expect(suggestions).not.toHaveProperty('maxItems');
+      expect(suggestionItems).not.toHaveProperty('minLength');
+      expect(suggestionItems).not.toHaveProperty('maxLength');
+
+      expect(options.validate({ title: 'Valido', suggestions: ['um', 'dois'] })).toEqual({
+        success: true,
+        value: { title: 'Valido', suggestions: ['um', 'dois'] },
+      });
+      expect(options.validate({ title: '', suggestions: ['um'] })).toMatchObject({
+        success: false,
+      });
     });
 
     it('maps normalized provider routing to OpenRouter provider options', async () => {
