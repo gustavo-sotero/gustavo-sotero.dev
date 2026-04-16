@@ -27,15 +27,18 @@ import {
   normalizeLinkedInPost,
   type PersistedTagForNormalization,
   type ProviderRoutingConfig,
+  providerRoutingConfigSchema,
 } from '@portfolio/shared';
 import { aiPostDraftRuns, tags } from '@portfolio/shared/db/schema';
 import type { Job } from 'bullmq';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';
+import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { generateStructuredObject } from '../lib/ai/generateStructuredObject';
 
 const logger = getLogger('worker', 'jobs', 'ai-post-draft-generation');
+const ASYNC_AI_GENERATION_MAX_RETRIES = 0;
 
 type ActiveRunStatus = 'running' | 'validating';
 
@@ -158,7 +161,8 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
   let draftRouting: ProviderRoutingConfig | undefined;
   try {
     const settings = await db.query.aiPostGenerationSettings.findFirst();
-    draftRouting = (settings?.draftRouting as ProviderRoutingConfig) ?? undefined;
+    const parsedRouting = providerRoutingConfigSchema.safeParse(settings?.draftRouting ?? null);
+    draftRouting = parsedRouting.success ? (parsedRouting.data ?? undefined) : undefined;
   } catch {
     // Non-fatal: routing config unavailable, proceed without it
   }
@@ -183,6 +187,8 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       operation: 'draft-async',
       metadata: { category: requestPayload.category, runId },
       providerRouting: draftRouting,
+      timeoutMs: env.AI_POSTS_TIMEOUT_MS,
+      maxRetries: ASYNC_AI_GENERATION_MAX_RETRIES,
     });
     providerGenerationId = result.providerGenerationId;
 

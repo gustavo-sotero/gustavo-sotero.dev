@@ -32,9 +32,13 @@ import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { AiGenerationError, generateStructuredObject } from '../lib/ai/generateStructuredObject';
 import { findAllTagsForNormalization } from '../repositories/tags.repo';
-import { resolveActiveAiPostGenerationConfig } from './ai-post-generation-settings.service';
+import {
+  resolveActiveAiDraftGenerationConfig,
+  resolveActiveAiTopicGenerationConfig,
+} from './ai-post-generation-settings.service';
 
 const logger = getLogger('services', 'post-generation');
+const SYNC_AI_GENERATION_MAX_RETRIES = 0;
 
 // ── Prompt builders ──────────────────────────────────────────────────────────
 // buildTopicsSystemPrompt, buildDraftSystemPrompt, and buildDraftUserPrompt
@@ -227,7 +231,7 @@ export async function generateTopicSuggestions(
   req: GenerateTopicsRequest
 ): Promise<GenerateTopicsResponse> {
   const [activeConfig, persistedTags] = await Promise.all([
-    resolveActiveAiPostGenerationConfig(),
+    resolveActiveAiTopicGenerationConfig(),
     findAllTagsForNormalization(),
   ]);
   const normalizedReq = normalizeTopicsRequest(req);
@@ -241,7 +245,9 @@ export async function generateTopicSuggestions(
       schema: generateTopicsOutputSchema,
       operation: 'topics',
       metadata: { category: normalizedReq.category },
-      providerRouting: activeConfig.topicsRouting,
+      providerRouting: activeConfig.topicsRouting ?? undefined,
+      timeoutMs: env.AI_POSTS_TIMEOUT_MS,
+      maxRetries: SYNC_AI_GENERATION_MAX_RETRIES,
     });
 
     return normalizeTopicsResponse(
@@ -268,7 +274,7 @@ export async function generateTopicSuggestions(
  */
 export async function generatePostDraft(req: GenerateDraftRequest): Promise<GenerateDraftResponse> {
   const [activeConfig, persistedTags] = await Promise.all([
-    resolveActiveAiPostGenerationConfig(),
+    resolveActiveAiDraftGenerationConfig(),
     findAllTagsForNormalization(),
   ]);
   const normalizedReq = normalizeDraftRequest(req, persistedTags);
@@ -282,7 +288,9 @@ export async function generatePostDraft(req: GenerateDraftRequest): Promise<Gene
       schema: generateDraftOutputSchema,
       operation: 'draft',
       metadata: { category: normalizedReq.category },
-      providerRouting: activeConfig.draftRouting,
+      providerRouting: activeConfig.draftRouting ?? undefined,
+      timeoutMs: env.AI_POSTS_TIMEOUT_MS,
+      maxRetries: SYNC_AI_GENERATION_MAX_RETRIES,
     });
 
     return normalizeDraftResponse(result.object as GenerateDraftResponse, persistedTags);

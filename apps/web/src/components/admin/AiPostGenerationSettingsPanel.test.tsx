@@ -62,7 +62,25 @@ import { AiPostGenerationSettingsPanel } from './AiPostGenerationSettingsPanel';
 const READY_CONFIG_STATE = {
   featureEnabled: true,
   status: 'ready' as const,
-  config: { topicsModelId: 'openai/gpt-4o', draftModelId: 'openai/gpt-4o' },
+  config: {
+    topicsModelId: 'openai/gpt-4o',
+    draftModelId: 'openai/gpt-4o',
+    topicsRouting: {
+      mode: 'low-latency' as const,
+      allowFallbacks: false,
+      preferredMaxLatencySeconds: 10,
+    },
+    draftRouting: {
+      mode: 'manual' as const,
+      allowFallbacks: false,
+      providerOrder: ['anthropic', 'openai'],
+      onlyProviders: ['anthropic'],
+      ignoreProviders: ['together'],
+      sort: 'latency' as const,
+      preferredMaxLatencySeconds: 12,
+      preferredMinThroughput: 100,
+    },
+  },
   issues: [],
   updatedAt: '2026-01-01T00:00:00.000Z',
   updatedBy: 'admin',
@@ -260,6 +278,24 @@ describe('AiPostGenerationSettingsPanel', () => {
     expect(selected.length).toBeGreaterThan(0);
   });
 
+  it('renders saved routing preferences for both operations', () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: READY_CONFIG_STATE,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPanel();
+
+    expect(screen.getByText(/Routing do provider/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue('10')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('anthropic, openai')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('anthropic')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('together')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('100')).toBeInTheDocument();
+  });
+
   it('shows model list items from the catalog', () => {
     useAiPostGenerationConfigMock.mockReturnValue({
       data: READY_CONFIG_STATE,
@@ -404,6 +440,41 @@ describe('AiPostGenerationSettingsPanel', () => {
           topicsModelId: 'anthropic/claude-3-5-sonnet',
         })
       );
+    });
+  });
+
+  it('persists normalized routing preferences together with the selected models', async () => {
+    useAiPostGenerationConfigMock.mockReturnValue({
+      data: READY_CONFIG_STATE,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: /Salvar configuração/i }));
+
+    await waitFor(() => {
+      expect(muteMock).toHaveBeenCalledWith({
+        topicsModelId: 'openai/gpt-4o',
+        draftModelId: 'openai/gpt-4o',
+        topicsRouting: {
+          mode: 'low-latency',
+          allowFallbacks: false,
+          preferredMaxLatencySeconds: 10,
+        },
+        draftRouting: {
+          mode: 'manual',
+          allowFallbacks: false,
+          providerOrder: ['anthropic', 'openai'],
+          onlyProviders: ['anthropic'],
+          ignoreProviders: ['together'],
+          sort: 'latency',
+          preferredMaxLatencySeconds: 12,
+          preferredMinThroughput: 100,
+        },
+      });
     });
   });
 

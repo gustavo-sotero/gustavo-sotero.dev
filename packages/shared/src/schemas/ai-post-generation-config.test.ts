@@ -6,6 +6,7 @@ import {
   aiPostGenerationModelsQuerySchema,
   aiPostGenerationStatusSchema,
   providerRoutingConfigSchema,
+  toOpenRouterProviderRouting,
   updateAiPostGenerationConfigSchema,
 } from './ai-post-generation-config';
 
@@ -190,60 +191,106 @@ describe('ai-post-generation-config schemas', () => {
       expect(providerRoutingConfigSchema.safeParse(null).success).toBe(true);
     });
 
-    it('accepts an empty object (all fields optional)', () => {
-      expect(providerRoutingConfigSchema.safeParse({}).success).toBe(true);
+    it('normalizes an empty object to balanced mode', () => {
+      const result = providerRoutingConfigSchema.parse({});
+
+      expect(result).toEqual({ mode: 'balanced' });
     });
 
-    it('accepts a fully populated routing config', () => {
-      const result = providerRoutingConfigSchema.safeParse({
-        order: ['openai', 'anthropic'],
-        allow_fallbacks: true,
+    it('accepts and normalizes the public routing shape', () => {
+      const result = providerRoutingConfigSchema.parse({
+        mode: 'manual',
+        providerOrder: [' openai ', 'anthropic', 'openai'],
+        allowFallbacks: false,
         sort: 'latency',
-        preferred_max_latency: 5000,
-        preferred_min_throughput: 100,
+        preferredMaxLatencySeconds: 10,
+        preferredMinThroughput: 100,
+        onlyProviders: ['openai'],
       });
 
-      expect(result.success).toBe(true);
+      expect(result).toEqual({
+        mode: 'manual',
+        providerOrder: ['openai', 'anthropic'],
+        allowFallbacks: false,
+        sort: 'latency',
+        preferredMaxLatencySeconds: 10,
+        preferredMinThroughput: 100,
+        onlyProviders: ['openai'],
+      });
     });
 
-    it('accepts partial routing config with only order and allow_fallbacks', () => {
-      const result = providerRoutingConfigSchema.safeParse({
+    it('accepts and normalizes the legacy provider shape', () => {
+      const result = providerRoutingConfigSchema.parse({
         order: ['openai'],
         allow_fallbacks: false,
+        ignore: ['together'],
       });
 
-      expect(result.success).toBe(true);
+      expect(result).toEqual({
+        mode: 'manual',
+        providerOrder: ['openai'],
+        allowFallbacks: false,
+        ignoreProviders: ['together'],
+      });
     });
 
-    it('rejects negative preferred_max_latency', () => {
+    it('rejects negative preferredMaxLatencySeconds', () => {
       const result = providerRoutingConfigSchema.safeParse({
-        preferred_max_latency: -1,
+        preferredMaxLatencySeconds: -1,
       });
 
       expect(result.success).toBe(false);
     });
 
-    it('rejects zero preferred_min_throughput', () => {
+    it('rejects zero preferredMinThroughput', () => {
       const result = providerRoutingConfigSchema.safeParse({
-        preferred_min_throughput: 0,
+        preferredMinThroughput: 0,
       });
 
       expect(result.success).toBe(false);
     });
 
-    it('rejects non-integer preferred_max_latency', () => {
+    it('rejects non-integer preferredMaxLatencySeconds', () => {
       const result = providerRoutingConfigSchema.safeParse({
-        preferred_max_latency: 1.5,
+        preferredMaxLatencySeconds: 1.5,
       });
 
       expect(result.success).toBe(false);
+    });
+
+    it('rejects overlapping allow and ignore provider lists', () => {
+      const result = providerRoutingConfigSchema.safeParse({
+        mode: 'manual',
+        onlyProviders: ['openai'],
+        ignoreProviders: ['openai'],
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects manual mode without an explicit preference', () => {
+      const result = providerRoutingConfigSchema.safeParse({ mode: 'manual' });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('maps low-latency mode to OpenRouter latency sorting', () => {
+      const result = toOpenRouterProviderRouting({
+        mode: 'low-latency',
+        preferredMaxLatencySeconds: 8,
+      });
+
+      expect(result).toEqual({
+        sort: 'latency',
+        preferred_max_latency: 8,
+      });
     });
 
     it('config schema accepts topicsRouting and draftRouting', () => {
       const result = aiPostGenerationConfigSchema.safeParse({
         topicsModelId: 'openai/gpt-4o',
         draftModelId: 'anthropic/claude-sonnet-4-5',
-        topicsRouting: { order: ['openai'], allow_fallbacks: true },
+        topicsRouting: { mode: 'manual', providerOrder: ['openai'], allowFallbacks: true },
         draftRouting: null,
       });
 

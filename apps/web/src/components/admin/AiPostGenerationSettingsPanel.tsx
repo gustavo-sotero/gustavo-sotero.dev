@@ -1,6 +1,11 @@
 'use client';
 
-import type { AiPostGenerationModelSummary } from '@portfolio/shared';
+import type {
+  AiPostGenerationModelSummary,
+  ProviderRoutingConfig,
+  ProviderRoutingMode,
+  ProviderRoutingSort,
+} from '@portfolio/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
@@ -65,6 +70,330 @@ function SavedModelCard({ label, modelId }: { label: string; modelId: string }) 
     <div className="rounded-md border border-zinc-800/80 bg-zinc-950/40 px-3 py-3">
       <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">{label}</p>
       <p className="mt-1 break-all font-mono text-xs text-zinc-300">{modelId}</p>
+    </div>
+  );
+}
+
+interface ProviderRoutingFormState {
+  mode: ProviderRoutingMode;
+  allowFallbacks: boolean;
+  sort: ProviderRoutingSort | '';
+  providerOrderText: string;
+  onlyProvidersText: string;
+  ignoreProvidersText: string;
+  preferredMaxLatencySeconds: string;
+  preferredMinThroughput: string;
+}
+
+const ROUTING_MODE_LABELS: Record<ProviderRoutingMode, string> = {
+  balanced: 'Balanceado',
+  'low-latency': 'Baixa latência',
+  manual: 'Manual',
+};
+
+function listToText(values?: string[]): string {
+  return values?.join(', ') ?? '';
+}
+
+function parseRoutingList(text: string): string[] | undefined {
+  const normalized = [
+    ...new Set(
+      text
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+    ),
+  ];
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function parsePositiveInteger(text: string): number | undefined {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+function toRoutingFormState(config?: ProviderRoutingConfig | null): ProviderRoutingFormState {
+  return {
+    mode: config?.mode ?? 'balanced',
+    allowFallbacks: config?.allowFallbacks ?? true,
+    sort: config?.sort ?? '',
+    providerOrderText: listToText(config?.providerOrder),
+    onlyProvidersText: listToText(config?.onlyProviders),
+    ignoreProvidersText: listToText(config?.ignoreProviders),
+    preferredMaxLatencySeconds: config?.preferredMaxLatencySeconds?.toString() ?? '',
+    preferredMinThroughput: config?.preferredMinThroughput?.toString() ?? '',
+  };
+}
+
+function buildRoutingConfig(form: ProviderRoutingFormState): ProviderRoutingConfig | null {
+  const preferredMaxLatencySeconds = parsePositiveInteger(form.preferredMaxLatencySeconds);
+  const preferredMinThroughput = parsePositiveInteger(form.preferredMinThroughput);
+
+  if (form.mode === 'balanced') {
+    return form.allowFallbacks
+      ? null
+      : {
+          mode: 'balanced',
+          allowFallbacks: false,
+        };
+  }
+
+  if (form.mode === 'low-latency') {
+    return {
+      mode: 'low-latency',
+      ...(form.allowFallbacks ? {} : { allowFallbacks: false }),
+      ...(preferredMaxLatencySeconds !== undefined ? { preferredMaxLatencySeconds } : {}),
+      ...(preferredMinThroughput !== undefined ? { preferredMinThroughput } : {}),
+    };
+  }
+
+  return {
+    mode: 'manual',
+    ...(form.allowFallbacks ? {} : { allowFallbacks: false }),
+    ...(form.sort ? { sort: form.sort } : {}),
+    ...(parseRoutingList(form.providerOrderText)
+      ? { providerOrder: parseRoutingList(form.providerOrderText) }
+      : {}),
+    ...(parseRoutingList(form.onlyProvidersText)
+      ? { onlyProviders: parseRoutingList(form.onlyProvidersText) }
+      : {}),
+    ...(parseRoutingList(form.ignoreProvidersText)
+      ? { ignoreProviders: parseRoutingList(form.ignoreProvidersText) }
+      : {}),
+    ...(preferredMaxLatencySeconds !== undefined ? { preferredMaxLatencySeconds } : {}),
+    ...(preferredMinThroughput !== undefined ? { preferredMinThroughput } : {}),
+  };
+}
+
+interface RoutingPreferencesSectionProps {
+  title: string;
+  description: string;
+  value: ProviderRoutingFormState;
+  onChange: (next: ProviderRoutingFormState) => void;
+}
+
+function RoutingPreferencesSection({
+  title,
+  description,
+  value,
+  onChange,
+}: RoutingPreferencesSectionProps) {
+  const sectionId = title === 'Temas' ? 'topics-routing' : 'draft-routing';
+  const update = <Key extends keyof ProviderRoutingFormState>(
+    key: Key,
+    nextValue: ProviderRoutingFormState[Key]
+  ) => {
+    onChange({ ...value, [key]: nextValue });
+  };
+
+  const isLowLatency = value.mode === 'low-latency';
+  const isManual = value.mode === 'manual';
+
+  return (
+    <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/30 p-4 space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-zinc-200">{title}</h3>
+        <p className="mt-1 text-xs leading-5 text-zinc-500">{description}</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="space-y-2 text-sm text-zinc-300">
+          <span className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+            Modo
+          </span>
+          <select
+            value={value.mode}
+            onChange={(event) => update('mode', event.target.value as ProviderRoutingMode)}
+            className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-200"
+          >
+            <option value="balanced">Balanceado</option>
+            <option value="low-latency">Baixa latência</option>
+            <option value="manual">Manual</option>
+          </select>
+        </label>
+
+        <label className="flex items-center gap-3 rounded-md border border-zinc-800 bg-zinc-900/70 px-3 py-2.5 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={value.allowFallbacks}
+            onChange={(event) => update('allowFallbacks', event.target.checked)}
+            className="h-4 w-4 rounded border-zinc-600 bg-zinc-950 text-emerald-500"
+          />
+          Permitir fallbacks automáticos do provider
+        </label>
+      </div>
+
+      {value.mode === 'balanced' && (
+        <p className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs leading-5 text-zinc-500">
+          Usa a estratégia padrão do OpenRouter, priorizando disponibilidade. Desative os fallbacks
+          apenas se quiser falhar rápido quando o provider principal estiver indisponível.
+        </p>
+      )}
+
+      {isLowLatency && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2 text-sm text-zinc-300">
+            <label
+              htmlFor={`${sectionId}-preferred-max-latency`}
+              className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Latência máxima preferida (s)
+            </label>
+            <Input
+              id={`${sectionId}-preferred-max-latency`}
+              type="number"
+              min={1}
+              value={value.preferredMaxLatencySeconds}
+              onChange={(event) => update('preferredMaxLatencySeconds', event.target.value)}
+              placeholder="Ex.: 10"
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 text-sm"
+            />
+          </div>
+
+          <div className="space-y-2 text-sm text-zinc-300">
+            <label
+              htmlFor={`${sectionId}-preferred-min-throughput`}
+              className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Throughput mínimo preferido
+            </label>
+            <Input
+              id={`${sectionId}-preferred-min-throughput`}
+              type="number"
+              min={1}
+              value={value.preferredMinThroughput}
+              onChange={(event) => update('preferredMinThroughput', event.target.value)}
+              placeholder="Ex.: 100"
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 text-sm"
+            />
+          </div>
+        </div>
+      )}
+
+      {isManual && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2 text-sm text-zinc-300 md:col-span-2">
+            <label
+              htmlFor={`${sectionId}-provider-order`}
+              className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Ordem preferida de providers
+            </label>
+            <Input
+              id={`${sectionId}-provider-order`}
+              type="text"
+              value={value.providerOrderText}
+              onChange={(event) => update('providerOrderText', event.target.value)}
+              placeholder="anthropic, openai"
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 text-sm"
+            />
+          </div>
+
+          <div className="space-y-2 text-sm text-zinc-300">
+            <label
+              htmlFor={`${sectionId}-sort`}
+              className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Estratégia de ordenação
+            </label>
+            <select
+              id={`${sectionId}-sort`}
+              value={value.sort}
+              onChange={(event) => update('sort', event.target.value as ProviderRoutingSort | '')}
+              className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-200"
+            >
+              <option value="">Padrão do OpenRouter</option>
+              <option value="price">Menor preço</option>
+              <option value="latency">Menor latência</option>
+              <option value="throughput">Maior throughput</option>
+            </select>
+          </div>
+
+          <div className="space-y-2 text-sm text-zinc-300">
+            <label
+              htmlFor={`${sectionId}-manual-preferred-max-latency`}
+              className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Latência máxima preferida (s)
+            </label>
+            <Input
+              id={`${sectionId}-manual-preferred-max-latency`}
+              type="number"
+              min={1}
+              value={value.preferredMaxLatencySeconds}
+              onChange={(event) => update('preferredMaxLatencySeconds', event.target.value)}
+              placeholder="Ex.: 10"
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 text-sm"
+            />
+          </div>
+
+          <div className="space-y-2 text-sm text-zinc-300">
+            <label
+              htmlFor={`${sectionId}-manual-preferred-min-throughput`}
+              className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Throughput mínimo preferido
+            </label>
+            <Input
+              id={`${sectionId}-manual-preferred-min-throughput`}
+              type="number"
+              min={1}
+              value={value.preferredMinThroughput}
+              onChange={(event) => update('preferredMinThroughput', event.target.value)}
+              placeholder="Ex.: 100"
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 text-sm"
+            />
+          </div>
+
+          <div className="space-y-2 text-sm text-zinc-300">
+            <label
+              htmlFor={`${sectionId}-only-providers`}
+              className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Permitir apenas estes providers
+            </label>
+            <Input
+              id={`${sectionId}-only-providers`}
+              type="text"
+              value={value.onlyProvidersText}
+              onChange={(event) => update('onlyProvidersText', event.target.value)}
+              placeholder="openai, anthropic"
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 text-sm"
+            />
+          </div>
+
+          <div className="space-y-2 text-sm text-zinc-300">
+            <label
+              htmlFor={`${sectionId}-ignore-providers`}
+              className="block text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            >
+              Ignorar estes providers
+            </label>
+            <Input
+              id={`${sectionId}-ignore-providers`}
+              type="text"
+              value={value.ignoreProvidersText}
+              onChange={(event) => update('ignoreProvidersText', event.target.value)}
+              placeholder="together, fireworks"
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 text-sm"
+            />
+          </div>
+        </div>
+      )}
+
+      <p className="text-[11px] leading-5 text-zinc-600">
+        {ROUTING_MODE_LABELS[value.mode]}: somente os campos preenchidos são persistidos. Listas
+        aceitam providers separados por vírgula.
+      </p>
     </div>
   );
 }
@@ -295,6 +624,10 @@ export function AiPostGenerationSettingsPanel() {
   const [draftSearch, setDraftSearch] = useState('');
   const [topicsPage, setTopicsPage] = useState(1);
   const [draftPage, setDraftPage] = useState(1);
+  const [topicsRoutingDraft, setTopicsRoutingDraft] = useState<ProviderRoutingFormState | null>(
+    null
+  );
+  const [draftRoutingDraft, setDraftRoutingDraft] = useState<ProviderRoutingFormState | null>(null);
   const [isRefreshingCatalog, setIsRefreshingCatalog] = useState(false);
   const deferredTopicsSearch = useDeferredValue(topicsSearch);
   const deferredDraftSearch = useDeferredValue(draftSearch);
@@ -320,6 +653,10 @@ export function AiPostGenerationSettingsPanel() {
   const savedDraftModel = configState?.config?.draftModelId ?? '';
   const effectiveTopics = topicsModelId || savedTopicsModel;
   const effectiveDraft = draftModelId || savedDraftModel;
+  const effectiveTopicsRouting =
+    topicsRoutingDraft ?? toRoutingFormState(configState?.config?.topicsRouting);
+  const effectiveDraftRouting =
+    draftRoutingDraft ?? toRoutingFormState(configState?.config?.draftRouting);
   const hasCatalogError = topicsModelsQuery.isError || draftModelsQuery.isError;
 
   async function handleRefreshCatalog() {
@@ -347,7 +684,12 @@ export function AiPostGenerationSettingsPanel() {
 
   function handleSave() {
     if (!effectiveTopics || !effectiveDraft) return;
-    save({ topicsModelId: effectiveTopics, draftModelId: effectiveDraft });
+    save({
+      topicsModelId: effectiveTopics,
+      draftModelId: effectiveDraft,
+      topicsRouting: buildRoutingConfig(effectiveTopicsRouting),
+      draftRouting: buildRoutingConfig(effectiveDraftRouting),
+    });
   }
 
   if (isLoadingConfig) {
@@ -522,9 +864,35 @@ export function AiPostGenerationSettingsPanel() {
             />
           </div>
 
+          <div className="space-y-4 border-t border-zinc-800 pt-5">
+            <div>
+              <h2 className="text-sm font-semibold text-zinc-200 mb-0.5">Routing do provider</h2>
+              <p className="text-xs text-zinc-500">
+                Preferências opcionais por operação. Deixe em modo balanceado para usar o padrão
+                resiliente do OpenRouter.
+              </p>
+            </div>
+
+            <div className="grid gap-5 xl:grid-cols-2">
+              <RoutingPreferencesSection
+                title="Temas"
+                description="Use baixa latência quando quiser respostas mais rápidas no fluxo de sugestão de temas."
+                value={effectiveTopicsRouting}
+                onChange={setTopicsRoutingDraft}
+              />
+
+              <RoutingPreferencesSection
+                title="Rascunhos"
+                description="Rascunhos costumam tolerar mais processamento; use manual apenas quando precisar restringir providers explicitamente."
+                value={effectiveDraftRouting}
+                onChange={setDraftRoutingDraft}
+              />
+            </div>
+          </div>
+
           <div className="flex items-center justify-between pt-1 border-t border-zinc-800">
             <p className="text-xs text-zinc-600">
-              Os modelos são validados contra o catálogo ao salvar.
+              Modelos e preferências de routing são validados antes de persistir a configuração.
             </p>
             <Button
               onClick={handleSave}

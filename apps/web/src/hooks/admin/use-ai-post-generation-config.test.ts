@@ -49,7 +49,16 @@ function makeWrapper() {
 const CONFIG_STATE = {
   featureEnabled: true,
   status: 'ready',
-  config: { topicsModelId: 'openai/gpt-4o', draftModelId: 'openai/gpt-4o' },
+  config: {
+    topicsModelId: 'openai/gpt-4o',
+    draftModelId: 'openai/gpt-4o',
+    topicsRouting: { mode: 'low-latency', preferredMaxLatencySeconds: 10 },
+    draftRouting: {
+      mode: 'manual',
+      providerOrder: ['anthropic', 'openai'],
+      allowFallbacks: false,
+    },
+  },
   issues: [],
   updatedAt: '2026-01-01T00:00:00.000Z',
   updatedBy: 'admin',
@@ -165,7 +174,16 @@ describe('use-ai-post-generation-config hooks', () => {
     it('calls apiPut with correct URL and payload', () => {
       useAdminMutationMock.mockImplementation((opts: { mutationFn: (d: unknown) => unknown }) => {
         // Invoke the mutationFn directly to verify the API call shape
-        opts.mutationFn({ topicsModelId: 'openai/gpt-4o', draftModelId: 'openai/gpt-4o' });
+        opts.mutationFn({
+          topicsModelId: 'openai/gpt-4o',
+          draftModelId: 'openai/gpt-4o',
+          topicsRouting: { mode: 'low-latency', preferredMaxLatencySeconds: 10 },
+          draftRouting: {
+            mode: 'manual',
+            providerOrder: ['anthropic', 'openai'],
+            allowFallbacks: false,
+          },
+        });
         return { mutate: vi.fn(), isPending: false };
       });
 
@@ -174,6 +192,12 @@ describe('use-ai-post-generation-config hooks', () => {
       expect(apiPutMock).toHaveBeenCalledWith('/admin/posts/generate/config', {
         topicsModelId: 'openai/gpt-4o',
         draftModelId: 'openai/gpt-4o',
+        topicsRouting: { mode: 'low-latency', preferredMaxLatencySeconds: 10 },
+        draftRouting: {
+          mode: 'manual',
+          providerOrder: ['anthropic', 'openai'],
+          allowFallbacks: false,
+        },
       });
     });
   });

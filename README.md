@@ -242,15 +242,17 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 
 ### Assistente de geração de posts com IA
 
-- `AI_POSTS_ENABLED=true` habilita as rotas `POST /admin/posts/generate/topics` e os endpoints assíncronos `POST /admin/posts/generate/draft-runs` / `GET /admin/posts/generate/draft-runs/:id`.
-- O endpoint legado síncrono `POST /admin/posts/generate/draft` segue disponível para compatibilidade.
+- `AI_POSTS_ENABLED=true` habilita os fluxos assíncronos de geração de temas e de rascunho.
+- **Geração de temas (async):** `POST /admin/posts/generate/topic-runs` (cria run, retorna `202`) + `GET /admin/posts/generate/topic-runs/:id` (poll de status/resultado). Timeouts e falhas do provider são persistidos como estados do run (`timed_out`, `failed`) em vez de erros síncronos no HTTP.
+- **Geração de rascunho (async):** `POST /admin/posts/generate/draft-runs` / `GET /admin/posts/generate/draft-runs/:id`.
+- Os endpoints legados síncronos `POST /admin/posts/generate/topics` e `POST /admin/posts/generate/draft` seguem disponíveis para compatibilidade e diagnóstico, mas não são o caminho principal da UI.
 - A categoria `misto` pode ser usada na geração de temas para pedir sugestões de qualquer categoria editorial; cada sugestão retornada continua trazendo uma categoria concreta.
 - Tags sugeridas pela IA são canonicalizadas antes de chegar ao review, priorizando nomes já existentes no catálogo e os nomes canônicos compartilhados do monorepo.
 - `OPENROUTER_API_KEY` é obrigatório quando a flag está ligada. Obtenha em [openrouter.ai/keys](https://openrouter.ai/keys).
-- `AI_POSTS_TIMEOUT_MS` ajusta o timeout do provider.
-- Os modelos ativos (**topics** e **draft**) são configurados via painel admin em `/admin/settings/ai-post-generation` e armazenados no banco de dados. Não são mais configurados por variável de ambiente.
+- `AI_POSTS_TIMEOUT_MS` ajusta o timeout do provider (usado tanto nas rotas legadas quanto nos workers assíncronos).
+- Os modelos ativos (**topics** e **draft**) são configurados via painel admin em `/admin/settings/ai-post-generation` e armazenados no banco de dados. Preferências de roteamento de provider (`mode`, `providerOrder`, `allowFallbacks`, `sort`, `preferredMaxLatencySeconds`, `preferredMinThroughput`, `onlyProviders`, `ignoreProviders`) também são persistidas por operação nos campos `topics_routing` e `draft_routing`.
 
-Quando habilitado, o assistente aparece em `/admin/posts/new`. O fluxo assíncrono (`/draft-runs`) cria um registro persistido no banco de dados e executa a geração em background via BullMQ worker, possibilitando polling de progresso por estágio. O admin precisa aplicar manualmente os campos gerados ao formulário — nada é salvo no rascunho de post automaticamente.
+Quando habilitado, o assistente aparece em `/admin/posts/new`. Tanto a geração de temas quanto a de rascunho criam registros persistidos no banco de dados e executam em background via BullMQ worker, possibilitando polling de progresso por estágio. O admin precisa aplicar manualmente os campos gerados ao formulário — nada é salvo no rascunho de post automaticamente.
 
 O payload de draft gerado contém:
 

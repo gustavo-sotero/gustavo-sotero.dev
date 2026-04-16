@@ -25,7 +25,7 @@ import type { AiPostDraftRun } from '@portfolio/shared/db/schema';
 import { aiPostDraftRuns, outbox, tags } from '@portfolio/shared/db/schema';
 import { asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';
-import { resolveActiveAiPostGenerationConfig } from './ai-post-generation-settings.service';
+import { resolveActiveAiDraftGenerationConfig } from './ai-post-generation-settings.service';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -74,7 +74,7 @@ export async function createDraftRun(
   // Pre-flight: ensure the feature is configured before accepting the run.
   // This surfaces config errors synchronously rather than failing silently in the worker.
   const [activeConfig, persistedTags] = await Promise.all([
-    resolveActiveAiPostGenerationConfig(),
+    resolveActiveAiDraftGenerationConfig(),
     loadPersistedTagsForNormalization(),
   ]);
 

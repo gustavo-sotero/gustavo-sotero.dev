@@ -4,6 +4,7 @@ import type {
   ProviderRoutingConfig,
   UpdateAiPostGenerationConfig,
 } from '@portfolio/shared';
+import { providerRoutingConfigSchema } from '@portfolio/shared';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import {
@@ -13,6 +14,26 @@ import {
 import { validateModelId } from './openrouter-models.service';
 
 const logger = getLogger('services', 'ai-post-generation-settings');
+
+function parsePersistedRoutingConfig(
+  value: unknown,
+  operation: 'topics' | 'draft'
+): ProviderRoutingConfig | null | undefined {
+  if (value == null) {
+    return null;
+  }
+
+  const parsed = providerRoutingConfigSchema.safeParse(value);
+  if (!parsed.success) {
+    logger.warn('Ignoring invalid persisted AI provider routing config', {
+      operation,
+      issues: parsed.error.issues.map((issue) => issue.message),
+    });
+    return null;
+  }
+
+  return parsed.data;
+}
 
 // ── Config state resolution ───────────────────────────────────────────────────
 
@@ -56,8 +77,8 @@ export async function getAiPostGenerationConfigState(): Promise<AiPostGeneration
   const config: AiPostGenerationConfig = {
     topicsModelId: row.topicsModelId,
     draftModelId: row.draftModelId,
-    topicsRouting: row.topicsRouting as ProviderRoutingConfig | null | undefined,
-    draftRouting: row.draftRouting as ProviderRoutingConfig | null | undefined,
+    topicsRouting: parsePersistedRoutingConfig(row.topicsRouting, 'topics'),
+    draftRouting: parsePersistedRoutingConfig(row.draftRouting, 'draft'),
   };
 
   // Validate current selection against OpenRouter catalog
@@ -254,8 +275,8 @@ export async function resolveActiveAiPostGenerationConfig(): Promise<AiPostGener
   return {
     topicsModelId: row.topicsModelId,
     draftModelId: row.draftModelId,
-    topicsRouting: row.topicsRouting as ProviderRoutingConfig | null | undefined,
-    draftRouting: row.draftRouting as ProviderRoutingConfig | null | undefined,
+    topicsRouting: parsePersistedRoutingConfig(row.topicsRouting, 'topics'),
+    draftRouting: parsePersistedRoutingConfig(row.draftRouting, 'draft'),
   };
 }
 
@@ -306,7 +327,7 @@ export async function resolveActiveAiTopicGenerationConfig(): Promise<
 
   return {
     topicsModelId: row.topicsModelId,
-    topicsRouting: row.topicsRouting as ProviderRoutingConfig | null | undefined,
+    topicsRouting: parsePersistedRoutingConfig(row.topicsRouting, 'topics'),
   };
 }
 
@@ -355,6 +376,6 @@ export async function resolveActiveAiDraftGenerationConfig(): Promise<
 
   return {
     draftModelId: row.draftModelId,
-    draftRouting: row.draftRouting as ProviderRoutingConfig | null | undefined,
+    draftRouting: parsePersistedRoutingConfig(row.draftRouting, 'draft'),
   };
 }

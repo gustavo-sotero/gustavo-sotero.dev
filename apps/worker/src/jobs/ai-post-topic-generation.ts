@@ -24,16 +24,19 @@ import {
   generateTopicsResponseSchema,
   type PersistedTagForNormalization,
   type ProviderRoutingConfig,
+  providerRoutingConfigSchema,
   type TopicSuggestion,
 } from '@portfolio/shared';
 import { aiPostTopicRuns, tags } from '@portfolio/shared/db/schema';
 import type { Job } from 'bullmq';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';
+import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { generateStructuredObject } from '../lib/ai/generateStructuredObject';
 
 const logger = getLogger('worker', 'jobs', 'ai-post-topic-generation');
+const ASYNC_AI_GENERATION_MAX_RETRIES = 0;
 
 type ActiveRunStatus = 'running' | 'validating';
 
@@ -172,7 +175,8 @@ export async function processAiPostTopicGeneration(job: Job<AiPostTopicJobData>)
   let topicsRouting: ProviderRoutingConfig | undefined;
   try {
     const settings = await db.query.aiPostGenerationSettings.findFirst();
-    topicsRouting = (settings?.topicsRouting as ProviderRoutingConfig) ?? undefined;
+    const parsedRouting = providerRoutingConfigSchema.safeParse(settings?.topicsRouting ?? null);
+    topicsRouting = parsedRouting.success ? (parsedRouting.data ?? undefined) : undefined;
   } catch {
     // Non-fatal: routing config unavailable, proceed without it
   }
@@ -195,6 +199,8 @@ export async function processAiPostTopicGeneration(job: Job<AiPostTopicJobData>)
       operation: 'topic-async',
       metadata: { category: requestPayload.category, runId },
       providerRouting: topicsRouting,
+      timeoutMs: env.AI_POSTS_TIMEOUT_MS,
+      maxRetries: ASYNC_AI_GENERATION_MAX_RETRIES,
     });
     providerGenerationId = result.providerGenerationId;
 

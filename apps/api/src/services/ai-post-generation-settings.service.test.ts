@@ -39,6 +39,8 @@ const SAVED_ROW = {
   scope: 'global',
   topicsModelId: 'openai/gpt-4o',
   draftModelId: 'openai/gpt-4o',
+  topicsRouting: { mode: 'low-latency', preferredMaxLatencySeconds: 10 },
+  draftRouting: { order: ['openai'], allow_fallbacks: false },
   updatedBy: 'admin',
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
@@ -95,6 +97,15 @@ describe('ai-post-generation-settings.service', () => {
 
       expect(state.status).toBe('ready');
       expect(state.config?.topicsModelId).toBe('openai/gpt-4o');
+      expect(state.config?.topicsRouting).toEqual({
+        mode: 'low-latency',
+        preferredMaxLatencySeconds: 10,
+      });
+      expect(state.config?.draftRouting).toEqual({
+        mode: 'manual',
+        providerOrder: ['openai'],
+        allowFallbacks: false,
+      });
       expect(state.issues).toHaveLength(0);
     });
 
@@ -185,6 +196,15 @@ describe('ai-post-generation-settings.service', () => {
 
       expect(config.topicsModelId).toBe('openai/gpt-4o');
       expect(config.draftModelId).toBe('openai/gpt-4o');
+      expect(config.topicsRouting).toEqual({
+        mode: 'low-latency',
+        preferredMaxLatencySeconds: 10,
+      });
+      expect(config.draftRouting).toEqual({
+        mode: 'manual',
+        providerOrder: ['openai'],
+        allowFallbacks: false,
+      });
     });
 
     it('throws DISABLED when feature is off', async () => {
@@ -228,6 +248,10 @@ describe('ai-post-generation-settings.service', () => {
       const config = await resolveActiveAiTopicGenerationConfig();
 
       expect(config.topicsModelId).toBe('openai/gpt-4o');
+      expect(config.topicsRouting).toEqual({
+        mode: 'low-latency',
+        preferredMaxLatencySeconds: 10,
+      });
     });
 
     it('succeeds even when the draft model is invalid (decoupled from draft config)', async () => {
@@ -297,6 +321,11 @@ describe('ai-post-generation-settings.service', () => {
       const config = await resolveActiveAiDraftGenerationConfig();
 
       expect(config.draftModelId).toBe('openai/gpt-4o');
+      expect(config.draftRouting).toEqual({
+        mode: 'manual',
+        providerOrder: ['openai'],
+        allowFallbacks: false,
+      });
     });
 
     it('succeeds even when the topics model is invalid (decoupled from topics config)', async () => {

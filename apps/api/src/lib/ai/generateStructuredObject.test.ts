@@ -137,6 +137,50 @@ describe('generateStructuredObject', () => {
       );
     });
 
+    it('passes explicit timeout and retry policy to the AI SDK call', async () => {
+      generateObjectMock.mockResolvedValueOnce(MOCK_AI_RESULT);
+
+      await generateStructuredObject({ ...BASE_OPTS, timeoutMs: 1_234, maxRetries: 2 });
+
+      expect(generateObjectMock).toHaveBeenCalledWith(
+        expect.objectContaining({ timeout: 1_234, maxRetries: 2 })
+      );
+    });
+
+    it('maps normalized provider routing to OpenRouter provider options', async () => {
+      generateObjectMock.mockResolvedValueOnce(MOCK_AI_RESULT);
+
+      await generateStructuredObject({
+        ...BASE_OPTS,
+        providerRouting: {
+          mode: 'manual',
+          allowFallbacks: false,
+          providerOrder: ['anthropic', 'openai'],
+          onlyProviders: ['anthropic'],
+          ignoreProviders: ['together'],
+          sort: 'latency',
+          preferredMaxLatencySeconds: 10,
+          preferredMinThroughput: 100,
+        },
+      });
+
+      expect(fakeModelFactory).toHaveBeenCalledWith(
+        'openai/gpt-4o',
+        expect.objectContaining({
+          provider: {
+            require_parameters: true,
+            order: ['anthropic', 'openai'],
+            allow_fallbacks: false,
+            sort: 'latency',
+            preferred_max_latency: 10,
+            preferred_min_throughput: 100,
+            only: ['anthropic'],
+            ignore: ['together'],
+          },
+        })
+      );
+    });
+
     it('passes the provided model ID to the model factory', async () => {
       generateObjectMock.mockResolvedValueOnce(MOCK_AI_RESULT);
 

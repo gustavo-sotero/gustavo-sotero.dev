@@ -2,14 +2,14 @@ import { OutboxEventType } from '@portfolio/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
-  resolveActiveAiPostGenerationConfigMock,
+  resolveActiveAiDraftGenerationConfigMock,
   selectOrderByMock,
   txInsertRunValuesMock,
   txInsertRunReturningMock,
   txInsertOutboxValuesMock,
   draftRunFindFirstMock,
 } = vi.hoisted(() => ({
-  resolveActiveAiPostGenerationConfigMock: vi.fn(),
+  resolveActiveAiDraftGenerationConfigMock: vi.fn(),
   selectOrderByMock: vi.fn(),
   txInsertRunValuesMock: vi.fn(),
   txInsertRunReturningMock: vi.fn(),
@@ -46,7 +46,7 @@ vi.mock('../config/db', () => ({
 }));
 
 vi.mock('./ai-post-generation-settings.service', () => ({
-  resolveActiveAiPostGenerationConfig: resolveActiveAiPostGenerationConfigMock,
+  resolveActiveAiDraftGenerationConfig: resolveActiveAiDraftGenerationConfigMock,
 }));
 
 import { createDraftRun, getDraftRunStatus } from './ai-post-generation-draft-runs.service';
@@ -109,8 +109,7 @@ function makeRun(overrides: Record<string, unknown> = {}) {
 describe('ai-post-generation-draft-runs.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resolveActiveAiPostGenerationConfigMock.mockResolvedValue({
-      topicsModelId: 'openai/gpt-4o-mini',
+    resolveActiveAiDraftGenerationConfigMock.mockResolvedValue({
       draftModelId: 'openai/gpt-4o',
     });
     selectOrderByMock.mockResolvedValue([

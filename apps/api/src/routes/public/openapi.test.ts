@@ -358,6 +358,7 @@ describe('openapi routes', () => {
     expect(String(draftSuccess?.data?.linkedinPost)).toMatch(/#\w+/);
 
     expect(draftRunsPost?.description).toContain('run ID');
+    expect(draftRunsPost?.responses && Object.hasOwn(draftRunsPost.responses, '503')).toBe(true);
     expect(draftRunsSchema?.properties?.category?.enum).toContain('misto');
     expect(draftRunsSchema?.required).toContain('selectedSuggestion');
     expect(draftRunsSchema?.properties?.selectedSuggestion?.required).toContain('proposedTitle');
@@ -383,6 +384,9 @@ describe('openapi routes', () => {
 
     // ── topic-runs OpenAPI parity ──────────────────────────────────────────────
     expect(topicRunsPost?.description).toContain('topic-runs');
+    expect(topicRunsPost?.description).toContain('10 requests per minute');
+    expect(topicRunsPost?.responses && Object.hasOwn(topicRunsPost.responses, '503')).toBe(true);
+    expect(topicRunsPost?.responses && Object.hasOwn(topicRunsPost.responses, '422')).toBe(false);
     expect(topicRunsSchema?.properties?.category?.enum).toContain('backend-arquitetura');
     expect(topicRunsSchema?.properties?.limit?.default).toBe(4);
     expect(topicRunsSchema?.properties?.limit?.minimum).toBe(3);
@@ -396,5 +400,66 @@ describe('openapi routes', () => {
     expect((topicRunCompletedResult?.suggestions as unknown[])?.[0]).toHaveProperty(
       'proposedTitle'
     );
+  });
+
+  it('GET /doc/spec documents AI config routing preferences in GET and PUT payloads', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<string, Record<string, unknown>>;
+    };
+
+    const configPath = body.paths['/admin/posts/generate/config'] as {
+      get?: {
+        responses?: Record<string, { content?: { 'application/json'?: { example?: unknown } } }>;
+      };
+      put?: {
+        requestBody?: {
+          content?: { 'application/json'?: { schema?: unknown; example?: unknown } };
+        };
+      };
+    };
+
+    const getExample = configPath.get?.responses?.['200']?.content?.['application/json']?.example as
+      | {
+          data?: {
+            config?: {
+              topicsRouting?: Record<string, unknown>;
+              draftRouting?: Record<string, unknown>;
+            };
+          };
+        }
+      | undefined;
+
+    const putSchema = configPath.put?.requestBody?.content?.['application/json']?.schema as
+      | { properties?: Record<string, unknown> }
+      | undefined;
+    const putExample = configPath.put?.requestBody?.content?.['application/json']?.example as
+      | {
+          topicsRouting?: Record<string, unknown>;
+          draftRouting?: Record<string, unknown>;
+        }
+      | undefined;
+
+    expect(getExample?.data?.config?.topicsRouting).toMatchObject({
+      mode: 'low-latency',
+    });
+    expect(getExample?.data?.config?.draftRouting).toMatchObject({
+      mode: 'manual',
+    });
+    expect(putSchema?.properties && Object.hasOwn(putSchema.properties, 'topicsRouting')).toBe(
+      true
+    );
+    expect(putSchema?.properties && Object.hasOwn(putSchema.properties, 'draftRouting')).toBe(true);
+    expect(putExample?.topicsRouting).toMatchObject({
+      mode: 'low-latency',
+      preferredMaxLatencySeconds: 10,
+    });
+    expect(putExample?.draftRouting).toMatchObject({
+      mode: 'manual',
+      providerOrder: ['openai', 'anthropic'],
+    });
   });
 });

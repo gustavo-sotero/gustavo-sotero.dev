@@ -167,6 +167,16 @@ export const adminPaths = {
                   config: {
                     topicsModelId: 'anthropic/claude-sonnet-4-5',
                     draftModelId: 'openai/gpt-4o',
+                    topicsRouting: {
+                      mode: 'low-latency',
+                      preferredMaxLatencySeconds: 10,
+                    },
+                    draftRouting: {
+                      mode: 'manual',
+                      providerOrder: ['openai', 'anthropic'],
+                      allowFallbacks: true,
+                      sort: 'throughput',
+                    },
                   },
                   issues: [],
                   updatedAt: '2026-04-14T12:00:00.000Z',
@@ -184,7 +194,7 @@ export const adminPaths = {
       tags: ['Admin - Posts'],
       summary: 'Save AI post generation config',
       description:
-        'Validates and persists the active model pair for AI post generation. Both models must support structured_outputs in the OpenRouter catalog.',
+        'Validates and persists the active model pair plus optional provider routing preferences for AI post generation. Both models must support structured_outputs in the OpenRouter catalog.',
       operationId: 'adminSaveAiPostGenerationConfig',
       security: [{ cookieAuth: [] }],
       requestBody: {
@@ -205,11 +215,96 @@ export const adminPaths = {
                   description: 'OpenRouter model ID for draft generation.',
                   example: 'openai/gpt-4o',
                 },
+                topicsRouting: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    mode: {
+                      type: 'string',
+                      enum: ['balanced', 'low-latency', 'manual'],
+                    },
+                    providerOrder: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                    allowFallbacks: {
+                      type: 'boolean',
+                    },
+                    sort: {
+                      type: 'string',
+                      enum: ['price', 'latency', 'throughput'],
+                    },
+                    preferredMaxLatencySeconds: {
+                      type: 'integer',
+                      minimum: 1,
+                    },
+                    preferredMinThroughput: {
+                      type: 'integer',
+                      minimum: 1,
+                    },
+                    onlyProviders: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                    ignoreProviders: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                  },
+                },
+                draftRouting: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    mode: {
+                      type: 'string',
+                      enum: ['balanced', 'low-latency', 'manual'],
+                    },
+                    providerOrder: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                    allowFallbacks: {
+                      type: 'boolean',
+                    },
+                    sort: {
+                      type: 'string',
+                      enum: ['price', 'latency', 'throughput'],
+                    },
+                    preferredMaxLatencySeconds: {
+                      type: 'integer',
+                      minimum: 1,
+                    },
+                    preferredMinThroughput: {
+                      type: 'integer',
+                      minimum: 1,
+                    },
+                    onlyProviders: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                    ignoreProviders: {
+                      type: 'array',
+                      items: { type: 'string' },
+                    },
+                  },
+                },
               },
             },
             example: {
               topicsModelId: 'anthropic/claude-sonnet-4-5',
               draftModelId: 'openai/gpt-4o',
+              topicsRouting: {
+                mode: 'low-latency',
+                preferredMaxLatencySeconds: 10,
+              },
+              draftRouting: {
+                mode: 'manual',
+                providerOrder: ['openai', 'anthropic'],
+                allowFallbacks: true,
+                sort: 'throughput',
+                onlyProviders: ['openai', 'anthropic'],
+              },
             },
           },
         },
@@ -227,6 +322,16 @@ export const adminPaths = {
                   config: {
                     topicsModelId: 'anthropic/claude-sonnet-4-5',
                     draftModelId: 'openai/gpt-4o',
+                    topicsRouting: {
+                      mode: 'low-latency',
+                      preferredMaxLatencySeconds: 10,
+                    },
+                    draftRouting: {
+                      mode: 'manual',
+                      providerOrder: ['openai', 'anthropic'],
+                      allowFallbacks: true,
+                      sort: 'throughput',
+                    },
                   },
                   issues: [],
                   updatedAt: '2026-04-14T12:00:00.000Z',
@@ -719,6 +824,21 @@ export const adminPaths = {
         },
         401: { $ref: '#/components/responses/Unauthorized' },
         403: { $ref: '#/components/responses/Forbidden' },
+        503: {
+          description: 'Feature disabled, model not configured, or provider unavailable.',
+          content: {
+            'application/json': {
+              example: {
+                success: false,
+                error: {
+                  code: 'SERVICE_UNAVAILABLE',
+                  message:
+                    'A geração de posts com IA não está configurada. Configure os modelos na página de configurações.',
+                },
+              },
+            },
+          },
+        },
         429: { $ref: '#/components/responses/RateLimited' },
         500: { $ref: '#/components/responses/InternalError' },
       },
@@ -847,7 +967,7 @@ export const adminPaths = {
       tags: ['Admin - Posts'],
       summary: 'Create async topic run',
       description:
-        'Enqueues an async topic generation run. Returns immediately with a run ID and recommended poll interval. Poll GET /admin/posts/generate/topic-runs/:id until status is `completed` or terminal. Admin-only, CSRF-protected, rate limited to 5 requests per minute.',
+        'Enqueues an async topic generation run. Returns immediately with a run ID and recommended poll interval. Poll GET /admin/posts/generate/topic-runs/:id until status is `completed` or terminal. Admin-only, CSRF-protected, rate limited to 10 requests per minute.',
       operationId: 'adminCreatePostTopicRun',
       security: [{ cookieAuth: [] }],
       requestBody: {
@@ -914,13 +1034,16 @@ export const adminPaths = {
         400: { $ref: '#/components/responses/ValidationError' },
         401: { $ref: '#/components/responses/Unauthorized' },
         403: { $ref: '#/components/responses/Forbidden' },
-        422: {
-          description: 'Feature disabled or model not configured.',
+        503: {
+          description: 'Feature disabled, model not configured, or provider unavailable.',
           content: {
             'application/json': {
               example: {
                 success: false,
-                error: { code: 'DISABLED', message: 'AI post generation is disabled.' },
+                error: {
+                  code: 'SERVICE_UNAVAILABLE',
+                  message: 'A geração de posts com IA não está habilitada nesta instância.',
+                },
               },
             },
           },
