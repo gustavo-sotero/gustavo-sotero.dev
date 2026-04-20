@@ -10,18 +10,18 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.4"
   },
   "dependencies": {
     "@logtape/file": "^2.0.5",
     "@logtape/logtape": "^2.0.5",
-    "@openrouter/ai-sdk-provider": "^2.5.1",
+    "@openrouter/ai-sdk-provider": "^2.8.0",
     "@portfolio/shared": "workspace:*",
-    "ai": "^6.0.158",
-    "bullmq": "^5.71.1",
+    "ai": "^6.0.168",
+    "bullmq": "^5.75.2",
     "drizzle-orm": "^0.45.2",
     "ioredis": "^5.10.1",
-    "postgres": "^3.4.8",
+    "postgres": "^3.4.9",
     "sharp": "^0.34.5",
     "zod": "^4.3.6"
   }
