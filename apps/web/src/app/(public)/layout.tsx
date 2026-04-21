@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { SITE_METADATA } from '@/lib/constants';
@@ -47,12 +46,10 @@ export default function PublicLayout({
       >
         Ir para o conteúdo principal
       </a>
-      {/* Header wrapped in Suspense: NavLinks uses usePathname() which is
-          a dynamic API in Cache Components mode. Suspense allows the build
-          to prerender the page shell while deferring path-dependent rendering. */}
-      <Suspense fallback={null}>
-        <Header />
-      </Suspense>
+      {/* Header is fully prerendered. Active link state is refined on the
+          client via a browser pathname store instead of Next's dynamic
+          pathname hook, so the navbar no longer needs a Suspense boundary. */}
+      <Header />
       <main id="main-content" className="flex-1">
         {children}
       </main>

@@ -2,10 +2,10 @@
 
 import { BookOpen, Home, Layers, Mail, Menu, X } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useBrowserPathname } from '@/hooks/use-browser-pathname';
 import { NAV_LINKS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +18,7 @@ const NAV_ICONS: Record<string, React.ElementType> = {
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
+  const pathname = useBrowserPathname();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

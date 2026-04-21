@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useBrowserPathname } from '@/hooks/use-browser-pathname';
 import { NAV_LINKS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 export function NavLinks() {
-  const pathname = usePathname();
+  const pathname = useBrowserPathname();
 
   return (
     <ul className="hidden md:flex items-center gap-1">
