@@ -11,6 +11,7 @@ vi.mock('@portfolio/shared', () => ({
     role: 'Desenvolvedor Fullstack',
     bio: 'Construo APIs robustas.',
     bioShort: 'Especialista em backend TypeScript.',
+    experienceLabel: '3+ anos',
     availability: 'Disponivel para novos projetos',
     hero: {
       greeting: 'Ola',
@@ -27,7 +28,6 @@ vi.mock('@portfolio/shared', () => ({
       email: 'gustavo@example.com',
     },
   },
-  getExperienceLabel: () => '3+ anos',
 }));
 
 vi.mock('next/link', () => ({
@@ -164,10 +164,9 @@ describe('HeroSection', () => {
     expect(screen.getByText(/Construo APIs robustas/)).toBeInTheDocument();
   });
 
-  it('renders the experience label from getExperienceLabel inside the bio', () => {
+  it('renders the configured experience label inside the bio', () => {
     render(<HeroSection tags={[]} resumeData={makeResumeData()} />);
 
-    // getExperienceLabel() is mocked to return '3+ anos'.
     const label = screen.getByText(/3\+ anos/);
     expect(label).toBeInTheDocument();
 

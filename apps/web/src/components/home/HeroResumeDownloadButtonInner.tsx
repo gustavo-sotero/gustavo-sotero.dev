@@ -5,11 +5,13 @@ import { Download, Loader2 } from 'lucide-react';
 import { useCallback } from 'react';
 import { ResumePdfDocument } from '@/components/resume/ResumePdfDocument';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
-import type { ResumeViewModel } from '@/lib/resume/mapper';
+import type { ResumeDataPayload } from '@/lib/data/public/resume';
+import { buildResumeViewModel } from '@/lib/resume/mapper';
 
 const FILENAME = 'curriculo-gustavo-sotero.pdf';
 
-export function HeroResumeDownloadButtonInner({ resume }: { resume: ResumeViewModel }) {
+export function HeroResumeDownloadButtonInner({ resumeData }: { resumeData: ResumeDataPayload }) {
+  const resume = buildResumeViewModel({ ...resumeData, now: new Date() });
   const [instance] = usePDF({ document: <ResumePdfDocument resume={resume} /> });
 
   const handleClick = useCallback(() => {

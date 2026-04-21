@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Marquee } from '@/components/ui/marquee';
 import { SOCIAL_LINKS } from '@/lib/constants';
 import type { ResumeDataPayload } from '@/lib/data/public/resume';
-import { buildResumeViewModel } from '@/lib/resume/mapper';
 import { HeroResumeDownloadButton } from './HeroResumeDownloadButton';
 import { HeroTerminal } from './HeroTerminal';
 
@@ -57,13 +56,15 @@ function pickStackBadges(tags: Tag[], count = 5): StackBadge[] {
 interface HeroSectionProps {
   tags?: Tag[];
   resumeData: ResumeDataPayload;
-  now: Date;
-  experienceLabel: string;
+  experienceLabel?: string;
 }
 
-export function HeroSection({ tags = [], resumeData, now, experienceLabel }: HeroSectionProps) {
+export function HeroSection({
+  tags = [],
+  resumeData,
+  experienceLabel = DEVELOPER_PUBLIC_PROFILE.experienceLabel,
+}: HeroSectionProps) {
   const prefersReducedMotion = useReducedMotion();
-  const resume = buildResumeViewModel({ ...resumeData, now });
   const stack: StackBadge[] =
     tags.length > 0
       ? pickStackBadges(tags)
@@ -131,7 +132,7 @@ export function HeroSection({ tags = [], resumeData, now, experienceLabel }: Her
             {/* CTAs */}
             <div className="flex flex-wrap gap-3 pt-2">
               {/* Currículo PDF — most prominent CTA */}
-              <HeroResumeDownloadButton resume={resume} />
+              <HeroResumeDownloadButton resumeData={resumeData} />
               <Button
                 asChild
                 size="lg"
