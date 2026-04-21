@@ -2,7 +2,7 @@
 
 import { SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons';
 import type { Tag, TagCategory } from '@portfolio/shared';
-import { DEVELOPER_PUBLIC_PROFILE, getExperienceLabel } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 import { Mail, Star } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import dynamic from 'next/dynamic';
@@ -57,12 +57,13 @@ function pickStackBadges(tags: Tag[], count = 5): StackBadge[] {
 interface HeroSectionProps {
   tags?: Tag[];
   resumeData: ResumeDataPayload;
+  now: Date;
+  experienceLabel: string;
 }
 
-export function HeroSection({ tags = [], resumeData }: HeroSectionProps) {
+export function HeroSection({ tags = [], resumeData, now, experienceLabel }: HeroSectionProps) {
   const prefersReducedMotion = useReducedMotion();
-  const experienceLabel = getExperienceLabel();
-  const resume = buildResumeViewModel({ ...resumeData, now: new Date() });
+  const resume = buildResumeViewModel({ ...resumeData, now });
   const stack: StackBadge[] =
     tags.length > 0
       ? pickStackBadges(tags)
@@ -245,7 +246,7 @@ export function HeroSection({ tags = [], resumeData }: HeroSectionProps) {
               opacity:0 on the server and animate in after hydration via the
               terminal's own TypingAnimation / AnimatedSpan sequence. */}
           <div className="relative order-2 flex justify-center lg:justify-end">
-            <HeroTerminal stack={terminalStack} />
+            <HeroTerminal stack={terminalStack} experienceLabel={experienceLabel} />
           </div>
         </div>
       </div>

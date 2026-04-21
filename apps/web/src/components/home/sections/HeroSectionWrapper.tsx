@@ -1,3 +1,4 @@
+import { getExperienceLabel } from '@portfolio/shared';
 import { SectionUnavailable } from '@/components/shared/SectionUnavailable';
 import { getHomeTags } from '@/lib/data/public/home';
 import { getResumeData } from '@/lib/data/public/resume';
@@ -8,15 +9,26 @@ import { HeroSection } from '../HeroSection';
  * Fetches tags and resume data in parallel so the hero can render the real
  * PDF download button without an extra client-side data round-trip.
  * Falls back to empty tags (Hero shows FALLBACK_STACK) if the API is unavailable.
+ *
+ * `now` and `experienceLabel` are computed here (Server Component) so that
+ * the Client Component tree never calls `new Date()` directly — which would
+ * fail Next.js static pre-rendering without a Suspense boundary.
  */
 export async function HeroSectionWrapper() {
   const [tagsResult, resumeResult] = await Promise.all([getHomeTags(), getResumeData()]);
   const tags = tagsResult.state !== 'degraded' ? tagsResult.data : [];
   const isDegraded = tagsResult.state === 'degraded' || resumeResult.state === 'degraded';
+  const now = new Date();
+  const experienceLabel = getExperienceLabel();
 
   return (
     <>
-      <HeroSection tags={tags} resumeData={resumeResult.data} />
+      <HeroSection
+        tags={tags}
+        resumeData={resumeResult.data}
+        now={now}
+        experienceLabel={experienceLabel}
+      />
       {isDegraded ? (
         <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 -mt-6">
           <SectionUnavailable />

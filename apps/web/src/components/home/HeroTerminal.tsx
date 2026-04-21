@@ -1,30 +1,11 @@
 'use client';
 
-import { DEVELOPER_PUBLIC_PROFILE, getExperienceLabel } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 import { useMemo } from 'react';
 import { AnimatedSpan, Terminal, TypingAnimation } from '@/components/ui/terminal';
 import { env } from '@/lib/env';
 
 const FALLBACK_STACK = ['TypeScript', 'Bun', 'Hono', 'Next.js', 'PostgreSQL'];
-
-const DEVELOPER_PROFILE = {
-  name: DEVELOPER_PUBLIC_PROFILE.name,
-  role: DEVELOPER_PUBLIC_PROFILE.role,
-  availability: DEVELOPER_PUBLIC_PROFILE.availability,
-  experience: getExperienceLabel(),
-  location: DEVELOPER_PUBLIC_PROFILE.location,
-  links: {
-    github: DEVELOPER_PUBLIC_PROFILE.links.github,
-    linkedin: DEVELOPER_PUBLIC_PROFILE.links.linkedin,
-    website: DEVELOPER_PUBLIC_PROFILE.links.website,
-    telegram: DEVELOPER_PUBLIC_PROFILE.links.telegram,
-    whatsapp: DEVELOPER_PUBLIC_PROFILE.links.whatsapp,
-  },
-  contacts: {
-    email: DEVELOPER_PUBLIC_PROFILE.contacts.email,
-    phone: DEVELOPER_PUBLIC_PROFILE.contacts.phone,
-  },
-} as const;
 
 const CLICKABLE_VALUE_TO_HREF: Record<string, string> = {
   [DEVELOPER_PUBLIC_PROFILE.links.github]: DEVELOPER_PUBLIC_PROFILE.links.github,
@@ -39,6 +20,7 @@ const CLICKABLE_VALUE_TO_HREF: Record<string, string> = {
 
 interface HeroTerminalProps {
   stack?: string[];
+  experienceLabel: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -161,9 +143,27 @@ function tokeniseJson(raw: string): Token[] {
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function HeroTerminal({ stack = FALLBACK_STACK }: HeroTerminalProps) {
+export function HeroTerminal({ stack = FALLBACK_STACK, experienceLabel }: HeroTerminalProps) {
   const renderedJson = useMemo(() => {
-    const json = JSON.stringify({ ...DEVELOPER_PROFILE, stack }, null, 2);
+    const developerProfile = {
+      name: DEVELOPER_PUBLIC_PROFILE.name,
+      role: DEVELOPER_PUBLIC_PROFILE.role,
+      availability: DEVELOPER_PUBLIC_PROFILE.availability,
+      experience: experienceLabel,
+      location: DEVELOPER_PUBLIC_PROFILE.location,
+      links: {
+        github: DEVELOPER_PUBLIC_PROFILE.links.github,
+        linkedin: DEVELOPER_PUBLIC_PROFILE.links.linkedin,
+        website: DEVELOPER_PUBLIC_PROFILE.links.website,
+        telegram: DEVELOPER_PUBLIC_PROFILE.links.telegram,
+        whatsapp: DEVELOPER_PUBLIC_PROFILE.links.whatsapp,
+      },
+      contacts: {
+        email: DEVELOPER_PUBLIC_PROFILE.contacts.email,
+        phone: DEVELOPER_PUBLIC_PROFILE.contacts.phone,
+      },
+    };
+    const json = JSON.stringify({ ...developerProfile, stack }, null, 2);
     let offset = 0;
 
     return tokeniseJson(json).map((tok) => {
@@ -205,7 +205,7 @@ export function HeroTerminal({ stack = FALLBACK_STACK }: HeroTerminalProps) {
         </span>
       );
     });
-  }, [stack]);
+  }, [stack, experienceLabel]);
 
   return (
     <div className="relative w-full max-w-xl mx-auto">
