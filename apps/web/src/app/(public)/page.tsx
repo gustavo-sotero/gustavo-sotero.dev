@@ -28,10 +28,12 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <>
-      {/* Hero streams independently — tags are cached at 1 h TTL */}
-      <Suspense fallback={<div className="min-h-[88vh]" aria-hidden />}>
-        <HeroSectionWrapper />
-      </Suspense>
+      {/* Hero is pre-rendered synchronously — data fetching functions use
+          'use cache' so on warm requests the data is instantly available.
+          No Suspense boundary here intentionally: the hero must appear without
+          any loading flash or streaming pop-in (only the terminal's own
+          typing animation is allowed). */}
+      <HeroSectionWrapper />
 
       {/* Main content sections — each has its own Suspense boundary */}
       <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 space-y-24 pb-24">

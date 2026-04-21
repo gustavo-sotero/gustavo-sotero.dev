@@ -15,6 +15,7 @@ import { SOCIAL_LINKS } from '@/lib/constants';
 import type { ResumeDataPayload } from '@/lib/data/public/resume';
 import { buildResumeViewModel } from '@/lib/resume/mapper';
 import { HeroResumeDownloadButton } from './HeroResumeDownloadButton';
+import { HeroTerminal } from './HeroTerminal';
 
 /**
  * Deferred animated grid — loaded after the main hero content is painted.
@@ -24,37 +25,6 @@ import { HeroResumeDownloadButton } from './HeroResumeDownloadButton';
  */
 const HeroBackground = dynamic(() => import('./HeroBackground').then((m) => m.HeroBackground), {
   ssr: false,
-});
-
-/**
- * Deferred terminal — loaded after the LCP-critical left column is painted.
- * The terminal renders ~50+ span elements for JSON syntax highlighting plus
- * multiple motion instances for the typing animation. Keeping it out of the
- * SSR payload reduces initial HTML size and ensures the LCP text is visible
- * and interactive before the right-column enhancement loads.
- * This mirrors the same ssr:false pattern used by HeroBackground.
- */
-const HeroTerminal = dynamic(() => import('./HeroTerminal').then((m) => m.HeroTerminal), {
-  ssr: false,
-  loading: () => (
-    <div className="relative w-full max-w-xl mx-auto">
-      <div className="w-full rounded-xl border border-zinc-800 bg-zinc-900/90 p-4 shadow-2xl shadow-zinc-950/80">
-        <div className="flex items-center gap-1.5 mb-4">
-          <div className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
-          <div className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
-          <div className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
-        </div>
-        <div className="space-y-2 animate-pulse">
-          <div className="h-3 w-3/4 rounded bg-zinc-800" />
-          <div className="h-3 w-1/3 rounded bg-zinc-800" />
-          <div className="h-3 w-full rounded bg-zinc-800 mt-2" />
-          <div className="h-3 w-5/6 rounded bg-zinc-800" />
-          <div className="h-3 w-4/5 rounded bg-zinc-800" />
-          <div className="h-3 w-2/3 rounded bg-zinc-800" />
-        </div>
-      </div>
-    </div>
-  ),
 });
 
 const FALLBACK_STACK = ['TypeScript', 'Bun', 'Next.js', 'PostgreSQL', 'Docker'];
@@ -270,12 +240,10 @@ export function HeroSection({ tags = [], resumeData }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* Right: Terminal — loaded client-side after LCP text is painted.
-              The ssr:false dynamic import ensures the terminal (50+ spans for
-              JSON syntax highlighting plus motion typing instances) is absent
-              from the initial SSR payload. The terminal's own internal
-              TypingAnimation / AnimatedSpan sequence handles the reveal once
-              the chunk loads on the client. */}
+          {/* Right: Terminal — SSR'd so the chrome is present in the initial
+              HTML without any loading skeleton. Motion elements render with
+              opacity:0 on the server and animate in after hydration via the
+              terminal's own TypingAnimation / AnimatedSpan sequence. */}
           <div className="relative order-2 flex justify-center lg:justify-end">
             <HeroTerminal stack={terminalStack} />
           </div>
