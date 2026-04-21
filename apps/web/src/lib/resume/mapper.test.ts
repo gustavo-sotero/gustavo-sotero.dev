@@ -85,6 +85,53 @@ function createProject(overrides: Partial<Project> = {}): Project {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Explicit timestamp contract — now is always supplied by the caller
+// ---------------------------------------------------------------------------
+
+describe('resume mapper timestamp contract', () => {
+  it('calculates age deterministically from the provided now value', () => {
+    // Two different reference dates must produce two different ages for the
+    // same birthDate — proving that now controls the output, not new Date().
+    const base = {
+      experience: [],
+      education: [],
+      tags: [],
+      projects: [],
+    };
+
+    const resumeAt2026 = buildResumeViewModel({
+      ...base,
+      now: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    const resumeAt2030 = buildResumeViewModel({
+      ...base,
+      now: new Date('2030-01-01T00:00:00.000Z'),
+    });
+
+    // The identity.age field is derived from now — different years → different ages.
+    expect(typeof resumeAt2026.identity.age).toBe('number');
+    expect(typeof resumeAt2030.identity.age).toBe('number');
+    expect(resumeAt2030.identity.age).toBeGreaterThan(resumeAt2026.identity.age);
+  });
+
+  it('produces identical output for the same now value across two calls', () => {
+    const opts = {
+      experience: [],
+      education: [],
+      tags: [],
+      projects: [],
+      now: new Date('2026-06-15T12:00:00.000Z'),
+    };
+
+    const first = buildResumeViewModel(opts);
+    const second = buildResumeViewModel(opts);
+
+    expect(first.identity.age).toBe(second.identity.age);
+  });
+});
+
 describe('resume mapper experience tags', () => {
   it('maps experience tags into the resume view model', () => {
     const tags = [createTag(1, 'TypeScript', 'language'), createTag(2, 'Hono', 'framework')];

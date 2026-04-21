@@ -54,8 +54,16 @@ const ResumeDownloadButtonInner = dynamic(
 
 export function ResumeDownloadButton({
   resume,
+  generatedAt,
   variant = 'primary',
   className = '',
 }: ResumeDownloadButtonProps) {
-  return <ResumeDownloadButtonInner resume={resume} variant={variant} className={className} />;
+  return (
+    <ResumeDownloadButtonInner
+      resume={resume}
+      generatedAt={generatedAt}
+      variant={variant}
+      className={className}
+    />
+  );
 }

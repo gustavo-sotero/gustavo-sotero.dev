@@ -4,7 +4,11 @@ import { SITE_BRAND_NAME } from '@/lib/constants';
 import { MobileNav } from './MobileNav';
 import { NavLinks } from './NavLinks';
 
-export function Header() {
+interface HeaderProps {
+  activeHref: string;
+}
+
+export function Header({ activeHref }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 glass-header">
       <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
@@ -28,12 +32,12 @@ export function Header() {
 
           {/* Desktop navigation */}
           <nav aria-label="Navegação principal" className="flex items-center">
-            <NavLinks />
+            <NavLinks activeHref={activeHref} />
           </nav>
 
           {/* Right-side actions */}
           <div className="flex items-center">
-            <MobileNav />
+            <MobileNav activeHref={activeHref} />
           </div>
         </div>
       </div>

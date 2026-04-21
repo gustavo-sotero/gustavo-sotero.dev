@@ -53,9 +53,16 @@ vi.mock('@icons-pack/react-simple-icons', () => ({
 }));
 
 vi.mock('lucide-react', () => ({
-  Linkedin: () => <span data-testid="icon-linkedin" />,
+  // Used directly by HeroSection
   Mail: () => <span data-testid="icon-mail" />,
   Star: () => <span data-testid="icon-star" />,
+  // Used by @/lib/constants (NAV_LINKS) which is transitively imported
+  Home: () => <span data-testid="icon-home" />,
+  Layers: () => <span data-testid="icon-layers" />,
+  BookOpen: () => <span data-testid="icon-book-open" />,
+  FileText: () => <span data-testid="icon-file-text" />,
+  // Unused but included for completeness to avoid "no export" errors
+  Linkedin: () => <span data-testid="icon-linkedin" />,
 }));
 
 vi.mock('@/components/ui/animated-gradient-text', () => ({
@@ -120,22 +127,13 @@ function makeTag(overrides: Partial<Tag> & Pick<Tag, 'id' | 'name' | 'category'>
   };
 }
 
-function makeResumeData() {
-  return {
-    experience: [],
-    education: [],
-    tags: [],
-    projects: [],
-  };
-}
-
 function expectBefore(a: HTMLElement, b: HTMLElement) {
   expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 }
 
 describe('HeroSection', () => {
   it('renders fallback stack badges when no tags are provided', () => {
-    render(<HeroSection tags={[]} resumeData={makeResumeData()} />);
+    render(<HeroSection tags={[]} />);
 
     expect(screen.getByText('TypeScript')).toBeInTheDocument();
     expect(screen.getByText('Bun')).toBeInTheDocument();
@@ -145,7 +143,7 @@ describe('HeroSection', () => {
   });
 
   it('renders all LCP-critical hero content without requiring motion entrance', () => {
-    render(<HeroSection tags={[]} resumeData={makeResumeData()} />);
+    render(<HeroSection tags={[]} />);
 
     // Developer name is the primary LCP candidate — must be in a heading.
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Gustavo Sotero');
@@ -165,7 +163,7 @@ describe('HeroSection', () => {
   });
 
   it('renders the configured experience label inside the bio', () => {
-    render(<HeroSection tags={[]} resumeData={makeResumeData()} />);
+    render(<HeroSection tags={[]} />);
 
     const label = screen.getByText(/3\+ anos/);
     expect(label).toBeInTheDocument();
@@ -186,7 +184,7 @@ describe('HeroSection', () => {
       makeTag({ id: 6, name: 'AWS', category: 'cloud', isHighlighted: false }),
     ];
 
-    render(<HeroSection tags={tags} resumeData={makeResumeData()} />);
+    render(<HeroSection tags={tags} />);
 
     const typeScript = screen.getByText('TypeScript');
     const docker = screen.getByText('Docker');

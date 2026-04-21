@@ -1,24 +1,26 @@
-'use client';
+﻿'use client';
 
-import { BookOpen, Home, Layers, Mail, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { useBrowserPathname } from '@/hooks/use-browser-pathname';
 import { NAV_LINKS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
-const NAV_ICONS: Record<string, React.ElementType> = {
-  '/': Home,
-  '/projects': Layers,
-  '/blog': BookOpen,
-  '/contact': Mail,
-};
+interface MobileNavProps {
+  activeHref: string;
+}
 
-export function MobileNav() {
+/**
+ * Mobile navigation sheet.
+ *
+ * Active state is resolved from the `activeHref` prop provided by the
+ * enclosing section layout -- no client-side pathname hook needed. The
+ * component stays `'use client'` only for the sheet open/close state.
+ */
+export function MobileNav({ activeHref }: MobileNavProps) {
   const [open, setOpen] = useState(false);
-  const pathname = useBrowserPathname();
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -58,9 +60,8 @@ export function MobileNav() {
         <nav className="flex-1 px-3 py-4" aria-label="Navegação mobile">
           <ul className="space-y-0.5">
             {NAV_LINKS.map((link) => {
-              const isActive =
-                link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
-              const Icon = NAV_ICONS[link.href] ?? Home;
+              const isActive = link.href === activeHref;
+              const Icon = link.icon;
 
               return (
                 <li key={link.href}>

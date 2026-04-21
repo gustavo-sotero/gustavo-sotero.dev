@@ -11,7 +11,6 @@
 import { Download } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
-import type { ResumeDataPayload } from '@/lib/data/public/resume';
 
 const HeroResumeDownloadButtonInner = dynamic(
   () => import('./HeroResumeDownloadButtonInner').then((mod) => mod.HeroResumeDownloadButtonInner),
@@ -32,6 +31,6 @@ const HeroResumeDownloadButtonInner = dynamic(
   }
 );
 
-export function HeroResumeDownloadButton({ resumeData }: { resumeData: ResumeDataPayload }) {
-  return <HeroResumeDownloadButtonInner resumeData={resumeData} />;
+export function HeroResumeDownloadButton() {
+  return <HeroResumeDownloadButtonInner />;
 }

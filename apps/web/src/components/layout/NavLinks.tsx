@@ -1,17 +1,24 @@
-'use client';
-
 import Link from 'next/link';
-import { useBrowserPathname } from '@/hooks/use-browser-pathname';
 import { NAV_LINKS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
-export function NavLinks() {
-  const pathname = useBrowserPathname();
+interface NavLinksProps {
+  activeHref: string;
+}
 
+/**
+ * Desktop navigation links.
+ *
+ * Now a Server Component — active state is resolved from the `activeHref` prop
+ * provided by the enclosing section layout rather than from a client-side
+ * pathname hook. No Suspense boundary is required and the active link is
+ * correct in the initial HTML.
+ */
+export function NavLinks({ activeHref }: NavLinksProps) {
   return (
     <ul className="hidden md:flex items-center gap-1">
       {NAV_LINKS.map((link) => {
-        const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+        const isActive = link.href === activeHref;
         return (
           <li key={link.href}>
             <Link

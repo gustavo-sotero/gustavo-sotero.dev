@@ -1,6 +1,4 @@
 import type { Metadata } from 'next';
-import { Footer } from '@/components/layout/Footer';
-import { Header } from '@/components/layout/Header';
 import { SITE_METADATA } from '@/lib/constants';
 import { env } from '@/lib/env';
 
@@ -30,30 +28,15 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Thin route-group layout — owns only shared metadata.
+ * The shell (skip-link, Header, main, Footer) is rendered by each section's
+ * nested layout via PublicShell, which receives the server-owned activeHref.
+ */
 export default function PublicLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    // flex column shell so the footer is pushed to the bottom on short pages.
-    // <html> and <body> are owned by the root layout (app/layout.tsx).
-    <div className="flex flex-col min-h-screen">
-      {/* Skip navigation link for keyboard / screen reader users */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-100 focus:px-4 focus:py-2 focus:bg-emerald-500 focus:text-zinc-950 focus:rounded-md focus:font-medium"
-      >
-        Ir para o conteúdo principal
-      </a>
-      {/* Header is fully prerendered. Active link state is refined on the
-          client via a browser pathname store instead of Next's dynamic
-          pathname hook, so the navbar no longer needs a Suspense boundary. */}
-      <Header />
-      <main id="main-content" className="flex-1">
-        {children}
-      </main>
-      <Footer />
-    </div>
-  );
+  return <>{children}</>;
 }

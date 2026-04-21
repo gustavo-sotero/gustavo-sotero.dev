@@ -12,7 +12,6 @@ import { AnimatedGradientText } from '@/components/ui/animated-gradient-text';
 import { Button } from '@/components/ui/button';
 import { Marquee } from '@/components/ui/marquee';
 import { SOCIAL_LINKS } from '@/lib/constants';
-import type { ResumeDataPayload } from '@/lib/data/public/resume';
 import { HeroResumeDownloadButton } from './HeroResumeDownloadButton';
 import { HeroTerminal } from './HeroTerminal';
 
@@ -55,13 +54,11 @@ function pickStackBadges(tags: Tag[], count = 5): StackBadge[] {
 
 interface HeroSectionProps {
   tags?: Tag[];
-  resumeData: ResumeDataPayload;
   experienceLabel?: string;
 }
 
 export function HeroSection({
   tags = [],
-  resumeData,
   experienceLabel = DEVELOPER_PUBLIC_PROFILE.experienceLabel,
 }: HeroSectionProps) {
   const prefersReducedMotion = useReducedMotion();
@@ -132,7 +129,7 @@ export function HeroSection({
             {/* CTAs */}
             <div className="flex flex-wrap gap-3 pt-2">
               {/* Currículo PDF — most prominent CTA */}
-              <HeroResumeDownloadButton resumeData={resumeData} />
+              <HeroResumeDownloadButton />
               <Button
                 asChild
                 size="lg"

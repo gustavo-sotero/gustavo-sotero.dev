@@ -2,17 +2,20 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getHomeTagsMock, getResumeDataMock } = vi.hoisted(() => ({
+const { getHomeTagsMock } = vi.hoisted(() => ({
   getHomeTagsMock: vi.fn(),
-  getResumeDataMock: vi.fn(),
 }));
 
 vi.mock('@/lib/data/public/home', () => ({
   getHomeTags: getHomeTagsMock,
 }));
 
-vi.mock('@/lib/data/public/resume', () => ({
-  getResumeData: getResumeDataMock,
+// `getCachedExperienceLabel` uses `cacheLife()` which is a Next.js build-time
+// feature not available in the Vitest jsdom environment. Mock the whole module
+// so tests run without requiring the cacheComponents build config.
+vi.mock('@/lib/cache/time', () => ({
+  getCachedExperienceLabel: vi.fn().mockResolvedValue('4+ anos'),
+  getCachedCurrentYear: vi.fn().mockResolvedValue(2026),
 }));
 
 vi.mock('../HeroSection', () => ({
@@ -31,12 +34,8 @@ describe('HeroSectionWrapper', () => {
     vi.clearAllMocks();
   });
 
-  it('shows a visible degraded-state notice when any dependency fails', async () => {
+  it('shows a visible degraded-state notice when tags dependency is degraded', async () => {
     getHomeTagsMock.mockResolvedValue({ state: 'degraded' });
-    getResumeDataMock.mockResolvedValue({
-      state: 'ok',
-      data: { experience: [], education: [], tags: [], projects: [] },
-    });
 
     await renderServerComponent(HeroSectionWrapper());
 
@@ -46,14 +45,21 @@ describe('HeroSectionWrapper', () => {
 
   it('does not show degraded-state notice when all dependencies are healthy', async () => {
     getHomeTagsMock.mockResolvedValue({ state: 'ok', data: [] });
-    getResumeDataMock.mockResolvedValue({
-      state: 'ok',
-      data: { experience: [], education: [], tags: [], projects: [] },
-    });
 
     await renderServerComponent(HeroSectionWrapper());
 
     expect(screen.getByTestId('hero-section')).toBeInTheDocument();
     expect(screen.queryByText('Seção temporariamente indisponível.')).not.toBeInTheDocument();
+  });
+
+  it('supplies experience label from the cache-safe server helper', async () => {
+    const { getCachedExperienceLabel } = await import('@/lib/cache/time');
+    (getCachedExperienceLabel as ReturnType<typeof vi.fn>).mockResolvedValue('5+ anos');
+    getHomeTagsMock.mockResolvedValue({ state: 'ok', data: [] });
+
+    await renderServerComponent(HeroSectionWrapper());
+
+    // The wrapper must call the cache helper to obtain the experience label.
+    expect(getCachedExperienceLabel).toHaveBeenCalled();
   });
 });

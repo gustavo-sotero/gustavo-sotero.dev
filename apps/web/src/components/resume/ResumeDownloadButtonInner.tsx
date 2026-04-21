@@ -11,6 +11,8 @@ import { ResumePdfDocument } from './ResumePdfDocument';
 
 export interface ResumeDownloadButtonProps {
   resume: ResumeViewModel;
+  /** Pre-formatted date string for the PDF footer (e.g. "15 de maio de 2026"). */
+  generatedAt: string;
   /** Button variant: 'primary' renders a filled button; 'outline' renders a bordered one */
   variant?: 'primary' | 'outline';
   className?: string;
@@ -38,12 +40,13 @@ function baseClasses(variant: 'primary' | 'outline', extra = '') {
 
 export function ResumeDownloadButtonInner({
   resume,
+  generatedAt,
   variant = 'primary',
   className = '',
 }: ResumeDownloadButtonProps) {
   return (
     <PDFDownloadLink
-      document={<ResumePdfDocument resume={resume} />}
+      document={<ResumePdfDocument resume={resume} generatedAt={generatedAt} />}
       fileName={FILENAME}
       className={baseClasses(variant, className)}
       aria-label="Baixar currículo em PDF"

@@ -1,4 +1,6 @@
 import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import type { LucideIcon } from 'lucide-react';
+import { BookOpen, FileText, Home, Layers, Mail } from 'lucide-react';
 
 export const SITE_BRAND_NAME = DEVELOPER_PUBLIC_PROFILE.name;
 
@@ -10,13 +12,29 @@ export const SITE_METADATA = {
   url: DEVELOPER_PUBLIC_PROFILE.links.website,
 } as const;
 
-export const NAV_LINKS = [
-  { label: 'Home', href: '/' },
-  { label: 'Projetos', href: '/projects' },
-  { label: 'Blog', href: '/blog' },
-  { label: 'Currículo', href: '/curriculo' },
-  { label: 'Contato', href: '/contact' },
-] as const;
+export interface NavLinkItem {
+  readonly label: string;
+  readonly href: string;
+  readonly icon: LucideIcon;
+}
+
+/**
+ * Shared navigation model consumed by both the desktop NavLinks and the mobile
+ * navigation sheet. Icon components are included here so mobile and desktop
+ * renderers share a single source of truth for the nav model.
+ *
+ * Active state is resolved server-side: each public section layout passes an
+ * `activeHref` prop matching its root path (e.g. '/blog') to PublicShell,
+ * which forwards it into Header → NavLinks / MobileNav. This eliminates the
+ * need for any client-side pathname hook in the public chrome.
+ */
+export const NAV_LINKS: ReadonlyArray<NavLinkItem> = [
+  { label: 'Home', href: '/', icon: Home },
+  { label: 'Projetos', href: '/projects', icon: Layers },
+  { label: 'Blog', href: '/blog', icon: BookOpen },
+  { label: 'Currículo', href: '/curriculo', icon: FileText },
+  { label: 'Contato', href: '/contact', icon: Mail },
+];
 
 export const SOCIAL_LINKS = {
   github: DEVELOPER_PUBLIC_PROFILE.links.github,

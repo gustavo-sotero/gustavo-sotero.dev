@@ -3,6 +3,7 @@ import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 import { FileCode, Mail, Rss } from 'lucide-react';
 import Link from 'next/link';
 import { AnimatedShinyText } from '@/components/ui/animated-shiny-text';
+import { getCachedCurrentYear } from '@/lib/cache/time';
 import { SITE_BRAND_NAME, SOCIAL_LINKS } from '@/lib/constants';
 import { env } from '@/lib/env';
 
@@ -50,9 +51,8 @@ const socialItems = [
   },
 ] as const;
 
-const CURRENT_YEAR = new Date().getFullYear();
-
-export function Footer() {
+export async function Footer() {
+  const CURRENT_YEAR = await getCachedCurrentYear();
   return (
     <footer className="border-t border-zinc-800/60 bg-zinc-950/80">
       <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-8">

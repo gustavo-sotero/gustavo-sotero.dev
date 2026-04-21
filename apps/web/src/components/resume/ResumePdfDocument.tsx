@@ -506,20 +506,15 @@ function ProjectEntry({ item }: { item: ResumeViewModel['projects'][number] }) {
 
 interface ResumePdfDocumentProps {
   resume: ResumeViewModel;
+  /** Pre-formatted date string (e.g. "15 de maio de 2026"). Must be supplied by the caller. */
+  generatedAt: string;
 }
 
-export function ResumePdfDocument({ resume }: ResumePdfDocumentProps) {
+export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProps) {
   const { identity, contacts, experience, education, skills, projects, languages, additionalInfo } =
     resume;
 
   const locationStr = [identity.city, identity.state, identity.country].filter(Boolean).join(', ');
-
-  const today = new Date();
-  const generatedAt = today.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
 
   return (
     <Document
