@@ -1,9 +1,10 @@
 'use client';
 
 import type { Project } from '@portfolio/shared';
-import { ExternalLink, Github, Globe, Star } from 'lucide-react';
+import { ExternalLink, Globe, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { GitHubIcon } from '@/components/shared/BrandIcons';
 import { AnimatedShinyText } from '@/components/ui/animated-shiny-text';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
@@ -119,7 +120,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                     onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-100 bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700/50 hover:border-zinc-600 rounded-md px-2.5 py-1.5 transition-all duration-200"
                   >
-                    <Github className="h-3.5 w-3.5" />
+                    <GitHubIcon className="h-3.5 w-3.5" />
                     <span>Repo</span>
                   </a>
                 )}

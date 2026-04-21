@@ -1,9 +1,10 @@
 import type { Tag } from '@portfolio/shared';
-import { ExternalLink, Github, Star } from 'lucide-react';
+import { ExternalLink, Star } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
+import { GitHubIcon } from '@/components/shared/BrandIcons';
 import { JsonLdScript } from '@/components/shared/JsonLdScript';
 import { MermaidRenderer } from '@/components/shared/MermaidRenderer';
 import { PublicPageUnavailable } from '@/components/shared/PublicPageUnavailable';
@@ -159,7 +160,7 @@ export async function ProjectDetailContent({ params }: ProjectDetailPageProps) {
                 className="gap-2 border-zinc-700 text-zinc-300 hover:border-emerald-500/40 hover:text-zinc-100"
               >
                 <a href={project.repositoryUrl} target="_blank" rel="noopener noreferrer">
-                  <Github className="h-4 w-4" />
+                  <GitHubIcon className="h-4 w-4" />
                   Repositório
                 </a>
               </Button>

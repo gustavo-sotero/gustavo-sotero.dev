@@ -1,15 +1,6 @@
-import {
-  Briefcase,
-  ExternalLink,
-  Github,
-  Globe,
-  GraduationCap,
-  Linkedin,
-  Mail,
-  MapPin,
-  Phone,
-} from 'lucide-react';
+import { Briefcase, ExternalLink, Globe, GraduationCap, Mail, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
+import { GitHubIcon, LinkedInIcon } from '@/components/shared/BrandIcons';
 import type { ResumeViewModel } from '@/lib/resume/mapper';
 
 // ---------------------------------------------------------------------------
@@ -212,7 +203,7 @@ function ProjectsSection({ projects }: { projects: ResumeViewModel['projects'] }
                     className="text-zinc-500 hover:text-emerald-400 transition-colors"
                     aria-label={`Repositório de ${item.title}`}
                   >
-                    <Github className="h-3.5 w-3.5" />
+                    <GitHubIcon className="h-3.5 w-3.5" />
                   </Link>
                 )}
                 {item.liveUrl && (
@@ -338,7 +329,7 @@ export function ResumePage({ resume }: ResumePageProps) {
             rel="nofollow noreferrer"
             className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-emerald-400 transition-colors border border-zinc-700 hover:border-emerald-500/50 rounded-full px-3 py-1.5"
           >
-            <Linkedin className="h-3.5 w-3.5" />
+            <LinkedInIcon className="h-3.5 w-3.5" />
             LinkedIn
           </a>
           <a
@@ -347,7 +338,7 @@ export function ResumePage({ resume }: ResumePageProps) {
             rel="nofollow noreferrer"
             className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-emerald-400 transition-colors border border-zinc-700 hover:border-emerald-500/50 rounded-full px-3 py-1.5"
           >
-            <Github className="h-3.5 w-3.5" />
+            <GitHubIcon className="h-3.5 w-3.5" />
             GitHub
           </a>
           <a

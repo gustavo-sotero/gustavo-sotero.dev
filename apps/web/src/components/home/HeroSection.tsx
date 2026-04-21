@@ -1,12 +1,13 @@
 'use client';
 
-import { SiGithub, SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons';
+import { SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons';
 import type { Tag, TagCategory } from '@portfolio/shared';
 import { DEVELOPER_PUBLIC_PROFILE, getExperienceLabel } from '@portfolio/shared';
-import { Linkedin, Mail, Star } from 'lucide-react';
+import { Mail, Star } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { GitHubIcon, LinkedInIcon } from '@/components/shared/BrandIcons';
 import { AnimatedGradientText } from '@/components/ui/animated-gradient-text';
 import { Button } from '@/components/ui/button';
 import { Marquee } from '@/components/ui/marquee';
@@ -230,7 +231,7 @@ export function HeroSection({ tags = [], resumeData }: HeroSectionProps) {
                 aria-label="GitHub"
                 className="inline-flex items-center justify-center w-11 h-11 sm:w-9 sm:h-9 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
               >
-                <SiGithub className="h-5 w-5 sm:h-4 sm:w-4" />
+                <GitHubIcon className="h-5 w-5 sm:h-4 sm:w-4" />
               </a>
               <a
                 href={SOCIAL_LINKS.linkedin}
@@ -239,7 +240,7 @@ export function HeroSection({ tags = [], resumeData }: HeroSectionProps) {
                 aria-label="LinkedIn"
                 className="inline-flex items-center justify-center w-11 h-11 sm:w-9 sm:h-9 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
               >
-                <Linkedin className="h-5 w-5 sm:h-4 sm:w-4" />
+                <LinkedInIcon className="h-5 w-5 sm:h-4 sm:w-4" />
               </a>
               <a
                 href={SOCIAL_LINKS.telegram}

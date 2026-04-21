@@ -1,7 +1,8 @@
 'use client';
 
-import { Github, Loader2, Shield } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
 import { useState } from 'react';
+import { GitHubIcon } from '@/components/shared/BrandIcons';
 import { Button } from '@/components/ui/button';
 import { useStartGithubOAuth } from '@/hooks/admin/use-admin-auth';
 
@@ -68,7 +69,7 @@ export default function AdminLoginPage() {
               {startOAuth.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Github className="h-4 w-4" />
+                <GitHubIcon className="h-4 w-4" />
               )}
               {startOAuth.isPending ? 'Redirecionando...' : 'Entrar com GitHub'}
             </Button>
