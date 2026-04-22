@@ -2,7 +2,7 @@
 
 import { usePDF } from '@react-pdf/renderer';
 import { Download, Loader2 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ResumePdfDocument } from '@/components/resume/ResumePdfDocument';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import type { ResumeDataPayload } from '@/lib/data/public/resume-client';
@@ -11,15 +11,62 @@ import { buildResumeViewModel } from '@/lib/resume/mapper';
 
 const FILENAME = 'curriculo-gustavo-sotero.pdf';
 
+function downloadResumePdf(url: string) {
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = FILENAME;
+  anchor.click();
+}
+
 export function HeroResumeDownloadButtonInner() {
   const [resumeData, setResumeData] = useState<ResumeDataPayload | null>(null);
+  const [isPreparing, setIsPreparing] = useState(false);
+  const [shouldAutoDownload, setShouldAutoDownload] = useState(false);
+  const loadPromiseRef = useRef<Promise<ResumeDataPayload> | null>(null);
+  const isMountedRef = useRef(true);
   const now = useMemo(() => new Date(), []);
 
   useEffect(() => {
-    getResumeDataClient().then(setResumeData);
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  const resume = resumeData ? buildResumeViewModel({ ...resumeData, now }) : null;
+  const ensureResumeData = useCallback(() => {
+    if (resumeData) {
+      return Promise.resolve(resumeData);
+    }
+
+    if (loadPromiseRef.current) {
+      return loadPromiseRef.current;
+    }
+
+    setIsPreparing(true);
+
+    const promise = getResumeDataClient()
+      .then((data) => {
+        if (isMountedRef.current) {
+          setResumeData(data);
+        }
+
+        return data;
+      })
+      .finally(() => {
+        loadPromiseRef.current = null;
+
+        if (isMountedRef.current) {
+          setIsPreparing(false);
+        }
+      });
+
+    loadPromiseRef.current = promise;
+    return promise;
+  }, [resumeData]);
+
+  const resume = useMemo(
+    () => (resumeData ? buildResumeViewModel({ ...resumeData, now }) : null),
+    [resumeData, now]
+  );
   const generatedAt = useMemo(
     () => now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }),
     [now]
@@ -28,16 +75,26 @@ export function HeroResumeDownloadButtonInner() {
     document: resume ? <ResumePdfDocument resume={resume} generatedAt={generatedAt} /> : undefined,
   });
 
-  const handleClick = useCallback(() => {
-    if (!instance.url || instance.loading) return;
-    // Create a transient anchor, trigger download, then discard — no DOM pollution.
-    const a = document.createElement('a');
-    a.href = instance.url;
-    a.download = FILENAME;
-    a.click();
-  }, [instance.url, instance.loading]);
+  useEffect(() => {
+    if (!shouldAutoDownload || !resume || !instance.url || instance.loading) {
+      return;
+    }
 
-  const isLoading = !resumeData || instance.loading;
+    downloadResumePdf(instance.url);
+    setShouldAutoDownload(false);
+  }, [instance.loading, instance.url, resume, shouldAutoDownload]);
+
+  const handleClick = useCallback(async () => {
+    if (resume && instance.url && !instance.loading) {
+      downloadResumePdf(instance.url);
+      return;
+    }
+
+    setShouldAutoDownload(true);
+    await ensureResumeData();
+  }, [ensureResumeData, instance.loading, instance.url, resume]);
+
+  const isLoading = isPreparing || (!!resume && instance.loading);
 
   return (
     <ShimmerButton

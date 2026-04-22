@@ -1,0 +1,64 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockApiGet = vi.fn();
+const mockApiGetPaginated = vi.fn();
+
+vi.mock('@/lib/api', () => ({
+  apiGet: (...args: unknown[]) => mockApiGet(...args),
+  apiGetPaginated: (...args: unknown[]) => mockApiGetPaginated(...args),
+}));
+
+const { getResumeDataClient } = await import('./resume-client');
+
+describe('getResumeDataClient', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('uses the same public resume payload shape as the server resume route', async () => {
+    mockApiGetPaginated
+      .mockResolvedValueOnce({ data: [{ id: 1, role: 'Backend Engineer' }] })
+      .mockResolvedValueOnce({ data: [{ id: 2, title: 'ADS' }] })
+      .mockResolvedValueOnce({ data: [{ id: 3, title: 'Projeto destaque' }] });
+    mockApiGet.mockResolvedValueOnce({ data: [{ id: 4, name: 'TypeScript' }] });
+
+    const result = await getResumeDataClient();
+
+    expect(mockApiGetPaginated).toHaveBeenNthCalledWith(
+      1,
+      '/experience?status=published&perPage=20'
+    );
+    expect(mockApiGetPaginated).toHaveBeenNthCalledWith(
+      2,
+      '/education?status=published&perPage=20'
+    );
+    expect(mockApiGet).toHaveBeenCalledWith('/tags?source=project');
+    expect(mockApiGetPaginated).toHaveBeenNthCalledWith(
+      3,
+      '/projects?status=published&featured=true&perPage=20'
+    );
+    expect(result).toEqual({
+      experience: [{ id: 1, role: 'Backend Engineer' }],
+      education: [{ id: 2, title: 'ADS' }],
+      tags: [{ id: 4, name: 'TypeScript' }],
+      projects: [{ id: 3, title: 'Projeto destaque' }],
+    });
+  });
+
+  it('falls back to empty arrays when any public resume endpoint is unavailable', async () => {
+    mockApiGetPaginated
+      .mockRejectedValueOnce(new Error('experience unavailable'))
+      .mockRejectedValueOnce(new Error('education unavailable'))
+      .mockRejectedValueOnce(new Error('projects unavailable'));
+    mockApiGet.mockRejectedValueOnce(new Error('tags unavailable'));
+
+    const result = await getResumeDataClient();
+
+    expect(result).toEqual({
+      experience: [],
+      education: [],
+      tags: [],
+      projects: [],
+    });
+  });
+});

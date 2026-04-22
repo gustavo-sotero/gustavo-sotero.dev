@@ -23,7 +23,7 @@ export async function getResumeDataClient(): Promise<ResumeDataPayload> {
       data: [] as Education[],
     })),
     apiGet<Tag[]>('/tags?source=project').catch(() => undefined),
-    apiGetPaginated<Project>('/projects?status=published&perPage=20').catch(() => ({
+    apiGetPaginated<Project>('/projects?status=published&featured=true&perPage=20').catch(() => ({
       data: [] as Project[],
     })),
   ]);

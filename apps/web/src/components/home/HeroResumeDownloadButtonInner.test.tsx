@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -87,8 +87,37 @@ describe('HeroResumeDownloadButtonInner', () => {
     vi.unstubAllGlobals();
   });
 
-  it('creates one explicit timestamp and reuses it for mapping and PDF generation', async () => {
+  it('keeps the CTA idle until the user requests the PDF', () => {
     render(<HeroResumeDownloadButtonInner />);
+
+    expect(getResumeDataClientMock).not.toHaveBeenCalled();
+    expect(buildResumeViewModelMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Baixar Currículo' })).toBeEnabled();
+  });
+
+  it('creates one explicit timestamp and reuses it once the user requests the PDF', async () => {
+    const originalCreateElement = document.createElement.bind(document);
+    const anchorClickMock = vi.fn();
+    const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(((
+      tagName: string,
+      options?: ElementCreationOptions
+    ) => {
+      if (tagName.toLowerCase() === 'a') {
+        const anchor = originalCreateElement('a');
+        anchor.click = anchorClickMock;
+        return anchor;
+      }
+
+      return originalCreateElement(tagName, options);
+    }) as typeof document.createElement);
+
+    render(<HeroResumeDownloadButtonInner />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Baixar Currículo' }));
+
+    await waitFor(() => {
+      expect(getResumeDataClientMock).toHaveBeenCalledTimes(1);
+    });
 
     await waitFor(() => {
       expect(buildResumeViewModelMock).toHaveBeenCalledTimes(1);
@@ -109,6 +138,12 @@ describe('HeroResumeDownloadButtonInner', () => {
         year: 'numeric',
       })
     );
+
+    await waitFor(() => {
+      expect(anchorClickMock).toHaveBeenCalledTimes(1);
+    });
+
     expect(screen.getByRole('button', { name: 'Baixar Currículo' })).toBeInTheDocument();
+    createElementSpy.mockRestore();
   });
 });
