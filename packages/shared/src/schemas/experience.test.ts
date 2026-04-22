@@ -11,6 +11,103 @@ const valid = {
 };
 
 describe('createExperienceSchema', () => {
+  describe('impactFacts validation', () => {
+    it('accepts undefined (field is optional)', () => {
+      const result = createExperienceSchema.safeParse(valid);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts an empty array', () => {
+      const result = createExperienceSchema.safeParse({ ...valid, impactFacts: [] });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts a list of valid facts', () => {
+      const result = createExperienceSchema.safeParse({
+        ...valid,
+        impactFacts: ['Reduziu tempo de deploy em 60%', 'Liderou squad de 4 devs'],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts a qualitative fact (no number required)', () => {
+      const result = createExperienceSchema.safeParse({
+        ...valid,
+        impactFacts: ['Implantou cultura de code review na equipe'],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects a list with an empty string item', () => {
+      const result = createExperienceSchema.safeParse({
+        ...valid,
+        impactFacts: ['Fato válido', ''],
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path[0] === 'impactFacts')).toBe(true);
+      }
+    });
+
+    it('rejects a list with a whitespace-only item', () => {
+      const result = createExperienceSchema.safeParse({
+        ...valid,
+        impactFacts: ['   '],
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path[0] === 'impactFacts')).toBe(true);
+      }
+    });
+
+    it('rejects a list exceeding 6 items', () => {
+      const result = createExperienceSchema.safeParse({
+        ...valid,
+        impactFacts: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path[0] === 'impactFacts')).toBe(true);
+      }
+    });
+
+    it('accepts exactly 6 items (boundary)', () => {
+      const result = createExperienceSchema.safeParse({
+        ...valid,
+        impactFacts: ['a', 'b', 'c', 'd', 'e', 'f'],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects an item exceeding 200 characters', () => {
+      const longFact = 'a'.repeat(201);
+      const result = createExperienceSchema.safeParse({
+        ...valid,
+        impactFacts: [longFact],
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path[0] === 'impactFacts')).toBe(true);
+      }
+    });
+
+    it('accepts an item of exactly 200 characters (boundary)', () => {
+      const exactFact = 'a'.repeat(200);
+      const result = createExperienceSchema.safeParse({
+        ...valid,
+        impactFacts: [exactFact],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('impactFacts validation also applies to updateExperienceSchema', () => {
+      const result = updateExperienceSchema.safeParse({
+        impactFacts: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('endDate required when isCurrent is false', () => {
     it('accepts a non-current entry with endDate', () => {
       const result = createExperienceSchema.safeParse(valid);

@@ -122,6 +122,62 @@ describe('public experience routes', () => {
     expect(body.error.code).toBe('NOT_FOUND');
   });
 
+  it('GET /experience/:slug includes impactFacts in the response body', async () => {
+    const entry = {
+      id: 1,
+      slug: 'backend-engineer-acme',
+      role: 'Backend Engineer',
+      company: 'Acme',
+      impactFacts: ['Reduziu tempo de deploy em 60%', 'Liderou squad de 4 devs'],
+    };
+    getExperienceBySlugMock.mockResolvedValueOnce(entry);
+
+    const app = new Hono();
+    app.route('/experience', publicExperienceRouter);
+
+    const res = await app.request('/experience/backend-engineer-acme');
+    const body = (await res.json()) as {
+      success: boolean;
+      data: { slug: string; impactFacts: string[] };
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.impactFacts).toEqual([
+      'Reduziu tempo de deploy em 60%',
+      'Liderou squad de 4 devs',
+    ]);
+  });
+
+  it('GET /experience includes impactFacts in paginated list items', async () => {
+    listExperienceMock.mockResolvedValueOnce(
+      paginatedResult([
+        {
+          id: 1,
+          slug: 'backend-engineer-acme',
+          role: 'Backend Engineer',
+          company: 'Acme',
+          impactFacts: ['Implantou CI/CD reduzindo bugs em produção em 35%'],
+        },
+      ])
+    );
+
+    const app = new Hono();
+    app.route('/experience', publicExperienceRouter);
+
+    const res = await app.request('/experience');
+    const body = (await res.json()) as {
+      success: boolean;
+      data: Array<{ impactFacts: string[] }>;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data[0]?.impactFacts).toEqual([
+      'Implantou CI/CD reduzindo bugs em produção em 35%',
+    ]);
+  });
+
   it('GET /experience pagination meta reflects perPage param', async () => {
     listExperienceMock.mockResolvedValueOnce({
       data: [{ id: 1 }, { id: 2 }],

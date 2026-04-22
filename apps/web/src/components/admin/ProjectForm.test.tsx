@@ -97,6 +97,30 @@ vi.mock('./CoverMediaField', () => ({
   CoverMediaField: () => <div data-testid="cover-media-field" />,
 }));
 
+vi.mock('./ImpactFactsEditor', () => ({
+  ImpactFactsEditor: ({
+    value,
+    onChange,
+  }: {
+    value: string[];
+    onChange: (facts: string[]) => void;
+    error?: string;
+  }) => (
+    <div data-testid="impact-facts-editor">
+      {value.map((fact, i) => (
+        <input key={i} readOnly aria-label={`Fato de impacto ${i + 1}`} value={fact} />
+      ))}
+      <button
+        type="button"
+        data-testid="add-mock-fact"
+        onClick={() => onChange([...value, 'Reduziu latência em 40%'])}
+      >
+        Add mock fact
+      </button>
+    </div>
+  ),
+}));
+
 describe('ProjectForm', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
@@ -230,5 +254,68 @@ describe('ProjectForm', () => {
       expect(payload.repositoryUrl).toBeUndefined();
       expect(payload.liveUrl).toBeUndefined();
     });
+  });
+
+  it('submit payload includes impactFacts when facts are added', async () => {
+    mutateAsyncMock.mockResolvedValueOnce({ data: {} });
+
+    render(<ProjectForm mode="create" />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Projeto com Impacto' },
+    });
+
+    fireEvent.click(screen.getByTestId('add-mock-fact'));
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar projeto/i }));
+
+    await waitFor(() => {
+      const payload = mutateAsyncMock.mock.calls[0]?.[0];
+      expect(payload?.impactFacts).toEqual(['Reduziu latência em 40%']);
+    });
+  });
+
+  it('submit payload includes empty impactFacts array when no facts are added', async () => {
+    mutateAsyncMock.mockResolvedValueOnce({ data: {} });
+
+    render(<ProjectForm mode="create" />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: /Título/i }), {
+      target: { value: 'Projeto Sem Impacto' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar projeto/i }));
+
+    await waitFor(() => {
+      const payload = mutateAsyncMock.mock.calls[0]?.[0];
+      expect(payload?.impactFacts).toEqual([]);
+    });
+  });
+
+  it('edit mode pre-populates impactFacts from project prop', () => {
+    const project: import('@portfolio/shared').Project = {
+      id: 42,
+      slug: 'projeto-existente',
+      title: 'Projeto Existente',
+      description: null,
+      content: null,
+      renderedContent: null,
+      coverUrl: null,
+      status: 'published',
+      repositoryUrl: null,
+      liveUrl: null,
+      featured: false,
+      order: 0,
+      impactFacts: ['Reduziu latência em 40%', 'Adotado por +200 devs'],
+      deletedAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      tags: [],
+    };
+
+    render(<ProjectForm mode="edit" project={project} />);
+
+    expect(screen.getByLabelText('Fato de impacto 1')).toHaveValue('Reduziu latência em 40%');
+    expect(screen.getByLabelText('Fato de impacto 2')).toHaveValue('Adotado por +200 devs');
   });
 });

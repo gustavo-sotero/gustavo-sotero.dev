@@ -126,3 +126,30 @@ describe('ProjectCard — tag rendering', () => {
     expect(screen.queryByText('Destaque')).toBeNull();
   });
 });
+
+describe('ProjectCard — impactFacts rendering', () => {
+  it('renders impact facts when impactFacts is non-empty', () => {
+    render(
+      <ProjectCard
+        project={makeProject({ impactFacts: ['Reduziu latência em 40%', 'Adotado por +200 devs'] })}
+      />
+    );
+    expect(screen.getByText('Reduziu latência em 40%')).toBeInTheDocument();
+    expect(screen.getByText('Adotado por +200 devs')).toBeInTheDocument();
+  });
+
+  it('renders all facts in order', () => {
+    const facts = ['Primeiro fato', 'Segundo fato', 'Terceiro fato'];
+    render(<ProjectCard project={makeProject({ impactFacts: facts })} />);
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]?.textContent).toContain('Primeiro fato');
+    expect(items[1]?.textContent).toContain('Segundo fato');
+    expect(items[2]?.textContent).toContain('Terceiro fato');
+  });
+
+  it('does not render impact facts section when impactFacts is empty', () => {
+    render(<ProjectCard project={makeProject({ impactFacts: [] })} />);
+    // Facts section should not be present (nothing to assert against since there is no semantic container)
+    expect(screen.queryByRole('list')).toBeNull();
+  });
+});

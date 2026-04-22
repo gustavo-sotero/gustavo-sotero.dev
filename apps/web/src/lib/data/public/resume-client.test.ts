@@ -45,6 +45,23 @@ describe('getResumeDataClient', () => {
     });
   });
 
+  it('passes impactFacts through for experience and projects', async () => {
+    mockApiGetPaginated
+      .mockResolvedValueOnce({
+        data: [{ id: 1, role: 'Backend Engineer', impactFacts: ['Liderou equipe de 4 devs'] }],
+      })
+      .mockResolvedValueOnce({ data: [{ id: 2, title: 'ADS' }] })
+      .mockResolvedValueOnce({
+        data: [{ id: 3, title: 'Projeto destaque', impactFacts: ['Reduziu latência em 40%'] }],
+      });
+    mockApiGet.mockResolvedValueOnce({ data: [] });
+
+    const result = await getResumeDataClient();
+
+    expect(result.experience[0]).toMatchObject({ impactFacts: ['Liderou equipe de 4 devs'] });
+    expect(result.projects[0]).toMatchObject({ impactFacts: ['Reduziu latência em 40%'] });
+  });
+
   it('falls back to empty arrays when any public resume endpoint is unavailable', async () => {
     mockApiGetPaginated
       .mockRejectedValueOnce(new Error('experience unavailable'))

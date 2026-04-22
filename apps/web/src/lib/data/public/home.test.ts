@@ -52,6 +52,21 @@ describe('getHomeFeaturedProjects', () => {
     expect((result as { state: 'ok'; data: unknown[] }).data).toEqual([project]);
   });
 
+  it('passes impactFacts through from API to loader result', async () => {
+    const project = {
+      id: 2,
+      slug: 'projeto-destaque',
+      impactFacts: ['Reduziu latência em 40%', 'Adotado por +200 devs'],
+    };
+    apiServerGetPaginatedMock.mockResolvedValueOnce(makePaginatedResponse([project]));
+
+    const result = await getHomeFeaturedProjects();
+
+    expect(result.state).toBe('ok');
+    const data = (result as { state: 'ok'; data: (typeof project)[] }).data;
+    expect(data[0]?.impactFacts).toEqual(['Reduziu latência em 40%', 'Adotado por +200 devs']);
+  });
+
   it('returns empty state when API responds with no projects', async () => {
     apiServerGetPaginatedMock.mockResolvedValueOnce(makePaginatedResponse([]));
 
@@ -150,6 +165,21 @@ describe('getHomeExperience', () => {
 
     expect(result.state).toBe('ok');
     expect((result as { state: 'ok'; data: unknown[] }).data).toEqual([item]);
+  });
+
+  it('passes impactFacts through from API to loader result', async () => {
+    const item = {
+      id: 1,
+      role: 'Backend Engineer',
+      impactFacts: ['Liderou squad de 4 devs', 'Reduziu bugs em 35%'],
+    };
+    apiServerGetPaginatedMock.mockResolvedValueOnce(makePaginatedResponse([item]));
+
+    const result = await getHomeExperience();
+
+    expect(result.state).toBe('ok');
+    const data = (result as { state: 'ok'; data: (typeof item)[] }).data;
+    expect(data[0]?.impactFacts).toEqual(['Liderou squad de 4 devs', 'Reduziu bugs em 35%']);
   });
 
   it('returns empty state when API responds with no experience entries', async () => {

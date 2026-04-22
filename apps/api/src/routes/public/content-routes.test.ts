@@ -357,4 +357,47 @@ describe('public content routes', () => {
     expect(response.status).toBe(200);
     expect(listTagsMock).toHaveBeenCalledWith({}, true);
   });
+
+  it('GET /projects/:slug includes impactFacts in the response body', async () => {
+    const project = {
+      id: 5,
+      slug: 'projeto-impacto',
+      title: 'Projeto com impacto',
+      impactFacts: ['Reduziu latência em 40%', 'Adotado por +200 devs'],
+    };
+    getProjectBySlugMock.mockResolvedValueOnce(project);
+
+    const app = new Hono();
+    app.route('/projects', publicProjectsRouter);
+
+    const response = await app.request('/projects/projeto-impacto');
+    const body = (await response.json()) as {
+      success: boolean;
+      data: { slug: string; impactFacts: string[] };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.impactFacts).toEqual(['Reduziu latência em 40%', 'Adotado por +200 devs']);
+  });
+
+  it('GET /projects includes impactFacts in paginated list items', async () => {
+    listProjectsMock.mockResolvedValueOnce({
+      data: [{ id: 1, slug: 'projeto-1', impactFacts: ['Fato quantificado: +30% uptime'] }],
+      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+    });
+
+    const app = new Hono();
+    app.route('/projects', publicProjectsRouter);
+
+    const response = await app.request('/projects');
+    const body = (await response.json()) as {
+      success: boolean;
+      data: Array<{ slug: string; impactFacts: string[] }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data[0]?.impactFacts).toEqual(['Fato quantificado: +30% uptime']);
+  });
 });

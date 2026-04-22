@@ -15,7 +15,7 @@ const uniqueTagIds = z
  * Each fact must be a non-empty string up to 200 characters.
  * Maximum of 6 facts per experience entry.
  */
-export const impactFactsSchema = z
+export const experienceImpactFactsSchema = z
   .array(
     z
       .string()
@@ -45,7 +45,7 @@ const experienceBaseShape = z.object({
   status: z.enum(['draft', 'published']).default('draft'),
   logoUrl: z.union([z.literal(''), z.string().url()]).optional(),
   credentialUrl: z.union([z.literal(''), z.string().url()]).optional(),
-  impactFacts: impactFactsSchema,
+  impactFacts: experienceImpactFactsSchema,
   tagIds: uniqueTagIds.optional(),
 });
 

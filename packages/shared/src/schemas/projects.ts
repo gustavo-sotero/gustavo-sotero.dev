@@ -11,7 +11,7 @@ const uniqueTagIds = z
  * Each fact must be a non-empty string up to 200 characters.
  * Maximum of 6 facts per project.
  */
-export const impactFactsSchema = z
+export const projectImpactFactsSchema = z
   .array(
     z
       .string()
@@ -36,7 +36,7 @@ export const createProjectSchema = z.object({
   liveUrl: z.union([z.literal(''), z.string().url()]).optional(),
   featured: z.boolean().default(false),
   order: z.number().int().default(0),
-  impactFacts: impactFactsSchema,
+  impactFacts: projectImpactFactsSchema,
   tagIds: uniqueTagIds.optional(),
 });
 

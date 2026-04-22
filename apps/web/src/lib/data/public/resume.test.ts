@@ -56,6 +56,32 @@ describe('getResumeData', () => {
     expect(result.data.tags.length).toBe(1);
   });
 
+  it('passes impactFacts through for experience and projects', async () => {
+    apiServerGetPaginatedMock
+      .mockResolvedValueOnce(
+        makePaginatedResponse([
+          { id: 1, role: 'Backend Engineer', impactFacts: ['Liderou equipe de 4 devs'] },
+        ])
+      )
+      .mockResolvedValueOnce(
+        makePaginatedResponse([{ id: 2, title: 'Análise e Desenvolvimento de Sistemas' }])
+      )
+      .mockResolvedValueOnce(
+        makePaginatedResponse([
+          { id: 3, title: 'Projeto destaque', impactFacts: ['Reduziu latência em 40%'] },
+        ])
+      );
+    apiServerGetMock.mockResolvedValueOnce([]);
+
+    const result = await getResumeData();
+
+    expect(result.state).toBe('ok');
+    const exp = result.data.experience as Array<{ impactFacts: string[] }>;
+    expect(exp[0]?.impactFacts).toEqual(['Liderou equipe de 4 devs']);
+    const proj = result.data.projects as Array<{ impactFacts: string[] }>;
+    expect(proj[0]?.impactFacts).toEqual(['Reduziu latência em 40%']);
+  });
+
   it('returns degraded state when one source fails, preserving partial data', async () => {
     apiServerGetPaginatedMock
       .mockRejectedValueOnce(new Error('experience API down'))
