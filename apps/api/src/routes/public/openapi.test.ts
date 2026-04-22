@@ -188,7 +188,10 @@ describe('openapi routes', () => {
               content?: {
                 'application/json'?: {
                   schema?: {
-                    properties?: Record<string, { default?: boolean; uniqueItems?: boolean }>;
+                    properties?: Record<
+                      string,
+                      { default?: boolean; uniqueItems?: boolean; maxItems?: number }
+                    >;
                   };
                 };
               };
@@ -200,7 +203,7 @@ describe('openapi routes', () => {
               content?: {
                 'application/json'?: {
                   schema?: {
-                    properties?: Record<string, { uniqueItems?: boolean }>;
+                    properties?: Record<string, { uniqueItems?: boolean; maxItems?: number }>;
                   };
                 };
               };
@@ -213,17 +216,25 @@ describe('openapi routes', () => {
     const projectCreate =
       body.paths['/admin/projects']?.post?.requestBody?.content?.['application/json']?.schema;
     const postCreate = body.paths['/admin/posts']?.post;
+    const experienceCreate =
+      body.paths['/admin/experience']?.post?.requestBody?.content?.['application/json']?.schema;
     const experiencePath = body.paths['/admin/experience/{identifier}'];
     const readyPath = body.paths['/ready']?.get;
 
     expect(projectCreate?.properties?.tagIds?.uniqueItems).toBe(true);
     expect(projectCreate?.properties?.featured?.default).toBe(false);
+    expect(projectCreate?.properties?.impactFacts?.maxItems).toBe(6);
     expect(postCreate?.responses && Object.hasOwn(postCreate.responses, '409')).toBe(true);
+    expect(experienceCreate?.properties?.impactFacts?.maxItems).toBe(6);
     expect(experiencePath?.get?.summary).toBe('Get experience entry by slug (admin)');
     expect(
       experiencePath?.patch?.requestBody?.content?.['application/json']?.schema?.properties?.tagIds
         ?.uniqueItems
     ).toBe(true);
+    expect(
+      experiencePath?.patch?.requestBody?.content?.['application/json']?.schema?.properties
+        ?.impactFacts?.maxItems
+    ).toBe(6);
     expect(
       experiencePath?.patch?.responses && Object.hasOwn(experiencePath.patch.responses, '409')
     ).toBe(true);
@@ -235,6 +246,66 @@ describe('openapi routes', () => {
       redis: 'ok',
       schema: 'ok',
     });
+  });
+
+  it('GET /doc/spec documents impactFacts on developer profile experience and projects', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<
+        string,
+        {
+          get?: {
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    schema?: {
+                      properties?: {
+                        data?: {
+                          properties?: {
+                            experience?: {
+                              items?: {
+                                properties?: Record<string, unknown>;
+                              };
+                            };
+                            projects?: {
+                              items?: {
+                                properties?: Record<string, unknown>;
+                              };
+                            };
+                          };
+                        };
+                      };
+                    };
+                    example?: {
+                      data?: {
+                        experience?: Array<Record<string, unknown>>;
+                        projects?: Array<Record<string, unknown>>;
+                      };
+                    };
+                  };
+                };
+              }
+            >;
+          };
+        }
+      >;
+    };
+
+    const profileGet = body.paths['/developer/profile']?.get;
+    const json = profileGet?.responses?.['200']?.content?.['application/json'];
+    const experienceProps =
+      json?.schema?.properties?.data?.properties?.experience?.items?.properties;
+    const projectProps = json?.schema?.properties?.data?.properties?.projects?.items?.properties;
+
+    expect(experienceProps && Object.hasOwn(experienceProps, 'impactFacts')).toBe(true);
+    expect(projectProps && Object.hasOwn(projectProps, 'impactFacts')).toBe(true);
+    expect(Array.isArray(json?.example?.data?.experience?.[0]?.impactFacts)).toBe(true);
+    expect(Array.isArray(json?.example?.data?.projects?.[0]?.impactFacts)).toBe(true);
   });
 
   it('GET /doc/spec documents AI post generation contracts with concrete examples', async () => {

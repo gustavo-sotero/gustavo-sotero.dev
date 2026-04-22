@@ -108,7 +108,7 @@ vi.mock('./ImpactFactsEditor', () => ({
   }) => (
     <div data-testid="impact-facts-editor">
       {value.map((fact, i) => (
-        <input key={i} readOnly aria-label={`Fato de impacto ${i + 1}`} value={fact} />
+        <input key={fact} readOnly aria-label={`Fato de impacto ${i + 1}`} value={fact} />
       ))}
       <button
         type="button"

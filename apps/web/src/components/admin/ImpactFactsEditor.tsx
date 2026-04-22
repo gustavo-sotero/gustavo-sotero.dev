@@ -10,6 +10,21 @@ import { Label } from '../ui/label';
 const MAX_FACTS = 6;
 const MAX_FACT_LENGTH = 200;
 
+type ImpactFactItem = {
+  id: string;
+  value: string;
+};
+
+let nextImpactFactId = 0;
+
+function createImpactFactItem(value: string): ImpactFactItem {
+  nextImpactFactId += 1;
+  return {
+    id: `impact-fact-${nextImpactFactId}`,
+    value,
+  };
+}
+
 interface ImpactFactsEditorProps {
   value: string[];
   onChange: (facts: string[]) => void;
@@ -27,23 +42,25 @@ interface ImpactFactsEditorProps {
 export function ImpactFactsEditor({ value, onChange, error }: ImpactFactsEditorProps) {
   // Internal state keeps stable string[] including transient empty strings
   // while the user is typing. onChange only fires with trimmed non-empty values.
-  const [items, setItems] = useState<string[]>(value.length > 0 ? value : []);
+  const [items, setItems] = useState<ImpactFactItem[]>(() => value.map(createImpactFactItem));
   const addedRef = useRef(false);
 
   // Sync from parent (e.g. edit mode loading)
   useEffect(() => {
     if (!addedRef.current) {
-      setItems(value);
+      setItems(value.map(createImpactFactItem));
     }
   }, [value]);
 
-  function emit(next: string[]) {
-    const cleaned = next.map((f) => f.trim()).filter((f) => f.length > 0);
+  function emit(next: ImpactFactItem[]) {
+    const cleaned = next.map((item) => item.value.trim()).filter((fact) => fact.length > 0);
     onChange(cleaned);
   }
 
   function handleChange(index: number, nextValue: string) {
-    const next = items.map((v, i) => (i === index ? nextValue : v));
+    const next = items.map((item, itemIndex) =>
+      itemIndex === index ? { ...item, value: nextValue } : item
+    );
     setItems(next);
     emit(next);
   }
@@ -51,7 +68,7 @@ export function ImpactFactsEditor({ value, onChange, error }: ImpactFactsEditorP
   function handleAdd() {
     if (items.length >= MAX_FACTS) return;
     addedRef.current = true;
-    const next = [...items, ''];
+    const next = [...items, createImpactFactItem('')];
     setItems(next);
     // Don't emit empty string — will be emitted when user types
   }
@@ -107,28 +124,28 @@ export function ImpactFactsEditor({ value, onChange, error }: ImpactFactsEditorP
       {/* Fact list */}
       {items.length > 0 && (
         <ol className="space-y-2">
-          {items.map((fact, index) => (
-            <li key={index} className="flex items-center gap-2">
+          {items.map((item, index) => (
+            <li key={item.id} className="flex items-center gap-2">
               <span className="text-xs text-zinc-600 font-mono w-5 text-right shrink-0">
                 {index + 1}.
               </span>
               <div className="relative flex-1">
                 <Input
-                  value={fact}
+                  value={item.value}
                   onChange={(e) => handleChange(index, e.target.value)}
                   placeholder="Verbo + resultado mensurável..."
                   maxLength={MAX_FACT_LENGTH}
                   aria-label={`Fato de impacto ${index + 1}`}
                   className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60 pr-12 text-sm"
                 />
-                {fact.length > MAX_FACT_LENGTH * 0.8 && (
+                {item.value.length > MAX_FACT_LENGTH * 0.8 && (
                   <span
                     className={cn(
                       'absolute right-8 top-1/2 -translate-y-1/2 text-[10px] font-mono',
-                      fact.length >= MAX_FACT_LENGTH ? 'text-red-400' : 'text-zinc-500'
+                      item.value.length >= MAX_FACT_LENGTH ? 'text-red-400' : 'text-zinc-500'
                     )}
                   >
-                    {MAX_FACT_LENGTH - fact.length}
+                    {MAX_FACT_LENGTH - item.value.length}
                   </span>
                 )}
               </div>

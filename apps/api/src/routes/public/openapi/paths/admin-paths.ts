@@ -1217,6 +1217,13 @@ export const adminPaths = {
                 liveUrl: { type: 'string', format: 'uri' },
                 featured: { type: 'boolean', default: false },
                 order: { type: 'integer', default: 0 },
+                impactFacts: {
+                  type: 'array',
+                  items: { type: 'string', minLength: 1, maxLength: 200 },
+                  maxItems: 6,
+                  description:
+                    'Ordered list of concise impact facts reused across portfolio and resume surfaces.',
+                },
                 tagIds: {
                   type: 'array',
                   items: { type: 'integer' },
@@ -1260,6 +1267,13 @@ export const adminPaths = {
                 liveUrl: { type: 'string', format: 'uri' },
                 featured: { type: 'boolean' },
                 order: { type: 'integer' },
+                impactFacts: {
+                  type: 'array',
+                  items: { type: 'string', minLength: 1, maxLength: 200 },
+                  maxItems: 6,
+                  description:
+                    'Ordered list of concise impact facts reused across portfolio and resume surfaces.',
+                },
                 tagIds: {
                   type: 'array',
                   items: { type: 'integer' },
@@ -1904,6 +1918,13 @@ export const adminPaths = {
                 status: { type: 'string', enum: ['draft', 'published'] },
                 logoUrl: { type: 'string' },
                 credentialUrl: { type: 'string' },
+                impactFacts: {
+                  type: 'array',
+                  items: { type: 'string', minLength: 1, maxLength: 200 },
+                  maxItems: 6,
+                  description:
+                    'Ordered list of concise impact facts reused across portfolio and resume surfaces.',
+                },
                 tagIds: {
                   type: 'array',
                   items: { type: 'integer' },
@@ -1977,6 +1998,13 @@ export const adminPaths = {
                 status: { type: 'string', enum: ['draft', 'published'] },
                 logoUrl: { type: 'string' },
                 credentialUrl: { type: 'string' },
+                impactFacts: {
+                  type: 'array',
+                  items: { type: 'string', minLength: 1, maxLength: 200 },
+                  maxItems: 6,
+                  description:
+                    'Ordered list of concise impact facts reused across portfolio and resume surfaces.',
+                },
                 tagIds: {
                   type: 'array',
                   items: { type: 'integer' },

@@ -134,6 +134,10 @@ export const publicPaths = {
                             endDate: { type: 'string', format: 'date-time', nullable: true },
                             isCurrent: { type: 'boolean' },
                             order: { type: 'integer' },
+                            impactFacts: {
+                              type: 'array',
+                              items: { type: 'string' },
+                            },
                             logoUrl: { type: 'string', nullable: true },
                           },
                         },
@@ -176,6 +180,10 @@ export const publicPaths = {
                             featured: { type: 'boolean' },
                             repositoryUrl: { type: 'string', nullable: true },
                             liveUrl: { type: 'string', nullable: true },
+                            impactFacts: {
+                              type: 'array',
+                              items: { type: 'string' },
+                            },
                             createdAt: { type: 'string', format: 'date-time' },
                             updatedAt: { type: 'string', format: 'date-time' },
                             tags: {
@@ -303,6 +311,7 @@ export const publicPaths = {
                       endDate: null,
                       isCurrent: true,
                       order: 0,
+                      impactFacts: ['Reduziu tempo de deploy em 60%', 'Liderou squad de 4 devs'],
                       logoUrl: null,
                     },
                   ],
@@ -333,6 +342,10 @@ export const publicPaths = {
                       featured: true,
                       repositoryUrl: 'https://github.com/example/portfolio',
                       liveUrl: 'https://gustavo-sotero.dev/api',
+                      impactFacts: [
+                        'Reduziu latência em 40%',
+                        'Automatizou geração de documentação pública com OpenAPI',
+                      ],
                       createdAt: '2025-01-01T00:00:00.000Z',
                       updatedAt: '2025-06-01T00:00:00.000Z',
                       tags: [

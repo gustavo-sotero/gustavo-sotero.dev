@@ -72,6 +72,7 @@ export interface ExperienceItemDTO {
   endDate: string | null;
   isCurrent: boolean;
   order: number;
+  impactFacts: string[];
   logoUrl: string | null;
 }
 
@@ -112,6 +113,7 @@ export interface ProjectSummaryDTO {
   featured: boolean;
   repositoryUrl: string | null;
   liveUrl: string | null;
+  impactFacts: string[];
   createdAt: string;
   updatedAt: string;
   tags: TagDTO[];
@@ -232,6 +234,7 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
     endDate: toIso(e.endDate),
     isCurrent: e.isCurrent ?? false,
     order: e.order ?? 0,
+    impactFacts: e.impactFacts ?? [],
     logoUrl: e.logoUrl ?? null,
   }));
 
@@ -277,6 +280,7 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
     featured: pr.featured ?? false,
     repositoryUrl: pr.repositoryUrl ?? null,
     liveUrl: pr.liveUrl ?? null,
+    impactFacts: pr.impactFacts ?? [],
     createdAt: toIsoRequired(pr.createdAt),
     updatedAt: toIsoRequired(pr.updatedAt),
     tags: flattenPivotTagArray((pr.tags ?? []) as Array<{ tag: Parameters<typeof mapTag>[0] }>).map(

@@ -202,6 +202,38 @@ describe('posts/projects services', () => {
     );
   });
 
+  it('createProjectService normaliza impactFacts antes de persistir', async () => {
+    dbLimitMock.mockResolvedValueOnce([]);
+    createProjectMock.mockResolvedValueOnce({ id: 1, slug: 'projeto-a' });
+
+    await createProjectService({
+      title: 'Projeto A',
+      content: '# Título',
+      status: 'draft',
+      featured: false,
+      order: 0,
+      impactFacts: ['  Reduziu latência em 40%  ', 'Adotado por +200 devs'],
+    });
+
+    expect(createProjectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        impactFacts: ['Reduziu latência em 40%', 'Adotado por +200 devs'],
+      }),
+      expect.anything()
+    );
+  });
+
+  it('updateProjectService rejects invalid impactFacts payloads before persistence', async () => {
+    dbLimitMock.mockResolvedValueOnce([{ id: 1, slug: 'projeto-a' }]);
+
+    await expect(updateProjectService(1, { impactFacts: ['   '] })).rejects.toMatchObject({
+      message: expect.stringContaining('VALIDATION_ERROR'),
+      validationDetails: [{ field: 'impactFacts', message: 'Impact fact cannot be empty' }],
+    });
+
+    expect(updateProjectMock).not.toHaveBeenCalled();
+  });
+
   it('getPostBySlug (admin) retorna tags achatadas em Tag[]', async () => {
     findPostBySlugMock.mockResolvedValueOnce({
       id: 1,

@@ -136,4 +136,49 @@ describe('developer-profile service — stack source alignment', () => {
     expect(result.metrics.totalTagsInUse).toBe(3);
     expect(totalInGroups).toBe(3);
   });
+
+  it('projects impactFacts for experience and projects into the aggregate payload', async () => {
+    findManyExperienceMock.mockResolvedValue(
+      makeEmptyPaginated([
+        {
+          id: 1,
+          slug: 'backend-engineer',
+          company: 'Acme',
+          role: 'Backend Engineer',
+          description: 'Backend platform work',
+          location: null,
+          employmentType: null,
+          startDate: '2024-01-01',
+          endDate: null,
+          isCurrent: true,
+          order: 0,
+          impactFacts: ['Reduziu tempo de deploy em 60%'],
+          logoUrl: null,
+        },
+      ])
+    );
+    findManyProjectsMock.mockResolvedValue(
+      makeEmptyPaginated([
+        {
+          id: 2,
+          slug: 'portfolio-api',
+          title: 'Portfolio API',
+          description: 'REST API',
+          coverUrl: null,
+          featured: true,
+          repositoryUrl: null,
+          liveUrl: null,
+          impactFacts: ['Reduziu latência em 40%'],
+          createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-02-01T00:00:00.000Z',
+          tags: [],
+        },
+      ])
+    );
+
+    const result = await getDeveloperProfile();
+
+    expect(result.experience[0]?.impactFacts).toEqual(['Reduziu tempo de deploy em 60%']);
+    expect(result.projects[0]?.impactFacts).toEqual(['Reduziu latência em 40%']);
+  });
 });

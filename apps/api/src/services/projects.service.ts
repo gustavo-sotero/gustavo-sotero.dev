@@ -11,6 +11,7 @@ import type { CreateProjectInput, UpdateProjectInput } from '@portfolio/shared/s
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
+import { normalizeProjectImpactFacts } from '../lib/impactFacts';
 import { renderMarkdown } from '../lib/markdown';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
@@ -100,6 +101,7 @@ export async function createProjectService(data: CreateProjectInput) {
   // 2. Render Markdown content if provided
   const renderedContent = data.content ? await renderMarkdown(data.content) : undefined;
   const normalizedTagIds = data.tagIds ? normalizeTagIds(data.tagIds) : [];
+  const normalizedImpactFacts = normalizeProjectImpactFacts(data.impactFacts) ?? [];
 
   // 3. Persist atomically: create project + tag sync in one transaction.
   // Keeping tag sync inside the same transaction guarantees that a crash between
@@ -124,7 +126,7 @@ export async function createProjectService(data: CreateProjectInput) {
         liveUrl: data.liveUrl,
         featured: data.featured ?? false,
         order: data.order ?? 0,
-        impactFacts: data.impactFacts ?? [],
+        impactFacts: normalizedImpactFacts,
       },
       tx
     );
@@ -181,7 +183,9 @@ export async function updateProjectService(id: number, data: UpdateProjectInput)
   if (data.liveUrl !== undefined) patch.liveUrl = data.liveUrl;
   if (data.featured !== undefined) patch.featured = data.featured;
   if (data.order !== undefined) patch.order = data.order;
-  if (data.impactFacts !== undefined) patch.impactFacts = data.impactFacts;
+  if (data.impactFacts !== undefined) {
+    patch.impactFacts = normalizeProjectImpactFacts(data.impactFacts);
+  }
 
   // 4. Content update — re-render Markdown
   if (data.content !== undefined) {

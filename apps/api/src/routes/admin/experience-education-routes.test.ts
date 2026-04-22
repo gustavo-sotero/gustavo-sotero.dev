@@ -221,6 +221,32 @@ describe('admin experience routes', () => {
     );
   });
 
+  it('POST /admin/experience passes impactFacts to service', async () => {
+    createExperienceServiceMock.mockResolvedValueOnce({
+      id: 1,
+      slug: 'engineer-acme',
+      ...validExperienceBody,
+      impactFacts: ['Reduziu tempo de deploy em 60%'],
+    });
+
+    const app = new Hono();
+    app.route('/admin/experience', adminExperienceRouter);
+
+    const res = await app.request('/admin/experience', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...validExperienceBody,
+        impactFacts: ['Reduziu tempo de deploy em 60%'],
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(createExperienceServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({ impactFacts: ['Reduziu tempo de deploy em 60%'] })
+    );
+  });
+
   it('POST /admin/experience returns 409 on slug conflict', async () => {
     createExperienceServiceMock.mockRejectedValueOnce(new Error('CONFLICT: Slug already taken'));
 
@@ -319,6 +345,29 @@ describe('admin experience routes', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { success: boolean };
     expect(body.success).toBe(true);
+  });
+
+  it('PATCH /admin/experience/:id passes impactFacts to service', async () => {
+    updateExperienceServiceMock.mockResolvedValueOnce({
+      id: 1,
+      slug: 'engineer-acme',
+      impactFacts: ['Liderou squad de 4 devs'],
+    });
+
+    const app = new Hono();
+    app.route('/admin/experience', adminExperienceRouter);
+
+    const res = await app.request('/admin/experience/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ impactFacts: ['Liderou squad de 4 devs'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(updateExperienceServiceMock).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ impactFacts: ['Liderou squad de 4 devs'] })
+    );
   });
 
   // DELETE ──────────────────────────────────────────────────────────────────────

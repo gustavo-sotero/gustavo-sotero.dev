@@ -344,6 +344,28 @@ describe('experience service', () => {
       ).rejects.toThrow('Failed to create experience');
     });
 
+    it('normalizes impactFacts before persisting experience entries', async () => {
+      ensureUniqueSlugMock.mockResolvedValueOnce('engineer-corp');
+      createExperienceMock.mockResolvedValueOnce(baseExperience);
+      findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
+
+      await createExperienceService({
+        role: 'Engineer',
+        company: 'Corp',
+        description: 'D.',
+        startDate: '2022-01-01',
+        isCurrent: true,
+        status: 'draft',
+        order: 0,
+        impactFacts: ['  Reduziu tempo de deploy em 60%  '],
+      });
+
+      expect(createExperienceMock).toHaveBeenCalledWith(
+        expect.objectContaining({ impactFacts: ['Reduziu tempo de deploy em 60%'] }),
+        expect.anything()
+      );
+    });
+
     it('returns experience with flattened tags after create', async () => {
       const tag = {
         id: 3,
@@ -441,6 +463,17 @@ describe('experience service', () => {
       await expect(updateExperienceService(1, { isCurrent: false })).rejects.toThrow(
         'VALIDATION_ERROR'
       );
+    });
+
+    it('rejects invalid impactFacts payloads before persisting experience updates', async () => {
+      findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
+
+      await expect(updateExperienceService(1, { impactFacts: ['   '] })).rejects.toMatchObject({
+        message: expect.stringContaining('VALIDATION_ERROR'),
+        validationDetails: [{ field: 'impactFacts', message: 'Impact fact cannot be empty' }],
+      });
+
+      expect(updateExperienceMock).not.toHaveBeenCalled();
     });
   });
 

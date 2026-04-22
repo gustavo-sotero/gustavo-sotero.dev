@@ -61,10 +61,13 @@ adminExperienceRouter.post('/', async (c) => {
       return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
     }
     if (message.startsWith('VALIDATION_ERROR:')) {
-      const details = (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
-        field: 'tagIds',
-        message: `Tag with id ${id} does not exist`,
-      }));
+      const details =
+        (err as { validationDetails?: Array<{ field: string; message: string }> })
+          .validationDetails ??
+        (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
+          field: 'tagIds',
+          message: `Tag with id ${id} does not exist`,
+        }));
       return errorResponse(
         c,
         400,
@@ -117,10 +120,13 @@ adminExperienceRouter.patch('/:id', async (c) => {
       return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
     }
     if (message.startsWith('VALIDATION_ERROR:')) {
-      const details = (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
-        field: 'tagIds',
-        message: `Tag with id ${id} does not exist`,
-      }));
+      const details =
+        (err as { validationDetails?: Array<{ field: string; message: string }> })
+          .validationDetails ??
+        (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
+          field: 'tagIds',
+          message: `Tag with id ${id} does not exist`,
+        }));
       return errorResponse(
         c,
         400,

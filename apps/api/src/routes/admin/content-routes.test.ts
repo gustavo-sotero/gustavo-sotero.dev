@@ -350,6 +350,57 @@ describe('admin content routes', () => {
     expect(body.error.details.some((d) => d.field === 'title')).toBe(true);
   });
 
+  it('POST /admin/projects passes impactFacts to service', async () => {
+    createProjectServiceMock.mockResolvedValueOnce({
+      id: 1,
+      slug: 'project-admin',
+      title: 'Projeto com impacto',
+      impactFacts: ['Reduziu latência em 40%'],
+    });
+
+    const app = new Hono();
+    app.route('/admin/projects', adminProjectsRouter);
+
+    const response = await app.request('/admin/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Projeto com impacto',
+        content: 'Conteúdo',
+        status: 'draft',
+        impactFacts: ['Reduziu latência em 40%'],
+      }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(createProjectServiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({ impactFacts: ['Reduziu latência em 40%'] })
+    );
+  });
+
+  it('PATCH /admin/projects/:id passes impactFacts to service', async () => {
+    updateProjectServiceMock.mockResolvedValueOnce({
+      id: 1,
+      slug: 'project-admin',
+      impactFacts: ['Adotado por +200 devs'],
+    });
+
+    const app = new Hono();
+    app.route('/admin/projects', adminProjectsRouter);
+
+    const response = await app.request('/admin/projects/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ impactFacts: ['Adotado por +200 devs'] }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(updateProjectServiceMock).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ impactFacts: ['Adotado por +200 devs'] })
+    );
+  });
+
   it('DELETE /admin/projects/:id returns 404 when project is missing', async () => {
     softDeleteProjectServiceMock.mockResolvedValueOnce(null);
 

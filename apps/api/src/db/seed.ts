@@ -1,4 +1,12 @@
-import { posts, postTags, projects, projectTags, tags } from '@portfolio/shared/db/schema';
+import {
+  experience,
+  experienceTags,
+  posts,
+  postTags,
+  projects,
+  projectTags,
+  tags,
+} from '@portfolio/shared/db/schema';
 import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
 import { and, eq, isNull, ne, or } from 'drizzle-orm';
 import { db, pgClient } from '../config/db';
@@ -143,7 +151,7 @@ await queue.add('send', { to: 'user@example.com' })
   },
 ];
 
-const SEED_PROJECTS = [
+export const SEED_PROJECTS = [
   {
     slug: 'fullstack-portfolio',
     title: 'Fullstack Portfolio',
@@ -206,6 +214,52 @@ A collection of open source work and experiments.
     order: 2,
     impactFacts: ['Contribuições com foco em DX — tipagem, ergonomia de API e documentação'],
     tagSlugs: ['typescript', 'react'],
+  },
+];
+
+export const SEED_EXPERIENCE = [
+  {
+    slug: 'backend-engineer-saas-platform',
+    role: 'Backend Engineer',
+    company: 'SaaS Platform',
+    description:
+      'Responsável por APIs críticas, filas assíncronas e evolução da observabilidade de produtos internos.',
+    location: 'Remoto',
+    employmentType: 'Tempo integral',
+    startDate: '2024-01-01',
+    endDate: null,
+    isCurrent: true,
+    order: 0,
+    status: 'published' as const,
+    logoUrl: null,
+    credentialUrl: null,
+    impactFacts: [
+      'Reduziu tempo médio de deploy em 60% com pipeline CI/CD padronizado',
+      'Diminuiu incidentes recorrentes em produção em 35% com observabilidade e alertas melhores',
+      'Acelerou integrações internas ao transformar fluxos manuais de horas em minutos',
+    ],
+    tagSlugs: ['typescript', 'hono', 'postgresql', 'redis', 'docker'],
+  },
+  {
+    slug: 'fullstack-developer-independent-products',
+    role: 'Fullstack Developer',
+    company: 'Produtos Independentes',
+    description:
+      'Construção de produtos próprios com foco em backend, automação operacional e entrega rápida de novas funcionalidades.',
+    location: 'Brasil',
+    employmentType: 'Autônomo',
+    startDate: '2022-01-01',
+    endDate: '2023-12-31',
+    isCurrent: false,
+    order: 1,
+    status: 'published' as const,
+    logoUrl: null,
+    credentialUrl: null,
+    impactFacts: [
+      'Lançou MVPs de ponta a ponta com stack TypeScript moderna e operação em VPS própria',
+      'Automatizou rotinas críticas de moderação e atendimento para sustentar crescimento com baixa sobrecarga manual',
+    ],
+    tagSlugs: ['typescript', 'nextjs', 'postgresql', 'redis', 'bun'],
   },
 ];
 
@@ -317,6 +371,42 @@ async function seed() {
 
     if (pivots.length > 0) {
       await db.insert(projectTags).values(pivots).onConflictDoNothing();
+    }
+  }
+
+  // ── Experience ───────────────────────────────────────────────────────────────
+  logger.info('Seeding experience...');
+  for (const entry of SEED_EXPERIENCE) {
+    const { tagSlugs, ...experienceData } = entry;
+
+    const [inserted] = await db
+      .insert(experience)
+      .values(experienceData)
+      .onConflictDoNothing({ target: experience.slug })
+      .returning({ id: experience.id, slug: experience.slug });
+
+    const experienceRecord =
+      inserted ??
+      (await db.query.experience.findFirst({ where: eq(experience.slug, experienceData.slug) }));
+
+    if (!experienceRecord) {
+      logger.warn(`Experience not found after upsert attempt: ${experienceData.slug}`);
+      continue;
+    }
+
+    if (inserted) {
+      logger.info(`Experience inserted: ${inserted.slug}`);
+    } else {
+      logger.info(`Experience already exists: ${experienceData.slug}`);
+    }
+
+    const pivots = tagSlugs
+      .map((slug) => tagIdBySlug[slug])
+      .filter((id): id is number => id !== undefined)
+      .map((tagId) => ({ experienceId: experienceRecord.id, tagId }));
+
+    if (pivots.length > 0) {
+      await db.insert(experienceTags).values(pivots).onConflictDoNothing();
     }
   }
 

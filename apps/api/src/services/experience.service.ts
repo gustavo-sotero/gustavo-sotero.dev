@@ -13,6 +13,7 @@ import type {
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
+import { normalizeExperienceImpactFacts } from '../lib/impactFacts';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import { assertTagsExist, normalizeTagIds } from '../lib/tagValidation';
@@ -116,6 +117,7 @@ export async function createExperienceService(data: CreateExperienceInput) {
   // Validate tag references before entering the transaction to produce a
   // deterministic domain error instead of a foreign-key 500.
   const normalizedTagIds = data.tagIds ? normalizeTagIds(data.tagIds) : [];
+  const normalizedImpactFacts = normalizeExperienceImpactFacts(data.impactFacts) ?? [];
   await assertTagsExist(normalizedTagIds);
 
   // Atomically write the experience row and sync tags in one transaction,
@@ -136,7 +138,7 @@ export async function createExperienceService(data: CreateExperienceInput) {
         status: data.status ?? 'draft',
         logoUrl: data.logoUrl,
         credentialUrl: data.credentialUrl,
-        impactFacts: data.impactFacts ?? [],
+        impactFacts: normalizedImpactFacts,
       },
       tx
     );
@@ -201,7 +203,10 @@ export async function updateExperienceService(id: number, data: UpdateExperience
         status: data.status,
         logoUrl: data.logoUrl,
         credentialUrl: data.credentialUrl,
-        impactFacts: data.impactFacts,
+        impactFacts:
+          data.impactFacts === undefined
+            ? undefined
+            : normalizeExperienceImpactFacts(data.impactFacts),
       },
       tx
     );

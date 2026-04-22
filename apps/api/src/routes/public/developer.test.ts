@@ -58,6 +58,7 @@ const MOCK_PROFILE = {
       endDate: null,
       isCurrent: true,
       order: 0,
+      impactFacts: ['Reduziu tempo de deploy em 60%', 'Liderou squad de 4 devs'],
       logoUrl: null,
     },
   ],
@@ -88,6 +89,7 @@ const MOCK_PROFILE = {
       featured: true,
       repositoryUrl: 'https://github.com/example/portfolio',
       liveUrl: 'https://gustavo-sotero.dev/api',
+      impactFacts: ['Reduziu latência em 40%', 'Automatizou a documentação OpenAPI'],
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-06-01T00:00:00.000Z',
       tags: [
@@ -207,14 +209,16 @@ describe('GET /developer/profile', () => {
     const body = (await response.json()) as { data: typeof MOCK_PROFILE };
 
     expect(Array.isArray(body.data.experience)).toBe(true);
-    if (body.data.experience.length > 0) {
-      const item = body.data.experience[0];
+    const item = body.data.experience[0];
+    if (item) {
       expect(item).toHaveProperty('id');
       expect(item).toHaveProperty('slug');
       expect(item).toHaveProperty('company');
       expect(item).toHaveProperty('role');
       expect(item).toHaveProperty('startDate');
       expect(item).toHaveProperty('isCurrent');
+      expect(item).toHaveProperty('impactFacts');
+      expect(Array.isArray(item.impactFacts)).toBe(true);
     }
   });
 
@@ -245,7 +249,9 @@ describe('GET /developer/profile', () => {
       expect(project).toHaveProperty('slug');
       expect(project).toHaveProperty('title');
       expect(project).toHaveProperty('featured');
+      expect(project).toHaveProperty('impactFacts');
       expect(project).toHaveProperty('tags');
+      expect(Array.isArray(project.impactFacts)).toBe(true);
       expect(Array.isArray(project.tags)).toBe(true);
     }
   });
