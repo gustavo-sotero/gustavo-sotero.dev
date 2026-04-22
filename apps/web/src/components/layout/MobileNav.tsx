@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { NAV_LINKS } from '@/lib/constants';
+import { type PublicNavHref, resolvePublicNavLinks } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface MobileNavProps {
-  activeHref: string;
+  activeHref: PublicNavHref;
 }
 
 /**
@@ -59,8 +59,7 @@ export function MobileNav({ activeHref }: MobileNavProps) {
         {/* Nav links */}
         <nav className="flex-1 px-3 py-4" aria-label="Navegação mobile">
           <ul className="space-y-0.5">
-            {NAV_LINKS.map((link) => {
-              const isActive = link.href === activeHref;
+            {resolvePublicNavLinks(activeHref).map((link) => {
               const Icon = link.icon;
 
               return (
@@ -70,24 +69,24 @@ export function MobileNav({ activeHref }: MobileNavProps) {
                     onClick={() => setOpen(false)}
                     className={cn(
                       'group relative flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150',
-                      isActive
+                      link.isActive
                         ? 'bg-emerald-500/10 text-emerald-400'
                         : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
                     )}
-                    aria-current={isActive ? 'page' : undefined}
+                    aria-current={link.isActive ? 'page' : undefined}
                   >
                     {/* Indicador de ativo */}
                     <span
                       className={cn(
                         'absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full transition-all duration-150',
-                        isActive ? 'bg-emerald-400 opacity-100' : 'opacity-0'
+                        link.isActive ? 'bg-emerald-400 opacity-100' : 'opacity-0'
                       )}
                     />
 
                     <span
                       className={cn(
                         'flex items-center justify-center h-8 w-8 rounded-md transition-colors duration-150 shrink-0',
-                        isActive
+                        link.isActive
                           ? 'bg-emerald-500/15 text-emerald-400'
                           : 'bg-zinc-800/60 text-zinc-500 group-hover:bg-zinc-700/60 group-hover:text-zinc-300'
                       )}
@@ -97,7 +96,7 @@ export function MobileNav({ activeHref }: MobileNavProps) {
 
                     <span>{link.label}</span>
 
-                    {isActive && (
+                    {link.isActive && (
                       <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
                     )}
                   </Link>

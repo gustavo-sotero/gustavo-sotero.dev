@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { AnimatedShinyText } from '@/components/ui/animated-shiny-text';
-import { SITE_BRAND_NAME } from '@/lib/constants';
+import { type PublicNavHref, SITE_BRAND_NAME } from '@/lib/constants';
 import { MobileNav } from './MobileNav';
 import { NavLinks } from './NavLinks';
 
 interface HeaderProps {
-  activeHref: string;
+  activeHref: PublicNavHref;
 }
 
 export function Header({ activeHref }: HeaderProps) {

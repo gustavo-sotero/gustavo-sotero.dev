@@ -54,13 +54,10 @@ function pickStackBadges(tags: Tag[], count = 5): StackBadge[] {
 
 interface HeroSectionProps {
   tags?: Tag[];
-  experienceLabel?: string;
+  experienceLabel: string;
 }
 
-export function HeroSection({
-  tags = [],
-  experienceLabel = DEVELOPER_PUBLIC_PROFILE.experienceLabel,
-}: HeroSectionProps) {
+export function HeroSection({ tags = [], experienceLabel }: HeroSectionProps) {
   const prefersReducedMotion = useReducedMotion();
   const stack: StackBadge[] =
     tags.length > 0

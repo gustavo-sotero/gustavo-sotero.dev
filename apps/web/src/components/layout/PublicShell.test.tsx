@@ -3,6 +3,7 @@
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import type { PublicNavHref } from '@/lib/constants';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -131,7 +132,7 @@ describe('PublicShell', () => {
   });
 
   it('renders the correct active nav item for each public section', () => {
-    const sections = [
+    const sections: Array<{ activeHref: PublicNavHref; label: string }> = [
       { activeHref: '/', label: 'Home' },
       { activeHref: '/projects', label: 'Projetos' },
       { activeHref: '/blog', label: 'Blog' },

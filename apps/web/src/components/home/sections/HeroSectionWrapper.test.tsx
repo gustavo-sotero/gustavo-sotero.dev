@@ -6,6 +6,10 @@ const { getHomeTagsMock } = vi.hoisted(() => ({
   getHomeTagsMock: vi.fn(),
 }));
 
+const { heroSectionMock } = vi.hoisted(() => ({
+  heroSectionMock: vi.fn(),
+}));
+
 vi.mock('@/lib/data/public/home', () => ({
   getHomeTags: getHomeTagsMock,
 }));
@@ -19,7 +23,10 @@ vi.mock('@/lib/cache/time', () => ({
 }));
 
 vi.mock('../HeroSection', () => ({
-  HeroSection: () => <div data-testid="hero-section">hero</div>,
+  HeroSection: (props: { experienceLabel: string }) => {
+    heroSectionMock(props);
+    return <div data-testid="hero-section">{props.experienceLabel}</div>;
+  },
 }));
 
 import { HeroSectionWrapper } from './HeroSectionWrapper';
@@ -61,5 +68,9 @@ describe('HeroSectionWrapper', () => {
 
     // The wrapper must call the cache helper to obtain the experience label.
     expect(getCachedExperienceLabel).toHaveBeenCalled();
+    expect(heroSectionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ experienceLabel: '5+ anos' })
+    );
+    expect(screen.getByText('5+ anos')).toBeInTheDocument();
   });
 });

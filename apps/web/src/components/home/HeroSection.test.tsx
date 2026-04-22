@@ -11,7 +11,6 @@ vi.mock('@portfolio/shared', () => ({
     role: 'Desenvolvedor Fullstack',
     bio: 'Construo APIs robustas.',
     bioShort: 'Especialista em backend TypeScript.',
-    experienceLabel: '3+ anos',
     availability: 'Disponivel para novos projetos',
     hero: {
       greeting: 'Ola',
@@ -133,7 +132,7 @@ function expectBefore(a: HTMLElement, b: HTMLElement) {
 
 describe('HeroSection', () => {
   it('renders fallback stack badges when no tags are provided', () => {
-    render(<HeroSection tags={[]} />);
+    render(<HeroSection tags={[]} experienceLabel="3+ anos" />);
 
     expect(screen.getByText('TypeScript')).toBeInTheDocument();
     expect(screen.getByText('Bun')).toBeInTheDocument();
@@ -143,7 +142,7 @@ describe('HeroSection', () => {
   });
 
   it('renders all LCP-critical hero content without requiring motion entrance', () => {
-    render(<HeroSection tags={[]} />);
+    render(<HeroSection tags={[]} experienceLabel="3+ anos" />);
 
     // Developer name is the primary LCP candidate — must be in a heading.
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Gustavo Sotero');
@@ -163,7 +162,7 @@ describe('HeroSection', () => {
   });
 
   it('renders the configured experience label inside the bio', () => {
-    render(<HeroSection tags={[]} />);
+    render(<HeroSection tags={[]} experienceLabel="3+ anos" />);
 
     const label = screen.getByText(/3\+ anos/);
     expect(label).toBeInTheDocument();
@@ -184,7 +183,7 @@ describe('HeroSection', () => {
       makeTag({ id: 6, name: 'AWS', category: 'cloud', isHighlighted: false }),
     ];
 
-    render(<HeroSection tags={tags} />);
+    render(<HeroSection tags={tags} experienceLabel="3+ anos" />);
 
     const typeScript = screen.getByText('TypeScript');
     const docker = screen.getByText('Docker');

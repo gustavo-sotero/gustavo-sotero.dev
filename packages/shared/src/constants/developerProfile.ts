@@ -16,11 +16,6 @@ export const DEVELOPER_PUBLIC_PROFILE = {
   birthDate: '2004-05-29',
   /** ISO 8601 YYYY-MM-DD — used to calculate years of experience dynamically */
   careerStartDate: '2021-07-01',
-  /**
-   * Static display label used by fully prerendered surfaces such as the home hero.
-   * Live time-based derivation still exists via getExperienceLabel() for dynamic flows.
-   */
-  experienceLabel: '4+ anos',
   hero: {
     greeting: 'Olá, eu sou',
     /** Shown as subtitle below the role — capability statement, not a tool listing. */

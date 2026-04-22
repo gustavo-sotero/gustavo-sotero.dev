@@ -3,6 +3,7 @@
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { type PublicNavHref, resolvePublicNavLinks } from '@/lib/constants';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ describe('NavLinks', () => {
   });
 
   it('marks the correct link for each public section', () => {
-    const sections = [
+    const sections: Array<{ activeHref: PublicNavHref; label: string }> = [
       { activeHref: '/', label: 'Home' },
       { activeHref: '/projects', label: 'Projetos' },
       { activeHref: '/blog', label: 'Blog' },
@@ -135,6 +136,16 @@ describe('MobileNav', () => {
 // ── Parity: desktop and mobile share one data source ─────────────────────────
 
 describe('NavLinks / MobileNav parity', () => {
+  it('resolves public nav items from one shared active-state helper', () => {
+    expect(resolvePublicNavLinks('/blog')).toEqual([
+      expect.objectContaining({ href: '/', isActive: false }),
+      expect.objectContaining({ href: '/projects', isActive: false }),
+      expect.objectContaining({ href: '/blog', isActive: true }),
+      expect.objectContaining({ href: '/curriculo', isActive: false }),
+      expect.objectContaining({ href: '/contact', isActive: false }),
+    ]);
+  });
+
   it('desktop and mobile expose exactly the same hrefs and labels', () => {
     const { unmount: unmountDesktop, getAllByRole: getDesktopLinks } = render(
       <NavLinks activeHref="/" />
