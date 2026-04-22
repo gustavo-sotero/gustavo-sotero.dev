@@ -73,6 +73,19 @@ function ExperienceSection({ experience }: { experience: ResumeViewModel['experi
               {item.description && (
                 <p className="text-sm text-zinc-400 leading-relaxed">{item.description}</p>
               )}
+              {item.impactFacts && item.impactFacts.length > 0 && (
+                <ul className="mt-2 space-y-1">
+                  {item.impactFacts.map((fact) => (
+                    <li
+                      key={fact}
+                      className="flex items-start gap-2 text-xs text-zinc-400 leading-relaxed"
+                    >
+                      <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                      {fact}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {item.tags && item.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {item.tags.map((tagName) => (
@@ -221,6 +234,19 @@ function ProjectsSection({ projects }: { projects: ResumeViewModel['projects'] }
             </div>
             {item.description && (
               <p className="text-xs text-zinc-400 leading-relaxed flex-1">{item.description}</p>
+            )}
+            {item.impactFacts && item.impactFacts.length > 0 && (
+              <ul className="space-y-1">
+                {item.impactFacts.map((fact) => (
+                  <li
+                    key={fact}
+                    className="flex items-start gap-1.5 text-xs text-zinc-400 leading-relaxed"
+                  >
+                    <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                    {fact}
+                  </li>
+                ))}
+              </ul>
             )}
             {item.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-1">

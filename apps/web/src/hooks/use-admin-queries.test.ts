@@ -121,6 +121,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     deletedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    impactFacts: [],
     tags: [],
     ...overrides,
   };

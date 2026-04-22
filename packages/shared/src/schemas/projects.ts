@@ -6,6 +6,22 @@ const uniqueTagIds = z
     message: 'tagIds cannot contain duplicates',
   });
 
+/**
+ * Ordered list of concise impact facts for a project.
+ * Each fact must be a non-empty string up to 200 characters.
+ * Maximum of 6 facts per project.
+ */
+export const impactFactsSchema = z
+  .array(
+    z
+      .string()
+      .trim()
+      .min(1, 'Impact fact cannot be empty')
+      .max(200, 'Each impact fact must be 200 characters or fewer')
+  )
+  .max(6, 'Maximum 6 impact facts allowed')
+  .optional();
+
 export const createProjectSchema = z.object({
   title: z.string().min(1).max(255),
   slug: z
@@ -20,6 +36,7 @@ export const createProjectSchema = z.object({
   liveUrl: z.union([z.literal(''), z.string().url()]).optional(),
   featured: z.boolean().default(false),
   order: z.number().int().default(0),
+  impactFacts: impactFactsSchema,
   tagIds: uniqueTagIds.optional(),
 });
 

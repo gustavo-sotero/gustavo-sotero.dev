@@ -36,6 +36,7 @@ export interface ResumeExperienceItem {
   endDate: string | null;
   isCurrent: boolean;
   formattedPeriod: string;
+  impactFacts: string[];
   tags: string[];
 }
 
@@ -66,6 +67,7 @@ export interface ResumeProjectItem {
   description: string | null;
   repositoryUrl: string | null;
   liveUrl: string | null;
+  impactFacts: string[];
   tags: string[];
 }
 
@@ -198,6 +200,7 @@ export function buildResumeViewModel(opts: {
     endDate: e.endDate ?? null,
     isCurrent: e.isCurrent,
     formattedPeriod: formatPeriod(e.startDate, e.endDate ?? null, e.isCurrent),
+    impactFacts: e.impactFacts ?? [],
     tags: (e.tags ?? []).map((t) => t.name),
   }));
 
@@ -257,6 +260,7 @@ export function buildResumeViewModel(opts: {
     description: p.description ?? null,
     repositoryUrl: p.repositoryUrl ?? null,
     liveUrl: p.liveUrl ?? null,
+    impactFacts: p.impactFacts ?? [],
     tags: (p.tags ?? []).map((t) => t.name),
   }));
 

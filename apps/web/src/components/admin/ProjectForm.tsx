@@ -21,6 +21,7 @@ function toProjectPayload(values: CreateProjectInput): CreateProjectInput {
     slug: values.slug || undefined,
     repositoryUrl: values.repositoryUrl || undefined,
     liveUrl: values.liveUrl || undefined,
+    impactFacts: values.impactFacts ?? [],
   };
 }
 
@@ -39,6 +40,7 @@ import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
 import { CreateTagDialogForm } from './CreateTagDialogForm';
+import { ImpactFactsEditor } from './ImpactFactsEditor';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagCheckboxGroup } from './TagCheckboxGroup';
 
@@ -75,6 +77,7 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
       liveUrl: project?.liveUrl ?? '',
       featured: project?.featured ?? false,
       order: project?.order ?? 0,
+      impactFacts: project?.impactFacts ?? [],
       tagIds: project?.tags?.map((t) => t.id) ?? [],
     },
   });
@@ -309,6 +312,19 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
           </Label>
         </div>
       </div>
+
+      {/* Impact Facts */}
+      <Controller
+        name="impactFacts"
+        control={control}
+        render={({ field }) => (
+          <ImpactFactsEditor
+            value={field.value ?? []}
+            onChange={field.onChange}
+            error={errors.impactFacts?.message}
+          />
+        )}
+      />
 
       {/* Tags */}
       {!tagsLoading && (

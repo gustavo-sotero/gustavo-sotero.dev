@@ -74,6 +74,21 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </p>
         )}
 
+        {/* Impact Facts */}
+        {project.impactFacts && project.impactFacts.length > 0 && (
+          <ul className="space-y-1 mt-1">
+            {project.impactFacts.map((fact) => (
+              <li
+                key={fact}
+                className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
+              >
+                <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                {fact}
+              </li>
+            ))}
+          </ul>
+        )}
+
         {/* Tags + Links — pinned to bottom */}
         {(tags.length > 0 || project.repositoryUrl || project.liveUrl) && (
           <div className="flex flex-col gap-2 mt-auto">

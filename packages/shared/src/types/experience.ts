@@ -14,6 +14,7 @@ export interface Experience {
   endDate: string | null;
   isCurrent: boolean;
   order: number;
+  impactFacts: string[];
   status: PostStatus;
   logoUrl: string | null;
   credentialUrl: string | null;
@@ -36,6 +37,7 @@ export interface ExperienceListItem {
   endDate: string | null;
   isCurrent: boolean;
   order: number;
+  impactFacts: string[];
   logoUrl: string | null;
   credentialUrl: string | null;
   tags?: Tag[];
@@ -56,6 +58,7 @@ export interface CreateExperienceDto {
   status?: PostStatus;
   logoUrl?: string;
   credentialUrl?: string;
+  impactFacts?: string[];
   tagIds?: number[];
 }
 

@@ -25,6 +25,7 @@ import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
 import { CreateTagDialogForm } from './CreateTagDialogForm';
+import { ImpactFactsEditor } from './ImpactFactsEditor';
 import { TagCheckboxGroup } from './TagCheckboxGroup';
 
 interface ExperienceFormProps {
@@ -46,6 +47,7 @@ function toExperiencePayload(values: ExperienceFormValues): CreateExperienceInpu
     logoUrl: values.logoUrl || undefined,
     credentialUrl: values.credentialUrl || undefined,
     slug: values.slug || undefined,
+    impactFacts: values.impactFacts ?? [],
   };
 }
 
@@ -153,6 +155,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
       status: (experience?.status === 'published' ? 'published' : 'draft') as 'draft' | 'published',
       logoUrl: experience?.logoUrl ?? '',
       credentialUrl: experience?.credentialUrl ?? '',
+      impactFacts: experience?.impactFacts ?? [],
       tagIds: experience?.tags?.map((t) => t.id) ?? [],
     },
   });
@@ -407,6 +410,19 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
           className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
         />
       </div>
+
+      {/* Impact Facts */}
+      <Controller
+        name="impactFacts"
+        control={control}
+        render={({ field }) => (
+          <ImpactFactsEditor
+            value={field.value ?? []}
+            onChange={field.onChange}
+            error={errors.impactFacts?.message}
+          />
+        )}
+      />
 
       {/* Tags */}
       {!tagsLoading && allTags.length > 0 && (

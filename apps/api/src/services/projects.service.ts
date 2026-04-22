@@ -124,6 +124,7 @@ export async function createProjectService(data: CreateProjectInput) {
         liveUrl: data.liveUrl,
         featured: data.featured ?? false,
         order: data.order ?? 0,
+        impactFacts: data.impactFacts ?? [],
       },
       tx
     );
@@ -180,6 +181,7 @@ export async function updateProjectService(id: number, data: UpdateProjectInput)
   if (data.liveUrl !== undefined) patch.liveUrl = data.liveUrl;
   if (data.featured !== undefined) patch.featured = data.featured;
   if (data.order !== undefined) patch.order = data.order;
+  if (data.impactFacts !== undefined) patch.impactFacts = data.impactFacts;
 
   // 4. Content update — re-render Markdown
   if (data.content !== undefined) {

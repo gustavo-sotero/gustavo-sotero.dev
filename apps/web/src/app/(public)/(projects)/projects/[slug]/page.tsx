@@ -180,6 +180,26 @@ export async function ProjectDetailContent({ params }: ProjectDetailPageProps) {
           </div>
         </header>
 
+        {/* Impact Facts — dedicated section, separate from markdown content */}
+        {project.impactFacts && project.impactFacts.length > 0 && (
+          <section aria-label="Fatos de impacto" className="mb-8">
+            <h2 className="text-sm font-mono font-semibold text-emerald-500 uppercase tracking-widest mb-4">
+              Impacto
+            </h2>
+            <ul className="space-y-2.5">
+              {project.impactFacts.map((fact) => (
+                <li
+                  key={fact}
+                  className="flex items-start gap-2.5 text-sm text-zinc-300 leading-relaxed"
+                >
+                  <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                  {fact}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* Content */}
         {project.renderedContent &&
           (hasMermaid ? (

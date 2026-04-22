@@ -141,6 +141,12 @@ export const openApiComponents = {
         liveUrl: { type: 'string', nullable: true },
         featured: { type: 'boolean', example: false },
         order: { type: 'integer', example: 0 },
+        impactFacts: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Ordered list of concise impact facts (max 6)',
+          example: ['Reduziu tempo de build em 40%', 'Adotado por +200 devs'],
+        },
         status: { type: 'string', enum: ['draft', 'published'] },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
@@ -196,6 +202,15 @@ export const openApiComponents = {
         endDate: { type: 'string', format: 'date', nullable: true, example: '2024-12-31' },
         isCurrent: { type: 'boolean', example: false },
         order: { type: 'integer', example: 0 },
+        impactFacts: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Ordered list of concise impact facts (max 6)',
+          example: [
+            'Liderou migração para microserviços reduzindo latência em 35%',
+            'Entregou MVP em 3 semanas',
+          ],
+        },
         status: { type: 'string', enum: ['draft', 'published'] },
         logoUrl: { type: 'string', nullable: true },
         credentialUrl: { type: 'string', nullable: true },

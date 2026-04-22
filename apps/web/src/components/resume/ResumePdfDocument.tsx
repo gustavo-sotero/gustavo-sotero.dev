@@ -167,6 +167,28 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: C.mid,
     lineHeight: 1.55,
+    marginBottom: 3,
+  },
+  impactFactsList: {
+    marginTop: 3,
+    marginBottom: 2,
+  },
+  impactFactRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 2,
+  },
+  impactFactBullet: {
+    fontSize: 8,
+    color: C.accent,
+    marginRight: 4,
+    lineHeight: 1.5,
+  },
+  impactFactText: {
+    fontSize: 8.5,
+    color: C.mid,
+    lineHeight: 1.5,
+    flex: 1,
   },
   currentBadge: {
     fontSize: 7.5,
@@ -433,6 +455,16 @@ function ExperienceEntry({ item }: { item: ResumeViewModel['experience'][number]
         {item.employmentType ? ` · ${item.employmentType}` : ''}
       </Text>
       {item.description ? <Text style={s.entryDesc}>{item.description}</Text> : null}
+      {item.impactFacts && item.impactFacts.length > 0 ? (
+        <View style={s.impactFactsList}>
+          {item.impactFacts.map((fact) => (
+            <View key={fact} style={s.impactFactRow}>
+              <Text style={s.impactFactBullet}>▸</Text>
+              <Text style={s.impactFactText}>{fact}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       {item.tags && item.tags.length > 0 ? (
         <View style={s.experienceTagsRow}>
           {item.tags.map((tagName) => (
@@ -487,6 +519,16 @@ function ProjectEntry({ item }: { item: ResumeViewModel['projects'][number] }) {
         </View>
       </View>
       {item.description ? <Text style={s.projectDesc}>{item.description}</Text> : null}
+      {item.impactFacts && item.impactFacts.length > 0 ? (
+        <View style={s.impactFactsList}>
+          {item.impactFacts.map((fact) => (
+            <View key={fact} style={s.impactFactRow}>
+              <Text style={s.impactFactBullet}>▸</Text>
+              <Text style={s.impactFactText}>{fact}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       {item.tags.length > 0 ? (
         <View style={s.projectTags}>
           {item.tags.map((tag) => (

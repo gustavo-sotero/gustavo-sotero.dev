@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   serial,
   text,
@@ -26,6 +27,7 @@ export const projects = pgTable(
     liveUrl: varchar('live_url', { length: 512 }),
     featured: boolean('featured').default(false).notNull(),
     order: integer('order').default(0).notNull(),
+    impactFacts: jsonb('impact_facts').$type<string[]>().default([]).notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true })

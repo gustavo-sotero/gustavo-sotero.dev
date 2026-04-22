@@ -138,6 +138,21 @@ function ExperienceCard({ item, index }: { item: Experience; index: number }) {
           {/* Description */}
           <ExpandableDescription text={item.description} />
 
+          {/* Impact Facts */}
+          {item.impactFacts && item.impactFacts.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {item.impactFacts.map((fact) => (
+                <li
+                  key={fact}
+                  className="flex items-start gap-2 text-xs text-zinc-400 leading-relaxed"
+                >
+                  <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                  {fact}
+                </li>
+              ))}
+            </ul>
+          )}
+
           {/* Tags */}
           {item.tags && item.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">

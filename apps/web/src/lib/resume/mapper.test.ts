@@ -33,6 +33,7 @@ function createExperience(overrides: Partial<Experience> = {}): Experience {
     deletedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
+    impactFacts: [],
     tags: [],
     ...overrides,
   };
@@ -80,6 +81,7 @@ function createProject(overrides: Partial<Project> = {}): Project {
     deletedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
+    impactFacts: [],
     tags: [],
     ...overrides,
   };
@@ -158,5 +160,57 @@ describe('resume mapper experience tags', () => {
     });
 
     expect(resume.experience[0]?.tags).toEqual([]);
+  });
+});
+
+describe('resume mapper impactFacts', () => {
+  it('projects experience impactFacts into the view model', () => {
+    const facts = ['Reduziu latência em 40%', 'Implementou CI/CD completo'];
+    const resume = buildResumeViewModel({
+      experience: [createExperience({ impactFacts: facts })],
+      education: [],
+      tags: [],
+      projects: [],
+      now: new Date('2026-02-01T00:00:00.000Z'),
+    });
+
+    expect(resume.experience[0]?.impactFacts).toEqual(facts);
+  });
+
+  it('defaults experience impactFacts to [] when undefined', () => {
+    const resume = buildResumeViewModel({
+      experience: [createExperience({ impactFacts: undefined })],
+      education: [],
+      tags: [],
+      projects: [],
+      now: new Date('2026-02-01T00:00:00.000Z'),
+    });
+
+    expect(resume.experience[0]?.impactFacts).toEqual([]);
+  });
+
+  it('projects project impactFacts into the view model', () => {
+    const facts = ['API documentada via OpenAPI', 'Pipeline de imagens com sharp'];
+    const resume = buildResumeViewModel({
+      experience: [],
+      education: [],
+      tags: [],
+      projects: [createProject({ impactFacts: facts })],
+      now: new Date('2026-02-01T00:00:00.000Z'),
+    });
+
+    expect(resume.projects[0]?.impactFacts).toEqual(facts);
+  });
+
+  it('defaults project impactFacts to [] when undefined', () => {
+    const resume = buildResumeViewModel({
+      experience: [],
+      education: [],
+      tags: [],
+      projects: [createProject({ impactFacts: undefined })],
+      now: new Date('2026-02-01T00:00:00.000Z'),
+    });
+
+    expect(resume.projects[0]?.impactFacts).toEqual([]);
   });
 });

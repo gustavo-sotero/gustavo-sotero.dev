@@ -176,6 +176,13 @@ A backend-centric portfolio demonstrating advanced architectural patterns includ
     liveUrl: 'https://portfolio.example.com',
     featured: true,
     order: 1,
+    impactFacts: [
+      'API documentada com OpenAPI/Swagger acessível em /doc',
+      'Pipeline de imagens com sharp — thumbnail, medium e WebP automáticos',
+      'Autenticação via GitHub OAuth + JWT em cookie httpOnly com CSRF',
+      'SSR com cache Redis em duas camadas — 5 min para listagens, 1h para detalhes',
+      'Jobs BullMQ com dead letter queue e retry com backoff exponencial',
+    ],
     tagSlugs: ['typescript', 'bun', 'hono', 'nextjs', 'postgresql', 'redis', 'docker'],
   },
   {
@@ -197,6 +204,7 @@ A collection of open source work and experiments.
     liveUrl: null,
     featured: false,
     order: 2,
+    impactFacts: ['Contribuições com foco em DX — tipagem, ergonomia de API e documentação'],
     tagSlugs: ['typescript', 'react'],
   },
 ];

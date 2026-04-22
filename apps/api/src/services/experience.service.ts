@@ -136,6 +136,7 @@ export async function createExperienceService(data: CreateExperienceInput) {
         status: data.status ?? 'draft',
         logoUrl: data.logoUrl,
         credentialUrl: data.credentialUrl,
+        impactFacts: data.impactFacts ?? [],
       },
       tx
     );
@@ -200,6 +201,7 @@ export async function updateExperienceService(id: number, data: UpdateExperience
         status: data.status,
         logoUrl: data.logoUrl,
         credentialUrl: data.credentialUrl,
+        impactFacts: data.impactFacts,
       },
       tx
     );

@@ -10,6 +10,22 @@ const uniqueTagIds = z
     message: 'tagIds cannot contain duplicates',
   });
 
+/**
+ * Ordered list of concise impact facts for an experience entry.
+ * Each fact must be a non-empty string up to 200 characters.
+ * Maximum of 6 facts per experience entry.
+ */
+export const impactFactsSchema = z
+  .array(
+    z
+      .string()
+      .trim()
+      .min(1, 'Impact fact cannot be empty')
+      .max(200, 'Each impact fact must be 200 characters or fewer')
+  )
+  .max(6, 'Maximum 6 impact facts allowed')
+  .optional();
+
 // Base object shape extracted so .partial() can be called without hitting Zod v4's
 // restriction that .partial() cannot be used on schemas containing refinements.
 const experienceBaseShape = z.object({
@@ -29,6 +45,7 @@ const experienceBaseShape = z.object({
   status: z.enum(['draft', 'published']).default('draft'),
   logoUrl: z.union([z.literal(''), z.string().url()]).optional(),
   credentialUrl: z.union([z.literal(''), z.string().url()]).optional(),
+  impactFacts: impactFactsSchema,
   tagIds: uniqueTagIds.optional(),
 });
 

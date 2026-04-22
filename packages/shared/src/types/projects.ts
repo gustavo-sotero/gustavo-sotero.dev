@@ -15,6 +15,7 @@ export interface Project {
   liveUrl: string | null;
   featured: boolean;
   order: number;
+  impactFacts: string[];
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -31,6 +32,7 @@ export interface ProjectListItem {
   status: PostStatus;
   featured: boolean;
   order: number;
+  impactFacts: string[];
   tags?: Tag[];
 }
 
@@ -46,6 +48,7 @@ export interface CreateProjectDto {
   liveUrl?: string;
   featured?: boolean;
   order?: number;
+  impactFacts?: string[];
   tagIds?: number[];
 }
 
