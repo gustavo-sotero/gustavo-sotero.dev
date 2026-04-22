@@ -39,6 +39,8 @@
     "drizzle-orm": "^0.45.2",
     "esbuild": "^0.28.0",
     "minimatch": "^10.2.5",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "rollup": "^4.60.2",
     "zod": "^4.3.6"
   },
