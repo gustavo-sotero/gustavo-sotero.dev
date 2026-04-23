@@ -19,6 +19,7 @@ describe('getResumeDataClient', () => {
     mockApiGetPaginated
       .mockResolvedValueOnce({ data: [{ id: 1, role: 'Backend Engineer' }] })
       .mockResolvedValueOnce({ data: [{ id: 2, title: 'ADS' }] })
+      .mockResolvedValueOnce({ data: [{ id: 5, name: 'TypeScript', category: 'language' }] })
       .mockResolvedValueOnce({ data: [{ id: 3, title: 'Projeto destaque' }] });
     mockApiGet.mockResolvedValueOnce({ data: [{ id: 4, name: 'TypeScript' }] });
 
@@ -32,14 +33,16 @@ describe('getResumeDataClient', () => {
       2,
       '/education?status=published&perPage=20'
     );
+    expect(mockApiGetPaginated).toHaveBeenNthCalledWith(3, '/skills?perPage=100');
     expect(mockApiGet).toHaveBeenCalledWith('/tags?source=project');
     expect(mockApiGetPaginated).toHaveBeenNthCalledWith(
-      3,
+      4,
       '/projects?status=published&featured=true&perPage=20'
     );
     expect(result).toEqual({
       experience: [{ id: 1, role: 'Backend Engineer' }],
       education: [{ id: 2, title: 'ADS' }],
+      skills: [{ id: 5, name: 'TypeScript', category: 'language' }],
       tags: [{ id: 4, name: 'TypeScript' }],
       projects: [{ id: 3, title: 'Projeto destaque' }],
     });
@@ -51,6 +54,7 @@ describe('getResumeDataClient', () => {
         data: [{ id: 1, role: 'Backend Engineer', impactFacts: ['Liderou equipe de 4 devs'] }],
       })
       .mockResolvedValueOnce({ data: [{ id: 2, title: 'ADS' }] })
+      .mockResolvedValueOnce({ data: [] })
       .mockResolvedValueOnce({
         data: [{ id: 3, title: 'Projeto destaque', impactFacts: ['Reduziu latência em 40%'] }],
       });
@@ -66,6 +70,7 @@ describe('getResumeDataClient', () => {
     mockApiGetPaginated
       .mockRejectedValueOnce(new Error('experience unavailable'))
       .mockRejectedValueOnce(new Error('education unavailable'))
+      .mockRejectedValueOnce(new Error('skills unavailable'))
       .mockRejectedValueOnce(new Error('projects unavailable'));
     mockApiGet.mockRejectedValueOnce(new Error('tags unavailable'));
 
@@ -74,6 +79,7 @@ describe('getResumeDataClient', () => {
     expect(result).toEqual({
       experience: [],
       education: [],
+      skills: [],
       tags: [],
       projects: [],
     });

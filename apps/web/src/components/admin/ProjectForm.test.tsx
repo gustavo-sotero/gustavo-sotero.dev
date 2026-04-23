@@ -83,6 +83,43 @@ vi.mock('./CreateTagDialogForm', () => ({
   },
 }));
 
+vi.mock('@/hooks/admin/use-admin-skills', () => ({
+  useAdminSkills: () => ({
+    data: [
+      {
+        id: 10,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        expertiseLevel: 2,
+        isHighlighted: false,
+        iconKey: 'si:SiTypescript',
+      },
+    ],
+    isLoading: false,
+  }),
+}));
+
+vi.mock('./CreateSkillDialogForm', () => ({
+  CreateSkillDialogForm: ({
+    open,
+    onClose,
+  }: {
+    open: boolean;
+    onClose: () => void;
+    onSkillCreated?: (skill: unknown) => void;
+  }) => {
+    if (!open) return null;
+    return (
+      <div data-testid="create-skill-dialog">
+        <button type="button" onClick={onClose}>
+          Fechar dialog skill
+        </button>
+      </div>
+    );
+  },
+}));
+
 vi.mock('./MarkdownEditor', () => ({
   MarkdownEditor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
     <textarea

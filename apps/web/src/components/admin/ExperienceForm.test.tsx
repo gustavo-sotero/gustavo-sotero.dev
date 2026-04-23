@@ -92,6 +92,43 @@ vi.mock('./CreateTagDialogForm', () => ({
   },
 }));
 
+vi.mock('@/hooks/admin/use-admin-skills', () => ({
+  useAdminSkills: () => ({
+    data: [
+      {
+        id: 10,
+        name: 'Docker',
+        slug: 'docker',
+        category: 'infra',
+        expertiseLevel: 2,
+        isHighlighted: false,
+        iconKey: 'si:SiDocker',
+      },
+    ],
+    isLoading: false,
+  }),
+}));
+
+vi.mock('./CreateSkillDialogForm', () => ({
+  CreateSkillDialogForm: ({
+    open,
+    onClose,
+  }: {
+    open: boolean;
+    onClose: () => void;
+    onSkillCreated?: (skill: unknown) => void;
+  }) => {
+    if (!open) return null;
+    return (
+      <div data-testid="create-skill-dialog">
+        <button type="button" onClick={onClose}>
+          Fechar dialog skill
+        </button>
+      </div>
+    );
+  },
+}));
+
 vi.mock('./CoverMediaField', () => ({
   CoverMediaField: () => <div data-testid="cover-media-field" />,
 }));

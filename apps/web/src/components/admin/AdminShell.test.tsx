@@ -50,6 +50,7 @@ vi.mock('lucide-react', () => {
     PanelLeftOpen: MockIcon,
     Tag: MockIcon,
     Terminal: MockIcon,
+    Zap: MockIcon,
   };
 });
 
@@ -97,6 +98,7 @@ describe('AdminShell navigation', () => {
       '/admin/projects',
       '/admin/analytics',
       '/admin/tags',
+      '/admin/skills',
       '/admin/comments',
       '/admin/settings/ai-post-generation',
     ];
