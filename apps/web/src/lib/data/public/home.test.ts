@@ -24,10 +24,12 @@ vi.mock('next/cache', () => ({
 // server-only stub is already aliased in vitest.config.ts
 
 import {
+  getBlogTags,
   getHomeEducation,
   getHomeExperience,
   getHomeFeaturedProjects,
   getHomeRecentPosts,
+  getHomeSkills,
   getHomeTags,
 } from './home';
 
@@ -224,6 +226,89 @@ describe('getHomeEducation', () => {
     apiServerGetPaginatedMock.mockRejectedValueOnce(new Error('education API down'));
 
     const result = await getHomeEducation();
+
+    expect(result.state).toBe('degraded');
+  });
+});
+
+describe('getHomeSkills', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('calls /skills?perPage=100 to fetch the full skill catalog', async () => {
+    apiServerGetPaginatedMock.mockResolvedValueOnce(makePaginatedResponse([]));
+
+    await getHomeSkills();
+
+    expect(apiServerGetPaginatedMock).toHaveBeenCalledWith('/skills?perPage=100');
+  });
+
+  it('returns ok state with skills when API responds with data', async () => {
+    const skill = {
+      id: 1,
+      name: 'TypeScript',
+      slug: 'typescript',
+      category: 'language',
+      expertiseLevel: 3,
+      isHighlighted: true,
+    };
+    apiServerGetPaginatedMock.mockResolvedValueOnce(makePaginatedResponse([skill]));
+
+    const result = await getHomeSkills();
+
+    expect(result.state).toBe('ok');
+    expect((result as { state: 'ok'; data: unknown[] }).data).toEqual([skill]);
+  });
+
+  it('returns empty state when API responds with no skills', async () => {
+    apiServerGetPaginatedMock.mockResolvedValueOnce(makePaginatedResponse([]));
+
+    const result = await getHomeSkills();
+
+    expect(result.state).toBe('empty');
+  });
+
+  it('returns degraded state when API throws', async () => {
+    apiServerGetPaginatedMock.mockRejectedValueOnce(new Error('skills API down'));
+
+    const result = await getHomeSkills();
+
+    expect(result.state).toBe('degraded');
+  });
+});
+
+describe('getBlogTags', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('calls /tags?source=post to restrict to blog/post tags', async () => {
+    apiServerGetMock.mockResolvedValueOnce([]);
+
+    await getBlogTags();
+
+    expect(apiServerGetMock).toHaveBeenCalledWith('/tags?source=post');
+  });
+
+  it('returns ok state with tags when API responds with data', async () => {
+    const tag = { id: 1, name: 'Node.js', slug: 'nodejs', category: 'tool' };
+    apiServerGetMock.mockResolvedValueOnce([tag]);
+
+    const result = await getBlogTags();
+
+    expect(result.state).toBe('ok');
+    expect((result as { state: 'ok'; data: unknown[] }).data).toEqual([tag]);
+  });
+
+  it('returns empty state when API responds with empty array', async () => {
+    apiServerGetMock.mockResolvedValueOnce([]);
+
+    const result = await getBlogTags();
+
+    expect(result.state).toBe('empty');
+  });
+
+  it('returns degraded state when API throws', async () => {
+    apiServerGetMock.mockRejectedValueOnce(new Error('tags API down'));
+
+    const result = await getBlogTags();
 
     expect(result.state).toBe('degraded');
   });

@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getHomeTagsMock } = vi.hoisted(() => ({
-  getHomeTagsMock: vi.fn(),
+const { getHomeSkillsMock } = vi.hoisted(() => ({
+  getHomeSkillsMock: vi.fn(),
 }));
 
 const { heroSectionMock } = vi.hoisted(() => ({
@@ -11,7 +11,7 @@ const { heroSectionMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/data/public/home', () => ({
-  getHomeTags: getHomeTagsMock,
+  getHomeSkills: getHomeSkillsMock,
 }));
 
 // `getCachedExperienceLabel` uses `cacheLife()` which is a Next.js build-time
@@ -23,7 +23,7 @@ vi.mock('@/lib/cache/time', () => ({
 }));
 
 vi.mock('../HeroSection', () => ({
-  HeroSection: (props: { experienceLabel: string }) => {
+  HeroSection: (props: { skills: unknown[]; experienceLabel: string }) => {
     heroSectionMock(props);
     return <div data-testid="hero-section">{props.experienceLabel}</div>;
   },
@@ -41,8 +41,8 @@ describe('HeroSectionWrapper', () => {
     vi.clearAllMocks();
   });
 
-  it('shows a visible degraded-state notice when tags dependency is degraded', async () => {
-    getHomeTagsMock.mockResolvedValue({ state: 'degraded' });
+  it('shows a visible degraded-state notice when skills dependency is degraded', async () => {
+    getHomeSkillsMock.mockResolvedValue({ state: 'degraded' });
 
     await renderServerComponent(HeroSectionWrapper());
 
@@ -51,7 +51,7 @@ describe('HeroSectionWrapper', () => {
   });
 
   it('does not show degraded-state notice when all dependencies are healthy', async () => {
-    getHomeTagsMock.mockResolvedValue({ state: 'ok', data: [] });
+    getHomeSkillsMock.mockResolvedValue({ state: 'ok', data: [] });
 
     await renderServerComponent(HeroSectionWrapper());
 
@@ -62,7 +62,7 @@ describe('HeroSectionWrapper', () => {
   it('supplies experience label from the cache-safe server helper', async () => {
     const { getCachedExperienceLabel } = await import('@/lib/cache/time');
     (getCachedExperienceLabel as ReturnType<typeof vi.fn>).mockResolvedValue('5+ anos');
-    getHomeTagsMock.mockResolvedValue({ state: 'ok', data: [] });
+    getHomeSkillsMock.mockResolvedValue({ state: 'ok', data: [] });
 
     await renderServerComponent(HeroSectionWrapper());
 

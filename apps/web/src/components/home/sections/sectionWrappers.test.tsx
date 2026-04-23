@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   getHomeFeaturedProjectsMock,
   getHomeRecentPostsMock,
-  getHomeTagsMock,
+  getHomeSkillsMock,
   getHomeExperienceMock,
   getHomeEducationMock,
 } = vi.hoisted(() => ({
   getHomeFeaturedProjectsMock: vi.fn(),
   getHomeRecentPostsMock: vi.fn(),
-  getHomeTagsMock: vi.fn(),
+  getHomeSkillsMock: vi.fn(),
   getHomeExperienceMock: vi.fn(),
   getHomeEducationMock: vi.fn(),
 }));
@@ -19,7 +19,7 @@ const {
 vi.mock('@/lib/data/public/home', () => ({
   getHomeFeaturedProjects: getHomeFeaturedProjectsMock,
   getHomeRecentPosts: getHomeRecentPostsMock,
-  getHomeTags: getHomeTagsMock,
+  getHomeSkills: getHomeSkillsMock,
   getHomeExperience: getHomeExperienceMock,
   getHomeEducation: getHomeEducationMock,
 }));
@@ -84,8 +84,8 @@ describe('home section wrappers', () => {
     expect(screen.getByText('Seção temporariamente indisponível.')).toBeInTheDocument();
   });
 
-  it('renders degraded UI for tags failures in skills section', async () => {
-    getHomeTagsMock.mockResolvedValue({ state: 'degraded' });
+  it('renders degraded UI for skills dependency failures in skills section', async () => {
+    getHomeSkillsMock.mockResolvedValue({ state: 'degraded' });
 
     await renderServerComponent(SkillsSection());
 

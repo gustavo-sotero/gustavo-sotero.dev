@@ -82,6 +82,10 @@ vi.mock('./routes/public/contact', () => ({
   contactRouter: makeRouter([{ method: 'post', path: '/' }]),
 }));
 
+vi.mock('./routes/public/skills', () => ({
+  publicSkillsRouter: makeRouter([{ method: 'get', path: '/' }]),
+}));
+
 vi.mock('./routes/admin/auth', () => ({
   authRouter: makeRouter([
     { method: 'post', path: '/github/start' },
@@ -119,6 +123,15 @@ vi.mock('./routes/admin/jobs', () => ({
   adminJobsRouter: makeRouter([{ method: 'get', path: '/dlq' }]),
 }));
 
+vi.mock('./routes/admin/skills', () => ({
+  adminSkillsRouter: makeRouter([
+    { method: 'get', path: '/' },
+    { method: 'post', path: '/' },
+    { method: 'patch', path: '/:id' },
+    { method: 'delete', path: '/:id' },
+  ]),
+}));
+
 import { app } from './app';
 
 describe('app route mounting (module 8 smoke)', () => {
@@ -150,6 +163,9 @@ describe('app route mounting (module 8 smoke)', () => {
       { method: 'POST', path: '/admin/uploads/presign' },
       { path: '/admin/analytics/summary' },
       { path: '/admin/jobs/dlq' },
+      { path: '/skills' },
+      { path: '/admin/skills' },
+      { method: 'POST', path: '/admin/skills' },
     ];
 
     for (const check of checks) {
