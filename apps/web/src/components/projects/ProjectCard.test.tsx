@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 /**
  * Tests for ProjectCard — tag rendering without truncation.
  *
