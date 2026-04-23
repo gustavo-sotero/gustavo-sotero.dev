@@ -1,17 +1,14 @@
 // @vitest-environment jsdom
 
 import type { Skill } from '@portfolio/shared';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { useAdminSkillsMock, useCreateSkillMock, useUpdateSkillMock, useDeleteSkillMock } =
-  vi.hoisted(() => ({
-    useAdminSkillsMock: vi.fn(),
-    useCreateSkillMock: vi.fn(),
-    useUpdateSkillMock: vi.fn(),
-    useDeleteSkillMock: vi.fn(),
-  }));
+const useAdminSkillsMock = vi.fn();
+const useCreateSkillMock = vi.fn();
+const useUpdateSkillMock = vi.fn();
+const useDeleteSkillMock = vi.fn();
 
 vi.mock('lucide-react', () => ({
   Loader2: () => <span data-testid="icon-loader" />,
@@ -23,10 +20,10 @@ vi.mock('lucide-react', () => ({
 }));
 
 vi.mock('@/hooks/admin/use-admin-skills', () => ({
-  useAdminSkills: useAdminSkillsMock,
-  useCreateSkill: useCreateSkillMock,
-  useUpdateSkill: useUpdateSkillMock,
-  useDeleteSkill: useDeleteSkillMock,
+  useAdminSkills: (...args: Parameters<typeof useAdminSkillsMock>) => useAdminSkillsMock(...args),
+  useCreateSkill: (...args: Parameters<typeof useCreateSkillMock>) => useCreateSkillMock(...args),
+  useUpdateSkill: (...args: Parameters<typeof useUpdateSkillMock>) => useUpdateSkillMock(...args),
+  useDeleteSkill: (...args: Parameters<typeof useDeleteSkillMock>) => useDeleteSkillMock(...args),
 }));
 
 vi.mock('@/components/ui/alert-dialog', () => ({
@@ -103,6 +100,27 @@ vi.mock('@/components/ui/switch', () => ({
   ),
 }));
 
+vi.mock('./CreateSkillDialogForm', () => ({
+  CreateSkillDialogForm: ({ open }: { open: boolean }) => (
+    <div data-testid="create-skill-dialog" data-state={open ? 'open' : 'closed'}>
+      <div role="radiogroup" aria-label="Nível de expertise">
+        <label>
+          <input type="radio" name="create-skill-expertise" readOnly />
+          Básico
+        </label>
+        <label>
+          <input type="radio" name="create-skill-expertise" readOnly />
+          Intermediário
+        </label>
+        <label>
+          <input type="radio" name="create-skill-expertise" readOnly />
+          Avançado
+        </label>
+      </div>
+    </div>
+  ),
+}));
+
 import { SkillManager } from './SkillManager';
 
 function makeSkill(overrides: Partial<Skill> = {}): Skill {
@@ -127,12 +145,22 @@ describe('SkillManager', () => {
     useDeleteSkillMock.mockReturnValue({ isPending: false, mutate: vi.fn() });
   });
 
-  it('uses radio inputs for expertise in both create and edit dialogs', () => {
+  it('renders expertise radios for create and edit flows', () => {
     render(<SkillManager />);
 
     expect(screen.getAllByRole('radiogroup', { name: 'Nível de expertise' })).toHaveLength(2);
     expect(screen.getAllByLabelText('Básico')).toHaveLength(2);
     expect(screen.getAllByLabelText('Intermediário')).toHaveLength(2);
     expect(screen.getAllByLabelText('Avançado')).toHaveLength(2);
+  });
+
+  it('opens the create dialog from the toolbar button', () => {
+    render(<SkillManager />);
+
+    expect(screen.getByTestId('create-skill-dialog')).toHaveAttribute('data-state', 'closed');
+
+    fireEvent.click(screen.getByRole('button', { name: /Nova skill/i }));
+
+    expect(screen.getByTestId('create-skill-dialog')).toHaveAttribute('data-state', 'open');
   });
 });

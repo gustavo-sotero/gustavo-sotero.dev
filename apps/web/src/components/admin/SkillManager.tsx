@@ -1,11 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { generateSlug, type SkillCategory, type Skill as SkillType } from '@portfolio/shared';
+import type { SkillCategory, Skill as SkillType } from '@portfolio/shared';
 import { Loader2, Pencil, Plus, Star, Trash2, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { type Control, Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { CreateSkillDialogForm } from '@/components/admin/CreateSkillDialogForm';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,12 +37,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import {
-  useAdminSkills,
-  useCreateSkill,
-  useDeleteSkill,
-  useUpdateSkill,
-} from '@/hooks/admin/use-admin-skills';
+import { useAdminSkills, useDeleteSkill, useUpdateSkill } from '@/hooks/admin/use-admin-skills';
 
 const SKILL_CATEGORIES: SkillCategory[] = ['language', 'framework', 'tool', 'db', 'cloud', 'infra'];
 
@@ -254,40 +250,13 @@ function EditSkillDialog({
   );
 }
 
-// ─── Create Skill Form ────────────────────────────────────────────────────────
+// ─── Create Skill Dialog Trigger ─────────────────────────────────────────────
 
-function CreateSkillForm({ onCreated }: { onCreated?: () => void }) {
-  const create = useCreateSkill();
+function CreateSkillButton() {
   const [open, setOpen] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset,
-    watch,
-    formState: { errors },
-  } = useForm<SkillFormInput>({
-    resolver: zodResolver(skillFormSchema),
-    defaultValues: {
-      name: '',
-      category: 'language',
-      expertiseLevel: 2,
-      isHighlighted: false,
-    },
-  });
-
-  const nameValue = watch('name');
-
-  async function onSubmit(data: SkillFormInput) {
-    await create.mutateAsync(data);
-    reset();
-    setOpen(false);
-    onCreated?.();
-  }
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
       <Button
         onClick={() => setOpen(true)}
         size="sm"
@@ -296,83 +265,8 @@ function CreateSkillForm({ onCreated }: { onCreated?: () => void }) {
         <Plus className="w-4 h-4 mr-1.5" />
         Nova skill
       </Button>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
-        <DialogHeader>
-          <DialogTitle>Criar skill</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="create-skill-name">Nome</Label>
-            <Input
-              id="create-skill-name"
-              placeholder="ex: TypeScript"
-              {...register('name')}
-              className="bg-zinc-800 border-zinc-700"
-            />
-            {errors.name && <p className="text-xs text-red-400">{errors.name.message}</p>}
-            {nameValue && <p className="text-xs text-zinc-500">Slug: {generateSlug(nameValue)}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Categoria</Label>
-            <Controller
-              name="category"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    {SKILL_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {CATEGORY_LABELS[cat]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-
-          <SkillExpertiseField control={control} inputName="create-skill-expertise" />
-
-          <div className="flex items-center justify-between">
-            <Label htmlFor="create-skill-highlighted">Destacada</Label>
-            <Controller
-              name="isHighlighted"
-              control={control}
-              render={({ field }) => (
-                <Switch
-                  id="create-skill-highlighted"
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setOpen(false)}
-              className="text-zinc-400 hover:text-zinc-100"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={create.isPending}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white"
-            >
-              {create.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Criar
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <CreateSkillDialogForm open={open} onClose={() => setOpen(false)} />
+    </>
   );
 }
 
@@ -466,7 +360,7 @@ export function SkillManager() {
         <p className="text-sm text-zinc-500">
           {isLoading ? 'Carregando...' : `${skills?.length ?? 0} skill(s) cadastrada(s)`}
         </p>
-        <CreateSkillForm />
+        <CreateSkillButton />
       </div>
 
       {isLoading && (
