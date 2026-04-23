@@ -48,7 +48,13 @@ describe('SkillsBentoBox', () => {
 
   it('renders categories and their skills from the provided catalog', () => {
     const skills: Skill[] = [
-      makeSkill({ id: 1, name: 'TypeScript', category: 'language', isHighlighted: true }),
+      makeSkill({
+        id: 1,
+        name: 'TypeScript',
+        category: 'language',
+        isHighlighted: true,
+        expertiseLevel: 3,
+      }),
       makeSkill({ id: 2, name: 'JavaScript', category: 'language' }),
       makeSkill({ id: 3, name: 'Next.js', category: 'framework' }),
       makeSkill({ id: 4, name: 'PostgreSQL', category: 'db' }),
@@ -65,6 +71,7 @@ describe('SkillsBentoBox', () => {
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
     expect(screen.getByText('Next.js')).toBeInTheDocument();
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
+    expect(screen.getByLabelText('TypeScript: 3 de 3 estrelas')).toBeInTheDocument();
   });
 
   it('renders highlighted skills with a badge', () => {

@@ -11,7 +11,7 @@ import type {
   UpdateSkillSchemaInput,
 } from '@portfolio/shared/schemas/skills';
 import type { Skill } from '@portfolio/shared/types/skills';
-import { cached, invalidatePattern } from '../lib/cache';
+import { cached, invalidateGroup } from '../lib/cache';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { SkillFilters } from '../repositories/skills.repo';
 import {
@@ -107,7 +107,7 @@ export async function createSkillService(data: CreateSkillSchemaInput): Promise<
 
   if (!row) throw new Error('Failed to create skill — database returned no row');
 
-  await invalidatePattern('skills:*');
+  await invalidateGroup('skillsContent');
   return toSkillDto(row);
 }
 
@@ -156,7 +156,7 @@ export async function updateSkillService(
   const updated = await updateSkill(id, patch);
   if (!updated) return null;
 
-  await invalidatePattern('skills:*');
+  await invalidateGroup('skillsContent');
   return toSkillDto(updated);
 }
 
@@ -165,7 +165,7 @@ export async function deleteSkillService(id: number): Promise<{ id: number } | n
   if (!current) return null;
   const result = await deleteSkill(id);
   if (!result) return null;
-  await invalidatePattern('skills:*');
+  await invalidateGroup('skillsContent');
   return result;
 }
 

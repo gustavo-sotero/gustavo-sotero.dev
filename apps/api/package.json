@@ -13,6 +13,7 @@
     "db:seed": "bun run --env-file ../../.env src/db/seed.ts",
     "db:migrate": "bun run --env-file ../../.env src/db/migrate.ts",
     "db:audit:schema": "bun run --env-file ../../.env src/db/audit-schema-parity.ts",
+    "db:backfill:skills": "bun run --env-file ../../.env src/db/backfill-skills-from-tags.ts",
     "db:backfill:comments": "bun run --env-file ../../.env src/db/backfill-comment-rendered-content.ts",
     "db:studio": "bunx drizzle-kit studio"
   },

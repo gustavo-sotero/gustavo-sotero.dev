@@ -57,7 +57,12 @@ export interface ResumeEducationItem {
 export interface ResumeSkillGroup {
   category: string;
   label: string;
-  skills: string[];
+  skills: ResumeSkillItem[];
+}
+
+export interface ResumeSkillItem {
+  name: string;
+  expertiseLevel: 1 | 2 | 3;
 }
 
 export interface ResumeProjectItem {
@@ -229,12 +234,24 @@ export function buildResumeViewModel(opts: {
 
   // Skills — group by category from Skill catalog, dedupe names, limit per category
   const categoryOrder = ['language', 'framework', 'db', 'tool', 'infra', 'cloud'];
-  const grouped = new Map<string, string[]>();
-  for (const skill of opts.skills ?? []) {
+  const grouped = new Map<string, ResumeSkillItem[]>();
+  const sortedSkills = [...(opts.skills ?? [])].sort(
+    (a, b) =>
+      Number(b.isHighlighted) - Number(a.isHighlighted) ||
+      b.expertiseLevel - a.expertiseLevel ||
+      a.name.localeCompare(b.name)
+  );
+
+  for (const skill of sortedSkills) {
     const cat = skill.category ?? 'tool';
     if (!grouped.has(cat)) grouped.set(cat, []);
     const list = grouped.get(cat);
-    if (list && !list.includes(skill.name)) list.push(skill.name);
+    if (list && !list.some((item) => item.name === skill.name)) {
+      list.push({
+        name: skill.name,
+        expertiseLevel: skill.expertiseLevel,
+      });
+    }
   }
 
   const skills: ResumeSkillGroup[] = categoryOrder

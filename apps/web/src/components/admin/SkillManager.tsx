@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { generateSlug, type SkillCategory, type Skill as SkillType } from '@portfolio/shared';
 import { Loader2, Pencil, Plus, Star, Trash2, Zap } from 'lucide-react';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { type Control, Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
   AlertDialog,
@@ -77,6 +77,42 @@ const skillFormSchema = z.object({
 });
 
 type SkillFormInput = z.infer<typeof skillFormSchema>;
+
+function SkillExpertiseField({
+  control,
+  inputName,
+}: {
+  control: Control<SkillFormInput>;
+  inputName: string;
+}) {
+  return (
+    <fieldset className="space-y-1.5">
+      <legend className="text-sm font-medium text-zinc-300">Nível de expertise</legend>
+      <Controller
+        name="expertiseLevel"
+        control={control}
+        render={({ field }) => (
+          <div role="radiogroup" aria-label="Nível de expertise" className="flex gap-3 flex-wrap">
+            {([1, 2, 3] as const).map((level) => (
+              <label key={level} className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name={inputName}
+                  value={level}
+                  checked={field.value === level}
+                  onChange={() => field.onChange(level)}
+                  className="accent-emerald-500"
+                  aria-label={EXPERTISE_LABELS[level]}
+                />
+                <span className="text-sm text-zinc-300">{EXPERTISE_LABELS[level]}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      />
+    </fieldset>
+  );
+}
 
 export function SkillCategoryBadge({ category }: { category: SkillCategory }) {
   const color = CATEGORY_COLORS[category];
@@ -177,30 +213,7 @@ function EditSkillDialog({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Nível de expertise</Label>
-            <Controller
-              name="expertiseLevel"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  value={String(field.value)}
-                  onValueChange={(v) => field.onChange(Number(v) as 1 | 2 | 3)}
-                >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    {([1, 2, 3] as const).map((level) => (
-                      <SelectItem key={level} value={String(level)}>
-                        {EXPERTISE_LABELS[level]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
+          <SkillExpertiseField control={control} inputName={`edit-skill-expertise-${skill.id}`} />
 
           <div className="flex items-center justify-between">
             <Label htmlFor="edit-skill-highlighted">Destacada</Label>
@@ -322,30 +335,7 @@ function CreateSkillForm({ onCreated }: { onCreated?: () => void }) {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Nível de expertise</Label>
-            <Controller
-              name="expertiseLevel"
-              control={control}
-              render={({ field }) => (
-                <Select
-                  value={String(field.value)}
-                  onValueChange={(v) => field.onChange(Number(v) as 1 | 2 | 3)}
-                >
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    {([1, 2, 3] as const).map((level) => (
-                      <SelectItem key={level} value={String(level)}>
-                        {EXPERTISE_LABELS[level]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
+          <SkillExpertiseField control={control} inputName="create-skill-expertise" />
 
           <div className="flex items-center justify-between">
             <Label htmlFor="create-skill-highlighted">Destacada</Label>
@@ -402,7 +392,7 @@ function SkillRow({ skill }: { skill: SkillType }) {
             {EXPERTISE_LABELS[skill.expertiseLevel]}
           </span>
           {skill.isHighlighted && (
-            <Star className="w-3 h-3 text-amber-400 flex-shrink-0" fill="currentColor" />
+            <Star className="w-3 h-3 text-amber-400 shrink-0" fill="currentColor" />
           )}
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

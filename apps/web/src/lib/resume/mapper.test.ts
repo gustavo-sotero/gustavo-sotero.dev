@@ -1,4 +1,4 @@
-import type { Education, Experience, Project, Tag } from '@portfolio/shared';
+import type { Education, Experience, Project, Skill, Tag } from '@portfolio/shared';
 import { describe, expect, it } from 'vitest';
 import { buildResumeViewModel } from './mapper';
 
@@ -84,6 +84,19 @@ function createProject(overrides: Partial<Project> = {}): Project {
     impactFacts: [],
     tags: [],
     ...overrides,
+  };
+}
+
+function createSkill(overrides: Partial<Skill> & Pick<Skill, 'id' | 'name' | 'category'>): Skill {
+  return {
+    id: overrides.id,
+    name: overrides.name,
+    slug: overrides.slug ?? overrides.name.toLowerCase(),
+    category: overrides.category,
+    iconKey: overrides.iconKey ?? null,
+    expertiseLevel: overrides.expertiseLevel ?? 1,
+    isHighlighted: overrides.isHighlighted ?? false,
+    createdAt: overrides.createdAt ?? '2026-01-01T00:00:00.000Z',
   };
 }
 
@@ -215,5 +228,44 @@ describe('resume mapper impactFacts', () => {
     });
 
     expect(resume.projects[0]?.impactFacts).toEqual([]);
+  });
+});
+
+describe('resume mapper skill expertise', () => {
+  it('keeps expertiseLevel in grouped skills and orders highlighted skills first', () => {
+    const resume = buildResumeViewModel({
+      experience: [],
+      education: [],
+      tags: [],
+      projects: [],
+      skills: [
+        createSkill({ id: 1, name: 'Node.js', category: 'tool', expertiseLevel: 2 }),
+        createSkill({
+          id: 2,
+          name: 'TypeScript',
+          category: 'language',
+          expertiseLevel: 3,
+          isHighlighted: true,
+        }),
+        createSkill({ id: 3, name: 'JavaScript', category: 'language', expertiseLevel: 2 }),
+      ],
+      now: new Date('2026-02-01T00:00:00.000Z'),
+    });
+
+    expect(resume.skills).toEqual([
+      {
+        category: 'language',
+        label: 'Linguagens',
+        skills: [
+          { name: 'TypeScript', expertiseLevel: 3 },
+          { name: 'JavaScript', expertiseLevel: 2 },
+        ],
+      },
+      {
+        category: 'tool',
+        label: 'Ferramentas',
+        skills: [{ name: 'Node.js', expertiseLevel: 2 }],
+      },
+    ]);
   });
 });

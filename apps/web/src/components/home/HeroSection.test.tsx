@@ -177,8 +177,20 @@ describe('HeroSection', () => {
   it('orders stack badges with highlighted skills first and then by category priority', () => {
     const skills: Skill[] = [
       makeSkill({ id: 1, name: 'Redis', category: 'db', isHighlighted: false }),
-      makeSkill({ id: 2, name: 'Docker', category: 'infra', isHighlighted: true }),
-      makeSkill({ id: 3, name: 'TypeScript', category: 'language', isHighlighted: true }),
+      makeSkill({
+        id: 2,
+        name: 'Docker',
+        category: 'infra',
+        isHighlighted: true,
+        expertiseLevel: 3,
+      }),
+      makeSkill({
+        id: 3,
+        name: 'TypeScript',
+        category: 'language',
+        isHighlighted: true,
+        expertiseLevel: 3,
+      }),
       makeSkill({ id: 4, name: 'Bun', category: 'tool', isHighlighted: false }),
       makeSkill({ id: 5, name: 'Next.js', category: 'framework', isHighlighted: false }),
       makeSkill({ id: 6, name: 'AWS', category: 'cloud', isHighlighted: false }),
@@ -199,5 +211,24 @@ describe('HeroSection', () => {
 
     // Only top 5 badges are shown.
     expect(screen.queryByText('AWS')).not.toBeInTheDocument();
+  });
+
+  it('adds expertise semantics to hero stack badges sourced from skills', () => {
+    render(
+      <HeroSection
+        skills={[
+          makeSkill({
+            id: 1,
+            name: 'TypeScript',
+            category: 'language',
+            expertiseLevel: 3,
+            isHighlighted: true,
+          }),
+        ]}
+        experienceLabel="3+ anos"
+      />
+    );
+
+    expect(screen.getByLabelText('TypeScript, expertise 3 de 3, destaque')).toBeInTheDocument();
   });
 });

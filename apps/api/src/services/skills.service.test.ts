@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   cachedMock,
-  invalidatePatternMock,
+  invalidateGroupMock,
   findManySkillsMock,
   findSkillByIdMock,
   findSkillByNameMock,
@@ -17,7 +17,7 @@ const {
   ensureUniqueSlugMock,
 } = vi.hoisted(() => ({
   cachedMock: vi.fn(),
-  invalidatePatternMock: vi.fn(),
+  invalidateGroupMock: vi.fn(),
   findManySkillsMock: vi.fn(),
   findSkillByIdMock: vi.fn(),
   findSkillByNameMock: vi.fn(),
@@ -34,7 +34,7 @@ const {
 
 vi.mock('../lib/cache', () => ({
   cached: cachedMock,
-  invalidatePattern: invalidatePatternMock,
+  invalidateGroup: invalidateGroupMock,
 }));
 
 vi.mock('../repositories/skills.repo', () => ({
@@ -86,7 +86,7 @@ describe('skills service', () => {
     cachedMock.mockImplementation((_key: string, _ttl: number, fetcher: () => unknown) =>
       fetcher()
     );
-    invalidatePatternMock.mockResolvedValue(undefined);
+    invalidateGroupMock.mockResolvedValue(undefined);
     resolveTagIconMock.mockReturnValue({ iconKey: 'si:SiTypescript' });
     generateSlugMock.mockReturnValue('typescript');
     ensureUniqueSlugMock.mockResolvedValue('typescript');
@@ -146,7 +146,7 @@ describe('skills service', () => {
       });
 
       expect(createSkillMock).toHaveBeenCalledTimes(1);
-      expect(invalidatePatternMock).toHaveBeenCalledWith('skills:*');
+      expect(invalidateGroupMock).toHaveBeenCalledWith('skillsContent');
       expect(result.isHighlighted).toBe(true);
     });
 
@@ -226,7 +226,7 @@ describe('skills service', () => {
       const result = await updateSkillService(1, { name: 'TypeScript v2' });
 
       expect(updateSkillMock).toHaveBeenCalledTimes(1);
-      expect(invalidatePatternMock).toHaveBeenCalledWith('skills:*');
+      expect(invalidateGroupMock).toHaveBeenCalledWith('skillsContent');
       expect(result?.name).toBe('TypeScript v2');
     });
   });
@@ -249,7 +249,7 @@ describe('skills service', () => {
       const result = await deleteSkillService(1);
 
       expect(deleteSkillMock).toHaveBeenCalledWith(1);
-      expect(invalidatePatternMock).toHaveBeenCalledWith('skills:*');
+      expect(invalidateGroupMock).toHaveBeenCalledWith('skillsContent');
       expect(result).toEqual({ id: 1 });
     });
   });

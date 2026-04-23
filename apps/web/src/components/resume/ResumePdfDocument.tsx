@@ -674,8 +674,8 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
                   <Text style={s.skillGroupLabel}>{group.label}</Text>
                   <View style={s.skillsRow}>
                     {group.skills.map((skill) => (
-                      <Text key={skill} style={s.skillPill}>
-                        {skill}
+                      <Text key={skill.name} style={s.skillPill}>
+                        {`${skill.name} ${'★'.repeat(skill.expertiseLevel)}${'☆'.repeat(3 - skill.expertiseLevel)}`}
                       </Text>
                     ))}
                   </View>

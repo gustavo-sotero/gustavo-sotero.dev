@@ -31,6 +31,7 @@ const CATEGORY_ORDER: SkillCategory[] = ['language', 'framework', 'tool', 'db', 
 interface StackBadge {
   name: string;
   isHighlighted: boolean;
+  expertiseLevel?: 1 | 2 | 3;
 }
 
 function pickStackBadges(skills: Skill[], count = 5): StackBadge[] {
@@ -41,7 +42,25 @@ function pickStackBadges(skills: Skill[], count = 5): StackBadge[] {
         CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category)
     )
     .slice(0, count)
-    .map((s) => ({ name: s.name, isHighlighted: s.isHighlighted }));
+    .map((s) => ({
+      name: s.name,
+      isHighlighted: s.isHighlighted,
+      expertiseLevel: s.expertiseLevel,
+    }));
+}
+
+function getBadgeLabel(stackBadge: StackBadge) {
+  if (stackBadge.expertiseLevel === undefined) {
+    return stackBadge.name;
+  }
+
+  return [
+    stackBadge.name,
+    `expertise ${stackBadge.expertiseLevel} de 3`,
+    stackBadge.isHighlighted ? 'destaque' : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
 }
 
 interface HeroSectionProps {
@@ -138,18 +157,21 @@ export function HeroSection({ skills = [], experienceLabel }: HeroSectionProps) 
             {/* Tech stack mini badges — Marquee with reduced-motion fallback */}
             {prefersReducedMotion ? (
               <div className="flex flex-wrap gap-2 pt-1">
-                {stack.map(({ name, isHighlighted }) => (
+                {stack.map((stackBadge) => (
                   <span
-                    key={name}
+                    key={stackBadge.name}
+                    role="img"
+                    aria-label={getBadgeLabel(stackBadge)}
+                    title={getBadgeLabel(stackBadge)}
                     className="inline-flex items-center gap-1 text-xs font-mono bg-zinc-900/80 border px-2 py-0.5 rounded"
                     style={
-                      isHighlighted
+                      stackBadge.isHighlighted
                         ? { borderColor: 'rgb(52 211 153 / 0.4)', color: '#6ee7b7' }
                         : { borderColor: 'rgb(39 39 42)', color: '#a1a1aa' }
                     }
                   >
-                    {name}
-                    {isHighlighted && (
+                    {stackBadge.name}
+                    {stackBadge.isHighlighted && (
                       <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
                     )}
                   </span>
@@ -161,18 +183,21 @@ export function HeroSection({ skills = [], experienceLabel }: HeroSectionProps) 
                 repeat={4}
                 className="pt-1 [--duration:20s] [--gap:0.5rem] overflow-hidden max-w-lg"
               >
-                {stack.map(({ name, isHighlighted }) => (
+                {stack.map((stackBadge) => (
                   <span
-                    key={name}
+                    key={stackBadge.name}
+                    role="img"
+                    aria-label={getBadgeLabel(stackBadge)}
+                    title={getBadgeLabel(stackBadge)}
                     className="inline-flex items-center gap-1 text-xs font-mono bg-zinc-900/80 border px-2 py-0.5 rounded mx-1 shrink-0"
                     style={
-                      isHighlighted
+                      stackBadge.isHighlighted
                         ? { borderColor: 'rgb(52 211 153 / 0.4)', color: '#6ee7b7' }
                         : { borderColor: 'rgb(39 39 42)', color: '#a1a1aa' }
                     }
                   >
-                    {name}
-                    {isHighlighted && (
+                    {stackBadge.name}
+                    {stackBadge.isHighlighted && (
                       <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
                     )}
                   </span>

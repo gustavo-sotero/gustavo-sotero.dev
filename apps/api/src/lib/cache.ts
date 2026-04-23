@@ -15,14 +15,15 @@ import { redis } from '../config/redis';
 const logger = getLogger('cache');
 
 export const CACHE_INVALIDATION_GROUPS = {
-  postsContent: ['posts:*', 'tags:*', 'feed:*', 'sitemap:*'],
-  projectsContent: ['projects:*', 'tags:*', 'feed:*', 'sitemap:*'],
-  tagsContent: ['tags:*', 'posts:*', 'projects:*'],
+  postsContent: ['posts:*', 'tags:*', 'feed:*', 'sitemap:*', 'developer:profile'],
+  projectsContent: ['projects:*', 'tags:*', 'feed:*', 'sitemap:*', 'developer:profile'],
+  skillsContent: ['skills:*', 'projects:*', 'experience:*', 'developer:profile'],
+  tagsContent: ['tags:*', 'posts:*', 'projects:*', 'developer:profile'],
   postTagsSync: ['posts:*', 'tags:*'],
   projectTagsSync: ['projects:*', 'tags:*'],
   commentsModeration: ['posts:slug:*'],
-  experienceContent: ['experience:*'],
-  educationContent: ['education:*'],
+  experienceContent: ['experience:*', 'developer:profile'],
+  educationContent: ['education:*', 'developer:profile'],
 } as const;
 
 export type CacheInvalidationGroup = keyof typeof CACHE_INVALIDATION_GROUPS;

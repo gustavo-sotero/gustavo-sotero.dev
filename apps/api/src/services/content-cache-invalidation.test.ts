@@ -48,12 +48,14 @@ vi.mock('../lib/cache', () => ({
       await invalidatePatternMock('tags:*');
       await invalidatePatternMock('feed:*');
       await invalidatePatternMock('sitemap:*');
+      await invalidatePatternMock('developer:profile');
     }
     if (group === 'projectsContent') {
       await invalidatePatternMock('projects:*');
       await invalidatePatternMock('tags:*');
       await invalidatePatternMock('feed:*');
       await invalidatePatternMock('sitemap:*');
+      await invalidatePatternMock('developer:profile');
     }
   }),
 }));
@@ -116,6 +118,7 @@ describe('content services cache invalidation', () => {
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
+    expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 
   it('invalidates posts and tags caches when updating a post', async () => {
@@ -128,6 +131,7 @@ describe('content services cache invalidation', () => {
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
+    expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 
   it('invalidates posts and tags caches when soft-deleting a post', async () => {
@@ -141,6 +145,7 @@ describe('content services cache invalidation', () => {
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
+    expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 
   it('invalidates projects and tags caches when creating a project', async () => {
@@ -159,6 +164,7 @@ describe('content services cache invalidation', () => {
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
+    expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 
   it('invalidates projects and tags caches when updating a project', async () => {
@@ -171,6 +177,7 @@ describe('content services cache invalidation', () => {
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
+    expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 
   it('invalidates projects and tags caches when soft-deleting a project', async () => {
@@ -182,5 +189,6 @@ describe('content services cache invalidation', () => {
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
+    expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 });
