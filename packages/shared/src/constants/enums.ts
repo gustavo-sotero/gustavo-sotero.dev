@@ -42,6 +42,17 @@ export const TagCategory = {
 } as const;
 export type TagCategory = (typeof TagCategory)[keyof typeof TagCategory];
 
+// Skill categories (technical only — no 'other')
+export const SkillCategory = {
+  LANGUAGE: 'language',
+  FRAMEWORK: 'framework',
+  TOOL: 'tool',
+  DB: 'db',
+  CLOUD: 'cloud',
+  INFRA: 'infra',
+} as const;
+export type SkillCategory = (typeof SkillCategory)[keyof typeof SkillCategory];
+
 // Transactional outbox event types — shared between API producers and worker relay.
 // Both sides must use these constants so contract drift is caught at compile time.
 export const OutboxEventType = {

@@ -6,6 +6,12 @@ const uniqueTagIds = z
     message: 'tagIds cannot contain duplicates',
   });
 
+const uniqueSkillIds = z
+  .array(z.number().int().positive())
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: 'skillIds cannot contain duplicates',
+  });
+
 /**
  * Ordered list of concise impact facts for a project.
  * Each fact must be a non-empty string up to 200 characters.
@@ -38,6 +44,7 @@ export const createProjectSchema = z.object({
   order: z.number().int().default(0),
   impactFacts: projectImpactFactsSchema,
   tagIds: uniqueTagIds.optional(),
+  skillIds: uniqueSkillIds.optional(),
 });
 
 export const updateProjectSchema = createProjectSchema.partial();

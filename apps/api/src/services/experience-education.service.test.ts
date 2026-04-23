@@ -156,6 +156,7 @@ const baseExperience = {
   createdAt: new Date('2022-01-01'),
   updatedAt: new Date('2022-01-01'),
   tags: [] as Array<{ tag: unknown }>,
+  skills: [] as Array<{ skill: unknown }>,
 };
 
 const baseEducation = {

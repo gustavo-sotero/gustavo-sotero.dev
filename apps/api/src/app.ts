@@ -20,6 +20,7 @@ import { adminJobsRouter } from './routes/admin/jobs';
 import { adminPostGenerationRouter } from './routes/admin/post-generation';
 import { adminPostsRouter } from './routes/admin/posts';
 import { adminProjectsRouter } from './routes/admin/projects';
+import { adminSkillsRouter } from './routes/admin/skills';
 import { adminTagsRouter } from './routes/admin/tags';
 import { adminUploadsRouter } from './routes/admin/uploads';
 import { commentsRouter } from './routes/public/comments';
@@ -33,6 +34,7 @@ import { openApiRouter } from './routes/public/openapi';
 import { publicPostsRouter } from './routes/public/posts';
 import { publicProjectsRouter } from './routes/public/projects';
 import { sitemapRouter } from './routes/public/sitemap';
+import { publicSkillsRouter } from './routes/public/skills';
 import { publicTagsRouter } from './routes/public/tags';
 import type { AppEnv } from './types/index';
 
@@ -161,6 +163,7 @@ app.route('/education', publicEducationRouter);
 app.route('/experience', publicExperienceRouter);
 app.route('/posts', publicPostsRouter);
 app.route('/projects', publicProjectsRouter);
+app.route('/skills', publicSkillsRouter);
 app.route('/tags', publicTagsRouter);
 
 // Auth — GitHub OAuth, session management (mounted at /auth, NOT /admin/auth)
@@ -171,6 +174,7 @@ const adminRouter = new Hono<AppEnv>();
 adminRouter.route('/posts', adminPostsRouter);
 adminRouter.route('/posts/generate', adminPostGenerationRouter);
 adminRouter.route('/projects', adminProjectsRouter);
+adminRouter.route('/skills', adminSkillsRouter);
 adminRouter.route('/tags', adminTagsRouter);
 adminRouter.route('/uploads', adminUploadsRouter);
 adminRouter.route('/comments', adminCommentsRouter);

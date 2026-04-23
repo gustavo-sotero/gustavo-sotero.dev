@@ -18,7 +18,7 @@ import { findManyEducation } from '../repositories/education.repo';
 import { findManyExperience } from '../repositories/experience.repo';
 import { findManyPosts } from '../repositories/posts.repo';
 import { findManyProjects } from '../repositories/projects.repo';
-import { findManyTags } from '../repositories/tags.repo';
+import { findManySkills } from '../repositories/skills.repo';
 
 // ── Static Profile Data ───────────────────────────────────────────────────────
 
@@ -48,16 +48,26 @@ export interface TagDTO {
   iconKey: string | null;
 }
 
+export interface SkillDTO {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  iconKey: string | null;
+  expertiseLevel: 1 | 2 | 3;
+  isHighlighted: boolean;
+}
+
 export interface StackDTO {
   groups: {
-    language: TagDTO[];
-    framework: TagDTO[];
-    tool: TagDTO[];
-    db: TagDTO[];
-    cloud: TagDTO[];
-    infra: TagDTO[];
-    other: TagDTO[];
+    language: SkillDTO[];
+    framework: SkillDTO[];
+    tool: SkillDTO[];
+    db: SkillDTO[];
+    cloud: SkillDTO[];
+    infra: SkillDTO[];
   };
+  totalSkills: number;
 }
 
 export interface ExperienceItemDTO {
@@ -122,7 +132,7 @@ export interface ProjectSummaryDTO {
 export interface MetricsDTO {
   totalPostsPublished: number;
   totalProjectsPublished: number;
-  totalTagsInUse: number;
+  totalSkillsInCatalog: number;
   pageviews30d: number;
   lastCalculatedAt: string;
 }
@@ -169,11 +179,40 @@ function mapTag(raw: {
   };
 }
 
-/** Build the stack groups from a flat list of tags. */
+/** Map a raw skill row to a public SkillDTO. */
+function mapSkill(raw: {
+  id: number;
+  name: string;
+  slug: string;
+  category: string;
+  iconKey: string | null;
+  expertiseLevel: number;
+  isHighlighted: number;
+}): SkillDTO {
+  return {
+    id: raw.id,
+    name: raw.name,
+    slug: raw.slug,
+    category: raw.category,
+    iconKey: raw.iconKey,
+    expertiseLevel: (raw.expertiseLevel as 1 | 2 | 3) ?? 1,
+    isHighlighted: raw.isHighlighted === 1,
+  };
+}
+
+/** Build the stack groups from a flat list of skills. */
 function buildStack(
-  tags: Array<{ id: number; name: string; slug: string; category: string; iconKey: string | null }>
+  skillRows: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    category: string;
+    iconKey: string | null;
+    expertiseLevel: number;
+    isHighlighted: number;
+  }>
 ): StackDTO {
-  const empty = (): TagDTO[] => [];
+  const empty = (): SkillDTO[] => [];
 
   const groups: StackDTO['groups'] = {
     language: empty(),
@@ -182,20 +221,26 @@ function buildStack(
     db: empty(),
     cloud: empty(),
     infra: empty(),
-    other: empty(),
   };
 
-  for (const tag of tags) {
-    const dto = mapTag(tag);
-    const cat = tag.category as keyof StackDTO['groups'];
+  for (const row of skillRows) {
+    const dto = mapSkill(row);
+    const cat = row.category as keyof StackDTO['groups'];
     if (cat in groups) {
       groups[cat].push(dto);
-    } else {
-      groups.other.push(dto);
     }
+    // Skill categories are technical-only (no 'other'), so unknown categories are silently skipped
   }
 
-  return { groups };
+  // Sort highlighted skills first within each group
+  for (const cat of Object.keys(groups) as (keyof StackDTO['groups'])[]) {
+    groups[cat].sort((a, b) => {
+      if (a.isHighlighted === b.isHighlighted) return a.name.localeCompare(b.name);
+      return a.isHighlighted ? -1 : 1;
+    });
+  }
+
+  return { groups, totalSkills: skillRows.length };
 }
 
 // ── Aggregation ───────────────────────────────────────────────────────────────
@@ -208,18 +253,18 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const now = new Date();
 
-  const [postsResult, projectsResult, tagsResult, experienceResult, educationResult, pageviews] =
+  const [postsResult, projectsResult, skillsResult, experienceResult, educationResult, pageviews] =
     await Promise.all([
       findManyPosts({ page: 1, perPage: RECENT_POSTS_LIMIT }, false),
       findManyProjects({ page: 1, perPage: RECENT_PROJECTS_LIMIT, featuredFirst: true }, false),
-      findManyTags({ source: 'project' }, true),
+      findManySkills({}),
       findManyExperience({ page: 1, perPage: 100 }, false),
       findManyEducation({ page: 1, perPage: 100 }, false),
       getPageviewCount({ from: thirtyDaysAgo, to: now }),
     ]);
 
-  // ── Stack ──────────────────────────────────────────────────────────────────
-  const stack = buildStack(tagsResult.data);
+  // ── Stack (from Skills catalog) ────────────────────────────────────────────
+  const stack = buildStack(skillsResult.data);
 
   // ── Experience ─────────────────────────────────────────────────────────────
   const experience: ExperienceItemDTO[] = experienceResult.data.map((e) => ({
@@ -292,7 +337,7 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
   const metrics: MetricsDTO = {
     totalPostsPublished: postsResult.meta.total,
     totalProjectsPublished: projectsResult.meta.total,
-    totalTagsInUse: tagsResult.meta.total,
+    totalSkillsInCatalog: skillsResult.meta.total,
     pageviews30d: pageviews,
     lastCalculatedAt: now.toISOString(),
   };

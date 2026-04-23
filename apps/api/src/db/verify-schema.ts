@@ -7,8 +7,8 @@
  *
  * This is a targeted check — it is not a full schema diff. It verifies
  * the exact objects that have been historically absent in drifted
- * environments: the `experience_tags` pivot table and the
- * `tags.is_highlighted` column.
+ * environments: the `experience_tags` pivot table, the
+ * `tags.is_highlighted` column, and the skill domain tables.
  */
 
 import { sql } from 'drizzle-orm';
@@ -29,21 +29,23 @@ export interface SchemaParity {
 export async function verifyRequiredSchema(): Promise<SchemaParity> {
   const missing: string[] = [];
 
-  // 1. Verify experience_tags table exists
-  const [tableRow] = await db.execute<{ exists: boolean }>(sql`
-    SELECT EXISTS (
-      SELECT 1
-      FROM pg_catalog.pg_tables
-      WHERE schemaname = 'public'
-        AND tablename  = 'experience_tags'
-    ) AS "exists"
-  `);
+  const REQUIRED_TABLES = ['experience_tags', 'skills', 'project_skills', 'experience_skills'];
 
-  if (!tableRow?.exists) {
-    missing.push('table:experience_tags');
+  for (const tableName of REQUIRED_TABLES) {
+    const [row] = await db.execute<{ exists: boolean }>(sql`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_tables
+        WHERE schemaname = 'public'
+          AND tablename  = ${tableName}
+      ) AS "exists"
+    `);
+    if (!row?.exists) {
+      missing.push(`table:${tableName}`);
+    }
   }
 
-  // 2. Verify tags.is_highlighted column exists
+  // Verify tags.is_highlighted column exists
   const [colRow] = await db.execute<{ exists: boolean }>(sql`
     SELECT EXISTS (
       SELECT 1

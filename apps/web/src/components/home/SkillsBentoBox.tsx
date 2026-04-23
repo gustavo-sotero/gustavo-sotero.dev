@@ -1,4 +1,4 @@
-import type { Tag } from '@portfolio/shared';
+import type { Skill } from '@portfolio/shared';
 import { Star } from 'lucide-react';
 import { TechIcon } from '@/components/shared/TechIcon';
 import { BentoGrid } from '@/components/ui/bento-grid';
@@ -11,14 +11,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   db: 'Banco de dados',
   cloud: 'Cloud',
   infra: 'Infraestrutura',
-  other: 'Outro',
 };
 
 interface SkillsBentoBoxProps {
-  tags: Tag[];
+  tags: Skill[];
 }
 
-function SkillCard({ tag, index }: { tag: Tag; index: number }) {
+function SkillCard({ tag, index }: { tag: Skill; index: number }) {
   return (
     <div
       className={cn(
@@ -56,7 +55,7 @@ function SkillCard({ tag, index }: { tag: Tag; index: number }) {
           {tag.name}
         </p>
         <p className="text-[10px] text-zinc-400 mt-0.5">
-          {CATEGORY_LABELS[tag.category ?? 'other']}
+          {CATEGORY_LABELS[tag.category] ?? tag.category}
         </p>
       </div>
     </div>
@@ -66,23 +65,23 @@ function SkillCard({ tag, index }: { tag: Tag; index: number }) {
 export function SkillsBentoBox({ tags }: SkillsBentoBoxProps) {
   if (tags.length === 0) return null;
 
-  // Group all tags by category (highlighted ones stay in their category)
+  // Group all skills by category
   const grouped = tags.reduce(
-    (acc, tag) => {
-      const cat = tag.category ?? 'other';
+    (acc, skill) => {
+      const cat = skill.category;
       if (!acc[cat]) acc[cat] = [];
-      acc[cat].push(tag);
+      acc[cat].push(skill);
       return acc;
     },
-    {} as Record<string, Tag[]>
+    {} as Record<string, Skill[]>
   );
 
-  // Within each category, sort highlighted tags first
+  // Within each category, sort highlighted skills first (defense-in-depth)
   for (const cat of Object.keys(grouped)) {
     grouped[cat].sort((a, b) => (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0));
   }
 
-  const categoryOrder = ['language', 'framework', 'db', 'tool', 'cloud', 'infra', 'other'];
+  const categoryOrder = ['language', 'framework', 'db', 'tool', 'cloud', 'infra'];
 
   return (
     <div className="space-y-8">

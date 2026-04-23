@@ -3,14 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
 
 const {
-  findManyTagsMock,
+  findManySkillsMock,
   findManyPostsMock,
   findManyProjectsMock,
   findManyExperienceMock,
   findManyEducationMock,
   getPageviewCountMock,
 } = vi.hoisted(() => ({
-  findManyTagsMock: vi.fn(),
+  findManySkillsMock: vi.fn(),
   findManyPostsMock: vi.fn(),
   findManyProjectsMock: vi.fn(),
   findManyExperienceMock: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('../lib/pivotHelpers', () => ({
   flattenPivotTagArray: vi.fn((arr: Array<{ tag: unknown }>) => arr.map((r) => r.tag)),
 }));
 
-vi.mock('../repositories/tags.repo', () => ({ findManyTags: findManyTagsMock }));
+vi.mock('../repositories/skills.repo', () => ({ findManySkills: findManySkillsMock }));
 vi.mock('../repositories/posts.repo', () => ({ findManyPosts: findManyPostsMock }));
 vi.mock('../repositories/projects.repo', () => ({ findManyProjects: findManyProjectsMock }));
 vi.mock('../repositories/experience.repo', () => ({ findManyExperience: findManyExperienceMock }));
@@ -57,18 +57,28 @@ function makeEmptyPaginated<T>(data: T[] = []) {
   return { data, meta: { page: 1, perPage: 10, total: data.length, totalPages: 1 } };
 }
 
-function makeMockTag(overrides: Partial<{ id: number; name: string; category: string }> = {}) {
+function makeMockSkill(
+  overrides: Partial<{
+    id: number;
+    name: string;
+    category: string;
+    expertiseLevel: number;
+    isHighlighted: number;
+  }> = {}
+) {
   return {
     id: overrides.id ?? 1,
     name: overrides.name ?? 'TypeScript',
     slug: 'typescript',
     category: overrides.category ?? 'language',
     iconKey: null,
+    expertiseLevel: overrides.expertiseLevel ?? 3,
+    isHighlighted: overrides.isHighlighted ?? 0,
   };
 }
 
 function setupDefaultMocks() {
-  findManyTagsMock.mockResolvedValue(makeEmptyPaginated());
+  findManySkillsMock.mockResolvedValue(makeEmptyPaginated());
   findManyPostsMock.mockResolvedValue(makeEmptyPaginated());
   findManyProjectsMock.mockResolvedValue(makeEmptyPaginated());
   findManyExperienceMock.mockResolvedValue(makeEmptyPaginated());
@@ -84,48 +94,64 @@ describe('developer-profile service — stack source alignment', () => {
     setupDefaultMocks();
   });
 
-  it('fetches tags with source=project so stack reflects only project tags', async () => {
+  it('fetches skills from the skill catalog to build the stack', async () => {
     await getDeveloperProfile();
 
-    expect(findManyTagsMock).toHaveBeenCalledWith({ source: 'project' }, true);
+    expect(findManySkillsMock).toHaveBeenCalledWith({});
   });
 
-  it('totalTagsInUse reflects the same project-only tag count as stack', async () => {
-    const mockTags = [
-      makeMockTag({ id: 1 }),
-      makeMockTag({ id: 2, name: 'Bun', category: 'tool' }),
+  it('totalSkillsInCatalog reflects the skill count returned by the repo', async () => {
+    const mockSkills = [
+      makeMockSkill({ id: 1 }),
+      makeMockSkill({ id: 2, name: 'Bun', category: 'tool' }),
     ];
-    findManyTagsMock.mockResolvedValue(makeEmptyPaginated(mockTags));
+    findManySkillsMock.mockResolvedValue(makeEmptyPaginated(mockSkills));
 
     const result = await getDeveloperProfile();
 
-    // meta.total from tagsResult is used directly for the metric
-    expect(result.metrics.totalTagsInUse).toBe(2);
+    // meta.total from skillsResult is used directly for the metric
+    expect(result.metrics.totalSkillsInCatalog).toBe(2);
   });
 
-  it('stack.groups are populated from project-only tags', async () => {
-    const langTag = makeMockTag({ id: 1, name: 'TypeScript', category: 'language' });
-    const toolTag = makeMockTag({ id: 2, name: 'Docker', category: 'tool' });
-    findManyTagsMock.mockResolvedValue(makeEmptyPaginated([langTag, toolTag]));
+  it('stack.groups are populated from the skill catalog', async () => {
+    const langSkill = makeMockSkill({ id: 1, name: 'TypeScript', category: 'language' });
+    const toolSkill = makeMockSkill({ id: 2, name: 'Docker', category: 'tool' });
+    findManySkillsMock.mockResolvedValue(makeEmptyPaginated([langSkill, toolSkill]));
 
     const result = await getDeveloperProfile();
 
     expect(result.stack.groups.language).toEqual([
-      { id: 1, name: 'TypeScript', slug: 'typescript', category: 'language', iconKey: null },
+      {
+        id: 1,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        iconKey: null,
+        expertiseLevel: 3,
+        isHighlighted: false,
+      },
     ]);
     expect(result.stack.groups.tool).toEqual([
-      { id: 2, name: 'Docker', slug: 'typescript', category: 'tool', iconKey: null },
+      {
+        id: 2,
+        name: 'Docker',
+        slug: 'typescript',
+        category: 'tool',
+        iconKey: null,
+        expertiseLevel: 3,
+        isHighlighted: false,
+      },
     ]);
     expect(result.stack.groups.framework).toEqual([]);
   });
 
-  it('totalTagsInUse and stack.groups count agree when all tags are in a single category', async () => {
-    const tags = [
-      makeMockTag({ id: 1, name: 'TypeScript', category: 'language' }),
-      makeMockTag({ id: 2, name: 'JavaScript', category: 'language' }),
-      makeMockTag({ id: 3, name: 'Python', category: 'language' }),
+  it('totalSkillsInCatalog and stack.groups count agree when all skills are in a single category', async () => {
+    const skillList = [
+      makeMockSkill({ id: 1, name: 'TypeScript', category: 'language' }),
+      makeMockSkill({ id: 2, name: 'JavaScript', category: 'language' }),
+      makeMockSkill({ id: 3, name: 'Python', category: 'language' }),
     ];
-    findManyTagsMock.mockResolvedValue(makeEmptyPaginated(tags));
+    findManySkillsMock.mockResolvedValue(makeEmptyPaginated(skillList));
 
     const result = await getDeveloperProfile();
 
@@ -133,7 +159,7 @@ describe('developer-profile service — stack source alignment', () => {
       (sum, arr) => sum + arr.length,
       0
     );
-    expect(result.metrics.totalTagsInUse).toBe(3);
+    expect(result.metrics.totalSkillsInCatalog).toBe(3);
     expect(totalInGroups).toBe(3);
   });
 

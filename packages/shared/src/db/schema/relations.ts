@@ -1,9 +1,10 @@
 import { relations } from 'drizzle-orm';
 import { comments } from './comments';
 import { experience } from './experience';
-import { experienceTags, postTags, projectTags } from './pivots';
+import { experienceSkills, experienceTags, postTags, projectSkills, projectTags } from './pivots';
 import { posts } from './posts';
 import { projects } from './projects';
+import { skills } from './skills';
 import { tags } from './tags';
 
 export const postsRelations = relations(posts, ({ many }) => ({
@@ -24,6 +25,7 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
 
 export const projectsRelations = relations(projects, ({ many }) => ({
   tags: many(projectTags),
+  skills: many(projectSkills),
 }));
 
 export const projectTagsRelations = relations(projectTags, ({ one }) => ({
@@ -60,6 +62,7 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
 
 export const experienceRelations = relations(experience, ({ many }) => ({
   tags: many(experienceTags),
+  skills: many(experienceSkills),
 }));
 
 export const experienceTagsRelations = relations(experienceTags, ({ one }) => ({
@@ -70,5 +73,34 @@ export const experienceTagsRelations = relations(experienceTags, ({ one }) => ({
   tag: one(tags, {
     fields: [experienceTags.tagId],
     references: [tags.id],
+  }),
+}));
+
+// ── Skill relations ───────────────────────────────────────────────────────────
+
+export const skillsRelations = relations(skills, ({ many }) => ({
+  projectSkills: many(projectSkills),
+  experienceSkills: many(experienceSkills),
+}));
+
+export const projectSkillsRelations = relations(projectSkills, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectSkills.projectId],
+    references: [projects.id],
+  }),
+  skill: one(skills, {
+    fields: [projectSkills.skillId],
+    references: [skills.id],
+  }),
+}));
+
+export const experienceSkillsRelations = relations(experienceSkills, ({ one }) => ({
+  experience: one(experience, {
+    fields: [experienceSkills.experienceId],
+    references: [experience.id],
+  }),
+  skill: one(skills, {
+    fields: [experienceSkills.skillId],
+    references: [skills.id],
   }),
 }));

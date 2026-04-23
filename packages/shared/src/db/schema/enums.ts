@@ -22,3 +22,12 @@ export const tagCategoryEnum = pgEnum('tag_category', [
   'infra',
   'other',
 ]);
+
+export const skillCategoryEnum = pgEnum('skill_category', [
+  'language',
+  'framework',
+  'tool',
+  'db',
+  'cloud',
+  'infra',
+]);

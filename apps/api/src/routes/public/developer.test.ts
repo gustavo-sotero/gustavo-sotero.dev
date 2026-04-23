@@ -119,7 +119,7 @@ const MOCK_PROFILE = {
   metrics: {
     totalPostsPublished: 12,
     totalProjectsPublished: 5,
-    totalTagsInUse: 18,
+    totalSkillsInCatalog: 18,
     pageviews30d: 3240,
     lastCalculatedAt: '2026-02-27T10:00:00.000Z',
   },
@@ -279,7 +279,7 @@ describe('GET /developer/profile', () => {
     const { metrics } = body.data;
     expect(typeof metrics.totalPostsPublished).toBe('number');
     expect(typeof metrics.totalProjectsPublished).toBe('number');
-    expect(typeof metrics.totalTagsInUse).toBe('number');
+    expect(typeof metrics.totalSkillsInCatalog).toBe('number');
     expect(typeof metrics.pageviews30d).toBe('number');
     expect(typeof metrics.lastCalculatedAt).toBe('string');
   });

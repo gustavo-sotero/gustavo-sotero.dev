@@ -32,6 +32,36 @@ export function flattenPivotTags<T extends { tags?: Array<{ tag: unknown }> }>(i
 }
 
 /**
+ * Flatten a pivot array `{ skill: T }[]` to `T[]`.
+ */
+export function flattenPivotSkillArray<TSkill>(pivots?: Array<{ skill: TSkill }>): TSkill[] {
+  return (pivots ?? []).map((pivot) => pivot.skill);
+}
+
+/**
+ * Flatten Drizzle pivot objects `{ skill: T }` to a direct `T[]`.
+ */
+export function flattenPivotSkills<T extends { skills?: Array<{ skill: unknown }> }>(item: T) {
+  return {
+    ...item,
+    skills: flattenPivotSkillArray(item.skills),
+  };
+}
+
+/**
+ * Flatten both tag and skill pivots from a Drizzle entity.
+ */
+export function flattenPivots<
+  T extends { tags?: Array<{ tag: unknown }>; skills?: Array<{ skill: unknown }> },
+>(item: T) {
+  return {
+    ...item,
+    tags: flattenPivotTagArray(item.tags),
+    skills: flattenPivotSkillArray(item.skills),
+  };
+}
+
+/**
  * Pure logic for "is this slug already taken" after performing the query.
  *
  * Each entity service executes its own table-specific query and delegates the

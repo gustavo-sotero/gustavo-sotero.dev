@@ -12,6 +12,7 @@
 export const TAG_HOME = 'public:home';
 export const TAG_POSTS_LIST = 'public:posts:list';
 export const TAG_PROJECTS_LIST = 'public:projects:list';
+export const TAG_SKILLS_LIST = 'public:skills:list';
 export const TAG_TAGS_LIST = 'public:tags:list';
 export const TAG_EXPERIENCE_LIST = 'public:experience:list';
 export const TAG_EDUCATION_LIST = 'public:education:list';
@@ -97,4 +98,11 @@ export function experienceMutationTags(): string[] {
  */
 export function educationMutationTags(): string[] {
   return [TAG_EDUCATION_LIST];
+}
+
+/**
+ * Tags to revalidate when a skill is created, updated, or deleted.
+ */
+export function skillMutationTags(): string[] {
+  return [TAG_HOME, TAG_SKILLS_LIST];
 }

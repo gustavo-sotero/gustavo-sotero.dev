@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { Tag } from '@portfolio/shared';
+import type { Skill } from '@portfolio/shared';
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -23,7 +23,7 @@ vi.mock('@/components/ui/bento-grid', () => ({
 
 import { SkillsBentoBox } from './SkillsBentoBox';
 
-function makeTag(overrides: Partial<Tag> & Pick<Tag, 'id' | 'name' | 'category'>): Tag {
+function makeSkill(overrides: Partial<Skill> & Pick<Skill, 'id' | 'name' | 'category'>): Skill {
   return {
     id: overrides.id,
     name: overrides.name,
@@ -31,6 +31,7 @@ function makeTag(overrides: Partial<Tag> & Pick<Tag, 'id' | 'name' | 'category'>
     category: overrides.category,
     iconKey: overrides.iconKey ?? null,
     isHighlighted: overrides.isHighlighted ?? false,
+    expertiseLevel: overrides.expertiseLevel ?? 1,
     createdAt: overrides.createdAt ?? '2026-03-30T00:00:00.000Z',
   };
 }
@@ -40,20 +41,20 @@ function expectBefore(a: HTMLElement, b: HTMLElement) {
 }
 
 describe('SkillsBentoBox', () => {
-  it('returns null when there are no tags', () => {
+  it('returns null when there are no skills', () => {
     const { container } = render(<SkillsBentoBox tags={[]} />);
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders categories and their tags from the provided catalog', () => {
-    const tags: Tag[] = [
-      makeTag({ id: 1, name: 'TypeScript', category: 'language', isHighlighted: true }),
-      makeTag({ id: 2, name: 'JavaScript', category: 'language' }),
-      makeTag({ id: 3, name: 'Next.js', category: 'framework' }),
-      makeTag({ id: 4, name: 'PostgreSQL', category: 'db' }),
+  it('renders categories and their skills from the provided catalog', () => {
+    const skills: Skill[] = [
+      makeSkill({ id: 1, name: 'TypeScript', category: 'language', isHighlighted: true }),
+      makeSkill({ id: 2, name: 'JavaScript', category: 'language' }),
+      makeSkill({ id: 3, name: 'Next.js', category: 'framework' }),
+      makeSkill({ id: 4, name: 'PostgreSQL', category: 'db' }),
     ];
 
-    render(<SkillsBentoBox tags={tags} />);
+    render(<SkillsBentoBox tags={skills} />);
 
     expect(screen.getByText('Stack & Skills')).toBeInTheDocument();
     expect(screen.getAllByText('Linguagem').length).toBeGreaterThan(0);
@@ -66,15 +67,15 @@ describe('SkillsBentoBox', () => {
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument();
   });
 
-  it('keeps highlighted tags first inside each category', () => {
-    const tags: Tag[] = [
-      makeTag({ id: 1, name: 'JavaScript', category: 'language', isHighlighted: false }),
-      makeTag({ id: 2, name: 'TypeScript', category: 'language', isHighlighted: true }),
-      makeTag({ id: 3, name: 'Bun', category: 'tool', isHighlighted: false }),
-      makeTag({ id: 4, name: 'Docker', category: 'tool', isHighlighted: true }),
+  it('renders highlighted skills with a badge', () => {
+    const skills: Skill[] = [
+      makeSkill({ id: 1, name: 'JavaScript', category: 'language', isHighlighted: false }),
+      makeSkill({ id: 2, name: 'TypeScript', category: 'language', isHighlighted: true }),
+      makeSkill({ id: 3, name: 'Bun', category: 'tool', isHighlighted: false }),
+      makeSkill({ id: 4, name: 'Docker', category: 'tool', isHighlighted: true }),
     ];
 
-    render(<SkillsBentoBox tags={tags} />);
+    render(<SkillsBentoBox tags={skills} />);
 
     const typeScript = screen.getByText('TypeScript');
     const javaScript = screen.getByText('JavaScript');

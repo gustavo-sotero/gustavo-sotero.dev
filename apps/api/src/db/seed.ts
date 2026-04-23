@@ -1,10 +1,13 @@
 import {
   experience,
+  experienceSkills,
   experienceTags,
   posts,
   postTags,
+  projectSkills,
   projects,
   projectTags,
+  skills,
   tags,
 } from '@portfolio/shared/db/schema';
 import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
@@ -42,6 +45,234 @@ const _RAW_SEED_TAGS = [
 export const SEED_TAGS = _RAW_SEED_TAGS.map((t) => ({
   ...t,
   iconKey: resolveTagIcon(t.name, t.category).iconKey,
+}));
+
+// ── Canonical Skills ──────────────────────────────────────────────────────────
+// These are the developer's personal skill catalog entries.
+// expertiseLevel: 1=familiar, 2=proficient, 3=expert
+// isHighlighted: top skills shown in the Bento Box (max 2 per category)
+const _RAW_SEED_SKILLS = [
+  // Languages
+  {
+    name: 'TypeScript',
+    slug: 'typescript',
+    category: 'language' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'JavaScript',
+    slug: 'javascript',
+    category: 'language' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'Python',
+    slug: 'python',
+    category: 'language' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'PHP',
+    slug: 'php',
+    category: 'language' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'Java',
+    slug: 'java',
+    category: 'language' as const,
+    expertiseLevel: 1 as const,
+    isHighlighted: 0 as const,
+  },
+  // Frameworks
+  {
+    name: 'Hono',
+    slug: 'hono',
+    category: 'framework' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'Next.js',
+    slug: 'nextjs',
+    category: 'framework' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'React',
+    slug: 'react',
+    category: 'framework' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'NestJS',
+    slug: 'nestjs',
+    category: 'framework' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'Fastify',
+    slug: 'fastify',
+    category: 'framework' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'Django',
+    slug: 'django',
+    category: 'framework' as const,
+    expertiseLevel: 1 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'Laravel',
+    slug: 'laravel',
+    category: 'framework' as const,
+    expertiseLevel: 1 as const,
+    isHighlighted: 0 as const,
+  },
+  // Tools
+  {
+    name: 'Bun',
+    slug: 'bun',
+    category: 'tool' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'Drizzle ORM',
+    slug: 'drizzle',
+    category: 'tool' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'Zod',
+    slug: 'zod',
+    category: 'tool' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'TanStack Query',
+    slug: 'tanstack-query',
+    category: 'tool' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'Node.js',
+    slug: 'nodejs',
+    category: 'tool' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'Prisma',
+    slug: 'prisma',
+    category: 'tool' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'BullMQ',
+    slug: 'bullmq',
+    category: 'tool' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'Vitest',
+    slug: 'vitest',
+    category: 'tool' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  // Databases
+  {
+    name: 'PostgreSQL',
+    slug: 'postgresql',
+    category: 'db' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'Redis',
+    slug: 'redis',
+    category: 'db' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'MySQL',
+    slug: 'mysql',
+    category: 'db' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 0 as const,
+  },
+  {
+    name: 'MongoDB',
+    slug: 'mongodb',
+    category: 'db' as const,
+    expertiseLevel: 1 as const,
+    isHighlighted: 0 as const,
+  },
+  // Cloud
+  {
+    name: 'AWS',
+    slug: 'aws',
+    category: 'cloud' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'Cloudflare',
+    slug: 'cloudflare',
+    category: 'cloud' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'GCP',
+    slug: 'gcp',
+    category: 'cloud' as const,
+    expertiseLevel: 1 as const,
+    isHighlighted: 0 as const,
+  },
+  // Infra
+  {
+    name: 'Docker',
+    slug: 'docker',
+    category: 'infra' as const,
+    expertiseLevel: 3 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'GitHub Actions',
+    slug: 'github-actions',
+    category: 'infra' as const,
+    expertiseLevel: 2 as const,
+    isHighlighted: 1 as const,
+  },
+  {
+    name: 'Kubernetes',
+    slug: 'kubernetes',
+    category: 'infra' as const,
+    expertiseLevel: 1 as const,
+    isHighlighted: 0 as const,
+  },
+];
+
+export const SEED_SKILLS = _RAW_SEED_SKILLS.map((s) => ({
+  ...s,
+  iconKey: resolveTagIcon(s.name, s.category).iconKey,
 }));
 
 const SEED_POSTS = [
@@ -192,6 +423,17 @@ A backend-centric portfolio demonstrating advanced architectural patterns includ
       'Jobs BullMQ com dead letter queue e retry com backoff exponencial',
     ],
     tagSlugs: ['typescript', 'bun', 'hono', 'nextjs', 'postgresql', 'redis', 'docker'],
+    skillSlugs: [
+      'typescript',
+      'bun',
+      'hono',
+      'nextjs',
+      'postgresql',
+      'redis',
+      'docker',
+      'drizzle',
+      'zod',
+    ],
   },
   {
     slug: 'open-source-contributions',
@@ -214,6 +456,7 @@ A collection of open source work and experiments.
     order: 2,
     impactFacts: ['Contribuições com foco em DX — tipagem, ergonomia de API e documentação'],
     tagSlugs: ['typescript', 'react'],
+    skillSlugs: ['typescript', 'react'],
   },
 ];
 
@@ -239,6 +482,7 @@ export const SEED_EXPERIENCE = [
       'Acelerou integrações internas ao transformar fluxos manuais de horas em minutos',
     ],
     tagSlugs: ['typescript', 'hono', 'postgresql', 'redis', 'docker'],
+    skillSlugs: ['typescript', 'hono', 'postgresql', 'redis', 'docker', 'nodejs', 'bullmq'],
   },
   {
     slug: 'fullstack-developer-independent-products',
@@ -260,6 +504,7 @@ export const SEED_EXPERIENCE = [
       'Automatizou rotinas críticas de moderação e atendimento para sustentar crescimento com baixa sobrecarga manual',
     ],
     tagSlugs: ['typescript', 'nextjs', 'postgresql', 'redis', 'bun'],
+    skillSlugs: ['typescript', 'nextjs', 'postgresql', 'redis', 'bun', 'react'],
   },
 ];
 
@@ -303,6 +548,37 @@ async function seed() {
   const tagIdBySlug = Object.fromEntries(allTags.map((t) => [t.slug, t.id]));
   logger.info(`Tags ready: ${allTags.length} total, ${insertedTags.length} newly inserted`);
 
+  // ── Skills ────────────────────────────────────────────────────────────────────
+  logger.info('Seeding skills...');
+  const insertedSkills = await db
+    .insert(skills)
+    .values(SEED_SKILLS)
+    .onConflictDoNothing({ target: skills.slug })
+    .returning({ id: skills.id, slug: skills.slug });
+
+  // Canonicalize predefined skills across reruns (same pattern as tags)
+  let canonicalizedSkillCount = 0;
+  for (const skill of SEED_SKILLS) {
+    const updated = await db
+      .update(skills)
+      .set({
+        category: skill.category,
+        iconKey: skill.iconKey,
+        expertiseLevel: skill.expertiseLevel,
+        isHighlighted: skill.isHighlighted,
+      })
+      .where(eq(skills.slug, skill.slug))
+      .returning({ id: skills.id });
+    canonicalizedSkillCount += updated.length;
+  }
+  if (canonicalizedSkillCount > 0) {
+    logger.info(`Canonicalized ${canonicalizedSkillCount} predefined skill(s)`);
+  }
+
+  const allSkills = await db.select({ id: skills.id, slug: skills.slug }).from(skills);
+  const skillIdBySlug = Object.fromEntries(allSkills.map((s) => [s.slug, s.id]));
+  logger.info(`Skills ready: ${allSkills.length} total, ${insertedSkills.length} newly inserted`);
+
   // ── Posts ─────────────────────────────────────────────────────────────────────
   logger.info('Seeding posts...');
   for (const post of SEED_POSTS) {
@@ -341,7 +617,7 @@ async function seed() {
   // ── Projects ─────────────────────────────────────────────────────────────────
   logger.info('Seeding projects...');
   for (const project of SEED_PROJECTS) {
-    const { tagSlugs, ...projectData } = project;
+    const { tagSlugs, skillSlugs, ...projectData } = project;
 
     const [inserted] = await db
       .insert(projects)
@@ -364,20 +640,29 @@ async function seed() {
       logger.info(`Project already exists: ${projectData.slug}`);
     }
 
-    const pivots = tagSlugs
+    const tagPivots = tagSlugs
       .map((s) => tagIdBySlug[s])
       .filter((id): id is number => id !== undefined)
       .map((tagId) => ({ projectId: projectRecord.id, tagId }));
 
-    if (pivots.length > 0) {
-      await db.insert(projectTags).values(pivots).onConflictDoNothing();
+    if (tagPivots.length > 0) {
+      await db.insert(projectTags).values(tagPivots).onConflictDoNothing();
+    }
+
+    const skillPivots = (skillSlugs ?? [])
+      .map((s) => skillIdBySlug[s])
+      .filter((id): id is number => id !== undefined)
+      .map((skillId) => ({ projectId: projectRecord.id, skillId }));
+
+    if (skillPivots.length > 0) {
+      await db.insert(projectSkills).values(skillPivots).onConflictDoNothing();
     }
   }
 
   // ── Experience ───────────────────────────────────────────────────────────────
   logger.info('Seeding experience...');
   for (const entry of SEED_EXPERIENCE) {
-    const { tagSlugs, ...experienceData } = entry;
+    const { tagSlugs, skillSlugs, ...experienceData } = entry;
 
     const [inserted] = await db
       .insert(experience)
@@ -400,13 +685,22 @@ async function seed() {
       logger.info(`Experience already exists: ${experienceData.slug}`);
     }
 
-    const pivots = tagSlugs
+    const tagPivots = tagSlugs
       .map((slug) => tagIdBySlug[slug])
       .filter((id): id is number => id !== undefined)
       .map((tagId) => ({ experienceId: experienceRecord.id, tagId }));
 
-    if (pivots.length > 0) {
-      await db.insert(experienceTags).values(pivots).onConflictDoNothing();
+    if (tagPivots.length > 0) {
+      await db.insert(experienceTags).values(tagPivots).onConflictDoNothing();
+    }
+
+    const skillPivots = (skillSlugs ?? [])
+      .map((slug) => skillIdBySlug[slug])
+      .filter((id): id is number => id !== undefined)
+      .map((skillId) => ({ experienceId: experienceRecord.id, skillId }));
+
+    if (skillPivots.length > 0) {
+      await db.insert(experienceSkills).values(skillPivots).onConflictDoNothing();
     }
   }
 

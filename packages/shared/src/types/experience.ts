@@ -1,4 +1,5 @@
 import type { PostStatus } from '../constants/enums';
+import type { Skill } from './skills';
 import type { Tag } from './tags';
 
 // Full experience entity (admin view)
@@ -22,6 +23,7 @@ export interface Experience {
   createdAt: string;
   updatedAt: string;
   tags?: Tag[];
+  skills?: Skill[];
 }
 
 // Minimal experience for public listing
@@ -60,6 +62,7 @@ export interface CreateExperienceDto {
   credentialUrl?: string;
   impactFacts?: string[];
   tagIds?: number[];
+  skillIds?: number[];
 }
 
 // Input for updating an experience entry (all fields optional)

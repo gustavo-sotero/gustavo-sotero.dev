@@ -221,14 +221,14 @@ export const publicPaths = {
                         required: [
                           'totalPostsPublished',
                           'totalProjectsPublished',
-                          'totalTagsInUse',
+                          'totalSkillsInCatalog',
                           'pageviews30d',
                           'lastCalculatedAt',
                         ],
                         properties: {
                           totalPostsPublished: { type: 'integer', example: 12 },
                           totalProjectsPublished: { type: 'integer', example: 5 },
-                          totalTagsInUse: { type: 'integer', example: 18 },
+                          totalSkillsInCatalog: { type: 'integer', example: 18 },
                           pageviews30d: { type: 'integer', example: 3240 },
                           lastCalculatedAt: { type: 'string', format: 'date-time' },
                         },
@@ -375,7 +375,7 @@ export const publicPaths = {
                   metrics: {
                     totalPostsPublished: 12,
                     totalProjectsPublished: 5,
-                    totalTagsInUse: 18,
+                    totalSkillsInCatalog: 18,
                     pageviews30d: 3240,
                     lastCalculatedAt: '2026-02-27T10:00:00.000Z',
                   },

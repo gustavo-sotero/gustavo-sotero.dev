@@ -1,4 +1,4 @@
-import { projects, projectTags, tags } from '@portfolio/shared/db/schema';
+import { projectSkills, projects, projectTags, skills, tags } from '@portfolio/shared/db/schema';
 import { and, count, eq, exists, isNull, type SQL, sql } from 'drizzle-orm';
 import { db } from '../config/db';
 import { buildPaginationMeta, parsePagination } from '../lib/pagination';
@@ -67,6 +67,9 @@ export async function findManyProjects(filters: ProjectFilters, adminMode = fals
         tags: {
           with: { tag: true },
         },
+        skills: {
+          with: { skill: true },
+        },
       },
     }),
   ]);
@@ -90,6 +93,9 @@ export async function findProjectBySlug(slug: string, adminMode = false) {
     with: {
       tags: {
         with: { tag: true },
+      },
+      skills: {
+        with: { skill: true },
       },
     },
   });

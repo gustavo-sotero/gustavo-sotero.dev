@@ -12,5 +12,6 @@ export * from './pivots';
 export * from './posts';
 export * from './projects';
 export * from './relations';
+export * from './skills';
 export * from './tags';
 export * from './uploads';

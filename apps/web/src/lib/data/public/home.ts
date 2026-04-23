@@ -1,5 +1,5 @@
 import 'server-only';
-import type { Education, Experience, Post, Project, Tag } from '@portfolio/shared';
+import type { Education, Experience, Post, Project, Skill, Tag } from '@portfolio/shared';
 import { cacheLife, cacheTag } from 'next/cache';
 import { apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';
@@ -9,6 +9,7 @@ import {
   TAG_HOME,
   TAG_POSTS_LIST,
   TAG_PROJECTS_LIST,
+  TAG_SKILLS_LIST,
   TAG_TAGS_LIST,
 } from './cache-tags';
 
@@ -59,7 +60,7 @@ export async function getHomeRecentPosts(): Promise<HomeLoaderResult<Post>> {
   }
 }
 
-/** All published tags for hero/skills sections. */
+/** All published tags for content taxonomy (blog/project filter chips). */
 export async function getHomeTags(): Promise<HomeLoaderResult<Tag>> {
   'use cache';
   cacheLife({ stale: 3600, revalidate: 3600, expire: 86400 });
@@ -71,6 +72,24 @@ export async function getHomeTags(): Promise<HomeLoaderResult<Tag>> {
     return tags.length > 0 ? { state: 'ok', data: tags } : { state: 'empty', data: [] };
   } catch (err) {
     logServerError('data:home', 'Failed to fetch tags', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { state: 'degraded' };
+  }
+}
+
+/** Skill catalog for the Skills/Bento section on the home page. */
+export async function getHomeSkills(): Promise<HomeLoaderResult<Skill>> {
+  'use cache';
+  cacheLife({ stale: 3600, revalidate: 3600, expire: 86400 });
+  cacheTag(TAG_HOME, TAG_SKILLS_LIST);
+
+  try {
+    const res = await apiServerGetPaginated<Skill>('/skills?perPage=100');
+    const skillsList = Array.isArray(res.data) ? res.data : [];
+    return skillsList.length > 0 ? { state: 'ok', data: skillsList } : { state: 'empty', data: [] };
+  } catch (err) {
+    logServerError('data:home', 'Failed to fetch skills', {
       error: err instanceof Error ? err.message : String(err),
     });
     return { state: 'degraded' };

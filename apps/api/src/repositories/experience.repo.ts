@@ -65,6 +65,9 @@ export async function findManyExperience(filters: ExperienceFilters, adminMode =
         tags: {
           with: { tag: true },
         },
+        skills: {
+          with: { skill: true },
+        },
       },
     }),
   ]);
@@ -87,6 +90,9 @@ export async function findExperienceBySlug(slug: string, adminMode = false) {
       tags: {
         with: { tag: true },
       },
+      skills: {
+        with: { skill: true },
+      },
     },
   });
 
@@ -100,6 +106,9 @@ export async function findExperienceById(id: number) {
     with: {
       tags: {
         with: { tag: true },
+      },
+      skills: {
+        with: { skill: true },
       },
     },
   });

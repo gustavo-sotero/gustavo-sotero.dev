@@ -1,4 +1,5 @@
 import type { PostStatus } from '../constants/enums';
+import type { Skill } from './skills';
 import type { Tag } from './tags';
 
 // Full project entity (admin view)
@@ -20,6 +21,7 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   tags?: Tag[];
+  skills?: Skill[];
 }
 
 // Minimal project for public listing
@@ -50,6 +52,7 @@ export interface CreateProjectDto {
   order?: number;
   impactFacts?: string[];
   tagIds?: number[];
+  skillIds?: number[];
 }
 
 // Input for updating a project (all fields optional)
