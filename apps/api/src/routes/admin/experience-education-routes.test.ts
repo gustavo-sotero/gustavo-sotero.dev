@@ -221,6 +221,34 @@ describe('admin experience routes', () => {
     );
   });
 
+  it('POST /admin/experience returns 400 with field-level details when service throws invalid skillIds error', async () => {
+    createExperienceServiceMock.mockRejectedValueOnce(
+      Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 99'), {
+        invalidSkillIds: [99],
+      })
+    );
+
+    const app = new Hono();
+    app.route('/admin/experience', adminExperienceRouter);
+
+    const res = await app.request('/admin/experience', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...validExperienceBody, skillIds: [99] }),
+    });
+
+    const body = (await res.json()) as {
+      success: boolean;
+      error: { code: string; details?: Array<{ field?: string }> };
+    };
+
+    expect(res.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details?.some((detail) => detail.field === 'skillIds')).toBe(true);
+  });
+
   it('POST /admin/experience passes impactFacts to service', async () => {
     createExperienceServiceMock.mockResolvedValueOnce({
       id: 1,
@@ -324,6 +352,34 @@ describe('admin experience routes', () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  it('PATCH /admin/experience/:id returns 400 with field-level details when service throws invalid skillIds error', async () => {
+    updateExperienceServiceMock.mockRejectedValueOnce(
+      Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 77'), {
+        invalidSkillIds: [77],
+      })
+    );
+
+    const app = new Hono();
+    app.route('/admin/experience', adminExperienceRouter);
+
+    const res = await app.request('/admin/experience/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skillIds: [77] }),
+    });
+
+    const body = (await res.json()) as {
+      success: boolean;
+      error: { code: string; details?: Array<{ field?: string }> };
+    };
+
+    expect(res.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details?.some((detail) => detail.field === 'skillIds')).toBe(true);
   });
 
   it('PATCH /admin/experience/:id returns 200 on success', async () => {

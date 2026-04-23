@@ -9,7 +9,7 @@ import {
   tags,
 } from '@portfolio/shared/db/schema';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
-import { and, asc, count, eq, exists, inArray, isNull, ne, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, count, eq, exists, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import { db } from '../config/db';
@@ -229,26 +229,6 @@ export async function tagNameExists(name: string, excludeId?: number): Promise<b
     .where(and(...conditions))
     .limit(1);
   return !!row;
-}
-
-/**
- * Count highlighted tags in a category.
- * Optionally excludes a tag by ID (used during updates to exclude self).
- */
-export async function countHighlightedByCategory(
-  category: string,
-  excludeId?: number
-): Promise<number> {
-  const cat = category as 'language' | 'framework' | 'tool' | 'db' | 'cloud' | 'infra' | 'other';
-  const conditions: SQL[] = [eq(tags.category, cat), eq(tags.isHighlighted, true)];
-  if (excludeId !== undefined) {
-    conditions.push(ne(tags.id, excludeId));
-  }
-  const [row] = await db
-    .select({ total: count() })
-    .from(tags)
-    .where(and(...conditions));
-  return row?.total ?? 0;
 }
 
 /** Create a tag. */

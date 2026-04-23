@@ -28,6 +28,36 @@ import type { AppEnv } from '../../types/index';
 
 const adminProjectsRouter = new Hono<AppEnv>();
 
+type ValidationDetail = {
+  field: string;
+  message: string;
+};
+
+function getValidationDetails(err: unknown): ValidationDetail[] | undefined {
+  const error = err as {
+    validationDetails?: ValidationDetail[];
+    invalidTagIds?: number[];
+    invalidSkillIds?: number[];
+  };
+
+  if (error.validationDetails) {
+    return error.validationDetails;
+  }
+
+  const details = [
+    ...(error.invalidTagIds?.map((id) => ({
+      field: 'tagIds',
+      message: `Tag with id ${id} does not exist`,
+    })) ?? []),
+    ...(error.invalidSkillIds?.map((id) => ({
+      field: 'skillIds',
+      message: `Skill with id ${id} does not exist`,
+    })) ?? []),
+  ];
+
+  return details.length > 0 ? details : undefined;
+}
+
 /**
  * GET /admin/projects
  * List all projects (including drafts) with optional filters and pagination.
@@ -63,13 +93,7 @@ adminProjectsRouter.post('/', async (c) => {
       return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
     }
     if (message.startsWith('VALIDATION_ERROR:')) {
-      const details =
-        (err as { validationDetails?: Array<{ field: string; message: string }> })
-          .validationDetails ??
-        (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
-          field: 'tagIds',
-          message: `Tag with id ${id} does not exist`,
-        }));
+      const details = getValidationDetails(err);
       return errorResponse(
         c,
         400,
@@ -122,13 +146,7 @@ adminProjectsRouter.patch('/:id', async (c) => {
       return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
     }
     if (message.startsWith('VALIDATION_ERROR:')) {
-      const details =
-        (err as { validationDetails?: Array<{ field: string; message: string }> })
-          .validationDetails ??
-        (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
-          field: 'tagIds',
-          message: `Tag with id ${id} does not exist`,
-        }));
+      const details = getValidationDetails(err);
       return errorResponse(
         c,
         400,

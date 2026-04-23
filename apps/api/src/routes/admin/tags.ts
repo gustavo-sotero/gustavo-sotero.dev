@@ -52,14 +52,6 @@ adminTagsRouter.post('/', async (c) => {
     return successResponse(c, tag, 201);
   } catch (err) {
     const message = (err as Error).message;
-    if (message.startsWith('HIGHLIGHT_LIMIT:')) {
-      return errorResponse(
-        c,
-        409,
-        'CONFLICT',
-        'M\u00e1ximo de 2 tags destacadas por categoria. Remova um destaque existente antes de adicionar outro.'
-      );
-    }
     if (message.toLowerCase().includes('conflict') || message.toLowerCase().includes('unique')) {
       return errorResponse(c, 409, 'CONFLICT', 'A tag with this name already exists');
     }

@@ -229,6 +229,9 @@ describe('HeroSection', () => {
       />
     );
 
-    expect(screen.getByLabelText('TypeScript, expertise 3 de 3, destaque')).toBeInTheDocument();
+    const badge = screen.getByLabelText('TypeScript, expertise 3 de 3, destaque');
+
+    expect(badge).toBeInTheDocument();
+    expect(badge.querySelector('[data-expertise-level="3"]')).not.toBeNull();
   });
 });

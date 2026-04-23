@@ -322,6 +322,62 @@ describe('admin content routes', () => {
     expect(body.error.details?.some((d) => d.field === 'tagIds')).toBe(true);
   });
 
+  it('POST /admin/projects returns 400 with field-level details when service throws invalid skillIds error', async () => {
+    createProjectServiceMock.mockRejectedValueOnce(
+      Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 55'), {
+        invalidSkillIds: [55],
+      })
+    );
+
+    const app = new Hono();
+    app.route('/admin/projects', adminProjectsRouter);
+
+    const response = await app.request('/admin/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Projeto', content: 'C', status: 'draft', skillIds: [55] }),
+    });
+
+    const body = (await response.json()) as {
+      success: boolean;
+      error: { code: string; details?: Array<{ field?: string }> };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details?.some((d) => d.field === 'skillIds')).toBe(true);
+  });
+
+  it('PATCH /admin/projects/:id returns 400 with field-level details when service throws invalid skillIds error', async () => {
+    updateProjectServiceMock.mockRejectedValueOnce(
+      Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 44'), {
+        invalidSkillIds: [44],
+      })
+    );
+
+    const app = new Hono();
+    app.route('/admin/projects', adminProjectsRouter);
+
+    const response = await app.request('/admin/projects/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skillIds: [44] }),
+    });
+
+    const body = (await response.json()) as {
+      success: boolean;
+      error: { code: string; details?: Array<{ field?: string }> };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(Array.isArray(body.error.details)).toBe(true);
+    expect(body.error.details?.some((d) => d.field === 'skillIds')).toBe(true);
+  });
+
   it('POST /admin/projects returns 400 with field-level validation details for missing required fields', async () => {
     const app = new Hono();
     app.route('/admin/projects', adminProjectsRouter);
@@ -458,7 +514,6 @@ describe('admin content routes', () => {
     expect(createTagServiceMock).toHaveBeenCalledWith({
       name: 'TypeScript',
       category: 'language',
-      isHighlighted: false,
     });
   });
 
@@ -500,7 +555,7 @@ describe('admin content routes', () => {
 
     expect(response.status).toBe(200);
     // Only the explicitly provided fields should be forwarded — the update schema
-    // has no defaults so category and isHighlighted are absent when not sent.
+    // has no defaults so category is absent when not sent.
     expect(updateTagServiceMock).toHaveBeenCalledWith(88, {
       name: 'Node.js',
     });
