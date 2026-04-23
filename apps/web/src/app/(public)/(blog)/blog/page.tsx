@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { PostCard } from '@/components/blog/PostCard';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getHomeTags } from '@/lib/data/public/home';
+import { getBlogTags } from '@/lib/data/public/home';
 import { getPublicPosts } from '@/lib/data/public/posts';
 
 export const metadata: Metadata = {
@@ -58,7 +58,7 @@ export interface BlogContentProps {
 export async function BlogContent({ currentPage, tag }: BlogContentProps) {
   const [postsResult, tagsResult] = await Promise.all([
     getPublicPosts({ page: currentPage, tag }),
-    getHomeTags(),
+    getBlogTags(),
   ]);
 
   if (postsResult.state === 'degraded') {

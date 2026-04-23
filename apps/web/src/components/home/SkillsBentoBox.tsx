@@ -14,7 +14,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 interface SkillsBentoBoxProps {
-  tags: Skill[];
+  skills: Skill[];
 }
 
 function SkillCard({ tag, index }: { tag: Skill; index: number }) {
@@ -62,11 +62,11 @@ function SkillCard({ tag, index }: { tag: Skill; index: number }) {
   );
 }
 
-export function SkillsBentoBox({ tags }: SkillsBentoBoxProps) {
-  if (tags.length === 0) return null;
+export function SkillsBentoBox({ skills }: SkillsBentoBoxProps) {
+  if (skills.length === 0) return null;
 
   // Group all skills by category
-  const grouped = tags.reduce(
+  const grouped = skills.reduce(
     (acc, skill) => {
       const cat = skill.category;
       if (!acc[cat]) acc[cat] = [];

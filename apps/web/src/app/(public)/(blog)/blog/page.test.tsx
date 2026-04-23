@@ -13,9 +13,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Module mocks ───────────────────────────────────────────────────────────────
 
-const { mockGetPublicPosts, mockGetHomeTags } = vi.hoisted(() => ({
+const { mockGetPublicPosts, mockGetBlogTags } = vi.hoisted(() => ({
   mockGetPublicPosts: vi.fn(),
-  mockGetHomeTags: vi.fn(),
+  mockGetBlogTags: vi.fn(),
 }));
 
 vi.mock('@/lib/data/public/posts', () => ({
@@ -23,7 +23,7 @@ vi.mock('@/lib/data/public/posts', () => ({
 }));
 
 vi.mock('@/lib/data/public/home', () => ({
-  getHomeTags: (...args: unknown[]) => mockGetHomeTags(...args),
+  getBlogTags: (...args: unknown[]) => mockGetBlogTags(...args),
 }));
 
 vi.mock('@/components/blog/PostCard', () => ({
@@ -87,7 +87,7 @@ describe('BlogContent', () => {
 
   it('renders degraded fallback when API is unavailable — build must not fail', async () => {
     mockGetPublicPosts.mockResolvedValue({ state: 'degraded' });
-    mockGetHomeTags.mockResolvedValue({ state: 'degraded' });
+    mockGetBlogTags.mockResolvedValue({ state: 'degraded' });
 
     const element = await BlogContent({ currentPage: 1 });
     render(element as React.ReactElement);
@@ -102,7 +102,7 @@ describe('BlogContent', () => {
       { id: 2, title: 'Post Beta', slug: 'post-beta' },
     ];
     mockGetPublicPosts.mockResolvedValue({ state: 'ok', data: posts, meta: defaultMeta });
-    mockGetHomeTags.mockResolvedValue({ state: 'ok', data: [] });
+    mockGetBlogTags.mockResolvedValue({ state: 'ok', data: [] });
 
     const element = await BlogContent({ currentPage: 1 });
     render(element as React.ReactElement);
@@ -115,7 +115,7 @@ describe('BlogContent', () => {
   it('renders tag chips from the public tags catalog when tags are available', async () => {
     const posts = [{ id: 1, title: 'Post Alpha', slug: 'post-alpha' }];
     mockGetPublicPosts.mockResolvedValue({ state: 'ok', data: posts, meta: defaultMeta });
-    mockGetHomeTags.mockResolvedValue({
+    mockGetBlogTags.mockResolvedValue({
       state: 'ok',
       data: [
         { id: 1, name: 'TypeScript', slug: 'typescript' },
@@ -138,7 +138,7 @@ describe('BlogContent', () => {
   it('keeps posts visible and hides tag chips when tags loader is degraded', async () => {
     const posts = [{ id: 1, title: 'Post Alpha', slug: 'post-alpha' }];
     mockGetPublicPosts.mockResolvedValue({ state: 'ok', data: posts, meta: defaultMeta });
-    mockGetHomeTags.mockResolvedValue({ state: 'degraded' });
+    mockGetBlogTags.mockResolvedValue({ state: 'degraded' });
 
     const element = await BlogContent({ currentPage: 1 });
     render(element as React.ReactElement);
@@ -155,7 +155,7 @@ describe('BlogContent', () => {
       data: [],
       meta: { page: 1, perPage: 9, total: 0, totalPages: 0 },
     });
-    mockGetHomeTags.mockResolvedValue({ state: 'empty', data: [] });
+    mockGetBlogTags.mockResolvedValue({ state: 'empty', data: [] });
 
     const element = await BlogContent({ currentPage: 1 });
     render(element as React.ReactElement);
@@ -166,13 +166,13 @@ describe('BlogContent', () => {
 
   it('does not throw when API is unavailable (simulates build-time API offline)', async () => {
     mockGetPublicPosts.mockRejectedValue(new Error('ECONNREFUSED'));
-    mockGetHomeTags.mockRejectedValue(new Error('ECONNREFUSED'));
+    mockGetBlogTags.mockRejectedValue(new Error('ECONNREFUSED'));
 
     // The loader itself should catch and not propagate; this test verifies the contract
     // is consistent: if the loader returns degraded, the page renders gracefully.
     // (The actual network error is absorbed in getPublicPosts — tested in posts.test.ts)
     mockGetPublicPosts.mockResolvedValueOnce({ state: 'degraded' });
-    mockGetHomeTags.mockResolvedValueOnce({ state: 'degraded' });
+    mockGetBlogTags.mockResolvedValueOnce({ state: 'degraded' });
 
     await expect(BlogContent({ currentPage: 1 })).resolves.toBeDefined();
   });

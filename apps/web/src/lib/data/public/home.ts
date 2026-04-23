@@ -60,7 +60,7 @@ export async function getHomeRecentPosts(): Promise<HomeLoaderResult<Post>> {
   }
 }
 
-/** All published tags for content taxonomy (blog/project filter chips). */
+/** Project tags for content taxonomy (project filter chips). */
 export async function getHomeTags(): Promise<HomeLoaderResult<Tag>> {
   'use cache';
   cacheLife({ stale: 3600, revalidate: 3600, expire: 86400 });
@@ -72,6 +72,24 @@ export async function getHomeTags(): Promise<HomeLoaderResult<Tag>> {
     return tags.length > 0 ? { state: 'ok', data: tags } : { state: 'empty', data: [] };
   } catch (err) {
     logServerError('data:home', 'Failed to fetch tags', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { state: 'degraded' };
+  }
+}
+
+/** Post tags for content taxonomy (blog filter chips). */
+export async function getBlogTags(): Promise<HomeLoaderResult<Tag>> {
+  'use cache';
+  cacheLife({ stale: 3600, revalidate: 3600, expire: 86400 });
+  cacheTag(TAG_HOME, TAG_TAGS_LIST);
+
+  try {
+    const data = await apiServerGet<Tag[]>('/tags?source=post');
+    const tags = Array.isArray(data) ? data : [];
+    return tags.length > 0 ? { state: 'ok', data: tags } : { state: 'empty', data: [] };
+  } catch (err) {
+    logServerError('data:home', 'Failed to fetch blog tags', {
       error: err instanceof Error ? err.message : String(err),
     });
     return { state: 'degraded' };

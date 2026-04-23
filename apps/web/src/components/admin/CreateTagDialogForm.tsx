@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { generateSlug, type Tag, type TagCategory } from '@portfolio/shared';
-import { Check, Info, Loader2, Star } from 'lucide-react';
+import { Check, Info, Loader2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { useAdminTags, useCreateTag } from '@/hooks/admin/use-admin-tags';
 import {
   ALL_TAG_CATEGORIES,
@@ -39,7 +38,6 @@ const createTagDialogSchema = z
   .object({
     name: z.string().min(1, 'Nome obrigatório').max(100, 'Máximo 100 caracteres').trim(),
     category: z.enum(ALL_TAG_CATEGORIES).or(z.literal('')),
-    isHighlighted: z.boolean(),
   })
   .superRefine((data, ctx) => {
     if (data.category === '') {
@@ -77,7 +75,6 @@ export function CreateTagDialogForm({
   const [matchedEntry, setMatchedEntry] = useState<PredefinedTagSuggestion | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [conflictError, setConflictError] = useState('');
-  const [highlightLimitError, setHighlightLimitError] = useState('');
   const suppressBlurRef = useRef(false);
 
   /** True when the current name matches a predefined catalog entry. */
@@ -95,7 +92,6 @@ export function CreateTagDialogForm({
     defaultValues: {
       name: '',
       category: defaultCategory ?? '',
-      isHighlighted: false,
     },
   });
 
@@ -111,7 +107,7 @@ export function CreateTagDialogForm({
     setRawName(value);
     setValue('name', value, { shouldDirty: true, shouldValidate: false });
     setConflictError('');
-    setHighlightLimitError('');
+    setConflictError('');
 
     // Exact match check: auto-fill and lock category when a catalog entry matches
     const entry = findCatalogEntryByName(value);
@@ -135,7 +131,6 @@ export function CreateTagDialogForm({
     setValue('category', suggestion.category, { shouldDirty: true });
     setShowSuggestions(false);
     setConflictError('');
-    setHighlightLimitError('');
     setTimeout(() => {
       suppressBlurRef.current = false;
     }, 0);
@@ -144,7 +139,6 @@ export function CreateTagDialogForm({
   function handleCategoryChange(category: TagCategory) {
     setValue('category', category, { shouldDirty: true });
     setConflictError('');
-    setHighlightLimitError('');
   }
 
   function handleNameBlur() {
@@ -159,25 +153,16 @@ export function CreateTagDialogForm({
     if (!effectiveCategory) return;
 
     setConflictError('');
-    setHighlightLimitError('');
     try {
       const result = await create.mutateAsync({
         name: data.name.trim(),
         category: effectiveCategory,
-        isHighlighted: data.isHighlighted,
       });
       onTagCreated?.(result?.data as Tag);
       handleClose();
     } catch (err) {
       const apiErr = err as { error?: { code?: string; message?: string } };
       if (apiErr?.error?.code === 'CONFLICT') {
-        if (apiErr.error.message?.includes('destacadas')) {
-          setHighlightLimitError(
-            'Máximo de 2 destaques por categoria atingido. Remova um destaque existente antes de adicionar outro.'
-          );
-          return;
-        }
-
         const normalized = data.name.trim().toLowerCase();
         const existing = existingTags.find((tag) => tag.name.trim().toLowerCase() === normalized);
 
@@ -196,12 +181,11 @@ export function CreateTagDialogForm({
   }
 
   function handleClose() {
-    reset({ name: '', category: defaultCategory ?? '', isHighlighted: false });
+    reset({ name: '', category: defaultCategory ?? '' });
     setRawName('');
     setMatchedEntry(null);
     setShowSuggestions(false);
     setConflictError('');
-    setHighlightLimitError('');
     onClose();
   }
 
@@ -358,36 +342,7 @@ export function CreateTagDialogForm({
             )}
           </div>
 
-          {/* ── 3. Highlight toggle ───────────────────────────────────────── */}
-          <div className="flex items-center justify-between rounded-lg border border-zinc-700/60 bg-zinc-800/40 px-3 py-2.5">
-            <div className="space-y-0.5">
-              <Label
-                htmlFor="ctdf-is-highlighted"
-                className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 cursor-pointer"
-              >
-                <Star className="h-3.5 w-3.5 text-amber-400" />
-                Destaque
-              </Label>
-              <p className="text-[10px] text-zinc-600">Máx. 2 por categoria</p>
-            </div>
-            <Controller
-              control={control}
-              name="isHighlighted"
-              render={({ field }) => (
-                <Switch
-                  id="ctdf-is-highlighted"
-                  checked={field.value}
-                  onCheckedChange={(v) => {
-                    field.onChange(v);
-                    setHighlightLimitError('');
-                  }}
-                  className="data-[state=checked]:bg-amber-500"
-                />
-              )}
-            />
-          </div>
-          {highlightLimitError && <p className="text-xs text-amber-400">{highlightLimitError}</p>}
-
+          {/* ── 3. Submit ───────────────────────────────────────────────── */}
           <DialogFooter className="gap-2 pt-2">
             <Button
               type="button"

@@ -42,7 +42,7 @@ function expectBefore(a: HTMLElement, b: HTMLElement) {
 
 describe('SkillsBentoBox', () => {
   it('returns null when there are no skills', () => {
-    const { container } = render(<SkillsBentoBox tags={[]} />);
+    const { container } = render(<SkillsBentoBox skills={[]} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -54,7 +54,7 @@ describe('SkillsBentoBox', () => {
       makeSkill({ id: 4, name: 'PostgreSQL', category: 'db' }),
     ];
 
-    render(<SkillsBentoBox tags={skills} />);
+    render(<SkillsBentoBox skills={skills} />);
 
     expect(screen.getByText('Stack & Skills')).toBeInTheDocument();
     expect(screen.getAllByText('Linguagem').length).toBeGreaterThan(0);
@@ -75,7 +75,7 @@ describe('SkillsBentoBox', () => {
       makeSkill({ id: 4, name: 'Docker', category: 'tool', isHighlighted: true }),
     ];
 
-    render(<SkillsBentoBox tags={skills} />);
+    render(<SkillsBentoBox skills={skills} />);
 
     const typeScript = screen.getByText('TypeScript');
     const javaScript = screen.getByText('JavaScript');

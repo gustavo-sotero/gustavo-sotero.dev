@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { generateSlug, type TagCategory, type Tag as TagType } from '@portfolio/shared';
-import { Check, Loader2, Pencil, Plus, Star, Tag, Trash2 } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, Tag, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -36,8 +36,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
-import { useAdminTags, useDeleteTag, useUpdateTag } from '@/hooks/admin/use-admin-tags';
+import {
+  useAdminTags,
+  useCreateTag,
+  useDeleteTag,
+  useUpdateTag,
+} from '@/hooks/admin/use-admin-tags';
 import {
   ALL_TAG_CATEGORIES,
   CATEGORY_COLORS,
@@ -51,7 +55,6 @@ import {
 const editTagSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório').max(100).trim(),
   category: z.enum(ALL_TAG_CATEGORIES),
-  isHighlighted: z.boolean(),
 });
 
 type EditTagInput = z.infer<typeof editTagSchema>;
@@ -98,7 +101,6 @@ function EditTagDialog({
   const update = useUpdateTag();
   const [nameInput, setNameInput] = useState(tag.name);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [highlightLimitError, setHighlightLimitError] = useState('');
   const suppressBlurRef = useRef(false);
 
   const {
@@ -112,7 +114,6 @@ function EditTagDialog({
     defaultValues: {
       name: tag.name,
       category: tag.category as EditTagInput['category'],
-      isHighlighted: tag.isHighlighted,
     },
   });
 
@@ -150,24 +151,17 @@ function EditTagDialog({
   }
 
   async function onSubmit(data: EditTagInput) {
-    setHighlightLimitError('');
     try {
       await update.mutateAsync({
         id: tag.id,
         data: {
           name: data.name.trim(),
           category: data.category,
-          isHighlighted: data.isHighlighted,
         },
       });
       onClose();
-    } catch (err) {
-      const apiErr = err as { error?: { code?: string; message?: string } };
-      if (apiErr?.error?.code === 'CONFLICT' && apiErr.error.message?.includes('destacadas')) {
-        setHighlightLimitError(
-          'Máximo de 2 destaques por categoria atingido. Remova um destaque existente antes de adicionar outro.'
-        );
-      }
+    } catch {
+      // swallow unexpected errors — the mutation hook handles toast/logging
     }
   }
 
@@ -266,36 +260,6 @@ function EditTagDialog({
             {errors.name && <p className="text-xs text-red-400">{errors.name.message}</p>}
           </div>
 
-          {/* Highlight toggle */}
-          <div className="flex items-center justify-between rounded-lg border border-zinc-700/60 bg-zinc-800/40 px-3 py-2.5">
-            <div className="space-y-0.5">
-              <Label
-                htmlFor="edit-tag-is-highlighted"
-                className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 cursor-pointer"
-              >
-                <Star className="h-3.5 w-3.5 text-amber-400" />
-                Destaque
-              </Label>
-              <p className="text-[10px] text-zinc-600">Máx. 2 por categoria</p>
-            </div>
-            <Controller
-              control={control}
-              name="isHighlighted"
-              render={({ field }) => (
-                <Switch
-                  id="edit-tag-is-highlighted"
-                  checked={field.value}
-                  onCheckedChange={(v) => {
-                    field.onChange(v);
-                    setHighlightLimitError('');
-                  }}
-                  className="data-[state=checked]:bg-amber-500"
-                />
-              )}
-            />
-          </div>
-          {highlightLimitError && <p className="text-xs text-amber-400">{highlightLimitError}</p>}
-
           <DialogFooter className="gap-2">
             <Button
               type="button"
@@ -367,9 +331,6 @@ export function TagManager() {
           <div className="w-44 text-xs font-medium text-zinc-500 uppercase tracking-wide">
             Icon Key
           </div>
-          <div className="w-14 text-xs font-medium text-zinc-500 uppercase tracking-wide text-center">
-            Destaque
-          </div>
           <div className="w-20 text-xs font-medium text-zinc-500 uppercase tracking-wide text-right">
             Ações
           </div>
@@ -416,14 +377,6 @@ export function TagManager() {
                   </code>
                 ) : (
                   <span className="text-xs text-zinc-700">—</span>
-                )}
-              </div>
-              <div className="w-14 flex items-center justify-center">
-                {tag.isHighlighted && (
-                  <Star
-                    className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
-                    aria-label="Destaque"
-                  />
                 )}
               </div>
               <div className="w-20 flex items-center justify-end gap-1">

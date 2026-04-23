@@ -203,7 +203,6 @@ describe('CreateTagDialogForm — name-first flow', () => {
         expect.objectContaining({
           name: 'TypeScript',
           category: 'language',
-          isHighlighted: false,
         })
       );
     });
@@ -228,7 +227,6 @@ describe('CreateTagDialogForm — name-first flow', () => {
         expect.objectContaining({
           name: 'My Custom Tool',
           category: 'tool',
-          isHighlighted: false,
         })
       );
     });
@@ -256,55 +254,7 @@ describe('CreateTagDialogForm — name-first flow', () => {
     });
   });
 
-  // ── Highlight toggle ─────────────────────────────────────────────────────
-
-  it('sends isHighlighted=true when the highlight toggle is switched on', async () => {
-    const newTag = {
-      id: 99,
-      name: 'Bun',
-      slug: 'bun',
-      category: 'tool',
-      iconKey: 'si:SiBun',
-      isHighlighted: true,
-    };
-    mutateAsyncMock.mockResolvedValue({ data: newTag });
-
-    render(<CreateTagDialogForm {...defaultProps} />);
-    fireEvent.change(screen.getByLabelText(/Nome/i), { target: { value: 'Bun' } });
-
-    const highlightSwitch = screen.getByRole('switch');
-    fireEvent.click(highlightSwitch);
-    fireEvent.click(screen.getByRole('button', { name: /Criar tag/i }));
-
-    await waitFor(() => {
-      expect(mutateAsyncMock).toHaveBeenCalledWith(
-        expect.objectContaining({ isHighlighted: true })
-      );
-    });
-  });
-
   // ── Error handling ────────────────────────────────────────────────────────
-
-  it('shows highlight limit error when API returns 409 CONFLICT with category limit message', async () => {
-    mutateAsyncMock.mockRejectedValue({
-      error: {
-        code: 'CONFLICT',
-        message:
-          'Máximo de 2 tags destacadas por categoria. Remova um destaque existente antes de adicionar outro.',
-      },
-    });
-
-    render(<CreateTagDialogForm {...defaultProps} />);
-    fireEvent.change(screen.getByLabelText(/Nome/i), { target: { value: 'SvelteKit' } });
-    fireEvent.click(screen.getByRole('button', { name: /Criar tag/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Máximo de 2 destaques por categoria/i)).toBeInTheDocument();
-    });
-
-    // Dialog must NOT close on highlight limit error
-    expect(defaultProps.onClose).not.toHaveBeenCalled();
-  });
 
   it('shows inline conflict error when API returns CONFLICT and no matching existing tag found', async () => {
     mutateAsyncMock.mockRejectedValue({ error: { code: 'CONFLICT' } });
