@@ -295,6 +295,9 @@ bun run --env-file .env apps/api/src/db/audit-schema-parity.ts
 
 Objetos verificados:
 - `table:experience_tags` — pivô entre experience e tags
+- `table:skills` — catálogo canônico de skills
+- `table:project_skills` — pivô entre projetos e skills
+- `table:experience_skills` — pivô entre experience e skills
 - `column:tags.is_highlighted` — coluna de destaque de tags
 
 ### Checklist de verificação pós-deploy
@@ -305,8 +308,12 @@ Execute essa sequência ao investigar falhas de startup ou readiness no ambiente
 -- 1. Confirme o histórico de migrações aplicadas
 SELECT * FROM __drizzle_migrations ORDER BY created_at DESC;
 
--- 2. Verifique se a tabela experience_tags existe
-SELECT to_regclass('public.experience_tags') AS experience_tags_table;
+-- 2. Verifique se todas as tabelas obrigatórias existem
+SELECT
+  to_regclass('public.experience_tags') AS experience_tags_table,
+  to_regclass('public.skills') AS skills_table,
+  to_regclass('public.project_skills') AS project_skills_table,
+  to_regclass('public.experience_skills') AS experience_skills_table;
 
 -- 3. Liste as colunas da tabela tags
 SELECT column_name

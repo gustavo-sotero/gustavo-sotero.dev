@@ -227,6 +227,59 @@ describe('openapi routes', () => {
     expect(experienceSchema?.properties).toHaveProperty('skills');
   });
 
+  it('GET /doc/spec keeps the developer profile stack example aligned with the Skill contract', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<
+        string,
+        {
+          get?: {
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    example?: {
+                      data?: {
+                        stack?: {
+                          groups?: Record<string, Array<Record<string, unknown>>>;
+                        };
+                      };
+                    };
+                  };
+                };
+              }
+            >;
+          };
+        }
+      >;
+    };
+
+    const groups =
+      body.paths['/developer/profile']?.get?.responses?.['200']?.content?.['application/json']
+        ?.example?.data?.stack?.groups ?? {};
+
+    expect(Object.keys(groups).sort()).toEqual([
+      'cloud',
+      'db',
+      'framework',
+      'infra',
+      'language',
+      'tool',
+    ]);
+
+    for (const sample of [groups.language?.[0], groups.framework?.[0], groups.db?.[0]]) {
+      expect(sample).toMatchObject({
+        expertiseLevel: expect.any(Number),
+        isHighlighted: expect.any(Boolean),
+        createdAt: expect.any(String),
+      });
+    }
+  });
+
   it('GET /doc/spec documents admin project and experience write contracts truthfully', async () => {
     const app = new Hono();
     app.route('/', openApiRouter);
