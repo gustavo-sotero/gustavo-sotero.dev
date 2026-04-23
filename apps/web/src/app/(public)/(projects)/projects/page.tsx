@@ -162,7 +162,7 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
 
       {/* ── Tag filter ──────────────────────────────────────────── */}
       {tags.length > 0 && (
-        <nav className="mb-8 flex flex-wrap gap-2" aria-label="Filtrar por tecnologia">
+        <nav className="mb-8 flex flex-wrap gap-2" aria-label="Filtrar por tag">
           <Link href={`/projects${buildProjectsQs({ sort })}`}>
             <Badge
               variant={!tag ? 'default' : 'secondary'}

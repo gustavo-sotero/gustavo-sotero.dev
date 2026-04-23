@@ -6,7 +6,7 @@
  *  - no `onSuccess`, chama helper de revalidate
  *  - falha de revalidate não interrompe fluxo de sucesso
  */
-import type { Post, Project, Tag } from '@portfolio/shared';
+import type { Post, Project, Skill, Tag } from '@portfolio/shared';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
@@ -54,6 +54,8 @@ const { useCreateProject, useUpdateProject, useDeleteProject } = await import(
 
 const { useCreateTag, useUpdateTag, useDeleteTag } = await import('./admin/use-admin-tags');
 
+const { useCreateSkill, useUpdateSkill, useDeleteSkill } = await import('./admin/use-admin-skills');
+
 const {
   useAdminUpdateCommentStatus,
   useApproveComment,
@@ -68,6 +70,7 @@ const {
   postMutationTagsWithSlugTransition,
   projectMutationTags,
   projectMutationTagsWithSlugTransition,
+  skillMutationTags,
   tagMutationTags,
 } = await import('@/lib/data/public/cache-tags');
 
@@ -134,6 +137,20 @@ function makeTag(overrides: Partial<Tag> = {}): Tag {
     slug: 'typescript',
     category: 'language',
     iconKey: 'si:SiTypescript',
+    createdAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function makeSkill(overrides: Partial<Skill> = {}): Skill {
+  return {
+    id: 1,
+    name: 'TypeScript',
+    slug: 'typescript',
+    category: 'language',
+    iconKey: 'si:SiTypescript',
+    expertiseLevel: 3,
+    isHighlighted: true,
     createdAt: new Date().toISOString(),
     ...overrides,
   };
@@ -319,6 +336,54 @@ describe('admin mutation hooks — revalidation on success', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(mockRevalidatePublicTags).toHaveBeenCalledWith(tagMutationTags());
+    });
+  });
+
+  // ── Skills ───────────────────────────────────────────────────────────────
+
+  describe('useCreateSkill', () => {
+    it('calls revalidatePublicTags with all skill-dependent public cache tags on success', async () => {
+      const skill = makeSkill();
+      mockApiPost.mockResolvedValueOnce({ success: true, data: skill });
+
+      const { result } = renderHook(() => useCreateSkill(), { wrapper: wrapper(qc) });
+      result.current.mutate({
+        name: 'TypeScript',
+        category: 'language',
+        expertiseLevel: 3,
+        isHighlighted: true,
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockRevalidatePublicTags).toHaveBeenCalledWith(skillMutationTags());
+    });
+  });
+
+  describe('useUpdateSkill', () => {
+    it('calls revalidatePublicTags with all skill-dependent public cache tags on success', async () => {
+      const skill = makeSkill({ name: 'TypeScript Updated' });
+      mockApiPatch.mockResolvedValueOnce({ success: true, data: skill });
+
+      const { result } = renderHook(() => useUpdateSkill(), { wrapper: wrapper(qc) });
+      result.current.mutate({
+        id: 1,
+        data: { name: 'TypeScript Updated', expertiseLevel: 2 },
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockRevalidatePublicTags).toHaveBeenCalledWith(skillMutationTags());
+    });
+  });
+
+  describe('useDeleteSkill', () => {
+    it('calls revalidatePublicTags with all skill-dependent public cache tags on success', async () => {
+      mockApiDelete.mockResolvedValueOnce({ success: true });
+
+      const { result } = renderHook(() => useDeleteSkill(), { wrapper: wrapper(qc) });
+      result.current.mutate(4);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockRevalidatePublicTags).toHaveBeenCalledWith(skillMutationTags());
     });
   });
 });

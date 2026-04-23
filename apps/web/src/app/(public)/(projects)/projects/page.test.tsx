@@ -131,7 +131,7 @@ describe('ProjectsContent', () => {
     const element = await ProjectsContent({ currentPage: 1, sort: 'recentes' });
     render(element as React.ReactElement);
 
-    expect(screen.getByRole('navigation', { name: /filtrar por tecnologia/i })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /filtrar por tag/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Todos' })).toHaveAttribute(
       'href',
       '/projects?sort=recentes'

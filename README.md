@@ -298,7 +298,6 @@ Objetos verificados:
 - `table:skills` — catálogo canônico de skills
 - `table:project_skills` — pivô entre projetos e skills
 - `table:experience_skills` — pivô entre experience e skills
-- `column:tags.is_highlighted` — coluna de destaque de tags
 
 ### Checklist de verificação pós-deploy
 

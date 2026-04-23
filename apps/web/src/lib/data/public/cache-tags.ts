@@ -104,5 +104,5 @@ export function educationMutationTags(): string[] {
  * Tags to revalidate when a skill is created, updated, or deleted.
  */
 export function skillMutationTags(): string[] {
-  return [TAG_HOME, TAG_SKILLS_LIST];
+  return [TAG_HOME, TAG_SKILLS_LIST, TAG_PROJECTS_LIST, TAG_EXPERIENCE_LIST];
 }

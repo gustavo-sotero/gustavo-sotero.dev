@@ -28,7 +28,7 @@ const publicDeveloperRouter = new Hono<AppEnv>();
  *  - Educational background
  *  - Recent/featured projects (up to 5)
  *  - Recent published posts (up to 5)
- *  - Public aggregate metrics (post/project/tag counts, pageviews 30d)
+ *  - Public aggregate metrics (post/project/skill counts, pageviews 30d)
  *
  * Response is always pretty-printed JSON for enhanced readability.
  */

@@ -444,7 +444,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
           control={control}
           render={({ field }) => (
             <TagCheckboxGroup
-              label="Tecnologias"
+              label="Tags"
               tags={allTags}
               selectedIds={field.value ?? []}
               onToggle={(tagId) => {

@@ -126,7 +126,7 @@ describe('BlogContent', () => {
     const element = await BlogContent({ currentPage: 1 });
     render(element as React.ReactElement);
 
-    expect(screen.getByRole('navigation', { name: /filtrar por tecnologia/i })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /filtrar por tag/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Todos' })).toHaveAttribute('href', '/blog');
     expect(screen.getByRole('link', { name: 'TypeScript' })).toHaveAttribute(
       'href',

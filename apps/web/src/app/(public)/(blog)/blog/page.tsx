@@ -88,7 +88,7 @@ export async function BlogContent({ currentPage, tag }: BlogContentProps) {
         )}
       </div>
       {tags.length > 0 && (
-        <nav className="mb-8 flex flex-wrap gap-2" aria-label="Filtrar por tecnologia">
+        <nav className="mb-8 flex flex-wrap gap-2" aria-label="Filtrar por tag">
           <Link href="/blog">
             <Badge
               variant={!tag ? 'default' : 'secondary'}

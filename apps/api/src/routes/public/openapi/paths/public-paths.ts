@@ -1,7 +1,7 @@
 /**
  * OpenAPI path definitions for all public (unauthenticated) routes.
- * Includes: developer profile, documentation, health, posts, projects, tags,
- * comments, contact, feed/sitemap, auth, experience, education.
+ * Includes: developer profile, documentation, health, posts, projects, skills,
+ * tags, comments, contact, feed/sitemap, auth, experience, education.
  */
 
 export const publicPaths = {
@@ -19,7 +19,7 @@ export const publicPaths = {
         '- Educational background\n' +
         '- Recent/featured projects (up to 5)\n' +
         '- Recent published posts (up to 5)\n' +
-        '- Public aggregate metrics (post/project/tag counts, pageviews last 30 days)\n\n' +
+        '- Public aggregate metrics (post/project/skill counts, pageviews last 30 days)\n\n' +
         'Response is always serialized as pretty-printed JSON for enhanced human readability.',
       operationId: 'getDeveloperProfile',
       responses: {
