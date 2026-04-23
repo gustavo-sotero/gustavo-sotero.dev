@@ -213,9 +213,7 @@ describe('experience service', () => {
         slug: 'typescript',
         category: 'language',
         iconKey: null,
-        highlighted: false,
-        order: 0,
-        createdAt: new Date(),
+        createdAt: '2025-01-01T00:00:00.000Z',
       };
       const experienceWithTag = { ...baseExperience, tags: [{ tag }] };
       findManyExperienceMock.mockResolvedValueOnce({
@@ -374,9 +372,7 @@ describe('experience service', () => {
         slug: 'bun',
         category: 'tool',
         iconKey: null,
-        highlighted: false,
-        order: 0,
-        createdAt: new Date(),
+        createdAt: '2025-02-01T00:00:00.000Z',
       };
       const experienceWithTag = { ...baseExperience, tags: [{ tag }] };
 

@@ -56,6 +56,7 @@ export interface SkillDTO {
   iconKey: string | null;
   expertiseLevel: 1 | 2 | 3;
   isHighlighted: boolean;
+  createdAt: string;
 }
 
 export interface StackDTO {
@@ -188,6 +189,7 @@ function mapSkill(raw: {
   iconKey: string | null;
   expertiseLevel: number;
   isHighlighted: number;
+  createdAt: Date | string;
 }): SkillDTO {
   return {
     id: raw.id,
@@ -197,6 +199,7 @@ function mapSkill(raw: {
     iconKey: raw.iconKey,
     expertiseLevel: (raw.expertiseLevel as 1 | 2 | 3) ?? 1,
     isHighlighted: raw.isHighlighted === 1,
+    createdAt: toIsoRequired(raw.createdAt),
   };
 }
 
@@ -210,6 +213,7 @@ function buildStack(
     iconKey: string | null;
     expertiseLevel: number;
     isHighlighted: number;
+    createdAt: Date | string;
   }>
 ): StackDTO {
   const empty = (): SkillDTO[] => [];

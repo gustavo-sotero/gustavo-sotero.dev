@@ -239,8 +239,30 @@ describe('posts/projects services', () => {
       id: 1,
       slug: 'post-a',
       tags: [
-        { postId: 1, tagId: 2, tag: { id: 2, name: 'TypeScript', slug: 'typescript' } },
-        { postId: 1, tagId: 3, tag: { id: 3, name: 'Bun', slug: 'bun' } },
+        {
+          postId: 1,
+          tagId: 2,
+          tag: {
+            id: 2,
+            name: 'TypeScript',
+            slug: 'typescript',
+            category: 'language',
+            iconKey: null,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        },
+        {
+          postId: 1,
+          tagId: 3,
+          tag: {
+            id: 3,
+            name: 'Bun',
+            slug: 'bun',
+            category: 'tool',
+            iconKey: null,
+            createdAt: '2025-01-02T00:00:00.000Z',
+          },
+        },
       ],
     });
 
@@ -250,8 +272,22 @@ describe('posts/projects services', () => {
     expect(result).toEqual(
       expect.objectContaining({
         tags: [
-          { id: 2, name: 'TypeScript', slug: 'typescript' },
-          { id: 3, name: 'Bun', slug: 'bun' },
+          {
+            id: 2,
+            name: 'TypeScript',
+            slug: 'typescript',
+            category: 'language',
+            iconKey: null,
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+          {
+            id: 3,
+            name: 'Bun',
+            slug: 'bun',
+            category: 'tool',
+            iconKey: null,
+            createdAt: '2025-01-02T00:00:00.000Z',
+          },
         ],
       })
     );
@@ -283,14 +319,39 @@ describe('posts/projects services', () => {
     findProjectBySlugMock.mockResolvedValueOnce({
       id: 1,
       slug: 'projeto-a',
-      tags: [{ projectId: 1, tagId: 4, tag: { id: 4, name: 'React', slug: 'react' } }],
+      tags: [
+        {
+          projectId: 1,
+          tagId: 4,
+          tag: {
+            id: 4,
+            name: 'React',
+            slug: 'react',
+            category: 'framework',
+            iconKey: null,
+            createdAt: '2025-01-03T00:00:00.000Z',
+          },
+        },
+      ],
+      skills: [],
     });
 
     const result = await getProjectBySlug('projeto-a', true);
 
     expect(findProjectBySlugMock).toHaveBeenCalledWith('projeto-a', true);
     expect(result).toEqual(
-      expect.objectContaining({ tags: [{ id: 4, name: 'React', slug: 'react' }] })
+      expect.objectContaining({
+        tags: [
+          {
+            id: 4,
+            name: 'React',
+            slug: 'react',
+            category: 'framework',
+            iconKey: null,
+            createdAt: '2025-01-03T00:00:00.000Z',
+          },
+        ],
+      })
     );
   });
 

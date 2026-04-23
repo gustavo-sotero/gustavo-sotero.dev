@@ -35,6 +35,9 @@ const MOCK_PROFILE = {
           slug: 'typescript',
           category: 'language',
           iconKey: 'si:SiTypescript',
+          expertiseLevel: 3,
+          isHighlighted: true,
+          createdAt: '2025-01-01T00:00:00.000Z',
         },
       ],
       framework: [],
@@ -42,7 +45,6 @@ const MOCK_PROFILE = {
       db: [],
       cloud: [],
       infra: [],
-      other: [],
     },
   },
   experience: [
@@ -200,7 +202,7 @@ describe('GET /developer/profile', () => {
     expect(groups).toHaveProperty('db');
     expect(groups).toHaveProperty('cloud');
     expect(groups).toHaveProperty('infra');
-    expect(groups).toHaveProperty('other');
+    expect(groups).not.toHaveProperty('other');
     expect(Array.isArray(groups.language)).toBe(true);
   });
 

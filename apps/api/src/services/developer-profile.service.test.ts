@@ -64,6 +64,7 @@ function makeMockSkill(
     category: string;
     expertiseLevel: number;
     isHighlighted: number;
+    createdAt: string;
   }> = {}
 ) {
   return {
@@ -74,6 +75,7 @@ function makeMockSkill(
     iconKey: null,
     expertiseLevel: overrides.expertiseLevel ?? 3,
     isHighlighted: overrides.isHighlighted ?? 0,
+    createdAt: overrides.createdAt ?? '2025-01-01T00:00:00.000Z',
   };
 }
 
@@ -129,6 +131,7 @@ describe('developer-profile service — stack source alignment', () => {
         iconKey: null,
         expertiseLevel: 3,
         isHighlighted: false,
+        createdAt: '2025-01-01T00:00:00.000Z',
       },
     ]);
     expect(result.stack.groups.tool).toEqual([
@@ -140,6 +143,7 @@ describe('developer-profile service — stack source alignment', () => {
         iconKey: null,
         expertiseLevel: 3,
         isHighlighted: false,
+        createdAt: '2025-01-01T00:00:00.000Z',
       },
     ]);
     expect(result.stack.groups.framework).toEqual([]);
