@@ -15,6 +15,7 @@ import {
   PanelLeftOpen,
   Tag,
   Terminal,
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Experiência', href: '/admin/experience', icon: Briefcase },
   { label: 'Formação', href: '/admin/education', icon: GraduationCap },
   { label: 'Tags', href: '/admin/tags', icon: Tag },
+  { label: 'Skills', href: '/admin/skills', icon: Zap },
   { label: 'Comentários', href: '/admin/comments', icon: MessageSquare },
   { label: 'Uploads', href: '/admin/uploads', icon: ImageIcon },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },

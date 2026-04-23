@@ -2150,6 +2150,190 @@ export const adminPaths = {
     },
   },
 
+  // ── Admin Skills ─────────────────────────────────────────────────────────────
+  '/admin/skills': {
+    get: {
+      tags: ['Admin - Skills'],
+      summary: 'List all skills',
+      operationId: 'adminListSkills',
+      security: [{ cookieAuth: [] }],
+      parameters: [
+        { $ref: '#/components/parameters/page' },
+        { $ref: '#/components/parameters/perPage' },
+        {
+          name: 'category',
+          in: 'query',
+          schema: { type: 'string', example: 'language,framework' },
+          description: 'Comma-separated category filter',
+        },
+        {
+          name: 'highlighted',
+          in: 'query',
+          schema: { type: 'boolean' },
+          description: 'Filter to highlighted skills only',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Paginated skill list',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: { type: 'array', items: { $ref: '#/components/schemas/Skill' } },
+                  meta: { $ref: '#/components/schemas/PaginationMeta' },
+                },
+              },
+            },
+          },
+        },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+      },
+    },
+    post: {
+      tags: ['Admin - Skills'],
+      summary: 'Create skill',
+      description:
+        'Creates a new skill. `iconKey` is always auto-assigned by the server icon resolver — do not send it.',
+      operationId: 'adminCreateSkill',
+      security: [{ cookieAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['name', 'category'],
+              properties: {
+                name: { type: 'string', maxLength: 100, example: 'TypeScript' },
+                category: {
+                  type: 'string',
+                  enum: ['language', 'framework', 'tool', 'db', 'cloud', 'infra'],
+                },
+                expertiseLevel: {
+                  type: 'integer',
+                  minimum: 1,
+                  maximum: 3,
+                  default: 1,
+                  description: '1 = familiar, 2 = proficient, 3 = expert',
+                },
+                isHighlighted: { type: 'boolean', default: false },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '201': {
+          description: 'Skill created',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: { $ref: '#/components/schemas/Skill' },
+                },
+              },
+            },
+          },
+        },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '409': { description: 'Skill name already exists or highlight limit reached' },
+      },
+    },
+  },
+  '/admin/skills/{id}': {
+    get: {
+      tags: ['Admin - Skills'],
+      summary: 'Get skill by ID',
+      operationId: 'adminGetSkill',
+      security: [{ cookieAuth: [] }],
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      responses: {
+        '200': {
+          description: 'Skill detail',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: { $ref: '#/components/schemas/Skill' },
+                },
+              },
+            },
+          },
+        },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '404': { $ref: '#/components/responses/NotFound' },
+      },
+    },
+    patch: {
+      tags: ['Admin - Skills'],
+      summary: 'Update skill',
+      operationId: 'adminUpdateSkill',
+      security: [{ cookieAuth: [] }],
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', maxLength: 100 },
+                category: {
+                  type: 'string',
+                  enum: ['language', 'framework', 'tool', 'db', 'cloud', 'infra'],
+                },
+                expertiseLevel: { type: 'integer', minimum: 1, maximum: 3 },
+                isHighlighted: { type: 'boolean' },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Skill updated',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean' },
+                  data: { $ref: '#/components/schemas/Skill' },
+                },
+              },
+            },
+          },
+        },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '404': { $ref: '#/components/responses/NotFound' },
+        '409': { description: 'Skill name already exists or highlight limit reached' },
+      },
+    },
+    delete: {
+      tags: ['Admin - Skills'],
+      summary: 'Delete skill',
+      description:
+        'Hard-deletes a skill. Cascade removes all project_skills and experience_skills rows.',
+      operationId: 'adminDeleteSkill',
+      security: [{ cookieAuth: [] }],
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+      responses: {
+        '204': { description: 'Deleted' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+        '404': { $ref: '#/components/responses/NotFound' },
+      },
+    },
+  },
+
   // ── Admin Jobs ───────────────────────────────────────────────────────────────
   '/admin/jobs/dlq': {
     get: {

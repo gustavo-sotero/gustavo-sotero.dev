@@ -79,38 +79,35 @@ export const publicPaths = {
                       },
                       stack: {
                         type: 'object',
-                        description: 'Technology stack grouped by category',
+                        description:
+                          'Technology stack grouped by category, sourced from the Skill catalog (not content tags).',
                         properties: {
                           groups: {
                             type: 'object',
                             properties: {
                               language: {
                                 type: 'array',
-                                items: { $ref: '#/components/schemas/TagPublic' },
+                                items: { $ref: '#/components/schemas/Skill' },
                               },
                               framework: {
                                 type: 'array',
-                                items: { $ref: '#/components/schemas/TagPublic' },
+                                items: { $ref: '#/components/schemas/Skill' },
                               },
                               tool: {
                                 type: 'array',
-                                items: { $ref: '#/components/schemas/TagPublic' },
+                                items: { $ref: '#/components/schemas/Skill' },
                               },
                               db: {
                                 type: 'array',
-                                items: { $ref: '#/components/schemas/TagPublic' },
+                                items: { $ref: '#/components/schemas/Skill' },
                               },
                               cloud: {
                                 type: 'array',
-                                items: { $ref: '#/components/schemas/TagPublic' },
+                                items: { $ref: '#/components/schemas/Skill' },
                               },
                               infra: {
                                 type: 'array',
-                                items: { $ref: '#/components/schemas/TagPublic' },
-                              },
-                              other: {
-                                type: 'array',
-                                items: { $ref: '#/components/schemas/TagPublic' },
+                                items: { $ref: '#/components/schemas/Skill' },
                               },
                             },
                           },
@@ -650,17 +647,66 @@ export const publicPaths = {
     },
   },
 
+  // ── Skills ──────────────────────────────────────────────────────────────────
+  '/skills': {
+    get: {
+      tags: ['Skills'],
+      summary: 'List skill catalog',
+      description:
+        'Returns the canonical skill catalog for portfolio stack/hero/resume surfaces.\n\n' +
+        'Skills are separate from content tags — use this endpoint for home hero badges, ' +
+        'the Stack & Skills section, and the currículo skills list.\n\n' +
+        'Optional filters: `category` (comma-separated) and `highlighted` (boolean).',
+      operationId: 'listSkills',
+      parameters: [
+        { $ref: '#/components/parameters/page' },
+        { $ref: '#/components/parameters/perPage' },
+        {
+          name: 'category',
+          in: 'query',
+          schema: { type: 'string', example: 'language,framework' },
+          description: 'Comma-separated category filter',
+        },
+        {
+          name: 'highlighted',
+          in: 'query',
+          schema: { type: 'boolean' },
+          description: 'When true, returns only highlighted skills',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Paginated list of skills',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  data: { type: 'array', items: { $ref: '#/components/schemas/Skill' } },
+                  meta: { $ref: '#/components/schemas/PaginationMeta' },
+                },
+              },
+            },
+          },
+        },
+        '400': { $ref: '#/components/responses/ValidationError' },
+      },
+    },
+  },
+
   // ── Tags ────────────────────────────────────────────────────────────────────
   '/tags': {
     get: {
       tags: ['Tags'],
       summary: 'List tags in use',
       description:
-        'Returns tags used by at least one published entity (post, project, or experience).\n\n' +
-        'Use `?source=project` (recommended for stack/skills surfaces) to restrict results to tags\n' +
-        'linked to published projects only. Use `?source=post` or `?source=experience` for the\n' +
-        'corresponding origin. When `source` is omitted, the union of all origins is returned\n' +
-        '(legacy default, backward-compatible).\n\n' +
+        'Returns content taxonomy tags used by at least one published entity (post, project, or experience).\n\n' +
+        'Use this endpoint for blog and project filter chips — NOT for portfolio stack surfaces.\n' +
+        'For home hero badges, Stack & Skills section, and the currículo skills list, use `GET /skills` instead.\n\n' +
+        'Use `?source=project` to restrict results to tags linked to published projects only, ' +
+        '`?source=post` or `?source=experience` for the corresponding origin. ' +
+        'When `source` is omitted, the union of all origins is returned.\n\n' +
         'Both `category` and `source` can be combined in the same request.',
       operationId: 'listTags',
       parameters: [

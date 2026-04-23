@@ -23,6 +23,8 @@ describe('openapi routes', () => {
     expect(body.info.title).toBe('Portfolio API');
     expect(body.paths).toHaveProperty('/posts');
     expect(body.paths).toHaveProperty('/projects');
+    expect(body.paths).toHaveProperty('/skills');
+    expect(body.paths).toHaveProperty('/admin/skills');
     expect(body.paths).toHaveProperty('/auth/github/start');
   });
 

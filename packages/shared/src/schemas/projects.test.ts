@@ -143,4 +143,44 @@ describe('project schemas', () => {
       }
     });
   });
+
+  describe('skillIds validation', () => {
+    it('accepts skillIds as optional on create', () => {
+      const result = createProjectSchema.safeParse({ ...validBase });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts valid unique skillIds on create', () => {
+      const result = createProjectSchema.safeParse({ ...validBase, skillIds: [1, 2, 3] });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects duplicate skillIds on create', () => {
+      const result = createProjectSchema.safeParse({ ...validBase, skillIds: [1, 1] });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((issue) => issue.path.join('.') === 'skillIds')).toBe(true);
+      }
+    });
+
+    it('accepts empty skillIds array on create', () => {
+      const result = createProjectSchema.safeParse({ ...validBase, skillIds: [] });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts valid unique skillIds on update', () => {
+      const result = updateProjectSchema.safeParse({ skillIds: [10, 20] });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects duplicate skillIds on update', () => {
+      const result = updateProjectSchema.safeParse({ skillIds: [5, 5] });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((issue) => issue.path.join('.') === 'skillIds')).toBe(true);
+      }
+    });
+  });
 });
