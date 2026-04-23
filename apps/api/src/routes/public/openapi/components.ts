@@ -80,12 +80,6 @@ export const openApiComponents = {
           example: 'language',
         },
         iconKey: { type: 'string', nullable: true, example: 'si:SiTypescript' },
-        isHighlighted: {
-          type: 'boolean',
-          example: false,
-          description:
-            'Whether this tag is highlighted as a key specialisation. Max 2 per category.',
-        },
         createdAt: { type: 'string', format: 'date-time' },
       },
     },

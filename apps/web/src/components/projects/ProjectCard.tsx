@@ -5,19 +5,15 @@ import { ExternalLink, Globe, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { GitHubIcon } from '@/components/shared/BrandIcons';
-import { AnimatedShinyText } from '@/components/ui/animated-shiny-text';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
-import { cn } from '@/lib/utils';
 
 interface ProjectCardProps {
   project: Project;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const tags = [...(project.tags ?? [])].sort(
-    (a, b) => Number(b.isHighlighted) - Number(a.isHighlighted)
-  );
+  const tags = project.tags ?? [];
 
   return (
     <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-all duration-300">
@@ -99,26 +95,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
                   <Badge
                     key={tag.id}
                     variant="secondary"
-                    className={cn(
-                      'text-xs border',
-                      tag.isHighlighted
-                        ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                        : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/50'
-                    )}
+                    className="text-xs border bg-zinc-800/80 text-zinc-400 border-zinc-700/50"
                   >
-                    {tag.isHighlighted && (
-                      <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 mr-1 inline-block flex-shrink-0" />
-                    )}
-                    {tag.isHighlighted ? (
-                      <AnimatedShinyText
-                        shimmerWidth={60}
-                        className="text-emerald-300! dark:text-emerald-300!"
-                      >
-                        {tag.name}
-                      </AnimatedShinyText>
-                    ) : (
-                      tag.name
-                    )}
+                    {tag.name}
                   </Badge>
                 ))}
               </div>

@@ -34,7 +34,6 @@ const tagCategoryCsvSchema = z.string().refine(
 export const createTagSchema = z.object({
   name: z.string().min(1).max(100),
   category: z.enum(tagCategoryValues).default('other'),
-  isHighlighted: z.boolean().optional().default(false),
 });
 
 /**
@@ -45,7 +44,6 @@ export const createTagSchema = z.object({
 export const updateTagSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   category: z.enum(tagCategoryValues).optional(),
-  isHighlighted: z.boolean().optional(),
 });
 
 export const tagQuerySchema = z.object({
@@ -73,7 +71,7 @@ export const publicTagQuerySchema = tagQuerySchema.extend({
 
 // Schema-inferred input types
 // CreateTagSchemaInput uses z.input<> so callers can omit fields that have
-// defaults (e.g. isHighlighted, category) — defaults are applied by the schema.
+// defaults (e.g. category) — defaults are applied by the schema.
 export type CreateTagSchemaInput = z.input<typeof createTagSchema>;
 export type UpdateTagSchemaInput = z.infer<typeof updateTagSchema>;
 export type TagQuery = z.infer<typeof tagQuerySchema>;

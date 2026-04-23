@@ -1,5 +1,5 @@
 import type { Tag } from '@portfolio/shared';
-import { ExternalLink, Star } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SITE_METADATA } from '@/lib/constants';
 import { getPublicProjectDetail } from '@/lib/data/public/projects';
-import { cn } from '@/lib/utils';
 
 interface ProjectDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -73,9 +72,7 @@ export async function ProjectDetailContent({ params }: ProjectDetailPageProps) {
 
   const hasMermaid = project.renderedContent?.includes('class="mermaid"') ?? false;
 
-  const tags = [...((project as typeof project & { tags?: Tag[] }).tags ?? [])].sort(
-    (a, b) => Number(b.isHighlighted) - Number(a.isHighlighted)
-  );
+  const tags = (project as typeof project & { tags?: Tag[] }).tags ?? [];
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -133,16 +130,8 @@ export async function ProjectDetailContent({ params }: ProjectDetailPageProps) {
                 <Badge
                   key={tag.id}
                   variant="secondary"
-                  className={cn(
-                    'gap-1.5 text-xs font-mono border transition-colors',
-                    tag.isHighlighted
-                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400/50 hover:text-emerald-200'
-                      : 'border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-emerald-500/30 hover:text-zinc-100'
-                  )}
+                  className="gap-1.5 text-xs font-mono border transition-colors border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-emerald-500/30 hover:text-zinc-100"
                 >
-                  {tag.isHighlighted && (
-                    <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
-                  )}
                   <TechIcon iconKey={tag.iconKey} category={tag.category} size={12} />
                   {tag.name}
                 </Badge>

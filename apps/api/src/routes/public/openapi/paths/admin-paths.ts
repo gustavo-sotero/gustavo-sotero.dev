@@ -1333,11 +1333,6 @@ export const adminPaths = {
                   description:
                     'Tag category. iconKey is auto-resolved from name + category by the system.',
                 },
-                isHighlighted: {
-                  type: 'boolean',
-                  default: false,
-                  description: 'Mark as highlighted specialisation. Max 2 per category.',
-                },
               },
             },
           },
@@ -1351,7 +1346,7 @@ export const adminPaths = {
           },
         },
         '400': { $ref: '#/components/responses/ValidationError' },
-        '409': { description: 'Name conflict or highlight limit exceeded (max 2 per category)' },
+        '409': { description: 'Name conflict' },
       },
     },
   },
@@ -1377,10 +1372,6 @@ export const adminPaths = {
                   enum: ['language', 'framework', 'tool', 'db', 'cloud', 'infra', 'other'],
                   description: 'Changing category triggers automatic iconKey recalculation.',
                 },
-                isHighlighted: {
-                  type: 'boolean',
-                  description: 'Mark as highlighted specialisation. Max 2 per category.',
-                },
               },
             },
           },
@@ -1390,7 +1381,7 @@ export const adminPaths = {
         '200': { description: 'Tag updated' },
         '400': { $ref: '#/components/responses/ValidationError' },
         '404': { $ref: '#/components/responses/NotFound' },
-        '409': { description: 'Name conflict or highlight limit exceeded (max 2 per category)' },
+        '409': { description: 'Name conflict' },
       },
     },
     delete: {

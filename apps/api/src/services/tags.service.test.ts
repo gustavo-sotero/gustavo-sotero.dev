@@ -11,7 +11,6 @@ const {
   createTagMock,
   updateTagMock,
   deleteTagMock,
-  countHighlightedByCategoryMock,
   syncPostTagsMock,
   syncProjectTagsMock,
 } = vi.hoisted(() => ({
@@ -25,7 +24,6 @@ const {
   createTagMock: vi.fn(),
   updateTagMock: vi.fn(),
   deleteTagMock: vi.fn(),
-  countHighlightedByCategoryMock: vi.fn(),
   syncPostTagsMock: vi.fn(),
   syncProjectTagsMock: vi.fn(),
 }));
@@ -58,7 +56,6 @@ vi.mock('../repositories/tags.repo', () => ({
   tagSlugExists: tagSlugExistsMock,
   createTag: createTagMock,
   updateTag: updateTagMock,
-  countHighlightedByCategory: countHighlightedByCategoryMock,
   deleteTag: deleteTagMock,
   syncPostTags: syncPostTagsMock,
   syncProjectTags: syncProjectTagsMock,
@@ -79,13 +76,21 @@ describe('tags service', () => {
       fetcher()
     );
     tagSlugExistsMock.mockResolvedValue(false);
-    // Default: no highlighted tags in any category
-    countHighlightedByCategoryMock.mockResolvedValue(0);
   });
 
   it('uses a source-aware cache key for public tag listings to avoid collisions', async () => {
     const repoResult = {
-      data: [{ id: 1, name: 'TypeScript', slug: 'typescript', category: 'language' }],
+      data: [
+        {
+          id: 1,
+          name: 'TypeScript',
+          slug: 'typescript',
+          category: 'language',
+          iconKey: 'si:SiTypescript',
+          isHighlighted: true,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ],
       meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
     };
     findManyTagsMock.mockResolvedValue(repoResult);
@@ -101,12 +106,30 @@ describe('tags service', () => {
       { category: 'language,framework', source: 'project' },
       true
     );
-    expect(result).toEqual(repoResult);
+    expect(result.meta).toEqual(repoResult.meta);
+    expect(result.data[0]).toMatchObject({
+      id: 1,
+      name: 'TypeScript',
+      slug: 'typescript',
+      category: 'language',
+      iconKey: 'si:SiTypescript',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+    expect(result.data[0]).not.toHaveProperty('isHighlighted');
   });
 
   it('preserves legacy union semantics when source is absent on public listing', async () => {
     const repoResult = {
-      data: [{ id: 1, name: 'TypeScript', slug: 'typescript', category: 'language' }],
+      data: [
+        {
+          id: 1,
+          name: 'TypeScript',
+          slug: 'typescript',
+          category: 'language',
+          iconKey: null,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ],
       meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
     };
     findManyTagsMock.mockResolvedValue(repoResult);
@@ -170,6 +193,7 @@ describe('tags service', () => {
       expect.objectContaining({ iconKey: 'si:SiTypescript' })
     );
     expect(result).toMatchObject({ iconKey: 'si:SiTypescript' });
+    expect(result).not.toHaveProperty('isHighlighted');
   });
 
   // Plan §13.2.3 — iconKey auto-resolved on update
@@ -206,7 +230,7 @@ describe('tags service', () => {
       slug: 'unknownstack',
       category: 'framework',
       iconKey: 'lucide:Layers',
-      isHighlighted: false,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
     });
     updateTagMock.mockResolvedValue({
       id: 12,
@@ -214,15 +238,16 @@ describe('tags service', () => {
       slug: 'unknownstack',
       category: 'infra',
       iconKey: 'lucide:Server',
-      isHighlighted: false,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
     });
 
-    await updateTagService(12, { category: 'infra' });
+    const result = await updateTagService(12, { category: 'infra' });
 
     expect(updateTagMock).toHaveBeenCalledWith(
       12,
       expect.objectContaining({ category: 'infra', iconKey: 'lucide:Server' })
     );
+    expect(result).not.toHaveProperty('isHighlighted');
   });
 
   it('regenerates slug and invalidates related caches on name update', async () => {
@@ -231,17 +256,27 @@ describe('tags service', () => {
       name: 'React',
       slug: 'react',
       category: 'framework',
+      iconKey: 'si:SiReact',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
     });
     tagNameExistsMock.mockResolvedValue(false);
     tagSlugExistsMock.mockResolvedValue(false);
-    updateTagMock.mockResolvedValue({ id: 1, name: 'TypeScript', slug: 'typescript' });
+    updateTagMock.mockResolvedValue({
+      id: 1,
+      name: 'TypeScript',
+      slug: 'typescript',
+      category: 'framework',
+      iconKey: 'si:SiTypescript',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
 
-    await updateTagService(1, { name: 'TypeScript' });
+    const result = await updateTagService(1, { name: 'TypeScript' });
 
     expect(updateTagMock).toHaveBeenCalledWith(1, expect.objectContaining({ slug: 'typescript' }));
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('posts:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('projects:*');
+    expect(result).not.toHaveProperty('isHighlighted');
   });
 
   it('invalidates both resource and tags caches when syncing post tags', async () => {
@@ -264,144 +299,45 @@ describe('tags service', () => {
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
   });
 
-  // ── Highlight limit (max 2 per category) ─────────────────────────────────────
-
-  it('allows creating a highlighted tag when category has fewer than 2 highlights', async () => {
-    findTagByNameMock.mockResolvedValue(null);
-    tagSlugExistsMock.mockResolvedValue(false);
-    countHighlightedByCategoryMock.mockResolvedValue(1); // only 1 currently highlighted
-
-    const created = {
+  it('strips legacy highlight metadata from create and update responses', async () => {
+    findTagByNameMock.mockResolvedValueOnce(null);
+    createTagMock.mockResolvedValueOnce({
       id: 7,
       name: 'Hono',
       slug: 'hono',
       category: 'framework',
       iconKey: 'si:SiHono',
       isHighlighted: true,
-      createdAt: new Date(),
-    };
-    createTagMock.mockResolvedValue(created);
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
 
-    const result = await createTagService({
+    const created = await createTagService({ name: 'Hono', category: 'framework' });
+
+    findTagByIdMock.mockResolvedValueOnce({
+      id: 7,
       name: 'Hono',
+      slug: 'hono',
       category: 'framework',
+      iconKey: 'si:SiHono',
       isHighlighted: true,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
     });
-
-    expect(createTagMock).toHaveBeenCalledWith(expect.objectContaining({ isHighlighted: true }));
-    expect(result?.isHighlighted).toBe(true);
-  });
-
-  it('throws HIGHLIGHT_LIMIT when creating a 3rd highlighted tag in the same category', async () => {
-    findTagByNameMock.mockResolvedValue(null);
-    countHighlightedByCategoryMock.mockResolvedValue(2); // already at the limit
-
-    await expect(
-      createTagService({ name: 'Express', category: 'framework', isHighlighted: true })
-    ).rejects.toThrow('HIGHLIGHT_LIMIT:');
-
-    expect(createTagMock).not.toHaveBeenCalled();
-  });
-
-  it('does not check highlight limit when creating a non-highlighted tag', async () => {
-    findTagByNameMock.mockResolvedValue(null);
-    tagSlugExistsMock.mockResolvedValue(false);
-    const created = {
-      id: 8,
-      name: 'Fastify',
-      slug: 'fastify',
+    updateTagMock.mockResolvedValueOnce({
+      id: 7,
+      name: 'Hono Runtime',
+      slug: 'hono-runtime',
       category: 'framework',
-      iconKey: null,
-      isHighlighted: false,
-      createdAt: new Date(),
-    };
-    createTagMock.mockResolvedValue(created);
-
-    await createTagService({ name: 'Fastify', category: 'framework', isHighlighted: false });
-
-    expect(countHighlightedByCategoryMock).not.toHaveBeenCalled();
-    expect(createTagMock).toHaveBeenCalled();
-  });
-
-  it('allows setting isHighlighted=true on update when category has room', async () => {
-    findTagByIdMock.mockResolvedValue({
-      id: 3,
-      name: 'Next.js',
-      slug: 'nextjs',
-      category: 'framework',
-      isHighlighted: false,
-    });
-    countHighlightedByCategoryMock.mockResolvedValue(1); // 1 other highlighted in framework
-    updateTagMock.mockResolvedValue({
-      id: 3,
-      name: 'Next.js',
-      slug: 'nextjs',
-      category: 'framework',
+      iconKey: 'si:SiHono',
       isHighlighted: true,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
     });
+    tagNameExistsMock.mockResolvedValueOnce(false);
+    tagSlugExistsMock.mockResolvedValueOnce(false);
 
-    const result = await updateTagService(3, { isHighlighted: true });
+    const updated = await updateTagService(7, { name: 'Hono Runtime' });
 
-    expect(updateTagMock).toHaveBeenCalledWith(3, expect.objectContaining({ isHighlighted: true }));
-    expect(result?.isHighlighted).toBe(true);
-  });
-
-  it('throws HIGHLIGHT_LIMIT when setting isHighlighted=true on update if category is full', async () => {
-    findTagByIdMock.mockResolvedValue({
-      id: 3,
-      name: 'Next.js',
-      slug: 'nextjs',
-      category: 'framework',
-      isHighlighted: false,
-    });
-    countHighlightedByCategoryMock.mockResolvedValue(2); // already at limit (excludes self)
-
-    await expect(updateTagService(3, { isHighlighted: true })).rejects.toThrow('HIGHLIGHT_LIMIT:');
-
-    expect(updateTagMock).not.toHaveBeenCalled();
-  });
-
-  it('allows removing highlight (isHighlighted=false) regardless of category count', async () => {
-    findTagByIdMock.mockResolvedValue({
-      id: 4,
-      name: 'React',
-      slug: 'react',
-      category: 'framework',
-      isHighlighted: true,
-    });
-    countHighlightedByCategoryMock.mockResolvedValue(2); // category is full, but we are removing
-    updateTagMock.mockResolvedValue({
-      id: 4,
-      name: 'React',
-      slug: 'react',
-      category: 'framework',
-      isHighlighted: false,
-    });
-
-    const result = await updateTagService(4, { isHighlighted: false });
-
-    // Should not throw; count check only happens when final state is highlighted
-    expect(updateTagMock).toHaveBeenCalledWith(
-      4,
-      expect.objectContaining({ isHighlighted: false })
-    );
-    expect(result?.isHighlighted).toBe(false);
-  });
-
-  it('validates target category when a highlighted tag changes category', async () => {
-    findTagByIdMock.mockResolvedValue({
-      id: 5,
-      name: 'PostgreSQL',
-      slug: 'postgresql',
-      category: 'db',
-      isHighlighted: true,
-    });
-    // The new target category (language) already has 2 highlights
-    countHighlightedByCategoryMock.mockResolvedValue(2);
-
-    await expect(updateTagService(5, { category: 'language' })).rejects.toThrow('HIGHLIGHT_LIMIT:');
-
-    expect(updateTagMock).not.toHaveBeenCalled();
+    expect(created).not.toHaveProperty('isHighlighted');
+    expect(updated).not.toHaveProperty('isHighlighted');
   });
 
   // ── deleteTagService ─────────────────────────────────────────────────────────

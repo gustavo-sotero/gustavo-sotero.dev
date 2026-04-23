@@ -52,7 +52,6 @@ function makeTag(id: number, name: string) {
     slug: name.toLowerCase(),
     category: 'tool' as const,
     iconKey: null,
-    isHighlighted: false,
     createdAt: '2026-01-01T00:00:00.000Z',
   };
 }

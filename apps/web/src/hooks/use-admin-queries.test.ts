@@ -134,7 +134,6 @@ function makeTag(overrides: Partial<Tag> = {}): Tag {
     slug: 'typescript',
     category: 'language',
     iconKey: 'si:SiTypescript',
-    isHighlighted: false,
     createdAt: new Date().toISOString(),
     ...overrides,
   };

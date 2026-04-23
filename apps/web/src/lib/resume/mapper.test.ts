@@ -9,7 +9,6 @@ function createTag(id: number, name: string, category: Tag['category'] = 'tool')
     slug: name.toLowerCase(),
     category,
     iconKey: null,
-    isHighlighted: false,
     createdAt: '2026-01-01T00:00:00.000Z',
   };
 }

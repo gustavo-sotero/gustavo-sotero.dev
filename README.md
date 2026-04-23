@@ -109,7 +109,7 @@ Todas as rotas admin têm o prefixo `/admin`. GETs de detalhe usam `:slug`; PATC
 | `/admin/posts/generate/*` | Assistente IA para sugerir temas e gerar drafts (assíncronos, persistidos) |
 | `/admin/projects`         | CMS — projetos                                   |
 | `/admin/skills`           | Gerenciamento do catálogo de skills              |
-| `/admin/tags`             | Gerenciamento de tags                            |
+| `/admin/tags`             | Gerenciamento de tags de conteúdo                |
 | `/admin/experience`       | Experiências profissionais                       |
 | `/admin/education`        | Formação acadêmica                               |
 | `/admin/comments`         | Moderação de comentários (aprovar/rejeitar)      |

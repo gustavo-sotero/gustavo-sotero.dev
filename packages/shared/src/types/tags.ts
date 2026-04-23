@@ -7,7 +7,6 @@ export interface Tag {
   slug: string;
   category: TagCategory;
   iconKey: string | null;
-  isHighlighted: boolean;
   createdAt: string;
 }
 
@@ -15,7 +14,6 @@ export interface Tag {
 export interface CreateTagInput {
   name: string;
   category?: TagCategory;
-  isHighlighted?: boolean;
 }
 
 // Input for updating a tag

@@ -4,7 +4,7 @@
  * Routes:
  *  GET    /admin/tags      - List all tags
  *  POST   /admin/tags      - Create a tag
- *  PATCH  /admin/tags/:id  - Update tag (name, category, isHighlighted)
+ *  PATCH  /admin/tags/:id  - Update tag (name, category)
  *  DELETE /admin/tags/:id  - Delete tag (hard delete; CASCADE clears pivots)
  *
  * Note: `iconKey` is always auto-assigned by the system (icon resolver).
@@ -69,7 +69,7 @@ adminTagsRouter.post('/', async (c) => {
 
 /**
  * PATCH /admin/tags/:id
- * Update tag name, category, or isHighlighted.
+ * Update tag name or category.
  * iconKey is always recalculated server-side from final name + category — not accepted from client.
  */
 adminTagsRouter.patch('/:id', async (c) => {
@@ -89,14 +89,6 @@ adminTagsRouter.patch('/:id', async (c) => {
     return successResponse(c, updated);
   } catch (err) {
     const message = (err as Error).message;
-    if (message.startsWith('HIGHLIGHT_LIMIT:')) {
-      return errorResponse(
-        c,
-        409,
-        'CONFLICT',
-        'M\u00e1ximo de 2 tags destacadas por categoria. Remova um destaque existente antes de adicionar outro.'
-      );
-    }
     if (message.toLowerCase().includes('conflict') || message.toLowerCase().includes('unique')) {
       return errorResponse(c, 409, 'CONFLICT', 'A tag with this name already exists');
     }

@@ -7,6 +7,34 @@
  */
 
 /**
+ * Remove legacy tag highlight metadata from API payloads.
+ *
+ * Tags remain content taxonomy; `isHighlighted` now belongs exclusively to the
+ * skill catalog even if the database row still carries the historical column.
+ */
+export function toTagDto<
+  TTag extends {
+    id: number;
+    name: string;
+    slug: string;
+    category: string;
+    iconKey: string | null;
+    createdAt?: Date | string;
+    isHighlighted?: boolean;
+  },
+>(tag: TTag) {
+  return {
+    id: tag.id,
+    name: tag.name,
+    slug: tag.slug,
+    category: tag.category,
+    iconKey: tag.iconKey,
+    createdAt:
+      tag.createdAt instanceof Date ? tag.createdAt.toISOString() : (tag.createdAt ?? null),
+  };
+}
+
+/**
  * Flatten a pivot array `{ tag: T }[]` to `T[]`.
  */
 export function flattenPivotTagArray<TTag>(pivots?: Array<{ tag: TTag }>): TTag[] {
@@ -27,7 +55,9 @@ export function flattenPivotTagArray<TTag>(pivots?: Array<{ tag: TTag }>): TTag[
 export function flattenPivotTags<T extends { tags?: Array<{ tag: unknown }> }>(item: T) {
   return {
     ...item,
-    tags: flattenPivotTagArray(item.tags),
+    tags: flattenPivotTagArray(item.tags).map((tag) =>
+      toTagDto(tag as Parameters<typeof toTagDto>[0])
+    ),
   };
 }
 
@@ -56,7 +86,9 @@ export function flattenPivots<
 >(item: T) {
   return {
     ...item,
-    tags: flattenPivotTagArray(item.tags),
+    tags: flattenPivotTagArray(item.tags).map((tag) =>
+      toTagDto(tag as Parameters<typeof toTagDto>[0])
+    ),
     skills: flattenPivotSkillArray(item.skills),
   };
 }

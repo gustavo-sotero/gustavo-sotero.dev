@@ -8,10 +8,11 @@
 
 import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
 import type { CreateTagSchemaInput, UpdateTagSchemaInput } from '@portfolio/shared/schemas/tags';
+import type { Tag } from '@portfolio/shared/types/tags';
 import { cached, invalidateGroup, invalidatePattern } from '../lib/cache';
+import { toTagDto } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import {
-  countHighlightedByCategory,
   createTag,
   deleteTag,
   findManyTags,
@@ -24,13 +25,13 @@ import {
   updateTag,
 } from '../repositories/tags.repo';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const MAX_HIGHLIGHTED_PER_CATEGORY = 2;
-
 // ── Cache TTLs ────────────────────────────────────────────────────────────────
 
 const LIST_TTL = 300; // 5 minutes
+
+function mapTagRow(row: Parameters<typeof toTagDto>[0]): Tag {
+  return toTagDto(row) as Tag;
+}
 
 // ── Service methods ───────────────────────────────────────────────────────────
 
@@ -48,30 +49,23 @@ export interface TagListFilters {
 export async function listTags(filters: TagListFilters = {}, publicOnly = false) {
   if (publicOnly) {
     const key = `tags:public:category=${filters.category ?? ''}:source=${filters.source ?? ''}`;
-    return cached(key, LIST_TTL, () => findManyTags(filters, true));
+    return cached(key, LIST_TTL, async () => {
+      const result = await findManyTags(filters, true);
+      return { ...result, data: result.data.map(mapTagRow) };
+    });
   }
-  return findManyTags(filters, false);
+  const result = await findManyTags(filters, false);
+  return { ...result, data: result.data.map(mapTagRow) };
 }
 
 /**
  * Create a new tag.
  * Auto-generates a slug from the name and enforces uniqueness.
- * Enforces the max-2-highlighted-per-category business rule.
  */
 export async function createTagService(data: CreateTagSchemaInput) {
   const nameTaken = await findTagByName(data.name);
   if (nameTaken) {
     throw new Error(`CONFLICT: Tag name "${data.name}" is already taken`);
-  }
-
-  if (data.isHighlighted) {
-    const category = data.category ?? 'other';
-    const highlightCount = await countHighlightedByCategory(category);
-    if (highlightCount >= MAX_HIGHLIGHTED_PER_CATEGORY) {
-      throw new Error(
-        `HIGHLIGHT_LIMIT: Category "${category}" already has ${MAX_HIGHLIGHTED_PER_CATEGORY} highlighted tags. Remove one before adding another.`
-      );
-    }
   }
 
   const baseSlug = generateSlug(data.name);
@@ -85,19 +79,20 @@ export async function createTagService(data: CreateTagSchemaInput) {
     slug,
     category: effectiveCategory,
     iconKey,
-    isHighlighted: data.isHighlighted ?? false,
   });
+  if (!tag) {
+    throw new Error('Failed to create tag — database returned no row');
+  }
 
   await invalidatePattern('tags:*');
-  return tag;
+  return mapTagRow(tag);
 }
 
 /**
  * Update an existing tag by ID.
  * If `name` changes, regenerates the slug (ensuring uniqueness, excluding self).
- * Allows updating `category`, `name`, and `isHighlighted`.
+ * Allows updating `category` and `name`.
  * `iconKey` is always recalculated server-side from the final name+category — never accepted from the client.
- * Enforces the max-2-highlighted-per-category business rule on the final state.
  */
 export async function updateTagService(id: number, data: UpdateTagSchemaInput) {
   const current = await findTagById(id);
@@ -117,7 +112,6 @@ export async function updateTagService(id: number, data: UpdateTagSchemaInput) {
   }
 
   if (data.category !== undefined) patch.category = data.category;
-  if (data.isHighlighted !== undefined) patch.isHighlighted = data.isHighlighted;
 
   // Compute final effective name and category (after applying patch).
   const finalName = patch.name ?? current.name;
@@ -130,26 +124,14 @@ export async function updateTagService(id: number, data: UpdateTagSchemaInput) {
   const { iconKey: resolvedIconKey } = resolveTagIcon(finalName, finalCategory);
   if (resolvedIconKey !== current.iconKey) patch.iconKey = resolvedIconKey;
 
-  // Validate highlight limit: compute final state after the patch
-  const finalHighlighted = patch.isHighlighted ?? current.isHighlighted;
-
-  if (finalHighlighted) {
-    const highlightCount = await countHighlightedByCategory(finalCategory, id);
-    if (highlightCount >= MAX_HIGHLIGHTED_PER_CATEGORY) {
-      throw new Error(
-        `HIGHLIGHT_LIMIT: Category "${finalCategory}" already has ${MAX_HIGHLIGHTED_PER_CATEGORY} highlighted tags. Remove one before adding another.`
-      );
-    }
-  }
-
-  if (Object.keys(patch).length === 0) return current; // nothing to update
+  if (Object.keys(patch).length === 0) return mapTagRow(current); // nothing to update
 
   const updated = await updateTag(id, patch);
 
   // Invalidate tag cache and also any content that may reference this tag
   await invalidateGroup('tagsContent');
 
-  return updated;
+  return updated ? mapTagRow(updated) : null;
 }
 
 /**

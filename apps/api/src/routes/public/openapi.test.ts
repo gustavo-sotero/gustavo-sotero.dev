@@ -158,6 +158,55 @@ describe('openapi routes', () => {
     );
   });
 
+  it('GET /doc/spec keeps tag contracts taxonomy-only and skill contracts highlight-aware', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      components: {
+        schemas: Record<string, { properties?: Record<string, unknown> }>;
+      };
+      paths: Record<
+        string,
+        {
+          post?: {
+            requestBody?: {
+              content?: {
+                'application/json'?: {
+                  schema?: { properties?: Record<string, unknown> };
+                };
+              };
+            };
+          };
+          patch?: {
+            requestBody?: {
+              content?: {
+                'application/json'?: {
+                  schema?: { properties?: Record<string, unknown> };
+                };
+              };
+            };
+          };
+        }
+      >;
+    };
+
+    const tagSchema = body.components.schemas.Tag;
+    const skillSchema = body.components.schemas.Skill;
+    const createTagProps =
+      body.paths['/admin/tags']?.post?.requestBody?.content?.['application/json']?.schema
+        ?.properties ?? {};
+    const updateTagProps =
+      body.paths['/admin/tags/{id}']?.patch?.requestBody?.content?.['application/json']?.schema
+        ?.properties ?? {};
+
+    expect(tagSchema?.properties).not.toHaveProperty('isHighlighted');
+    expect(skillSchema?.properties).toHaveProperty('isHighlighted');
+    expect(createTagProps).not.toHaveProperty('isHighlighted');
+    expect(updateTagProps).not.toHaveProperty('isHighlighted');
+  });
+
   it('GET /doc/spec documents admin project and experience write contracts truthfully', async () => {
     const app = new Hono();
     app.route('/', openApiRouter);
