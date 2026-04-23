@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { Tag } from '@portfolio/shared';
+import type { Skill } from '@portfolio/shared';
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -114,13 +114,14 @@ vi.mock('./HeroBackground', () => ({
 
 import { HeroSection } from './HeroSection';
 
-function makeTag(overrides: Partial<Tag> & Pick<Tag, 'id' | 'name' | 'category'>): Tag {
+function makeSkill(overrides: Partial<Skill> & Pick<Skill, 'id' | 'name' | 'category'>): Skill {
   return {
     id: overrides.id,
     name: overrides.name,
     slug: overrides.slug ?? overrides.name.toLowerCase().replace(/\s+/g, '-'),
     category: overrides.category,
     iconKey: overrides.iconKey ?? null,
+    expertiseLevel: overrides.expertiseLevel ?? 2,
     isHighlighted: overrides.isHighlighted ?? false,
     createdAt: overrides.createdAt ?? '2026-03-30T00:00:00.000Z',
   };
@@ -131,8 +132,8 @@ function expectBefore(a: HTMLElement, b: HTMLElement) {
 }
 
 describe('HeroSection', () => {
-  it('renders fallback stack badges when no tags are provided', () => {
-    render(<HeroSection tags={[]} experienceLabel="3+ anos" />);
+  it('renders fallback stack badges when no skills are provided', () => {
+    render(<HeroSection skills={[]} experienceLabel="3+ anos" />);
 
     expect(screen.getByText('TypeScript')).toBeInTheDocument();
     expect(screen.getByText('Bun')).toBeInTheDocument();
@@ -142,7 +143,7 @@ describe('HeroSection', () => {
   });
 
   it('renders all LCP-critical hero content without requiring motion entrance', () => {
-    render(<HeroSection tags={[]} experienceLabel="3+ anos" />);
+    render(<HeroSection skills={[]} experienceLabel="3+ anos" />);
 
     // Developer name is the primary LCP candidate — must be in a heading.
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Gustavo Sotero');
@@ -162,7 +163,7 @@ describe('HeroSection', () => {
   });
 
   it('renders the configured experience label inside the bio', () => {
-    render(<HeroSection tags={[]} experienceLabel="3+ anos" />);
+    render(<HeroSection skills={[]} experienceLabel="3+ anos" />);
 
     const label = screen.getByText(/3\+ anos/);
     expect(label).toBeInTheDocument();
@@ -173,17 +174,17 @@ describe('HeroSection', () => {
     expect(h1).not.toHaveTextContent('3+ anos');
   });
 
-  it('orders stack badges with highlighted tags first and then by category priority', () => {
-    const tags: Tag[] = [
-      makeTag({ id: 1, name: 'Redis', category: 'db', isHighlighted: false }),
-      makeTag({ id: 2, name: 'Docker', category: 'infra', isHighlighted: true }),
-      makeTag({ id: 3, name: 'TypeScript', category: 'language', isHighlighted: true }),
-      makeTag({ id: 4, name: 'Bun', category: 'tool', isHighlighted: false }),
-      makeTag({ id: 5, name: 'Next.js', category: 'framework', isHighlighted: false }),
-      makeTag({ id: 6, name: 'AWS', category: 'cloud', isHighlighted: false }),
+  it('orders stack badges with highlighted skills first and then by category priority', () => {
+    const skills: Skill[] = [
+      makeSkill({ id: 1, name: 'Redis', category: 'db', isHighlighted: false }),
+      makeSkill({ id: 2, name: 'Docker', category: 'infra', isHighlighted: true }),
+      makeSkill({ id: 3, name: 'TypeScript', category: 'language', isHighlighted: true }),
+      makeSkill({ id: 4, name: 'Bun', category: 'tool', isHighlighted: false }),
+      makeSkill({ id: 5, name: 'Next.js', category: 'framework', isHighlighted: false }),
+      makeSkill({ id: 6, name: 'AWS', category: 'cloud', isHighlighted: false }),
     ];
 
-    render(<HeroSection tags={tags} experienceLabel="3+ anos" />);
+    render(<HeroSection skills={skills} experienceLabel="3+ anos" />);
 
     const typeScript = screen.getByText('TypeScript');
     const docker = screen.getByText('Docker');

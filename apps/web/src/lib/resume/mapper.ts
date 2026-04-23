@@ -1,4 +1,4 @@
-import type { Education, Experience, Project, Tag } from '@portfolio/shared';
+import type { Education, Experience, Project, Skill, Tag } from '@portfolio/shared';
 import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 
 // ---------------------------------------------------------------------------
@@ -153,6 +153,7 @@ const MAX_SKILLS_PER_CATEGORY = 10;
 export function buildResumeViewModel(opts: {
   experience: Experience[];
   education: Education[];
+  skills?: Skill[];
   tags: Tag[];
   projects: Project[];
   now: Date;
@@ -226,14 +227,14 @@ export function buildResumeViewModel(opts: {
     formattedPeriod: formatPeriod(e.startDate ?? null, e.endDate ?? null, e.isCurrent),
   }));
 
-  // Skills — group by category, dedupe names, limit per category
-  const categoryOrder = ['language', 'framework', 'db', 'tool', 'infra', 'cloud', 'other'];
+  // Skills — group by category from Skill catalog, dedupe names, limit per category
+  const categoryOrder = ['language', 'framework', 'db', 'tool', 'infra', 'cloud'];
   const grouped = new Map<string, string[]>();
-  for (const tag of opts.tags) {
-    const cat = tag.category ?? 'other';
+  for (const skill of opts.skills ?? []) {
+    const cat = skill.category ?? 'tool';
     if (!grouped.has(cat)) grouped.set(cat, []);
     const list = grouped.get(cat);
-    if (list && !list.includes(tag.name)) list.push(tag.name);
+    if (list && !list.includes(skill.name)) list.push(skill.name);
   }
 
   const skills: ResumeSkillGroup[] = categoryOrder

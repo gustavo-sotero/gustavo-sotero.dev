@@ -6,6 +6,7 @@ import {
   createProjectSchema,
   generateSlug,
   type Project,
+  type Skill,
   type Tag,
 } from '@portfolio/shared';
 import type { z } from 'zod';
@@ -30,6 +31,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useCreateProject, useUpdateProject } from '@/hooks/admin/use-admin-projects';
+import { useAdminSkills } from '@/hooks/admin/use-admin-skills';
 import { useAdminTags } from '@/hooks/admin/use-admin-tags';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
@@ -52,6 +54,7 @@ interface ProjectFormProps {
 export function ProjectForm({ mode, project }: ProjectFormProps) {
   const router = useRouter();
   const { data: allTags = [], isLoading: tagsLoading } = useAdminTags();
+  const { data: allSkills = [], isLoading: skillsLoading } = useAdminSkills();
   const createMutation = useCreateProject();
   const updateMutation = useUpdateProject(project?.id ?? 0, project?.slug);
   const [autoSlug, setAutoSlug] = useState(mode === 'create');
@@ -79,6 +82,7 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
       order: project?.order ?? 0,
       impactFacts: project?.impactFacts ?? [],
       tagIds: project?.tags?.map((t) => t.id) ?? [],
+      skillIds: project?.skills?.map((s) => s.id) ?? [],
     },
   });
 
@@ -105,6 +109,13 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
       setValue('tagIds', [...current, tag.id]);
     }
     setCreateTagOpen(false);
+  }
+
+  function handleSkillCreated(skill: Skill) {
+    const current = getValues('skillIds') ?? [];
+    if (!current.includes(skill.id)) {
+      setValue('skillIds', [...current, skill.id]);
+    }
   }
 
   async function onSubmit(values: CreateProjectInput) {
@@ -342,6 +353,30 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
                 field.onChange(exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
               }}
               onCreateTag={() => setCreateTagOpen(true)}
+            />
+          )}
+        />
+      )}
+
+      {/* Skills */}
+      {!skillsLoading && allSkills.length > 0 && (
+        <Controller
+          name="skillIds"
+          control={control}
+          render={({ field }) => (
+            <TagCheckboxGroup
+              label="Skills"
+              tags={allSkills}
+              selectedIds={field.value ?? []}
+              onToggle={(skillId) => {
+                const current = field.value ?? [];
+                const exists = current.includes(skillId);
+                field.onChange(
+                  exists ? current.filter((id) => id !== skillId) : [...current, skillId]
+                );
+              }}
+              onCreateTag={() => {}}
+              createLabel=""
             />
           )}
         />

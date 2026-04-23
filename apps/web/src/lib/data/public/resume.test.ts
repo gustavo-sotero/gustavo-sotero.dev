@@ -30,6 +30,7 @@ describe('getResumeData', () => {
     apiServerGetPaginatedMock
       .mockResolvedValueOnce(makePaginatedResponse([]))
       .mockResolvedValueOnce(makePaginatedResponse([]))
+      .mockResolvedValueOnce(makePaginatedResponse([]))
       .mockResolvedValueOnce(makePaginatedResponse([]));
     apiServerGetMock.mockResolvedValueOnce([]);
 
@@ -44,6 +45,17 @@ describe('getResumeData', () => {
       .mockResolvedValueOnce(
         makePaginatedResponse([{ id: 2, title: 'Análise e Desenvolvimento de Sistemas' }])
       )
+      .mockResolvedValueOnce(
+        makePaginatedResponse([
+          {
+            id: 5,
+            name: 'TypeScript',
+            category: 'language',
+            expertiseLevel: 3,
+            isHighlighted: true,
+          },
+        ])
+      )
       .mockResolvedValueOnce(makePaginatedResponse([{ id: 3, title: 'Projeto destaque' }]));
     apiServerGetMock.mockResolvedValueOnce([{ id: 4, name: 'TypeScript', category: 'language' }]);
 
@@ -53,6 +65,7 @@ describe('getResumeData', () => {
     expect(result.data.experience.length).toBe(1);
     expect(result.data.education.length).toBe(1);
     expect(result.data.projects.length).toBe(1);
+    expect(result.data.skills.length).toBe(1);
     expect(result.data.tags.length).toBe(1);
   });
 
@@ -66,6 +79,7 @@ describe('getResumeData', () => {
       .mockResolvedValueOnce(
         makePaginatedResponse([{ id: 2, title: 'Análise e Desenvolvimento de Sistemas' }])
       )
+      .mockResolvedValueOnce(makePaginatedResponse([]))
       .mockResolvedValueOnce(
         makePaginatedResponse([
           { id: 3, title: 'Projeto destaque', impactFacts: ['Reduziu latência em 40%'] },
@@ -88,6 +102,7 @@ describe('getResumeData', () => {
       .mockResolvedValueOnce(
         makePaginatedResponse([{ id: 2, title: 'Análise e Desenvolvimento de Sistemas' }])
       )
+      .mockResolvedValueOnce(makePaginatedResponse([]))
       .mockResolvedValueOnce(makePaginatedResponse([{ id: 3, title: 'Projeto destaque' }]));
     apiServerGetMock.mockResolvedValueOnce([{ id: 4, name: 'TypeScript', category: 'language' }]);
 

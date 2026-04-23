@@ -1,7 +1,7 @@
 'use client';
 
 import { SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons';
-import type { Tag, TagCategory } from '@portfolio/shared';
+import type { Skill, SkillCategory } from '@portfolio/shared';
 import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 import { Mail, Star } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
@@ -26,42 +26,34 @@ const HeroBackground = dynamic(() => import('./HeroBackground').then((m) => m.He
 });
 
 const FALLBACK_STACK = ['TypeScript', 'Bun', 'Next.js', 'PostgreSQL', 'Docker'];
-const CATEGORY_ORDER: TagCategory[] = [
-  'language',
-  'framework',
-  'tool',
-  'db',
-  'cloud',
-  'infra',
-  'other',
-];
+const CATEGORY_ORDER: SkillCategory[] = ['language', 'framework', 'tool', 'db', 'cloud', 'infra'];
 
 interface StackBadge {
   name: string;
   isHighlighted: boolean;
 }
 
-function pickStackBadges(tags: Tag[], count = 5): StackBadge[] {
-  return [...tags]
+function pickStackBadges(skills: Skill[], count = 5): StackBadge[] {
+  return [...skills]
     .sort(
       (a, b) =>
         Number(b.isHighlighted) - Number(a.isHighlighted) ||
         CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category)
     )
     .slice(0, count)
-    .map((t) => ({ name: t.name, isHighlighted: !!t.isHighlighted }));
+    .map((s) => ({ name: s.name, isHighlighted: s.isHighlighted }));
 }
 
 interface HeroSectionProps {
-  tags?: Tag[];
+  skills?: Skill[];
   experienceLabel: string;
 }
 
-export function HeroSection({ tags = [], experienceLabel }: HeroSectionProps) {
+export function HeroSection({ skills = [], experienceLabel }: HeroSectionProps) {
   const prefersReducedMotion = useReducedMotion();
   const stack: StackBadge[] =
-    tags.length > 0
-      ? pickStackBadges(tags)
+    skills.length > 0
+      ? pickStackBadges(skills)
       : FALLBACK_STACK.map((name) => ({ name, isHighlighted: false }));
   const terminalStack = stack.map((t) => (t.isHighlighted ? `${t.name} ★` : t.name));
   return (

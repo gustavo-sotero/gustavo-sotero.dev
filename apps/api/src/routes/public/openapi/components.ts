@@ -241,6 +241,35 @@ export const openApiComponents = {
         updatedAt: { type: 'string', format: 'date-time' },
       },
     },
+    Skill: {
+      type: 'object',
+      description: 'A portfolio skill from the canonical skill catalog.',
+      required: ['id', 'name', 'slug', 'category', 'expertiseLevel', 'isHighlighted'],
+      properties: {
+        id: { type: 'integer', example: 1 },
+        name: { type: 'string', example: 'TypeScript' },
+        slug: { type: 'string', example: 'typescript' },
+        category: {
+          type: 'string',
+          enum: ['language', 'framework', 'tool', 'db', 'cloud', 'infra'],
+          example: 'language',
+        },
+        iconKey: { type: 'string', nullable: true, example: 'si:SiTypescript' },
+        expertiseLevel: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 3,
+          example: 3,
+          description: 'Proficiency: 1 = familiar, 2 = proficient, 3 = expert',
+        },
+        isHighlighted: {
+          type: 'boolean',
+          example: true,
+          description: 'Whether this skill is featured in the hero/stack section.',
+        },
+        createdAt: { type: 'string', format: 'date-time' },
+      },
+    },
   },
   parameters: {
     page: {

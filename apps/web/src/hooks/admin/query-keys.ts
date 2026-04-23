@@ -36,4 +36,7 @@ export const adminKeys = {
   aiPostGenerationConfig: () => ['admin', 'ai-post-generation', 'config'] as const,
   aiPostGenerationModels: (params?: object) =>
     ['admin', 'ai-post-generation', 'models', params ?? {}] as const,
+
+  skills: (params?: object) => ['admin', 'skills', params ?? {}] as const,
+  skill: (id: number) => ['admin', 'skill', id] as const,
 } as const;

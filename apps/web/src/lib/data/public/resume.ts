@@ -1,5 +1,5 @@
 import 'server-only';
-import type { Education, Experience, Project, Tag } from '@portfolio/shared';
+import type { Education, Experience, Project, Skill, Tag } from '@portfolio/shared';
 import { cacheLife, cacheTag } from 'next/cache';
 import { apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';
@@ -7,12 +7,14 @@ import {
   TAG_EDUCATION_LIST,
   TAG_EXPERIENCE_LIST,
   TAG_PROJECTS_LIST,
+  TAG_SKILLS_LIST,
   TAG_TAGS_LIST,
 } from './cache-tags';
 
 export interface ResumeDataPayload {
   experience: Experience[];
   education: Education[];
+  skills: Skill[];
   tags: Tag[];
   projects: Project[];
 }
@@ -24,6 +26,7 @@ export type ResumeLoaderResult =
 const EMPTY_RESUME_DATA: ResumeDataPayload = {
   experience: [],
   education: [],
+  skills: [],
   tags: [],
   projects: [],
 };
@@ -32,11 +35,17 @@ const EMPTY_RESUME_DATA: ResumeDataPayload = {
 export async function getResumeData(): Promise<ResumeLoaderResult> {
   'use cache';
   cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
-  cacheTag(TAG_EXPERIENCE_LIST, TAG_EDUCATION_LIST, TAG_TAGS_LIST, TAG_PROJECTS_LIST);
+  cacheTag(
+    TAG_EXPERIENCE_LIST,
+    TAG_EDUCATION_LIST,
+    TAG_TAGS_LIST,
+    TAG_PROJECTS_LIST,
+    TAG_SKILLS_LIST
+  );
 
   let degraded = false;
 
-  const [experienceRes, educationRes, tags, projectsRes] = await Promise.all([
+  const [experienceRes, educationRes, skillsRes, tags, projectsRes] = await Promise.all([
     apiServerGetPaginated<Experience>('/experience?status=published&perPage=20').catch((err) => {
       degraded = true;
       logServerError('data:resume', 'Failed to fetch experience', {
@@ -51,8 +60,14 @@ export async function getResumeData(): Promise<ResumeLoaderResult> {
       });
       return { data: [] as Education[] };
     }),
-    apiServerGet<Tag[]>('/tags?source=project').catch((err) => {
+    apiServerGetPaginated<Skill>('/skills?perPage=100').catch((err) => {
       degraded = true;
+      logServerError('data:resume', 'Failed to fetch skills', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return { data: [] as Skill[] };
+    }),
+    apiServerGet<Tag[]>('/tags?source=project').catch((err) => {
       logServerError('data:resume', 'Failed to fetch tags', {
         error: err instanceof Error ? err.message : String(err),
       });
@@ -72,6 +87,7 @@ export async function getResumeData(): Promise<ResumeLoaderResult> {
   const data: ResumeDataPayload = {
     experience: experienceRes.data,
     education: educationRes.data,
+    skills: Array.isArray(skillsRes.data) ? skillsRes.data : [],
     tags: Array.isArray(tags) ? tags : [],
     projects: projectsRes.data,
   };

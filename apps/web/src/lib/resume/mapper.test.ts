@@ -98,6 +98,7 @@ describe('resume mapper timestamp contract', () => {
     const base = {
       experience: [],
       education: [],
+      skills: [],
       tags: [],
       projects: [],
     };
@@ -122,6 +123,7 @@ describe('resume mapper timestamp contract', () => {
     const opts = {
       experience: [],
       education: [],
+      skills: [],
       tags: [],
       projects: [],
       now: new Date('2026-06-15T12:00:00.000Z'),
@@ -142,6 +144,7 @@ describe('resume mapper experience tags', () => {
     const resume = buildResumeViewModel({
       experience,
       education: [createEducation()],
+      skills: [],
       tags,
       projects: [createProject()],
       now: new Date('2026-02-01T00:00:00.000Z'),
