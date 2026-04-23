@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { apiServerGetPaginatedMock, apiServerGetMock } = vi.hoisted(() => ({
+const { apiServerGetPaginatedMock } = vi.hoisted(() => ({
   apiServerGetPaginatedMock: vi.fn(),
-  apiServerGetMock: vi.fn(),
 }));
 
 vi.mock('@/lib/api.server', () => ({
   apiServerGetPaginated: apiServerGetPaginatedMock,
-  apiServerGet: apiServerGetMock,
 }));
 
 vi.mock('next/cache', () => ({
@@ -26,17 +24,28 @@ describe('getResumeData', () => {
     vi.clearAllMocks();
   });
 
-  it('fetches tags from /tags?source=project', async () => {
+  it('fetches experience, education, skills, and featured projects in parallel', async () => {
     apiServerGetPaginatedMock
       .mockResolvedValueOnce(makePaginatedResponse([]))
       .mockResolvedValueOnce(makePaginatedResponse([]))
       .mockResolvedValueOnce(makePaginatedResponse([]))
       .mockResolvedValueOnce(makePaginatedResponse([]));
-    apiServerGetMock.mockResolvedValueOnce([]);
 
     await getResumeData();
 
-    expect(apiServerGetMock).toHaveBeenCalledWith('/tags?source=project');
+    expect(apiServerGetPaginatedMock).toHaveBeenNthCalledWith(
+      1,
+      '/experience?status=published&perPage=20'
+    );
+    expect(apiServerGetPaginatedMock).toHaveBeenNthCalledWith(
+      2,
+      '/education?status=published&perPage=20'
+    );
+    expect(apiServerGetPaginatedMock).toHaveBeenNthCalledWith(3, '/skills?perPage=100');
+    expect(apiServerGetPaginatedMock).toHaveBeenNthCalledWith(
+      4,
+      '/projects?status=published&featured=true&perPage=20'
+    );
   });
 
   it('returns ok state when all sources succeed', async () => {
@@ -57,7 +66,6 @@ describe('getResumeData', () => {
         ])
       )
       .mockResolvedValueOnce(makePaginatedResponse([{ id: 3, title: 'Projeto destaque' }]));
-    apiServerGetMock.mockResolvedValueOnce([{ id: 4, name: 'TypeScript', category: 'language' }]);
 
     const result = await getResumeData();
 
@@ -66,7 +74,6 @@ describe('getResumeData', () => {
     expect(result.data.education.length).toBe(1);
     expect(result.data.projects.length).toBe(1);
     expect(result.data.skills.length).toBe(1);
-    expect(result.data.tags.length).toBe(1);
   });
 
   it('passes impactFacts through for experience and projects', async () => {
@@ -85,7 +92,6 @@ describe('getResumeData', () => {
           { id: 3, title: 'Projeto destaque', impactFacts: ['Reduziu latência em 40%'] },
         ])
       );
-    apiServerGetMock.mockResolvedValueOnce([]);
 
     const result = await getResumeData();
 
@@ -104,7 +110,6 @@ describe('getResumeData', () => {
       )
       .mockResolvedValueOnce(makePaginatedResponse([]))
       .mockResolvedValueOnce(makePaginatedResponse([{ id: 3, title: 'Projeto destaque' }]));
-    apiServerGetMock.mockResolvedValueOnce([{ id: 4, name: 'TypeScript', category: 'language' }]);
 
     const result = await getResumeData();
 
@@ -112,6 +117,5 @@ describe('getResumeData', () => {
     expect(result.data.experience).toEqual([]);
     expect(result.data.education.length).toBe(1);
     expect(result.data.projects.length).toBe(1);
-    expect(result.data.tags.length).toBe(1);
   });
 });

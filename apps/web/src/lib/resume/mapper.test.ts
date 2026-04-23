@@ -111,7 +111,6 @@ describe('resume mapper timestamp contract', () => {
       experience: [],
       education: [],
       skills: [],
-      tags: [],
       projects: [],
     };
 
@@ -136,7 +135,6 @@ describe('resume mapper timestamp contract', () => {
       experience: [],
       education: [],
       skills: [],
-      tags: [],
       projects: [],
       now: new Date('2026-06-15T12:00:00.000Z'),
     };
@@ -157,7 +155,6 @@ describe('resume mapper experience tags', () => {
       experience,
       education: [createEducation()],
       skills: [],
-      tags,
       projects: [createProject()],
       now: new Date('2026-02-01T00:00:00.000Z'),
     });
@@ -169,7 +166,6 @@ describe('resume mapper experience tags', () => {
     const resume = buildResumeViewModel({
       experience: [createExperience({ tags: undefined })],
       education: [],
-      tags: [],
       projects: [],
       now: new Date('2026-02-01T00:00:00.000Z'),
     });
@@ -184,7 +180,6 @@ describe('resume mapper impactFacts', () => {
     const resume = buildResumeViewModel({
       experience: [createExperience({ impactFacts: facts })],
       education: [],
-      tags: [],
       projects: [],
       now: new Date('2026-02-01T00:00:00.000Z'),
     });
@@ -196,7 +191,6 @@ describe('resume mapper impactFacts', () => {
     const resume = buildResumeViewModel({
       experience: [createExperience({ impactFacts: undefined })],
       education: [],
-      tags: [],
       projects: [],
       now: new Date('2026-02-01T00:00:00.000Z'),
     });
@@ -209,7 +203,6 @@ describe('resume mapper impactFacts', () => {
     const resume = buildResumeViewModel({
       experience: [],
       education: [],
-      tags: [],
       projects: [createProject({ impactFacts: facts })],
       now: new Date('2026-02-01T00:00:00.000Z'),
     });
@@ -221,7 +214,6 @@ describe('resume mapper impactFacts', () => {
     const resume = buildResumeViewModel({
       experience: [],
       education: [],
-      tags: [],
       projects: [createProject({ impactFacts: undefined })],
       now: new Date('2026-02-01T00:00:00.000Z'),
     });
@@ -235,7 +227,6 @@ describe('resume mapper skill expertise', () => {
     const resume = buildResumeViewModel({
       experience: [],
       education: [],
-      tags: [],
       projects: [],
       skills: [
         createSkill({ id: 1, name: 'Node.js', category: 'tool', expertiseLevel: 2 }),

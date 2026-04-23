@@ -3,20 +3,19 @@
  * This file intentionally does NOT import 'server-only' so it can be used
  * inside client components (e.g. HeroResumeDownloadButtonInner).
  */
-import type { Education, Experience, Project, Skill, Tag } from '@portfolio/shared';
-import { apiGet, apiGetPaginated } from '@/lib/api';
+import type { Education, Experience, Project, Skill } from '@portfolio/shared';
+import { apiGetPaginated } from '@/lib/api';
 
 export interface ResumeDataPayload {
   experience: Experience[];
   education: Education[];
   skills: Skill[];
-  tags: Tag[];
   projects: Project[];
 }
 
 /** Fetches all resume data from the public API. For use in client components only. */
 export async function getResumeDataClient(): Promise<ResumeDataPayload> {
-  const [expRes, eduRes, skillsRes, tagsRes, projRes] = await Promise.all([
+  const [expRes, eduRes, skillsRes, projRes] = await Promise.all([
     apiGetPaginated<Experience>('/experience?status=published&perPage=20').catch(() => ({
       data: [] as Experience[],
     })),
@@ -26,7 +25,6 @@ export async function getResumeDataClient(): Promise<ResumeDataPayload> {
     apiGetPaginated<Skill>('/skills?perPage=100').catch(() => ({
       data: [] as Skill[],
     })),
-    apiGet<Tag[]>('/tags?source=project').catch(() => undefined),
     apiGetPaginated<Project>('/projects?status=published&featured=true&perPage=20').catch(() => ({
       data: [] as Project[],
     })),
@@ -36,7 +34,6 @@ export async function getResumeDataClient(): Promise<ResumeDataPayload> {
     experience: expRes.data ?? [],
     education: eduRes.data ?? [],
     skills: Array.isArray(skillsRes?.data) ? (skillsRes.data as Skill[]) : [],
-    tags: Array.isArray(tagsRes?.data) ? (tagsRes.data as Tag[]) : [],
     projects: projRes.data ?? [],
   };
 }

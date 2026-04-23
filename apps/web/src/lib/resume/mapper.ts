@@ -1,4 +1,4 @@
-import type { Education, Experience, Project, Skill, Tag } from '@portfolio/shared';
+import type { Education, Experience, Project, Skill } from '@portfolio/shared';
 import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 
 // ---------------------------------------------------------------------------
@@ -159,7 +159,6 @@ export function buildResumeViewModel(opts: {
   experience: Experience[];
   education: Education[];
   skills?: Skill[];
-  tags: Tag[];
   projects: Project[];
   now: Date;
 }): ResumeViewModel {

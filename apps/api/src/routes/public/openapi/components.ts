@@ -145,6 +145,11 @@ export const openApiComponents = {
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
         tags: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
+        skills: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/Skill' },
+          description: 'Skills linked to the project from the canonical skill catalog.',
+        },
       },
     },
     Comment: {
@@ -210,6 +215,12 @@ export const openApiComponents = {
         credentialUrl: { type: 'string', nullable: true },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
+        tags: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
+        skills: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/Skill' },
+          description: 'Skills linked to the experience entry from the canonical skill catalog.',
+        },
       },
     },
     Education: {

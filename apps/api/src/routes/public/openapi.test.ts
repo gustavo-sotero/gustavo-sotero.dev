@@ -207,6 +207,26 @@ describe('openapi routes', () => {
     expect(updateTagProps).not.toHaveProperty('isHighlighted');
   });
 
+  it('GET /doc/spec documents project and experience skill relations on public schemas', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      components: {
+        schemas: Record<string, { properties?: Record<string, unknown> }>;
+      };
+    };
+
+    const projectSchema = body.components.schemas.Project;
+    const experienceSchema = body.components.schemas.Experience;
+
+    expect(projectSchema?.properties).toHaveProperty('tags');
+    expect(projectSchema?.properties).toHaveProperty('skills');
+    expect(experienceSchema?.properties).toHaveProperty('tags');
+    expect(experienceSchema?.properties).toHaveProperty('skills');
+  });
+
   it('GET /doc/spec documents admin project and experience write contracts truthfully', async () => {
     const app = new Hono();
     app.route('/', openApiRouter);
@@ -267,20 +287,30 @@ describe('openapi routes', () => {
     const projectCreate =
       body.paths['/admin/projects']?.post?.requestBody?.content?.['application/json']?.schema;
     const postCreate = body.paths['/admin/posts']?.post;
+    const postCreateProps =
+      body.paths['/admin/posts']?.post?.requestBody?.content?.['application/json']?.schema
+        ?.properties ?? {};
     const experienceCreate =
       body.paths['/admin/experience']?.post?.requestBody?.content?.['application/json']?.schema;
     const experiencePath = body.paths['/admin/experience/{identifier}'];
     const readyPath = body.paths['/ready']?.get;
 
     expect(projectCreate?.properties?.tagIds?.uniqueItems).toBe(true);
+    expect(projectCreate?.properties?.skillIds?.uniqueItems).toBe(true);
     expect(projectCreate?.properties?.featured?.default).toBe(false);
     expect(projectCreate?.properties?.impactFacts?.maxItems).toBe(6);
     expect(postCreate?.responses && Object.hasOwn(postCreate.responses, '409')).toBe(true);
+    expect(postCreateProps).not.toHaveProperty('skillIds');
     expect(experienceCreate?.properties?.impactFacts?.maxItems).toBe(6);
+    expect(experienceCreate?.properties?.skillIds?.uniqueItems).toBe(true);
     expect(experiencePath?.get?.summary).toBe('Get experience entry by slug (admin)');
     expect(
       experiencePath?.patch?.requestBody?.content?.['application/json']?.schema?.properties?.tagIds
         ?.uniqueItems
+    ).toBe(true);
+    expect(
+      experiencePath?.patch?.requestBody?.content?.['application/json']?.schema?.properties
+        ?.skillIds?.uniqueItems
     ).toBe(true);
     expect(
       experiencePath?.patch?.requestBody?.content?.['application/json']?.schema?.properties
