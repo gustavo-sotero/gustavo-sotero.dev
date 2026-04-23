@@ -36,12 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  useAdminTags,
-  useCreateTag,
-  useDeleteTag,
-  useUpdateTag,
-} from '@/hooks/admin/use-admin-tags';
+import { useAdminTags, useDeleteTag, useUpdateTag } from '@/hooks/admin/use-admin-tags';
 import {
   ALL_TAG_CATEGORIES,
   CATEGORY_COLORS,

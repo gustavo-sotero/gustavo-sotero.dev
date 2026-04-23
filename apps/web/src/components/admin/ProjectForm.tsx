@@ -41,6 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
+import { CreateSkillDialogForm } from './CreateSkillDialogForm';
 import { CreateTagDialogForm } from './CreateTagDialogForm';
 import { ImpactFactsEditor } from './ImpactFactsEditor';
 import { MarkdownEditor } from './MarkdownEditor';
@@ -59,6 +60,7 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
   const updateMutation = useUpdateProject(project?.id ?? 0, project?.slug);
   const [autoSlug, setAutoSlug] = useState(mode === 'create');
   const [createTagOpen, setCreateTagOpen] = useState(false);
+  const [createSkillOpen, setCreateSkillOpen] = useState(false);
 
   const {
     register,
@@ -375,8 +377,8 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
                   exists ? current.filter((id) => id !== skillId) : [...current, skillId]
                 );
               }}
-              onCreateTag={() => {}}
-              createLabel=""
+              onCreateTag={() => setCreateSkillOpen(true)}
+              createLabel="Criar skill"
             />
           )}
         />
@@ -406,6 +408,12 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
         open={createTagOpen}
         onClose={() => setCreateTagOpen(false)}
         onTagCreated={handleTagCreated}
+      />
+      {/* Inline skill creation — opens without leaving the page */}
+      <CreateSkillDialogForm
+        open={createSkillOpen}
+        onClose={() => setCreateSkillOpen(false)}
+        onSkillCreated={handleSkillCreated}
       />
     </form>
   );

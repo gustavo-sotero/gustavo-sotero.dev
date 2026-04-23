@@ -5,15 +5,15 @@
   "private": true,
   "scripts": {
     "dev": "bun --env-file ../../.env --watch src/index.ts",
-    "start": "bun --env-file ../../.env run src/index.ts",
+    "start": "bun run --env-file ../../.env src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "echo 'No build step — Bun runs TS directly'",
     "db:generate": "bunx drizzle-kit generate",
-    "db:seed": "bun --env-file ../../.env run src/db/seed.ts",
-    "db:migrate": "bun --env-file ../../.env run src/db/migrate.ts",
-    "db:audit:schema": "bun --env-file ../../.env run src/db/audit-schema-parity.ts",
-    "db:backfill:comments": "bun --env-file ../../.env run src/db/backfill-comment-rendered-content.ts",
+    "db:seed": "bun run --env-file ../../.env src/db/seed.ts",
+    "db:migrate": "bun run --env-file ../../.env src/db/migrate.ts",
+    "db:audit:schema": "bun run --env-file ../../.env src/db/audit-schema-parity.ts",
+    "db:backfill:comments": "bun run --env-file ../../.env src/db/backfill-comment-rendered-content.ts",
     "db:studio": "bunx drizzle-kit studio"
   },
   "dependencies": {

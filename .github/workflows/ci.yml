@@ -138,10 +138,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/portfolio_smoke
           NODE_ENV: test
-        run: bun --no-env-file run apps/api/src/db/migrate.ts
+        run: bun run --no-env-file apps/api/src/db/migrate.ts
 
       - name: Run schema parity audit
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/portfolio_smoke
           NODE_ENV: test
-        run: bun --no-env-file run apps/api/src/db/audit-schema-parity.ts
+        run: bun run --no-env-file apps/api/src/db/audit-schema-parity.ts

@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
+import { CreateSkillDialogForm } from './CreateSkillDialogForm';
 import { CreateTagDialogForm } from './CreateTagDialogForm';
 import { ImpactFactsEditor } from './ImpactFactsEditor';
 import { TagCheckboxGroup } from './TagCheckboxGroup';
@@ -132,6 +133,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
   const updateMutation = useUpdateExperience(experience?.id ?? 0);
   const [autoSlug, setAutoSlug] = useState(mode === 'create');
   const [createTagOpen, setCreateTagOpen] = useState(false);
+  const [createSkillOpen, setCreateSkillOpen] = useState(false);
   const { data: allTags = [], isLoading: tagsLoading } = useAdminTags();
   const { data: allSkills = [], isLoading: skillsLoading } = useAdminSkills();
 
@@ -473,8 +475,8 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
                   exists ? current.filter((id) => id !== skillId) : [...current, skillId]
                 );
               }}
-              onCreateTag={() => {}}
-              createLabel=""
+              onCreateTag={() => setCreateSkillOpen(true)}
+              createLabel="Criar skill"
             />
           )}
         />
@@ -507,6 +509,11 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
         open={createTagOpen}
         onClose={() => setCreateTagOpen(false)}
         onTagCreated={handleTagCreated}
+      />
+      <CreateSkillDialogForm
+        open={createSkillOpen}
+        onClose={() => setCreateSkillOpen(false)}
+        onSkillCreated={handleSkillCreated}
       />
     </form>
   );

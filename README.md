@@ -212,7 +212,7 @@ Os scripts de banco de dados têm contratos de variáveis de ambiente intenciona
 | **Scripts de BD** (`db:migrate`, `db:seed`, `db:audit:schema`, `db:backfill:comments`) | Apenas `DATABASE_URL` (+ `NODE_ENV` opcional) |
 | **Runtime da API** (`dev:api`, `start`) | Contrato completo — todas as variáveis em `.env` |
 
-Os scripts de BD locais (`bun run db:*`) passam `--env-file .env` explicitamente para carregar o `.env` do repositório. Em CI, os scripts de BD são invocados diretamente com `bun --no-env-file run ...` e apenas a variável necessária é injetada via `env:` no step do workflow — sem depender da leitura automática de `.env`.
+Os scripts de BD locais (`bun run db:*`) passam `--env-file .env` explicitamente para carregar o `.env` do repositório. Em CI, os scripts de BD são invocados diretamente com `bun run --no-env-file ...` e apenas a variável necessária é injetada via `env:` no step do workflow — sem depender da leitura automática de `.env`.
 
 Isso garante que migrações e audits de schema possam rodar em pipelines de CI que provisionam apenas PostgreSQL, sem precisar fornecer segredos irrelevantes como Redis, OAuth, S3 ou Telegram.
 
@@ -286,7 +286,7 @@ A paridade de schema verifica se os objetos críticos do banco de dados existem 
 
 ```bash
 # A partir da raiz do repositório:
-bun --env-file .env run apps/api/src/db/audit-schema-parity.ts
+bun run --env-file .env apps/api/src/db/audit-schema-parity.ts
 # Saída: ✅ Schema parity OK (exit 0)
 # Ou: ❌ Schema parity FAILED — lista de objetos ausentes (exit 1)
 ```
@@ -325,7 +325,7 @@ Significa que o banco é alcançável mas um ou mais objetos obrigatórios estã
 1. Confirme que o container está usando a imagem correta (tag/commit SHA)
 2. Confirme que `DATABASE_URL` aponta para o banco de destino pretendido
 3. Execute as migrações manualmente: `bun run db:migrate`
-4. Rode o audit de paridade: `bun --env-file .env run apps/api/src/db/audit-schema-parity.ts`
+4. Rode o audit de paridade: `bun run --env-file .env apps/api/src/db/audit-schema-parity.ts`
 5. Se o audit ainda falhar após as migrações, investigue `__drizzle_migrations` — pode haver uma entrada de migração faltando ou que não foi aplicada com sucesso
 
 ### Erros de tagIds em endpoints admin

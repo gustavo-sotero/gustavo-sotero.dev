@@ -1,4 +1,4 @@
-import { projectSkills, projects, projectTags, skills, tags } from '@portfolio/shared/db/schema';
+import { projects, projectTags, tags } from '@portfolio/shared/db/schema';
 import { and, count, eq, exists, isNull, type SQL, sql } from 'drizzle-orm';
 import { db } from '../config/db';
 import { buildPaginationMeta, parsePagination } from '../lib/pagination';

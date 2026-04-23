@@ -7,7 +7,7 @@
  * entries in the public profile, home, or résumé loaders.
  *
  * Usage:
- *   bun --env-file ../../.env run src/db/audit-experience.ts
+ *   bun run --env-file ../../.env src/db/audit-experience.ts
  *
  * Output:
  *   Prints a table of offending rows (id, slug, role, company, startDate).

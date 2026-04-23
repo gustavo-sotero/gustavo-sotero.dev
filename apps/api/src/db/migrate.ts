@@ -69,7 +69,7 @@ export async function runMigrations(): Promise<void> {
 
 // Allow running this file directly. Local use should pass an explicit env file
 // (for example via `bun run db:migrate` from the repo root); CI should inject
-// DATABASE_URL and use `bun --no-env-file run apps/api/src/db/migrate.ts`.
+// DATABASE_URL and use `bun run --no-env-file apps/api/src/db/migrate.ts`.
 if (import.meta.main) {
   const { setupLogger } = await import('../config/logger');
   await setupLogger();
