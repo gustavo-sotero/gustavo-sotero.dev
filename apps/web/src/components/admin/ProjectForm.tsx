@@ -361,7 +361,7 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
       )}
 
       {/* Skills */}
-      {!skillsLoading && allSkills.length > 0 && (
+      {!skillsLoading && (
         <Controller
           name="skillIds"
           control={control}

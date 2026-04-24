@@ -2,6 +2,16 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostForm } from './PostForm';
 
+var adminTagsData = [
+  {
+    id: 1,
+    name: 'TypeScript',
+    slug: 'typescript',
+    category: 'language',
+    iconKey: 'si:SiTypescript',
+  },
+];
+
 const pushMock = vi.fn();
 const mutateAsyncMock = vi.fn();
 let onTagCreatedCb:
@@ -30,15 +40,7 @@ vi.mock('@portfolio/shared', async () => {
 
 vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useAdminTags: () => ({
-    data: [
-      {
-        id: 1,
-        name: 'TypeScript',
-        slug: 'typescript',
-        category: 'language',
-        iconKey: 'si:SiTypescript',
-      },
-    ],
+    data: adminTagsData,
     isLoading: false,
   }),
 }));
@@ -106,6 +108,15 @@ describe('PostForm', () => {
     mutateAsyncMock.mockReset();
     pushMock.mockReset();
     onTagCreatedCb = undefined;
+    adminTagsData = [
+      {
+        id: 1,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        iconKey: 'si:SiTypescript',
+      },
+    ];
   });
 
   afterEach(() => {
@@ -202,6 +213,15 @@ describe('PostForm', () => {
   it('renders existing tags as native checkboxes', () => {
     render(<PostForm mode="create" />);
     expect(screen.getByRole('checkbox', { name: 'TypeScript' })).toBeInTheDocument();
+  });
+
+  it('keeps create tag action visible when the registry is empty', () => {
+    adminTagsData = [];
+
+    render(<PostForm mode="create" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar tag/i }));
+    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
   });
 
   // Scheduling feature tests

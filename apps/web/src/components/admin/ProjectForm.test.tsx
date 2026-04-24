@@ -10,6 +10,28 @@ globalThis.ResizeObserver = class ResizeObserver {
 
 import { ProjectForm } from './ProjectForm';
 
+var adminTagsData = [
+  {
+    id: 1,
+    name: 'Docker',
+    slug: 'docker',
+    category: 'infra',
+    iconKey: 'si:SiDocker',
+  },
+];
+
+var adminSkillsData = [
+  {
+    id: 10,
+    name: 'TypeScript',
+    slug: 'typescript',
+    category: 'language',
+    expertiseLevel: 2,
+    isHighlighted: false,
+    iconKey: 'si:SiTypescript',
+  },
+];
+
 const pushMock = vi.fn();
 const mutateAsyncMock = vi.fn();
 let onTagCreatedCb:
@@ -28,17 +50,9 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@portfolio/shared', async () => {
-  const actual = await vi.importActual<typeof import('@portfolio/shared')>('@portfolio/shared');
-  return {
-    ...actual,
-    generateSlug: () => 'projeto-de-teste',
-  };
-});
-
 vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useAdminTags: () => ({
-    data: [{ id: 1, name: 'Docker', slug: 'docker', category: 'infra', iconKey: 'si:SiDocker' }],
+    data: adminTagsData,
     isLoading: false,
   }),
 }));
@@ -85,17 +99,7 @@ vi.mock('./CreateTagDialogForm', () => ({
 
 vi.mock('@/hooks/admin/use-admin-skills', () => ({
   useAdminSkills: () => ({
-    data: [
-      {
-        id: 10,
-        name: 'TypeScript',
-        slug: 'typescript',
-        category: 'language',
-        expertiseLevel: 2,
-        isHighlighted: false,
-        iconKey: 'si:SiTypescript',
-      },
-    ],
+    data: adminSkillsData,
     isLoading: false,
   }),
 }));
@@ -163,6 +167,26 @@ describe('ProjectForm', () => {
     mutateAsyncMock.mockReset();
     pushMock.mockReset();
     onTagCreatedCb = undefined;
+    adminTagsData = [
+      {
+        id: 1,
+        name: 'Docker',
+        slug: 'docker',
+        category: 'infra',
+        iconKey: 'si:SiDocker',
+      },
+    ];
+    adminSkillsData = [
+      {
+        id: 10,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        expertiseLevel: 2,
+        isHighlighted: false,
+        iconKey: 'si:SiTypescript',
+      },
+    ];
   });
 
   afterEach(() => {
@@ -223,6 +247,19 @@ describe('ProjectForm', () => {
     expect(screen.getByRole('checkbox', { name: 'Docker' })).toBeInTheDocument();
   });
 
+  it('keeps create tag and skill actions visible when registries are empty', () => {
+    adminTagsData = [];
+    adminSkillsData = [];
+
+    render(<ProjectForm mode="create" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar tag/i }));
+    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar skill/i }));
+    expect(screen.getByTestId('create-skill-dialog')).toBeInTheDocument();
+  });
+
   it('auto-generates slug from title change in create mode', async () => {
     render(<ProjectForm mode="create" />);
 
@@ -268,7 +305,7 @@ describe('ProjectForm', () => {
     fireEvent.click(screen.getByText('Gerar auto'));
 
     await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: /Slug/i })).toHaveValue('projeto-de-teste');
+      expect(screen.getByRole('textbox', { name: /Slug/i })).toHaveValue('meu-projeto');
     });
   });
 

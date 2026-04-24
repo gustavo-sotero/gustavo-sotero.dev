@@ -2,15 +2,27 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExperienceForm } from './ExperienceForm';
 
-const { generateSlugMock } = vi.hoisted(() => ({
-  generateSlugMock: vi.fn((value: string) =>
-    value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-  ),
-}));
+var adminTagsData = [
+  {
+    id: 1,
+    name: 'TypeScript',
+    slug: 'typescript',
+    category: 'language',
+    iconKey: 'si:SiTypescript',
+  },
+];
+
+var adminSkillsData = [
+  {
+    id: 10,
+    name: 'Docker',
+    slug: 'docker',
+    category: 'infra',
+    expertiseLevel: 2,
+    isHighlighted: false,
+    iconKey: 'si:SiDocker',
+  },
+];
 
 const pushMock = vi.fn();
 const mutateAsyncMock = vi.fn();
@@ -30,25 +42,9 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@portfolio/shared', async () => {
-  const actual = await vi.importActual<typeof import('@portfolio/shared')>('@portfolio/shared');
-  return {
-    ...actual,
-    generateSlug: generateSlugMock,
-  };
-});
-
 vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useAdminTags: () => ({
-    data: [
-      {
-        id: 1,
-        name: 'TypeScript',
-        slug: 'typescript',
-        category: 'language',
-        iconKey: 'si:SiTypescript',
-      },
-    ],
+    data: adminTagsData,
     isLoading: false,
   }),
 }));
@@ -94,17 +90,7 @@ vi.mock('./CreateTagDialogForm', () => ({
 
 vi.mock('@/hooks/admin/use-admin-skills', () => ({
   useAdminSkills: () => ({
-    data: [
-      {
-        id: 10,
-        name: 'Docker',
-        slug: 'docker',
-        category: 'infra',
-        expertiseLevel: 2,
-        isHighlighted: false,
-        iconKey: 'si:SiDocker',
-      },
-    ],
+    data: adminSkillsData,
     isLoading: false,
   }),
 }));
@@ -161,8 +147,27 @@ describe('ExperienceForm', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
     pushMock.mockReset();
-    generateSlugMock.mockClear();
     onTagCreatedCb = undefined;
+    adminTagsData = [
+      {
+        id: 1,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        iconKey: 'si:SiTypescript',
+      },
+    ];
+    adminSkillsData = [
+      {
+        id: 10,
+        name: 'Docker',
+        slug: 'docker',
+        category: 'infra',
+        expertiseLevel: 2,
+        isHighlighted: false,
+        iconKey: 'si:SiDocker',
+      },
+    ];
   });
 
   afterEach(() => {
@@ -208,6 +213,19 @@ describe('ExperienceForm', () => {
     expect(checkbox).toBeChecked();
   });
 
+  it('keeps create tag and skill actions visible when registries are empty', () => {
+    adminTagsData = [];
+    adminSkillsData = [];
+
+    render(<ExperienceForm mode="create" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar tag/i }));
+    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Criar skill/i }));
+    expect(screen.getByTestId('create-skill-dialog')).toBeInTheDocument();
+  });
+
   it('updates slug from role and company while auto slug is enabled', () => {
     render(<ExperienceForm mode="create" />);
 
@@ -215,7 +233,6 @@ describe('ExperienceForm', () => {
     fireEvent.change(screen.getByLabelText(/Empresa/i), { target: { value: 'Acme' } });
 
     expect(screen.getByLabelText('Slug')).toHaveValue('backend-engineer-acme');
-    expect(generateSlugMock).toHaveBeenLastCalledWith('Backend Engineer-Acme');
   });
 
   it('preserves manual slug edits after auto slug is disabled', () => {

@@ -438,7 +438,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
       />
 
       {/* Tags */}
-      {!tagsLoading && allTags.length > 0 && (
+      {!tagsLoading && (
         <Controller
           name="tagIds"
           control={control}
@@ -459,7 +459,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
       )}
 
       {/* Skills */}
-      {!skillsLoading && allSkills.length > 0 && (
+      {!skillsLoading && (
         <Controller
           name="skillIds"
           control={control}
