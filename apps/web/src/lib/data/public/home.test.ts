@@ -91,6 +91,15 @@ describe('getHomeFeaturedProjects', () => {
 describe('getHomeRecentPosts', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('requests manual ordering for the home posts carousel', async () => {
+    const post = { id: 2, title: 'Redis Post', slug: 'redis-post' };
+    apiServerGetPaginatedMock.mockResolvedValueOnce(makePaginatedResponse([post]));
+
+    await getHomeRecentPosts();
+
+    expect(apiServerGetPaginatedMock).toHaveBeenCalledWith('/posts?perPage=3&sort=manual');
+  });
+
   it('returns ok state with data when API responds with posts', async () => {
     const post = { id: 2, title: 'Redis Post', slug: 'redis-post' };
     apiServerGetPaginatedMock.mockResolvedValueOnce(makePaginatedResponse([post]));

@@ -43,7 +43,7 @@ export async function getHomeFeaturedProjects(): Promise<HomeLoaderResult<Projec
   }
 }
 
-/** Posts for the home section (max 3, manual relevance ordering). */
+/** Posts for the home section (max 3, admin-curated manual ordering). */
 export async function getHomeRecentPosts(): Promise<HomeLoaderResult<Post>> {
   'use cache';
   cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
@@ -53,7 +53,7 @@ export async function getHomeRecentPosts(): Promise<HomeLoaderResult<Post>> {
     const res = await apiServerGetPaginated<Post>('/posts?perPage=3&sort=manual');
     return res.data.length > 0 ? { state: 'ok', data: res.data } : { state: 'empty', data: [] };
   } catch (err) {
-    logServerError('data:home', 'Failed to fetch recent posts', {
+    logServerError('data:home', 'Failed to fetch featured home posts', {
       error: err instanceof Error ? err.message : String(err),
     });
     return { state: 'degraded' };

@@ -43,7 +43,7 @@ export default function HomePage() {
           </Suspense>
         </section>
 
-        <section id="posts" aria-label="Posts recentes">
+        <section id="posts" aria-label="Posts em destaque">
           <Suspense fallback={<RecentPostsSkeleton />}>
             <RecentPostsSection />
           </Suspense>

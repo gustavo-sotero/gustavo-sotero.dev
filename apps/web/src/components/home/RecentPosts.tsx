@@ -43,7 +43,7 @@ export function RecentPosts({ posts }: RecentPostsProps) {
       <div className="overflow-hidden sm:overflow-visible sm:px-12">
         <Carousel
           opts={{ align: 'start', loop: false }}
-          aria-label="Posts recentes"
+          aria-label="Posts em destaque"
           className="w-full"
         >
           <CarouselContent>

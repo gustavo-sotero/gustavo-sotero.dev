@@ -1,3 +1,4 @@
+import { render, screen } from '@testing-library/react';
 import { Children, isValidElement, type ReactElement, Suspense } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -78,5 +79,12 @@ describe('HomePage composition', () => {
 
     expect(heroNode?.type).toBe(HeroSectionWrapperMock);
     expect(heroNode?.type).not.toBe(Suspense);
+  });
+
+  it('labels the posts section as featured content to match manual ordering', () => {
+    render(HomePage() as ReactElement);
+
+    expect(screen.getByRole('region', { name: 'Posts em destaque' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Posts recentes' })).not.toBeInTheDocument();
   });
 });
