@@ -175,6 +175,15 @@ describe('canonicalizeSuggestedTagNames', () => {
     expect(postgresEntries).toHaveLength(1);
   });
 
+  it('deduplicates equivalent unknown names that only differ by diacritics', () => {
+    const result = canonicalizeSuggestedTagNames([
+      'Arquitetura Assíncrona',
+      'Arquitetura Assincrona',
+    ]);
+
+    expect(result).toEqual(['Arquitetura Assíncrona']);
+  });
+
   it('deduplicates variants with different casing', () => {
     const result = canonicalizeSuggestedTagNames(['JWT', 'jwt']);
     expect(result).toHaveLength(1);
