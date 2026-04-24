@@ -23,6 +23,7 @@ import {
   findManyTags,
   findTagById,
   findTagByName,
+  findTagBySlug,
   findTagsBySlugs,
   syncPostTags,
   syncProjectTags,
@@ -37,6 +38,15 @@ const LIST_TTL = 300; // 5 minutes
 
 function mapTagRow(row: Parameters<typeof toTagDto>[0]): Tag {
   return toTagDto(row) as Tag;
+}
+
+function isTagConflictError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('conflict') || message.includes('unique') || message.includes('duplicate key')
+  );
 }
 
 // ── Service methods ───────────────────────────────────────────────────────────
@@ -206,16 +216,18 @@ export async function resolveAiSuggestedTags(suggestedNames: string[]): Promise<
         resolvedTags.push(created);
       }
     } catch (err) {
-      // Race condition: another concurrent request created this tag first
-      if ((err as Error).message.includes('CONFLICT')) {
-        const recovered = await findTagByName(canonicalName);
+      // Race condition: another concurrent request created this tag first.
+      // Recover both from explicit name conflicts and raw DB unique violations.
+      if (isTagConflictError(err)) {
+        const recovered = (await findTagByName(canonicalName)) ?? (await findTagBySlug(slug));
         if (recovered && !seenIds.has(recovered.id)) {
           seenIds.add(recovered.id);
           resolvedTags.push(mapTagRow(recovered));
+          continue;
         }
-      } else {
-        throw err;
       }
+
+      throw err;
     }
   }
 

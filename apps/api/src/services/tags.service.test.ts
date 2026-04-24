@@ -6,6 +6,7 @@ const {
   findManyTagsMock,
   findTagByIdMock,
   findTagByNameMock,
+  findTagBySlugMock,
   tagNameExistsMock,
   tagSlugExistsMock,
   createTagMock,
@@ -21,6 +22,7 @@ const {
   findManyTagsMock: vi.fn(),
   findTagByIdMock: vi.fn(),
   findTagByNameMock: vi.fn(),
+  findTagBySlugMock: vi.fn(),
   tagNameExistsMock: vi.fn(),
   tagSlugExistsMock: vi.fn(),
   createTagMock: vi.fn(),
@@ -56,6 +58,7 @@ vi.mock('../repositories/tags.repo', () => ({
   findManyTags: findManyTagsMock,
   findTagById: findTagByIdMock,
   findTagByName: findTagByNameMock,
+  findTagBySlug: findTagBySlugMock,
   tagNameExists: tagNameExistsMock,
   tagSlugExists: tagSlugExistsMock,
   createTag: createTagMock,
@@ -83,6 +86,7 @@ describe('tags service', () => {
       fetcher()
     );
     tagSlugExistsMock.mockResolvedValue(false);
+    findTagBySlugMock.mockResolvedValue(null);
     findAllTagsForNormalizationMock.mockResolvedValue([]);
     findTagsBySlugsM.mockResolvedValue([]);
   });
@@ -489,6 +493,23 @@ describe('tags service', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ id: 5, name: 'Redis' });
+    });
+
+    it('recovers from a raw slug unique violation by refetching the winner by slug', async () => {
+      findTagsBySlugsM.mockResolvedValueOnce([]);
+      findTagByNameMock.mockResolvedValueOnce(null); // conflict check inside createTagService
+      tagSlugExistsMock.mockResolvedValue(false);
+      createTagMock.mockRejectedValueOnce(
+        new Error('duplicate key value violates unique constraint "tags_slug_unique"')
+      );
+      findTagByNameMock.mockResolvedValueOnce(null); // recovery by name misses
+      findTagBySlugMock.mockResolvedValueOnce(redisRow); // recovery by slug wins
+
+      const result = await resolveAiSuggestedTags(['Redis']);
+
+      expect(findTagBySlugMock).toHaveBeenCalledWith('redis');
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ id: 5, name: 'Redis', slug: 'redis' });
     });
 
     it('invalidates the tags cache when at least one tag is created', async () => {

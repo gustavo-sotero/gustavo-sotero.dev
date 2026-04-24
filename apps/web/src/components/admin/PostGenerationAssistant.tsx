@@ -646,10 +646,8 @@ export function PostGenerationAssistant({
                       if (fields.content) {
                         setValue('content', fields.content);
                       }
-                      if (fields.tagIds && fields.tagIds.length > 0) {
-                        onTagsApplied?.(fields.tagIds);
-                        setValue('tagIds', fields.tagIds);
-                      }
+                      onTagsApplied?.(fields.tagIds);
+                      setValue('tagIds', fields.tagIds);
                     }}
                     onApplyField={(field, value) => {
                       if (field === 'tagIds' && Array.isArray(value)) {

@@ -159,6 +159,71 @@ describe('openapi routes', () => {
     );
   });
 
+  it('GET /doc/spec documents the AI suggested tag resolution endpoint contract', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<
+        string,
+        {
+          post?: {
+            operationId?: string;
+            description?: string;
+            requestBody?: {
+              content?: {
+                'application/json'?: {
+                  schema?: {
+                    required?: string[];
+                    properties?: Record<
+                      string,
+                      {
+                        minItems?: number;
+                        maxItems?: number;
+                        example?: string[];
+                      }
+                    >;
+                  };
+                };
+              };
+            };
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    example?: {
+                      data?: Array<{ name?: string; category?: string }>;
+                    };
+                  };
+                };
+              }
+            >;
+          };
+        }
+      >;
+    };
+
+    const resolvePost = body.paths['/admin/tags/resolve-ai-suggested']?.post;
+    const namesSchema =
+      resolvePost?.requestBody?.content?.['application/json']?.schema?.properties?.names;
+    const successExample =
+      resolvePost?.responses?.['200']?.content?.['application/json']?.example?.data;
+
+    expect(resolvePost?.operationId).toBe('adminResolveAiSuggestedTags');
+    expect(resolvePost?.description).toContain(
+      'Only call this endpoint when the admin explicitly accepts a draft'
+    );
+    expect(resolvePost?.requestBody?.content?.['application/json']?.schema?.required).toContain(
+      'names'
+    );
+    expect(namesSchema?.minItems).toBe(1);
+    expect(namesSchema?.maxItems).toBe(50);
+    expect(namesSchema?.example).toEqual(['Redis', 'BullMQ', 'typescript']);
+    expect(successExample?.[0]).toMatchObject({ name: 'Redis', category: 'db' });
+  });
+
   it('GET /doc/spec keeps tag contracts taxonomy-only and skill contracts highlight-aware', async () => {
     const app = new Hono();
     app.route('/', openApiRouter);

@@ -14,6 +14,9 @@ const startTopicRunMock = vi.fn();
 const resetTopicRunMock = vi.fn();
 const startDraftRunMock = vi.fn();
 const useAiPostGenerationConfigMock = vi.fn();
+const { draftReviewMockState } = vi.hoisted(() => ({
+  draftReviewMockState: { applyAllTagIds: [1] as number[] },
+}));
 
 vi.mock('@/hooks/admin/use-ai-post-generation-config', () => ({
   useAiPostGenerationConfig: () => useAiPostGenerationConfigMock(),
@@ -150,7 +153,7 @@ vi.mock('@/components/admin/PostDraftReview', () => ({
             slug: draft.slug,
             excerpt: draft.excerpt,
             content: draft.content,
-            tagIds: [1],
+            tagIds: draftReviewMockState.applyAllTagIds,
           })
         }
         data-testid="apply-all"
@@ -329,6 +332,7 @@ function renderAssistant() {
 describe('PostGenerationAssistant', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    draftReviewMockState.applyAllTagIds = [1];
 
     // Default: config is ready and valid so generation is allowed
     useAiPostGenerationConfigMock.mockReturnValue({
@@ -557,6 +561,29 @@ describe('PostGenerationAssistant', () => {
     await waitFor(() => {
       // The mermaid content should be passed to setValue as-is (not transformed)
       expect(setValueMock).toHaveBeenCalledWith('content', MERMAID_DRAFT_FIXTURE.content);
+    });
+  });
+
+  it('applies empty tagIds when the accepted draft resolves to no tags', async () => {
+    draftReviewMockState.applyAllTagIds = [];
+    mockTopicRunCompleted([SUGGESTION_FIXTURE]);
+    mockDraftRunCompleted(DRAFT_FIXTURE);
+
+    const { setValueMock, onTagsAppliedMock } = renderAssistant();
+    fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+    fireEvent.change(screen.getByTestId('category-select'), {
+      target: { value: 'backend-arquitetura' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Sugerir temas/i }));
+    await waitFor(() => screen.getByTestId('topic-0'));
+    fireEvent.click(screen.getByTestId('topic-0'));
+    await waitFor(() => screen.getByTestId('draft-review'));
+
+    fireEvent.click(screen.getByTestId('apply-all'));
+
+    await waitFor(() => {
+      expect(onTagsAppliedMock).toHaveBeenCalledWith([]);
+      expect(setValueMock).toHaveBeenCalledWith('tagIds', []);
     });
   });
 
