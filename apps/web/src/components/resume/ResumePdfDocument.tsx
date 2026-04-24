@@ -1,5 +1,3 @@
-'use client';
-
 import { Document, Font, Link, Page, Path, StyleSheet, Svg, Text, View } from '@react-pdf/renderer';
 import type { ResumeViewModel } from '@/lib/resume/mapper';
 

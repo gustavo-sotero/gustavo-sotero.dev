@@ -31,34 +31,6 @@ const CATEGORY_ORDER: SkillCategory[] = ['language', 'framework', 'tool', 'db', 
 interface StackBadge {
   name: string;
   isHighlighted: boolean;
-  expertiseLevel?: 1 | 2 | 3;
-}
-
-function StackBadgeExpertise({ expertiseLevel }: { expertiseLevel?: 1 | 2 | 3 }) {
-  if (expertiseLevel === undefined) return null;
-
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-flex items-center gap-0.5"
-      data-expertise-level={expertiseLevel}
-    >
-      {([1, 2, 3] as const).map((starNumber) => {
-        const filled = starNumber <= expertiseLevel;
-
-        return (
-          <Star
-            key={`expertise-${expertiseLevel}-${starNumber}`}
-            className={
-              filled
-                ? 'h-2.5 w-2.5 shrink-0 fill-emerald-400 text-emerald-400'
-                : 'h-2.5 w-2.5 shrink-0 text-zinc-600'
-            }
-          />
-        );
-      })}
-    </span>
-  );
 }
 
 function pickStackBadges(skills: Skill[], count = 5): StackBadge[] {
@@ -72,22 +44,11 @@ function pickStackBadges(skills: Skill[], count = 5): StackBadge[] {
     .map((s) => ({
       name: s.name,
       isHighlighted: s.isHighlighted,
-      expertiseLevel: s.expertiseLevel,
     }));
 }
 
 function getBadgeLabel(stackBadge: StackBadge) {
-  if (stackBadge.expertiseLevel === undefined) {
-    return stackBadge.name;
-  }
-
-  return [
-    stackBadge.name,
-    `expertise ${stackBadge.expertiseLevel} de 3`,
-    stackBadge.isHighlighted ? 'destaque' : null,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  return stackBadge.isHighlighted ? `${stackBadge.name}, destaque` : stackBadge.name;
 }
 
 interface HeroSectionProps {
@@ -198,7 +159,6 @@ export function HeroSection({ skills = [], experienceLabel }: HeroSectionProps) 
                     }
                   >
                     {stackBadge.name}
-                    <StackBadgeExpertise expertiseLevel={stackBadge.expertiseLevel} />
                     {stackBadge.isHighlighted && (
                       <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
                     )}
@@ -225,7 +185,6 @@ export function HeroSection({ skills = [], experienceLabel }: HeroSectionProps) 
                     }
                   >
                     {stackBadge.name}
-                    <StackBadgeExpertise expertiseLevel={stackBadge.expertiseLevel} />
                     {stackBadge.isHighlighted && (
                       <Star className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400 shrink-0" />
                     )}

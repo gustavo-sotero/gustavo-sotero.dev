@@ -213,7 +213,7 @@ describe('HeroSection', () => {
     expect(screen.queryByText('AWS')).not.toBeInTheDocument();
   });
 
-  it('adds expertise semantics to hero stack badges sourced from skills', () => {
+  it('adds highlight semantics to hero stack badges without expertise stars', () => {
     render(
       <HeroSection
         skills={[
@@ -229,9 +229,9 @@ describe('HeroSection', () => {
       />
     );
 
-    const badge = screen.getByLabelText('TypeScript, expertise 3 de 3, destaque');
+    const badge = screen.getByLabelText('TypeScript, destaque');
 
     expect(badge).toBeInTheDocument();
-    expect(badge.querySelector('[data-expertise-level="3"]')).not.toBeNull();
+    expect(badge.querySelector('[data-expertise-level]')).toBeNull();
   });
 });

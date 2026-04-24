@@ -1,69 +1,47 @@
-/**
- * ResumeDownloadButton — public surface used by Server and Client Components.
- *
- * `@react-pdf/renderer` is client-only and incompatible with Turbopack SSR
- * compilation. By loading the inner component with `{ ssr: false }`, the
- * entire @react-pdf dependency tree is partitioned to the browser bundle and
- * never touched during the SSR pass.
- */
 'use client';
 
-import { Loader2 } from 'lucide-react';
-import dynamic from 'next/dynamic';
-import type { ResumeDownloadButtonProps } from './ResumeDownloadButtonInner';
+import { Download, Loader2 } from 'lucide-react';
+import { useResumePdfDownload } from '@/hooks/useResumePdfDownload';
+import { RESUME_PDF_PATH } from '@/lib/resume/pdf';
+import { cn } from '@/lib/utils';
 
-export type { ResumeDownloadButtonProps };
-
-// ---------------------------------------------------------------------------
-// Loading skeleton — rendered while the client bundle is fetched.
-// Accepts variant so the placeholder matches the final button shape.
-// ---------------------------------------------------------------------------
-
-function LoadingSkeleton({ variant = 'primary' }: { variant?: 'primary' | 'outline' }) {
-  const base =
-    'inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium cursor-not-allowed opacity-60 transition-all';
-  const variantClass =
-    variant === 'primary'
-      ? 'bg-emerald-500 text-zinc-950'
-      : 'border border-zinc-700 text-zinc-300 bg-transparent';
-  return (
-    <span className={`${base} ${variantClass}`}>
-      <Loader2 className="h-4 w-4 animate-spin" />
-      Carregando PDF...
-    </span>
-  );
+export interface ResumeDownloadButtonProps {
+  variant?: 'primary' | 'outline';
+  className?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Dynamic import — ssr:false ensures @react-pdf/renderer is never compiled
-// during SSR. Turbopack won't attempt to resolve its module IDs server-side.
-// ---------------------------------------------------------------------------
-
-const ResumeDownloadButtonInner = dynamic(
-  () => import('./ResumeDownloadButtonInner').then((mod) => mod.ResumeDownloadButtonInner),
-  {
-    ssr: false,
-    loading: () => <LoadingSkeleton />,
-  }
-);
-
-// ---------------------------------------------------------------------------
-// Public wrapper — passes variant to both the loading skeleton and the inner
-// button once the bundle has loaded.
-// ---------------------------------------------------------------------------
+function baseClasses(variant: 'primary' | 'outline', extra = '') {
+  const base =
+    'inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950';
+  const variantClass =
+    variant === 'primary'
+      ? 'bg-emerald-500 text-zinc-950 hover:bg-emerald-400 shadow-md shadow-emerald-500/20'
+      : 'border border-zinc-700 text-zinc-300 bg-transparent hover:bg-zinc-800 hover:border-zinc-600 hover:text-zinc-100';
+  return [base, variantClass, extra].filter(Boolean).join(' ');
+}
 
 export function ResumeDownloadButton({
-  resume,
-  generatedAt,
   variant = 'primary',
   className = '',
 }: ResumeDownloadButtonProps) {
+  const { isPreparing, handleClick } = useResumePdfDownload();
+
   return (
-    <ResumeDownloadButtonInner
-      resume={resume}
-      generatedAt={generatedAt}
-      variant={variant}
-      className={className}
-    />
+    <a
+      href={RESUME_PDF_PATH}
+      download
+      onClick={handleClick}
+      className={cn(baseClasses(variant, className), isPreparing && 'cursor-wait opacity-90')}
+      aria-busy={isPreparing}
+      aria-disabled={isPreparing}
+      aria-label={isPreparing ? 'Gerando PDF do currículo' : 'Baixar currículo em PDF'}
+    >
+      {isPreparing ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Download className="h-4 w-4" />
+      )}
+      {isPreparing ? 'Gerando PDF...' : 'Baixar currículo em PDF'}
+    </a>
   );
 }

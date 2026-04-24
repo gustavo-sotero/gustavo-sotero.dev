@@ -6,5 +6,5 @@
     - Sistema de destaque ainda deve ser mantido, mas deve ser adicionado o sistema de expertise.
     - Com isso a ui da stack e skills deverá ser revisada para se ajustar ao novo sistema.
 [x] Criação automática de tags na geração de post assistida de ia.
-[ ] Sistema de ordenação de post, seja por relevancia ou por ordem customizada pelo admin, como em projetos.
+[x] Sistema de ordenação de post, seja por relevancia ou por ordem customizada pelo admin, como em projetos.
     - pagina de blog o usuario pode escolher a ordenação que quer ver os posts.

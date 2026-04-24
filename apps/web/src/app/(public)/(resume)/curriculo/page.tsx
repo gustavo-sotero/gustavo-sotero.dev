@@ -28,11 +28,6 @@ export async function CurriculoContent() {
   const [resumeResult, now] = await Promise.all([getResumeData(), Promise.resolve(new Date())]);
   const resume = buildResumeViewModel({ ...resumeResult.data, now });
   const isDegraded = resumeResult.state === 'degraded';
-  const generatedAt = now.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
 
   return (
     <div className="container mx-auto max-w-4xl px-4 md:px-6 lg:px-8 py-12 md:py-16">
@@ -49,7 +44,7 @@ export async function CurriculoContent() {
             Última atualização via painel admin — sempre em sincronia com o portfólio.
           </p>
         </div>
-        <ResumeDownloadButton resume={resume} generatedAt={generatedAt} variant="primary" />
+        <ResumeDownloadButton variant="primary" />
       </div>
 
       {isDegraded ? <SectionUnavailable /> : null}
@@ -59,7 +54,7 @@ export async function CurriculoContent() {
 
       {/* Bottom download CTA */}
       <div className="mt-12 pt-8 border-t border-zinc-800 flex justify-center">
-        <ResumeDownloadButton resume={resume} generatedAt={generatedAt} variant="outline" />
+        <ResumeDownloadButton variant="outline" />
       </div>
     </div>
   );
