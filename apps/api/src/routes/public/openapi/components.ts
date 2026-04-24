@@ -109,6 +109,11 @@ export const openApiComponents = {
         renderedContent: { type: 'string', description: 'Pre-rendered HTML' },
         coverUrl: { type: 'string', nullable: true },
         status: { type: 'string', enum: ['draft', 'published', 'scheduled'] },
+        order: {
+          type: 'integer',
+          example: 0,
+          description: 'Admin-defined manual ordering rank (lower = higher priority)',
+        },
         publishedAt: { type: 'string', format: 'date-time', nullable: true },
         scheduledAt: {
           type: 'string',

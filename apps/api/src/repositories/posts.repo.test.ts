@@ -26,6 +26,7 @@ const {
     deletedAt: 'posts.deletedAt',
     publishedAt: 'posts.publishedAt',
     createdAt: 'posts.createdAt',
+    order: 'posts.order',
   },
   postTagsTable: {
     postId: 'postTags.postId',
@@ -124,5 +125,28 @@ describe('posts repository temporal guard', () => {
 
     expect(lteMock).toHaveBeenCalledWith(postsTable.publishedAt, expect.anything());
     expect(findFirstMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('posts repository sort ordering', () => {
+  it('usa ordenação manual quando sort=manual', async () => {
+    await findManyPosts({ sort: 'manual' }, false);
+
+    const allInterpolatedValues = sqlMock.mock.calls.flatMap((call) => call.slice(1));
+    expect(allInterpolatedValues).toContain(postsTable.order);
+  });
+
+  it('não usa ordem manual quando sort=recent', async () => {
+    await findManyPosts({ sort: 'recent' }, false);
+
+    const allInterpolatedValues = sqlMock.mock.calls.flatMap((call) => call.slice(1));
+    expect(allInterpolatedValues).not.toContain(postsTable.order);
+  });
+
+  it('não usa ordem manual por padrão (sort omitido)', async () => {
+    await findManyPosts({}, false);
+
+    const allInterpolatedValues = sqlMock.mock.calls.flatMap((call) => call.slice(1));
+    expect(allInterpolatedValues).not.toContain(postsTable.order);
   });
 });

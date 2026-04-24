@@ -63,7 +63,7 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 describe('BlogPage', () => {
   it('keeps searchParams resolution inside a Suspense wrapper', () => {
     const element = BlogPage({
-      searchParams: new Promise<{ page?: string; tag?: string }>(() => undefined),
+      searchParams: new Promise<{ page?: string; tag?: string; sort?: string }>(() => undefined),
     });
 
     expect(isPromiseLike(element)).toBe(false);
@@ -89,7 +89,7 @@ describe('BlogContent', () => {
     mockGetPublicPosts.mockResolvedValue({ state: 'degraded' });
     mockGetBlogTags.mockResolvedValue({ state: 'degraded' });
 
-    const element = await BlogContent({ currentPage: 1 });
+    const element = await BlogContent({ currentPage: 1, sort: 'recentes' });
     render(element as React.ReactElement);
 
     expect(screen.getByText(/serviço temporariamente indisponível/i)).toBeDefined();
@@ -104,7 +104,7 @@ describe('BlogContent', () => {
     mockGetPublicPosts.mockResolvedValue({ state: 'ok', data: posts, meta: defaultMeta });
     mockGetBlogTags.mockResolvedValue({ state: 'ok', data: [] });
 
-    const element = await BlogContent({ currentPage: 1 });
+    const element = await BlogContent({ currentPage: 1, sort: 'recentes' });
     render(element as React.ReactElement);
 
     expect(screen.getAllByTestId('post-card')).toHaveLength(2);
@@ -123,10 +123,11 @@ describe('BlogContent', () => {
       ],
     });
 
-    const element = await BlogContent({ currentPage: 1 });
+    const element = await BlogContent({ currentPage: 1, sort: 'recentes' });
     render(element as React.ReactElement);
 
     expect(screen.getByRole('navigation', { name: /filtrar por tag/i })).toBeInTheDocument();
+    // Default sort (recentes) is omitted from URLs to keep them clean
     expect(screen.getByRole('link', { name: 'Todos' })).toHaveAttribute('href', '/blog');
     expect(screen.getByRole('link', { name: 'TypeScript' })).toHaveAttribute(
       'href',
@@ -140,7 +141,7 @@ describe('BlogContent', () => {
     mockGetPublicPosts.mockResolvedValue({ state: 'ok', data: posts, meta: defaultMeta });
     mockGetBlogTags.mockResolvedValue({ state: 'degraded' });
 
-    const element = await BlogContent({ currentPage: 1 });
+    const element = await BlogContent({ currentPage: 1, sort: 'recentes' });
     render(element as React.ReactElement);
 
     expect(screen.getByTestId('post-card')).toBeInTheDocument();
@@ -157,7 +158,7 @@ describe('BlogContent', () => {
     });
     mockGetBlogTags.mockResolvedValue({ state: 'empty', data: [] });
 
-    const element = await BlogContent({ currentPage: 1 });
+    const element = await BlogContent({ currentPage: 1, sort: 'recentes' });
     render(element as React.ReactElement);
 
     expect(screen.getByText(/nenhum artigo encontrado/i)).toBeDefined();
@@ -174,6 +175,46 @@ describe('BlogContent', () => {
     mockGetPublicPosts.mockResolvedValueOnce({ state: 'degraded' });
     mockGetBlogTags.mockResolvedValueOnce({ state: 'degraded' });
 
-    await expect(BlogContent({ currentPage: 1 })).resolves.toBeDefined();
+    await expect(BlogContent({ currentPage: 1, sort: 'recentes' })).resolves.toBeDefined();
+  });
+
+  it('renders sort toggle link — defaults to recentes mode showing Recentes label', async () => {
+    const posts = [{ id: 1, title: 'Post Alpha', slug: 'post-alpha' }];
+    mockGetPublicPosts.mockResolvedValue({ state: 'ok', data: posts, meta: defaultMeta });
+    mockGetBlogTags.mockResolvedValue({ state: 'ok', data: [] });
+
+    const element = await BlogContent({ currentPage: 1, sort: 'recentes' });
+    render(element as React.ReactElement);
+
+    const toggleLink = screen.getByTitle(/Ordenação atual: Recentes/i);
+    expect(toggleLink).toBeDefined();
+    // Clicking should navigate to relevancia sort (omitted default → /blog?sort=relevancia)
+    expect(toggleLink).toHaveAttribute('href', '/blog?sort=relevancia');
+  });
+
+  it('renders sort toggle link — relevancia mode showing Relevância label', async () => {
+    const posts = [{ id: 1, title: 'Post Alpha', slug: 'post-alpha' }];
+    mockGetPublicPosts.mockResolvedValue({ state: 'ok', data: posts, meta: defaultMeta });
+    mockGetBlogTags.mockResolvedValue({ state: 'ok', data: [] });
+
+    const element = await BlogContent({ currentPage: 1, sort: 'relevancia' });
+    render(element as React.ReactElement);
+
+    const toggleLink = screen.getByTitle(/Ordenação atual: Relevância/i);
+    expect(toggleLink).toBeDefined();
+    // Clicking should navigate back to recentes (default — no sort param)
+    expect(toggleLink).toHaveAttribute('href', '/blog');
+  });
+
+  it('sort toggle preserves active tag filter', async () => {
+    const posts = [{ id: 1, title: 'Post Alpha', slug: 'post-alpha' }];
+    mockGetPublicPosts.mockResolvedValue({ state: 'ok', data: posts, meta: defaultMeta });
+    mockGetBlogTags.mockResolvedValue({ state: 'ok', data: [] });
+
+    const element = await BlogContent({ currentPage: 1, sort: 'recentes', tag: 'typescript' });
+    render(element as React.ReactElement);
+
+    const toggleLink = screen.getByTitle(/Ordenação atual: Recentes/i);
+    expect(toggleLink).toHaveAttribute('href', '/blog?tag=typescript&sort=relevancia');
   });
 });

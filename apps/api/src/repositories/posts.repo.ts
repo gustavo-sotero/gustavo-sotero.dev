@@ -15,6 +15,7 @@ export function publicPostVisibilityClauses(postTable: typeof posts = posts): SQ
 export interface PostFilters {
   status?: 'draft' | 'published' | 'scheduled';
   tag?: string;
+  sort?: 'manual' | 'recent';
   page?: string | number;
   perPage?: string | number;
 }
@@ -59,7 +60,10 @@ export async function findManyPosts(filters: PostFilters, adminMode = false) {
     db.select({ total: count() }).from(posts).where(where),
     db.query.posts.findMany({
       where,
-      orderBy: sql`${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`,
+      orderBy:
+        filters.sort === 'manual'
+          ? sql`${posts.order} ASC, ${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`
+          : sql`${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`,
       limit,
       offset,
       with: {

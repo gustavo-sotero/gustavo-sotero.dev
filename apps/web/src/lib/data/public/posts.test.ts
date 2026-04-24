@@ -43,7 +43,7 @@ describe('getPublicPosts', () => {
       { slug: 'post-1' },
     ]);
     expect((result as Extract<typeof result, { data: unknown }>).meta).toEqual(meta);
-    expect(mockApiServerGetPaginated).toHaveBeenCalledWith('/posts?perPage=9');
+    expect(mockApiServerGetPaginated).toHaveBeenCalledWith('/posts?perPage=9&sort=recent');
   });
 
   it('returns empty state when API responds with no posts', async () => {
@@ -99,5 +99,31 @@ describe('getPublicPostDetail', () => {
     const result = await getPublicPostDetail('post-1');
 
     expect(result).toEqual({ state: 'degraded' });
+  });
+
+  it('includes sort=recent in query by default', async () => {
+    const meta = { page: 1, perPage: 9, total: 1, totalPages: 1 };
+    mockApiServerGetPaginated.mockResolvedValueOnce({
+      success: true,
+      data: [{ slug: 'p1' }],
+      meta,
+    });
+
+    await getPublicPosts();
+
+    expect(mockApiServerGetPaginated).toHaveBeenCalledWith(expect.stringContaining('sort=recent'));
+  });
+
+  it('includes sort=manual in query when sort=manual', async () => {
+    const meta = { page: 1, perPage: 9, total: 1, totalPages: 1 };
+    mockApiServerGetPaginated.mockResolvedValueOnce({
+      success: true,
+      data: [{ slug: 'p1' }],
+      meta,
+    });
+
+    await getPublicPosts({ sort: 'manual' });
+
+    expect(mockApiServerGetPaginated).toHaveBeenCalledWith(expect.stringContaining('sort=manual'));
   });
 });

@@ -33,6 +33,7 @@ const postSchemaBase = z.object({
   excerpt: z.string().max(500).optional(),
   coverUrl: z.union([z.literal(''), z.string().url()]).optional(),
   status: z.enum(['draft', 'published', 'scheduled']).default('draft'),
+  order: z.number().int().default(0),
   tagIds: uniqueTagIds.optional(),
   scheduledAt: futureISODate.optional(),
 });
@@ -69,9 +70,11 @@ export const postQuerySchema = z.object({
   perPage: z.coerce.number().int().positive().max(100).default(20),
   tag: z.string().optional(),
   status: z.enum(['draft', 'published', 'scheduled']).optional(),
+  sort: z.enum(['manual', 'recent']).default('recent'),
 });
 
 // Schema-inferred input types (preferred over manual interface definitions)
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
 export type PostQuery = z.infer<typeof postQuerySchema>;
+export type PostSortMode = PostQuery['sort'];

@@ -448,6 +448,70 @@ describe('openapi routes', () => {
     });
   });
 
+  it('GET /doc/spec documents post ordering contract — order on Post schema and sort param on GET /posts', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      components: {
+        schemas: Record<string, { properties?: Record<string, unknown> }>;
+      };
+      paths: Record<
+        string,
+        {
+          get?: {
+            parameters?: Array<{
+              name?: string;
+              in?: string;
+              schema?: { type?: string; enum?: string[]; default?: string };
+            }>;
+          };
+          post?: {
+            requestBody?: {
+              content?: {
+                'application/json'?: {
+                  schema?: { properties?: Record<string, unknown> };
+                };
+              };
+            };
+          };
+          patch?: {
+            requestBody?: {
+              content?: {
+                'application/json'?: {
+                  schema?: { properties?: Record<string, unknown> };
+                };
+              };
+            };
+          };
+        }
+      >;
+    };
+
+    const postSchema = body.components.schemas.Post;
+    const postsGetParams = body.paths['/posts']?.get?.parameters ?? [];
+    const sortParam = postsGetParams.find((p) => p.name === 'sort' && p.in === 'query');
+    const adminPostCreateProps =
+      body.paths['/admin/posts']?.post?.requestBody?.content?.['application/json']?.schema
+        ?.properties ?? {};
+    const adminPostUpdateProps =
+      body.paths['/admin/posts/{id}']?.patch?.requestBody?.content?.['application/json']?.schema
+        ?.properties ?? {};
+
+    // Post component schema must expose order
+    expect(postSchema?.properties).toHaveProperty('order');
+
+    // Public GET /posts must document the sort query parameter
+    expect(sortParam).toBeDefined();
+    expect(sortParam?.schema?.enum).toEqual(['manual', 'recent']);
+    expect(sortParam?.schema?.default).toBe('recent');
+
+    // Admin create/update payloads must document order
+    expect(adminPostCreateProps).toHaveProperty('order');
+    expect(adminPostUpdateProps).toHaveProperty('order');
+  });
+
   it('GET /doc/spec documents impactFacts on developer profile experience and projects', async () => {
     const app = new Hono();
     app.route('/', openApiRouter);

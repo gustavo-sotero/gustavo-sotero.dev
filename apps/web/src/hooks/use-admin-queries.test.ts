@@ -105,6 +105,7 @@ function makePost(overrides: Partial<Post> = {}): Post {
     updatedAt: new Date().toISOString(),
     publishedAt: new Date().toISOString(),
     scheduledAt: null,
+    order: 0,
     tags: [],
     ...overrides,
   };
@@ -185,7 +186,12 @@ describe('admin mutation hooks — revalidation on success', () => {
       mockApiPost.mockResolvedValueOnce({ success: true, data: post });
 
       const { result } = renderHook(() => useCreatePost(), { wrapper: wrapper(qc) });
-      result.current.mutate({ title: 'My Post', content: '# My Post', status: 'published' });
+      result.current.mutate({
+        title: 'My Post',
+        content: '# My Post',
+        status: 'published',
+        order: 0,
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(mockRevalidatePublicTags).toHaveBeenCalledWith(postMutationTags());
@@ -197,7 +203,12 @@ describe('admin mutation hooks — revalidation on success', () => {
       mockRevalidatePublicTags.mockRejectedValueOnce(new Error('Cache unavailable'));
 
       const { result } = renderHook(() => useCreatePost(), { wrapper: wrapper(qc) });
-      result.current.mutate({ title: 'My Post', content: '# My Post', status: 'published' });
+      result.current.mutate({
+        title: 'My Post',
+        content: '# My Post',
+        status: 'published',
+        order: 0,
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
     });

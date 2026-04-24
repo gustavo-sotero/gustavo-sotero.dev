@@ -82,7 +82,10 @@ describe('admin content routes', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(1);
-    expect(listPostsMock).toHaveBeenCalledWith({ page: 1, perPage: 20, status: 'draft' }, true);
+    expect(listPostsMock).toHaveBeenCalledWith(
+      { page: 1, perPage: 20, status: 'draft', sort: 'recent', tag: undefined },
+      true
+    );
   });
 
   it('POST /admin/posts returns 409 on conflict with error envelope', async () => {
@@ -227,6 +230,38 @@ describe('admin content routes', () => {
 
     const response = await app.request('/admin/posts/99', { method: 'DELETE' });
     expect(response.status).toBe(404);
+  });
+
+  it('POST /admin/posts accepts order field and passes it to service', async () => {
+    createPostServiceMock.mockResolvedValueOnce({ id: 1, slug: 'novo-post', order: 5 });
+
+    const app = new Hono();
+    app.route('/admin/posts', adminPostsRouter);
+
+    const response = await app.request('/admin/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Novo Post', content: 'Conteúdo', status: 'draft', order: 5 }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(createPostServiceMock).toHaveBeenCalledWith(expect.objectContaining({ order: 5 }));
+  });
+
+  it('PATCH /admin/posts/:id accepts order field and passes it to service', async () => {
+    updatePostServiceMock.mockResolvedValueOnce({ id: 1, slug: 'post-1', order: 3 });
+
+    const app = new Hono();
+    app.route('/admin/posts', adminPostsRouter);
+
+    const response = await app.request('/admin/posts/1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: 3 }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(updatePostServiceMock).toHaveBeenCalledWith(1, expect.objectContaining({ order: 3 }));
   });
 
   it('GET /admin/projects returns paginated data', async () => {

@@ -86,8 +86,11 @@ export default function AdminPostsPage() {
         </>
       }
       tableHeader={
-        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center px-4 py-2.5 border-b border-zinc-800 bg-zinc-900/80">
+        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center px-4 py-2.5 border-b border-zinc-800 bg-zinc-900/80">
           <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Título</span>
+          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide w-16 text-center">
+            Ordem
+          </span>
           <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide w-24 text-center">
             Status
           </span>
@@ -124,11 +127,14 @@ export default function AdminPostsPage() {
       {posts.map((post: Post) => (
         <div
           key={post.id}
-          className="grid grid-cols-[1fr_auto_auto_auto] items-center px-4 py-3 border-b border-zinc-800/50 last:border-0 hover:bg-zinc-900/80 transition-colors"
+          className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center px-4 py-3 border-b border-zinc-800/50 last:border-0 hover:bg-zinc-900/80 transition-colors"
         >
           <div className="min-w-0 pr-4">
             <p className="text-sm font-medium text-zinc-200 truncate">{post.title}</p>
             <p className="text-xs font-mono text-zinc-600 truncate">{post.slug}</p>
+          </div>
+          <div className="w-16 flex justify-center">
+            <span className="text-xs font-mono text-zinc-500">{post.order}</span>
           </div>
           <div className="w-24 flex justify-center">
             <AdminStatusBadge status={post.status} />

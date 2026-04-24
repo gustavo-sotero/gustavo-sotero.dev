@@ -68,7 +68,42 @@ describe('public content routes', () => {
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(1);
     expect(body.meta.total).toBe(1);
-    expect(listPostsMock).toHaveBeenCalledWith({ page: 1, perPage: 20 }, false);
+    expect(listPostsMock).toHaveBeenCalledWith(
+      { page: 1, perPage: 20, sort: 'recent', tag: undefined },
+      false
+    );
+  });
+
+  it('GET /posts?sort=manual forwards sort=manual to service', async () => {
+    listPostsMock.mockResolvedValueOnce({
+      data: [{ id: 1, slug: 'post-1' }],
+      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+    });
+
+    const app = new Hono();
+    app.route('/posts', publicPostsRouter);
+
+    const response = await app.request('/posts?sort=manual');
+    expect(response.status).toBe(200);
+    expect(listPostsMock).toHaveBeenCalledWith(
+      { page: 1, perPage: 20, sort: 'manual', tag: undefined },
+      false
+    );
+  });
+
+  it('GET /posts?sort=invalid returns validation error', async () => {
+    const app = new Hono();
+    app.route('/posts', publicPostsRouter);
+
+    const response = await app.request('/posts?sort=invalid');
+    const body = (await response.json()) as {
+      success: boolean;
+      error: { code: string };
+    };
+
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('GET /posts/:slug returns 404 when post is missing', async () => {

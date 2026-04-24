@@ -505,6 +505,17 @@ export const publicPaths = {
         { $ref: '#/components/parameters/page' },
         { $ref: '#/components/parameters/perPage' },
         { $ref: '#/components/parameters/tag' },
+        {
+          name: 'sort',
+          in: 'query',
+          schema: {
+            type: 'string',
+            enum: ['manual', 'recent'],
+            default: 'recent',
+          },
+          description:
+            'Post ordering: "manual" uses admin-defined order rank (lower = higher priority), "recent" uses chronological order (default).',
+        },
       ],
       responses: {
         '200': {

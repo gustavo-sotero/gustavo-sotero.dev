@@ -11,6 +11,7 @@ export interface Post {
   renderedContent: string | null;
   coverUrl: string | null;
   status: PostStatus;
+  order: number;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -27,6 +28,7 @@ export interface PostListItem {
   excerpt: string | null;
   coverUrl: string | null;
   status: PostStatus;
+  order: number;
   publishedAt: string | null;
   scheduledAt: string | null;
   tags?: Tag[];
@@ -40,6 +42,7 @@ export interface CreatePostDto {
   excerpt?: string;
   coverUrl?: string;
   status?: PostStatus;
+  order?: number;
   tagIds?: number[];
   scheduledAt?: string;
 }

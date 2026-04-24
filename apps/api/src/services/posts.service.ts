@@ -44,6 +44,7 @@ async function postSlugTaken(slug: string, excludeId?: number): Promise<boolean>
 export interface PostListFilters {
   status?: 'draft' | 'published' | 'scheduled';
   tag?: string;
+  sort?: 'manual' | 'recent';
   page?: string | number;
   perPage?: string | number;
 }
@@ -58,9 +59,10 @@ export async function listPosts(filters: PostListFilters, adminMode = false) {
     return { ...result, data: result.data.map(flattenPivotTags) };
   }
 
-  const key = `posts:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}`;
+  const sort = filters.sort ?? 'recent';
+  const key = `posts:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}:sort=${sort}`;
   return cached(key, LIST_TTL, async () => {
-    const result = await findManyPosts(filters, false);
+    const result = await findManyPosts({ ...filters, sort }, false);
     return { ...result, data: result.data.map(flattenPivotTags) };
   });
 }
@@ -126,6 +128,7 @@ export async function createPostService(data: CreatePostInput) {
         excerpt: data.excerpt,
         coverUrl: data.coverUrl,
         status,
+        order: data.order ?? 0,
         publishedAt,
         scheduledAt,
       },
@@ -198,6 +201,7 @@ export async function updatePostService(id: number, data: UpdatePostInput) {
   if (data.excerpt !== undefined) patch.excerpt = data.excerpt;
   if (data.coverUrl !== undefined) patch.coverUrl = data.coverUrl;
   if (data.status !== undefined) patch.status = data.status;
+  if (data.order !== undefined) patch.order = data.order;
 
   // 6. Resolve timestamps based on status transitions
   const newStatus = data.status ?? current.status;

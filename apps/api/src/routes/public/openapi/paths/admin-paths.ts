@@ -68,6 +68,11 @@ export const adminPaths = {
                   description:
                     "Required when status is 'scheduled'. Must be a future UTC datetime.",
                 },
+                order: {
+                  type: 'integer',
+                  default: 0,
+                  description: 'Admin-defined manual ordering rank (lower = higher priority).',
+                },
                 tagIds: {
                   type: 'array',
                   items: { type: 'integer' },
@@ -113,6 +118,10 @@ export const adminPaths = {
                   type: 'string',
                   format: 'date-time',
                   description: "Required when status is 'scheduled'",
+                },
+                order: {
+                  type: 'integer',
+                  description: 'Admin-defined manual ordering rank (lower = higher priority).',
                 },
                 tagIds: {
                   type: 'array',

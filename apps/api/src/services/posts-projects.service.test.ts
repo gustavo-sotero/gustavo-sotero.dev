@@ -130,6 +130,7 @@ describe('posts/projects services', () => {
       title: 'Meu Post',
       content: 'conteudo',
       status: 'draft',
+      order: 0,
     });
 
     expect(createPostMock).toHaveBeenCalledWith(
@@ -137,6 +138,55 @@ describe('posts/projects services', () => {
         slug: 'meu-post-1',
         renderedContent: '<p>rendered</p>',
       }),
+      expect.anything()
+    );
+  });
+
+  it('createPostService persiste order fornecido pelo chamador', async () => {
+    dbLimitMock.mockResolvedValueOnce([]);
+    createPostMock.mockResolvedValueOnce({ id: 1, slug: 'post-ordenado', order: 5 });
+
+    await createPostService({
+      title: 'Post Ordenado',
+      content: 'conteudo',
+      status: 'draft',
+      order: 5,
+    });
+
+    expect(createPostMock).toHaveBeenCalledWith(
+      expect.objectContaining({ order: 5 }),
+      expect.anything()
+    );
+  });
+
+  it('createPostService usa order=0 quando não fornecido', async () => {
+    dbLimitMock.mockResolvedValueOnce([]);
+    createPostMock.mockResolvedValueOnce({ id: 1, slug: 'post-default', order: 0 });
+
+    await createPostService({
+      title: 'Post Default',
+      content: 'conteudo',
+      status: 'draft',
+      order: 0,
+    });
+
+    expect(createPostMock).toHaveBeenCalledWith(
+      expect.objectContaining({ order: 0 }),
+      expect.anything()
+    );
+  });
+
+  it('updatePostService persiste order ao atualizar ranking', async () => {
+    dbLimitMock.mockResolvedValueOnce([
+      { id: 1, slug: 'post-a', publishedAt: null, status: 'draft' },
+    ]);
+    updatePostMock.mockResolvedValueOnce({ id: 1, slug: 'post-a', order: 3 });
+
+    await updatePostService(1, { order: 3 });
+
+    expect(updatePostMock).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ order: 3 }),
       expect.anything()
     );
   });
@@ -414,6 +464,7 @@ describe('posts/projects services', () => {
       content: 'conteudo',
       status: 'scheduled',
       scheduledAt: futureDate,
+      order: 0,
     });
 
     expect(createPostMock).toHaveBeenCalledWith(
@@ -433,7 +484,7 @@ describe('posts/projects services', () => {
     dbLimitMock.mockResolvedValueOnce([]);
     createPostMock.mockResolvedValueOnce({ id: 1, slug: 'rascunho' });
 
-    await createPostService({ title: 'Rascunho', content: 'conteudo', status: 'draft' });
+    await createPostService({ title: 'Rascunho', content: 'conteudo', status: 'draft', order: 0 });
 
     expect(enqueueScheduledPostPublishMock).not.toHaveBeenCalled();
   });
@@ -617,7 +668,7 @@ describe('posts/projects services', () => {
       );
       const { invalidateGroup } = await import('../lib/cache');
       await expect(
-        createPostService({ title: 'T', content: 'C', status: 'draft', tagIds: [999] })
+        createPostService({ title: 'T', content: 'C', status: 'draft', order: 0, tagIds: [999] })
       ).rejects.toMatchObject({
         message: expect.stringContaining('VALIDATION_ERROR'),
         invalidTagIds: [999],
@@ -634,6 +685,7 @@ describe('posts/projects services', () => {
         title: 'T',
         content: 'C',
         status: 'draft',
+        order: 0,
         tagIds: [5, 5, 7],
       });
 

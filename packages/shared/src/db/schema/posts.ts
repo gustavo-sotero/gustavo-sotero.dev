@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { index, pgTable, serial, text, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { index, integer, pgTable, serial, text, timestamp, varchar } from 'drizzle-orm/pg-core';
 import { statusEnum } from './enums';
 
 export const posts = pgTable(
@@ -13,6 +13,7 @@ export const posts = pgTable(
     renderedContent: text('rendered_content'),
     coverUrl: varchar('cover_url', { length: 512 }),
     status: statusEnum('status').default('draft').notNull(),
+    order: integer('order').default(0).notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true })

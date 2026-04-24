@@ -25,12 +25,16 @@ publicPostsRouter.get('/', async (c) => {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
     tag: c.req.query('tag'),
+    sort: c.req.query('sort'),
     // status is not exposed on public routes — always "published"
   });
   if (!qv.ok) return qv.response;
 
   // Force public mode: only published, no status filter
-  const result = await listPosts(qv.data, false);
+  const result = await listPosts(
+    { page: qv.data.page, perPage: qv.data.perPage, tag: qv.data.tag, sort: qv.data.sort },
+    false
+  );
   return paginatedResponse(c, result.data, result.meta);
 });
 

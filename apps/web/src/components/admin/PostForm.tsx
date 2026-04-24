@@ -131,6 +131,7 @@ export function PostForm({ mode, post }: PostFormProps) {
       excerpt: post?.excerpt ?? '',
       coverUrl: post?.coverUrl ?? '',
       status: post?.status ?? 'draft',
+      order: post?.order ?? 0,
       tagIds: post?.tags?.map((t) => t.id) ?? [],
       // Raw ISO UTC string from post (Zod validates + transforms to Date on submit)
       scheduledAt: post?.scheduledAt ?? undefined,
@@ -310,37 +311,52 @@ export function PostForm({ mode, post }: PostFormProps) {
         )}
       />
 
-      {/* Status */}
-      <div className="space-y-2">
-        <Label className="text-zinc-300 text-sm">Status</Label>
-        <Select
-          defaultValue={post?.status ?? 'draft'}
-          onValueChange={(v) => setValue('status', v as 'draft' | 'published' | 'scheduled')}
-        >
-          <SelectTrigger className="w-40 bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-emerald-500/40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-zinc-900 border-zinc-800">
-            <SelectItem
-              value="draft"
-              className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-            >
-              Rascunho
-            </SelectItem>
-            <SelectItem
-              value="published"
-              className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-            >
-              Publicado
-            </SelectItem>
-            <SelectItem
-              value="scheduled"
-              className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
-            >
-              Agendado
-            </SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Status + Order */}
+      <div className="flex flex-wrap items-end gap-6">
+        <div className="space-y-2">
+          <Label className="text-zinc-300 text-sm">Status</Label>
+          <Select
+            defaultValue={post?.status ?? 'draft'}
+            onValueChange={(v) => setValue('status', v as 'draft' | 'published' | 'scheduled')}
+          >
+            <SelectTrigger className="w-40 bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-emerald-500/40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
+              <SelectItem
+                value="draft"
+                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+              >
+                Rascunho
+              </SelectItem>
+              <SelectItem
+                value="published"
+                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+              >
+                Publicado
+              </SelectItem>
+              <SelectItem
+                value="scheduled"
+                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+              >
+                Agendado
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="order" className="text-zinc-300 text-sm">
+            Ordem
+          </Label>
+          <Input
+            id="order"
+            type="number"
+            {...register('order', { valueAsNumber: true })}
+            className="w-20 bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40"
+            min={0}
+          />
+        </div>
       </div>
 
       {/* Scheduled At — shown only when status = 'scheduled' */}

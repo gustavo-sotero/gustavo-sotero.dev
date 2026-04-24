@@ -43,14 +43,14 @@ export async function getHomeFeaturedProjects(): Promise<HomeLoaderResult<Projec
   }
 }
 
-/** Recent posts for the home section (max 3). */
+/** Posts for the home section (max 3, manual relevance ordering). */
 export async function getHomeRecentPosts(): Promise<HomeLoaderResult<Post>> {
   'use cache';
   cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
   cacheTag(TAG_HOME, TAG_POSTS_LIST);
 
   try {
-    const res = await apiServerGetPaginated<Post>('/posts?perPage=3');
+    const res = await apiServerGetPaginated<Post>('/posts?perPage=3&sort=manual');
     return res.data.length > 0 ? { state: 'ok', data: res.data } : { state: 'empty', data: [] };
   } catch (err) {
     logServerError('data:home', 'Failed to fetch recent posts', {

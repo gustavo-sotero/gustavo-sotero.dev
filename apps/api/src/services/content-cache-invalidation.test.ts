@@ -112,6 +112,7 @@ describe('content services cache invalidation', () => {
       title: 'Novo Post',
       content: 'Conteúdo',
       status: 'draft',
+      order: 0,
     });
 
     expect(invalidatePatternMock).toHaveBeenCalledWith('posts:*');

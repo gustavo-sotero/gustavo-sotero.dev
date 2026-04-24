@@ -24,6 +24,7 @@ export interface PostsListParams {
   page?: number;
   perPage?: number;
   tag?: string;
+  sort?: 'manual' | 'recent';
 }
 
 export async function getPublicPosts(params: PostsListParams = {}): Promise<PostsListResult> {
@@ -31,7 +32,8 @@ export async function getPublicPosts(params: PostsListParams = {}): Promise<Post
   cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
   cacheTag(TAG_POSTS_LIST);
 
-  const qs = new URLSearchParams({ perPage: String(params.perPage ?? 9) });
+  const sort = params.sort ?? 'recent';
+  const qs = new URLSearchParams({ perPage: String(params.perPage ?? 9), sort });
   if (params.page && params.page > 1) qs.set('page', String(params.page));
   if (params.tag) qs.set('tag', params.tag);
 

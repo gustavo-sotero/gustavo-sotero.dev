@@ -66,6 +66,7 @@ function makePost(overrides: Partial<Post> & Pick<Post, 'id' | 'slug' | 'title'>
     updatedAt: overrides.updatedAt ?? '2026-01-01T00:00:00.000Z',
     publishedAt: overrides.publishedAt ?? '2026-01-01T00:00:00.000Z',
     scheduledAt: overrides.scheduledAt ?? null,
+    order: overrides.order ?? 0,
     tags: overrides.tags ?? [],
   };
 }

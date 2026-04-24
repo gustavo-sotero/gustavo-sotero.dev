@@ -74,6 +74,7 @@ function makePost(overrides: Partial<Post> = {}): Post {
     updatedAt: '2026-01-01T00:00:00.000Z',
     publishedAt: '2026-01-01T00:00:00.000Z',
     scheduledAt: null,
+    order: 0,
     tags: [],
     ...overrides,
   };

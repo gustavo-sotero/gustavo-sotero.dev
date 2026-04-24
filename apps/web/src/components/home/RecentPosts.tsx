@@ -26,7 +26,7 @@ export function RecentPosts({ posts }: RecentPostsProps) {
       <div className="flex items-end justify-between gap-4">
         <div className="space-y-1">
           <p className="text-sm font-mono text-emerald-500 uppercase tracking-widest">blog</p>
-          <h2 className="text-2xl md:text-3xl font-bold text-zinc-100">Posts Recentes</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-zinc-100">Posts em Destaque</h2>
         </div>
         <Link
           href="/blog"

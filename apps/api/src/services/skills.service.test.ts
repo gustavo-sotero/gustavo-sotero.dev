@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   cachedMock,
@@ -92,7 +92,7 @@ describe('skills service', () => {
     ensureUniqueSlugMock.mockResolvedValue('typescript');
   });
 
-  // ── listSkills ─────────────────────────────────────────────────────────────
+  // â”€â”€ listSkills â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   describe('listSkills', () => {
     it('returns mapped DTOs without cache by default', async () => {
       const mockResult = {
@@ -151,7 +151,7 @@ describe('skills service', () => {
     });
   });
 
-  // ── createSkillService ─────────────────────────────────────────────────────
+  // â”€â”€ createSkillService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   describe('createSkillService', () => {
     it('creates and returns DTO when name is unique', async () => {
       findSkillByNameMock.mockResolvedValueOnce(null);
@@ -197,7 +197,7 @@ describe('skills service', () => {
     });
   });
 
-  // ── updateSkillService ─────────────────────────────────────────────────────
+  // â”€â”€ updateSkillService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   describe('updateSkillService', () => {
     it('returns null when skill does not exist', async () => {
       findSkillByIdMock.mockResolvedValueOnce(null);
@@ -251,7 +251,7 @@ describe('skills service', () => {
     });
   });
 
-  // ── deleteSkillService ─────────────────────────────────────────────────────
+  // â”€â”€ deleteSkillService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   describe('deleteSkillService', () => {
     it('returns null when skill does not exist', async () => {
       findSkillByIdMock.mockResolvedValueOnce(null);
@@ -274,7 +274,7 @@ describe('skills service', () => {
     });
   });
 
-  // ── getSkillById ───────────────────────────────────────────────────────────
+  // â”€â”€ getSkillById â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   describe('getSkillById', () => {
     it('returns mapped DTO when found', async () => {
       findSkillByIdMock.mockResolvedValueOnce(baseRow);
