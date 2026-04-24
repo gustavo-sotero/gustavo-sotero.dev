@@ -83,7 +83,7 @@ export function projectMutationTagsWithSlugTransition(
  * Tags to revalidate when a tag entity is created, updated, or deleted.
  */
 export function tagMutationTags(): string[] {
-  return [TAG_HOME, TAG_TAGS_LIST, TAG_POSTS_LIST, TAG_PROJECTS_LIST];
+  return [TAG_HOME, TAG_TAGS_LIST, TAG_POSTS_LIST, TAG_PROJECTS_LIST, TAG_EXPERIENCE_LIST];
 }
 
 /**

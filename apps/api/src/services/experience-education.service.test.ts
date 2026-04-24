@@ -226,6 +226,47 @@ describe('experience service', () => {
       expect(result.data[0]?.tags).toEqual([tag]);
     });
 
+    it('normalizes related skills to the public Skill DTO shape', async () => {
+      const experienceWithSkill = {
+        ...baseExperience,
+        skills: [
+          {
+            skill: {
+              id: 6,
+              name: 'Docker',
+              slug: 'docker',
+              category: 'infra',
+              iconKey: 'si:SiDocker',
+              expertiseLevel: 2,
+              isHighlighted: 0,
+              createdAt: new Date('2025-01-02T00:00:00.000Z'),
+              updatedAt: new Date('2025-01-03T00:00:00.000Z'),
+            },
+          },
+        ],
+      };
+      findManyExperienceMock.mockResolvedValueOnce({
+        data: [experienceWithSkill],
+        meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+      });
+
+      const result = await listExperience({ page: 1, perPage: 20 }, false);
+
+      expect(result.data[0]?.skills).toEqual([
+        {
+          id: 6,
+          name: 'Docker',
+          slug: 'docker',
+          category: 'infra',
+          iconKey: 'si:SiDocker',
+          expertiseLevel: 2,
+          isHighlighted: false,
+          createdAt: '2025-01-02T00:00:00.000Z',
+        },
+      ]);
+      expect(result.data[0]?.skills?.[0]).not.toHaveProperty('updatedAt');
+    });
+
     it('bypasses cache in admin mode', async () => {
       const mockResult = {
         data: [baseExperience],

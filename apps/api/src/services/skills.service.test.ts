@@ -122,12 +122,32 @@ describe('skills service', () => {
       };
       findManySkillsMock.mockResolvedValueOnce(mockResult);
 
-      await listSkills({ category: 'language' }, true);
+      await listSkills({ category: 'language', page: 2, perPage: 10 }, true);
 
       expect(cachedMock).toHaveBeenCalledTimes(1);
       const [cacheKey] = cachedMock.mock.calls[0] as [string, number, unknown];
       expect(cacheKey).toContain('skills:public:');
+      expect(cacheKey).toContain('page=2');
+      expect(cacheKey).toContain('perPage=10');
       expect(cacheKey).toContain('language');
+    });
+
+    it('uses distinct public cache keys for different pagination windows', async () => {
+      const mockResult = {
+        data: [baseRow],
+        meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+      };
+      findManySkillsMock.mockResolvedValue(mockResult);
+
+      await listSkills({ page: 1, perPage: 10 }, true);
+      await listSkills({ page: 2, perPage: 10 }, true);
+
+      const firstKey = cachedMock.mock.calls[0]?.[0] as string;
+      const secondKey = cachedMock.mock.calls[1]?.[0] as string;
+
+      expect(firstKey).not.toBe(secondKey);
+      expect(firstKey).toContain('page=1');
+      expect(secondKey).toContain('page=2');
     });
   });
 

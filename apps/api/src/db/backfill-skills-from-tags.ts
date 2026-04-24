@@ -30,6 +30,7 @@ interface SkillSourceRow {
   name: string;
   slug: string;
   category: TechnicalSkillCategory;
+  isHighlighted: boolean;
 }
 
 interface ExistingSkillRow {
@@ -109,6 +110,7 @@ async function defaultLoadProjectTagRows(): Promise<SkillSourceRow[]> {
       name: tags.name,
       slug: tags.slug,
       category: tags.category,
+      isHighlighted: tags.isHighlighted,
     })
     .from(projectTags)
     .innerJoin(tags, eq(projectTags.tagId, tags.id))
@@ -126,6 +128,7 @@ async function defaultLoadExperienceTagRows(): Promise<SkillSourceRow[]> {
       name: tags.name,
       slug: tags.slug,
       category: tags.category,
+      isHighlighted: tags.isHighlighted,
     })
     .from(experienceTags)
     .innerJoin(tags, eq(experienceTags.tagId, tags.id))
@@ -200,7 +203,7 @@ export async function runSkillsCatalogBackfill({
       category: row.category,
       iconKey: resolveTagIcon(row.name, row.category).iconKey,
       expertiseLevel: 1,
-      isHighlighted: 0,
+      isHighlighted: row.isHighlighted ? 1 : 0,
     }));
 
   const uniqueMissingSkillRows = uniqueByKey(

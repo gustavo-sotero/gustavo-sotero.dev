@@ -35,6 +35,36 @@ export function toTagDto<
 }
 
 /**
+ * Normalize embedded skill rows to the public Skill DTO shape.
+ *
+ * Project/experience relation queries return raw DB rows, where booleans may
+ * still be encoded as `0 | 1` and timestamps are `Date` objects.
+ */
+export function toSkillDto<
+  TSkill extends {
+    id: number;
+    name: string;
+    slug: string;
+    category: string;
+    iconKey: string | null;
+    expertiseLevel: number;
+    isHighlighted: number | boolean;
+    createdAt: Date | string;
+  },
+>(skill: TSkill) {
+  return {
+    id: skill.id,
+    name: skill.name,
+    slug: skill.slug,
+    category: skill.category,
+    iconKey: skill.iconKey,
+    expertiseLevel: skill.expertiseLevel as 1 | 2 | 3,
+    isHighlighted: skill.isHighlighted === true || skill.isHighlighted === 1,
+    createdAt: skill.createdAt instanceof Date ? skill.createdAt.toISOString() : skill.createdAt,
+  };
+}
+
+/**
  * Flatten a pivot array `{ tag: T }[]` to `T[]`.
  */
 export function flattenPivotTagArray<TTag>(pivots?: Array<{ tag: TTag }>): TTag[] {
@@ -69,12 +99,27 @@ export function flattenPivotSkillArray<TSkill>(pivots?: Array<{ skill: TSkill }>
 }
 
 /**
- * Flatten Drizzle pivot objects `{ skill: T }` to a direct `T[]`.
+ * Flatten Drizzle pivot objects `{ skill: T }` to public Skill DTOs.
  */
-export function flattenPivotSkills<T extends { skills?: Array<{ skill: unknown }> }>(item: T) {
+export function flattenPivotSkills<
+  T extends {
+    skills?: Array<{
+      skill: {
+        id: number;
+        name: string;
+        slug: string;
+        category: string;
+        iconKey: string | null;
+        expertiseLevel: number;
+        isHighlighted: number | boolean;
+        createdAt: Date | string;
+      };
+    }>;
+  },
+>(item: T) {
   return {
     ...item,
-    skills: flattenPivotSkillArray(item.skills),
+    skills: flattenPivotSkillArray(item.skills).map((skill) => toSkillDto(skill)),
   };
 }
 
@@ -82,14 +127,28 @@ export function flattenPivotSkills<T extends { skills?: Array<{ skill: unknown }
  * Flatten both tag and skill pivots from a Drizzle entity.
  */
 export function flattenPivots<
-  T extends { tags?: Array<{ tag: unknown }>; skills?: Array<{ skill: unknown }> },
+  T extends {
+    tags?: Array<{ tag: unknown }>;
+    skills?: Array<{
+      skill: {
+        id: number;
+        name: string;
+        slug: string;
+        category: string;
+        iconKey: string | null;
+        expertiseLevel: number;
+        isHighlighted: number | boolean;
+        createdAt: Date | string;
+      };
+    }>;
+  },
 >(item: T) {
   return {
     ...item,
     tags: flattenPivotTagArray(item.tags).map((tag) =>
       toTagDto(tag as Parameters<typeof toTagDto>[0])
     ),
-    skills: flattenPivotSkillArray(item.skills),
+    skills: flattenPivotSkillArray(item.skills).map((skill) => toSkillDto(skill)),
   };
 }
 

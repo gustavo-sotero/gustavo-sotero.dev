@@ -27,13 +27,48 @@ function makeSkillRow(overrides: {
 describe('runSkillsCatalogBackfill', () => {
   it('creates missing skills and links both project and experience pivots idempotently', async () => {
     const loadProjectTagRows = vi.fn().mockResolvedValue([
-      { entityId: 10, tagId: 1, name: 'TypeScript', slug: 'typescript', category: 'language' },
-      { entityId: 10, tagId: 2, name: 'Hono', slug: 'hono', category: 'framework' },
-      { entityId: 11, tagId: 3, name: 'Docker', slug: 'docker', category: 'infra' },
+      {
+        entityId: 10,
+        tagId: 1,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        isHighlighted: true,
+      },
+      {
+        entityId: 10,
+        tagId: 2,
+        name: 'Hono',
+        slug: 'hono',
+        category: 'framework',
+        isHighlighted: true,
+      },
+      {
+        entityId: 11,
+        tagId: 3,
+        name: 'Docker',
+        slug: 'docker',
+        category: 'infra',
+        isHighlighted: false,
+      },
     ]);
     const loadExperienceTagRows = vi.fn().mockResolvedValue([
-      { entityId: 20, tagId: 1, name: 'TypeScript', slug: 'typescript', category: 'language' },
-      { entityId: 20, tagId: 4, name: 'Redis', slug: 'redis', category: 'db' },
+      {
+        entityId: 20,
+        tagId: 1,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        isHighlighted: true,
+      },
+      {
+        entityId: 20,
+        tagId: 4,
+        name: 'Redis',
+        slug: 'redis',
+        category: 'db',
+        isHighlighted: false,
+      },
     ]);
     const listExistingSkills = vi
       .fn()
@@ -68,7 +103,7 @@ describe('runSkillsCatalogBackfill', () => {
         category: 'framework',
         iconKey: 'icon:hono',
         expertiseLevel: 1,
-        isHighlighted: 0,
+        isHighlighted: 1,
       },
       {
         name: 'Docker',
@@ -111,7 +146,14 @@ describe('runSkillsCatalogBackfill', () => {
     await expect(
       runSkillsCatalogBackfill({
         loadProjectTagRows: async () => [
-          { entityId: 10, tagId: 1, name: 'TypeScript', slug: 'typescript', category: 'language' },
+          {
+            entityId: 10,
+            tagId: 1,
+            name: 'TypeScript',
+            slug: 'typescript',
+            category: 'language',
+            isHighlighted: true,
+          },
         ],
         loadExperienceTagRows: async () => [],
         listExistingSkills,

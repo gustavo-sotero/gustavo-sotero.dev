@@ -355,6 +355,51 @@ describe('posts/projects services', () => {
     );
   });
 
+  it('getProjectBySlug (admin) normaliza skills relacionadas para o DTO público', async () => {
+    findProjectBySlugMock.mockResolvedValueOnce({
+      id: 1,
+      slug: 'projeto-a',
+      tags: [],
+      skills: [
+        {
+          projectId: 1,
+          skillId: 7,
+          skill: {
+            id: 7,
+            name: 'TypeScript',
+            slug: 'typescript',
+            category: 'language',
+            iconKey: 'si:SiTypescript',
+            expertiseLevel: 3,
+            isHighlighted: 1,
+            createdAt: new Date('2025-01-04T00:00:00.000Z'),
+            updatedAt: new Date('2025-01-05T00:00:00.000Z'),
+          },
+        },
+      ],
+    });
+
+    const result = await getProjectBySlug('projeto-a', true);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        skills: [
+          {
+            id: 7,
+            name: 'TypeScript',
+            slug: 'typescript',
+            category: 'language',
+            iconKey: 'si:SiTypescript',
+            expertiseLevel: 3,
+            isHighlighted: true,
+            createdAt: '2025-01-04T00:00:00.000Z',
+          },
+        ],
+      })
+    );
+    expect(result?.skills?.[0]).not.toHaveProperty('updatedAt');
+  });
+
   // ── Scheduling tests ──────────────────────────────────────────────────────
 
   it('createPostService com status=scheduled persiste scheduledAt e enfileira job', async () => {

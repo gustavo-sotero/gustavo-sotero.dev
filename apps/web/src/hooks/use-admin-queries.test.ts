@@ -66,6 +66,7 @@ const {
 } = await import('./admin/use-admin-comments');
 
 const {
+  TAG_EXPERIENCE_LIST,
   postMutationTags,
   postMutationTagsWithSlugTransition,
   projectMutationTags,
@@ -168,6 +169,10 @@ describe('admin mutation hooks — revalidation on success', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('tagMutationTags includes experience-backed public cache tags', () => {
+    expect(tagMutationTags()).toContain(TAG_EXPERIENCE_LIST);
   });
 
   // ── Posts ──────────────────────────────────────────────────────────────────

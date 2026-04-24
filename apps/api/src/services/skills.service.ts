@@ -64,7 +64,7 @@ export interface SkillListFilters {
 
 export async function listSkills(filters: SkillListFilters = {}, useCache = false) {
   if (useCache) {
-    const key = `skills:public:category=${filters.category ?? ''}:highlighted=${String(filters.highlighted ?? '')}`;
+    const key = `skills:public:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 100}:category=${filters.category ?? ''}:highlighted=${String(filters.highlighted ?? '')}`;
     return cached(key, LIST_TTL, async () => {
       const result = await findManySkills(filters as SkillFilters);
       return { ...result, data: result.data.map(toSkillDto) };
