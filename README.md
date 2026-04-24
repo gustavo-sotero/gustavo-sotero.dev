@@ -336,6 +336,10 @@ Significa que o banco é alcançável mas um ou mais objetos obrigatórios estã
 4. Rode o audit de paridade: `bun run --env-file .env apps/api/src/db/audit-schema-parity.ts`
 5. Se o audit ainda falhar após as migrações, investigue `__drizzle_migrations` — pode haver uma entrada de migração faltando ou que não foi aplicada com sucesso
 
+Caso específico do rollout de skills:
+- Se `__drizzle_migrations` já contém `0005_add_skills` mas `skills`, `project_skills` ou `experience_skills` continuam ausentes, aplique a migration de reparo forward `0007_repair_skills_catalog` com `bun run db:migrate`.
+- Esse reparo é idempotente e existe para bancos que registraram a migration histórica sem materializar os objetos do catálogo de skills.
+
 ### Erros de tagIds em endpoints admin
 
 Se `POST /admin/experience`, `POST /admin/posts` ou `POST /admin/projects` retornar `400 VALIDATION_ERROR` com `field: tagIds`, significa que um ou mais IDs submetidos não existem na tabela `tags`. Isso é comportamento correto — substitui a falha opaca `500` que ocorria anteriormente.
