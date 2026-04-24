@@ -54,4 +54,13 @@ describe('migration manifest', () => {
     expect(repairSql).toContain('CREATE TABLE IF NOT EXISTS "experience_skills"');
     expect(repairSql).toContain('CREATE INDEX IF NOT EXISTS "skills_category_idx"');
   });
+
+  it('guards skills constraint repair against pre-existing indexes', () => {
+    const repairSql = readFileSync(join(drizzleDir, '0007_repair_skills_catalog.sql'), 'utf8');
+
+    expect(repairSql).toContain("conname = 'skills_name_unique'");
+    expect(repairSql).toContain('UNIQUE USING INDEX "skills_name_unique"');
+    expect(repairSql).toContain("conname = 'skills_slug_unique'");
+    expect(repairSql).toContain('UNIQUE USING INDEX "skills_slug_unique"');
+  });
 });

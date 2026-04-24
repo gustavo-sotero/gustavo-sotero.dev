@@ -37,97 +37,209 @@ CREATE TABLE IF NOT EXISTS "experience_skills" (
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "skills" ADD CONSTRAINT "skills_pkey" PRIMARY KEY ("id");
-EXCEPTION
-	WHEN duplicate_object OR invalid_table_definition THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'skills_pkey'
+			AND conrelid = 'public.skills'::regclass
+	) THEN
+		IF EXISTS (
+			SELECT 1
+			FROM pg_class index_rel
+			JOIN pg_namespace n ON n.oid = index_rel.relnamespace
+			WHERE index_rel.relkind = 'i'
+				AND n.nspname = 'public'
+				AND index_rel.relname = 'skills_pkey'
+		) THEN
+			ALTER TABLE "skills" ADD CONSTRAINT "skills_pkey" PRIMARY KEY USING INDEX "skills_pkey";
+		ELSE
+			ALTER TABLE "skills" ADD CONSTRAINT "skills_pkey" PRIMARY KEY ("id");
+		END IF;
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "project_skills" ADD CONSTRAINT "project_skills_project_id_skill_id_pk"
-		PRIMARY KEY ("project_id", "skill_id");
-EXCEPTION
-	WHEN duplicate_object OR invalid_table_definition THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'project_skills_project_id_skill_id_pk'
+			AND conrelid = 'public.project_skills'::regclass
+	) THEN
+		IF EXISTS (
+			SELECT 1
+			FROM pg_class index_rel
+			JOIN pg_namespace n ON n.oid = index_rel.relnamespace
+			WHERE index_rel.relkind = 'i'
+				AND n.nspname = 'public'
+				AND index_rel.relname = 'project_skills_project_id_skill_id_pk'
+		) THEN
+			ALTER TABLE "project_skills" ADD CONSTRAINT "project_skills_project_id_skill_id_pk"
+				PRIMARY KEY USING INDEX "project_skills_project_id_skill_id_pk";
+		ELSE
+			ALTER TABLE "project_skills" ADD CONSTRAINT "project_skills_project_id_skill_id_pk"
+				PRIMARY KEY ("project_id", "skill_id");
+		END IF;
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "experience_skills" ADD CONSTRAINT "experience_skills_experience_id_skill_id_pk"
-		PRIMARY KEY ("experience_id", "skill_id");
-EXCEPTION
-	WHEN duplicate_object OR invalid_table_definition THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'experience_skills_experience_id_skill_id_pk'
+			AND conrelid = 'public.experience_skills'::regclass
+	) THEN
+		IF EXISTS (
+			SELECT 1
+			FROM pg_class index_rel
+			JOIN pg_namespace n ON n.oid = index_rel.relnamespace
+			WHERE index_rel.relkind = 'i'
+				AND n.nspname = 'public'
+				AND index_rel.relname = 'experience_skills_experience_id_skill_id_pk'
+		) THEN
+			ALTER TABLE "experience_skills" ADD CONSTRAINT "experience_skills_experience_id_skill_id_pk"
+				PRIMARY KEY USING INDEX "experience_skills_experience_id_skill_id_pk";
+		ELSE
+			ALTER TABLE "experience_skills" ADD CONSTRAINT "experience_skills_experience_id_skill_id_pk"
+				PRIMARY KEY ("experience_id", "skill_id");
+		END IF;
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "skills" ADD CONSTRAINT "skills_name_unique" UNIQUE("name");
-EXCEPTION
-	WHEN duplicate_object THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'skills_name_unique'
+			AND conrelid = 'public.skills'::regclass
+	) THEN
+		IF EXISTS (
+			SELECT 1
+			FROM pg_class index_rel
+			JOIN pg_namespace n ON n.oid = index_rel.relnamespace
+			WHERE index_rel.relkind = 'i'
+				AND n.nspname = 'public'
+				AND index_rel.relname = 'skills_name_unique'
+		) THEN
+			ALTER TABLE "skills" ADD CONSTRAINT "skills_name_unique" UNIQUE USING INDEX "skills_name_unique";
+		ELSE
+			ALTER TABLE "skills" ADD CONSTRAINT "skills_name_unique" UNIQUE("name");
+		END IF;
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "skills" ADD CONSTRAINT "skills_slug_unique" UNIQUE("slug");
-EXCEPTION
-	WHEN duplicate_object THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'skills_slug_unique'
+			AND conrelid = 'public.skills'::regclass
+	) THEN
+		IF EXISTS (
+			SELECT 1
+			FROM pg_class index_rel
+			JOIN pg_namespace n ON n.oid = index_rel.relnamespace
+			WHERE index_rel.relkind = 'i'
+				AND n.nspname = 'public'
+				AND index_rel.relname = 'skills_slug_unique'
+		) THEN
+			ALTER TABLE "skills" ADD CONSTRAINT "skills_slug_unique" UNIQUE USING INDEX "skills_slug_unique";
+		ELSE
+			ALTER TABLE "skills" ADD CONSTRAINT "skills_slug_unique" UNIQUE("slug");
+		END IF;
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "skills" ADD CONSTRAINT "skills_expertise_level_check"
-		CHECK ("skills"."expertise_level" >= 1 AND "skills"."expertise_level" <= 3);
-EXCEPTION
-	WHEN duplicate_object THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'skills_expertise_level_check'
+			AND conrelid = 'public.skills'::regclass
+	) THEN
+		ALTER TABLE "skills" ADD CONSTRAINT "skills_expertise_level_check"
+			CHECK ("skills"."expertise_level" >= 1 AND "skills"."expertise_level" <= 3);
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "skills" ADD CONSTRAINT "skills_is_highlighted_check"
-		CHECK ("skills"."is_highlighted" IN (0, 1));
-EXCEPTION
-	WHEN duplicate_object THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'skills_is_highlighted_check'
+			AND conrelid = 'public.skills'::regclass
+	) THEN
+		ALTER TABLE "skills" ADD CONSTRAINT "skills_is_highlighted_check"
+			CHECK ("skills"."is_highlighted" IN (0, 1));
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "project_skills" ADD CONSTRAINT "project_skills_project_id_projects_id_fk"
-		FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;
-EXCEPTION
-	WHEN duplicate_object THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'project_skills_project_id_projects_id_fk'
+			AND conrelid = 'public.project_skills'::regclass
+	) THEN
+		ALTER TABLE "project_skills" ADD CONSTRAINT "project_skills_project_id_projects_id_fk"
+			FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "project_skills" ADD CONSTRAINT "project_skills_skill_id_skills_id_fk"
-		FOREIGN KEY ("skill_id") REFERENCES "public"."skills"("id") ON DELETE cascade ON UPDATE no action;
-EXCEPTION
-	WHEN duplicate_object THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'project_skills_skill_id_skills_id_fk'
+			AND conrelid = 'public.project_skills'::regclass
+	) THEN
+		ALTER TABLE "project_skills" ADD CONSTRAINT "project_skills_skill_id_skills_id_fk"
+			FOREIGN KEY ("skill_id") REFERENCES "public"."skills"("id") ON DELETE cascade ON UPDATE no action;
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "experience_skills" ADD CONSTRAINT "experience_skills_experience_id_experience_id_fk"
-		FOREIGN KEY ("experience_id") REFERENCES "public"."experience"("id") ON DELETE cascade ON UPDATE no action;
-EXCEPTION
-	WHEN duplicate_object THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'experience_skills_experience_id_experience_id_fk'
+			AND conrelid = 'public.experience_skills'::regclass
+	) THEN
+		ALTER TABLE "experience_skills" ADD CONSTRAINT "experience_skills_experience_id_experience_id_fk"
+			FOREIGN KEY ("experience_id") REFERENCES "public"."experience"("id") ON DELETE cascade ON UPDATE no action;
+	END IF;
 END
 $$;
 --> statement-breakpoint
 DO $$
 BEGIN
-	ALTER TABLE "experience_skills" ADD CONSTRAINT "experience_skills_skill_id_skills_id_fk"
-		FOREIGN KEY ("skill_id") REFERENCES "public"."skills"("id") ON DELETE cascade ON UPDATE no action;
-EXCEPTION
-	WHEN duplicate_object THEN null;
+	IF NOT EXISTS (
+		SELECT 1
+		FROM pg_constraint
+		WHERE conname = 'experience_skills_skill_id_skills_id_fk'
+			AND conrelid = 'public.experience_skills'::regclass
+	) THEN
+		ALTER TABLE "experience_skills" ADD CONSTRAINT "experience_skills_skill_id_skills_id_fk"
+			FOREIGN KEY ("skill_id") REFERENCES "public"."skills"("id") ON DELETE cascade ON UPDATE no action;
+	END IF;
 END
 $$;
 --> statement-breakpoint
