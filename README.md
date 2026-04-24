@@ -259,7 +259,7 @@ Quando habilitado, o assistente aparece em `/admin/posts/new`. Tanto a geração
 O payload de draft gerado contém:
 
 - `title`, `slug`, `excerpt`, `content` — aplicáveis diretamente ao formulário.
-- `suggestedTagNames` — lista de nomes de tags canonicalizados antes de chegar ao review; tags desconhecidas são exibidas separadamente mas não são aplicadas automaticamente.
+- `suggestedTagNames` — lista de nomes de tags canonicalizados antes de chegar ao review. Tags já existentes no catálogo são exibidas em destaque; tags desconhecidas aparecem riscadas e são **criadas automaticamente** (com categoria inferida do catálogo compartilhado, fallback `other`) quando o admin aceita o draft — nunca durante a geração ou o polling.
 - `imagePrompt` — texto em **PT-BR** descrevendo a imagem a ser gerada (simples, minimalista, elegante, formato 1:1 ou 4:3, uso como thumb). Exibido como **copy-only** na review; não preenche `coverUrl` automaticamente.
 - `linkedinPost` — texto curto em PT-BR pronto para publicar no LinkedIn, com gancho inicial, link canônico obrigatório para o post no blog (`https://gustavo-sotero.dev/blog/{slug}`) e 3–5 hashtags temáticas ao final. Exibido como **copy-only** na review; não preenche nenhum campo do formulário automaticamente.
 - `notes` — avisos editoriais opcionais da IA (nullable).

@@ -33,7 +33,7 @@ const {
       return `${acc}${part}${value}`;
     }, '')
   ),
-  tagsTable: { id: 'tags.id', category: 'tags.category', name: 'tags.name' },
+  tagsTable: { id: 'tags.id', category: 'tags.category', name: 'tags.name', slug: 'tags.slug' },
   postsTable: {
     id: 'posts.id',
     status: 'posts.status',
@@ -100,7 +100,12 @@ vi.mock('../config/db', () => ({
   },
 }));
 
-import { findExistingTagIds, findManyTags } from './tags.repo';
+import {
+  findAllTagsForNormalization,
+  findExistingTagIds,
+  findManyTags,
+  findTagsBySlugs,
+} from './tags.repo';
 
 /** Helper to prime mocks for a publicOnly query with `n` total matching tags. */
 function setupPublicQuery(total: number, rows: unknown[]) {
@@ -306,5 +311,103 @@ describe('findExistingTagIds', () => {
 
     expect(result).toEqual([7, 42]);
     expect(result.every((v) => typeof v === 'number')).toBe(true);
+  });
+});
+
+// ── findAllTagsForNormalization ───────────────────────────────────────────────
+
+describe('findAllTagsForNormalization', () => {
+  it('returns name/slug projections for all tags ordered by name', async () => {
+    const rows = [
+      { name: 'Redis', slug: 'redis' },
+      { name: 'TypeScript', slug: 'typescript' },
+    ];
+    orderByMock.mockResolvedValueOnce(rows);
+    fromMock.mockReturnValueOnce({ orderBy: orderByMock });
+
+    const result = await findAllTagsForNormalization();
+
+    expect(result).toEqual(rows);
+    expect(ascMock).toHaveBeenCalledWith(tagsTable.name);
+  });
+
+  it('returns an empty array when no tags exist', async () => {
+    orderByMock.mockResolvedValueOnce([]);
+    fromMock.mockReturnValueOnce({ orderBy: orderByMock });
+
+    const result = await findAllTagsForNormalization();
+
+    expect(result).toEqual([]);
+  });
+});
+
+// ── findTagsBySlugs ───────────────────────────────────────────────────────────
+
+describe('findTagsBySlugs', () => {
+  it('returns an empty array without querying the database when input is empty', async () => {
+    const result = await findTagsBySlugs([]);
+
+    expect(result).toEqual([]);
+    // selectMock must NOT be called — short-circuit guards the DB
+    expect(selectMock).not.toHaveBeenCalled();
+  });
+
+  it('returns matching tags for the provided slugs', async () => {
+    const rows = [
+      {
+        id: 5,
+        name: 'Redis',
+        slug: 'redis',
+        category: 'db',
+        iconKey: 'si:SiRedis',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ];
+    orderByMock.mockResolvedValueOnce(rows);
+    whereMock.mockReturnValueOnce({ orderBy: orderByMock });
+
+    const result = await findTagsBySlugs(['redis']);
+
+    expect(inArrayMock).toHaveBeenCalledWith(tagsTable.slug, ['redis']);
+    expect(result).toEqual(rows);
+  });
+
+  it('returns an empty array when none of the provided slugs exist', async () => {
+    orderByMock.mockResolvedValueOnce([]);
+    whereMock.mockReturnValueOnce({ orderBy: orderByMock });
+
+    const result = await findTagsBySlugs(['nonexistent-slug']);
+
+    expect(result).toEqual([]);
+  });
+
+  it('handles multiple slugs in a single batch query', async () => {
+    const rows = [
+      {
+        id: 1,
+        name: 'Redis',
+        slug: 'redis',
+        category: 'db',
+        iconKey: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 2,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        iconKey: 'si:SiTypescript',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ];
+    orderByMock.mockResolvedValueOnce(rows);
+    whereMock.mockReturnValueOnce({ orderBy: orderByMock });
+
+    const result = await findTagsBySlugs(['redis', 'typescript']);
+
+    expect(inArrayMock).toHaveBeenCalledWith(tagsTable.slug, ['redis', 'typescript']);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ slug: 'redis' });
+    expect(result[1]).toMatchObject({ slug: 'typescript' });
   });
 });
