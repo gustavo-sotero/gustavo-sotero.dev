@@ -13,11 +13,9 @@ vi.mock('@/components/shared/TechIcon', () => ({
   TechIcon: ({ name }: { name: string }) => <span data-testid={`tech-icon-${name}`} />,
 }));
 
-vi.mock('@/components/ui/bento-grid', () => ({
-  BentoGrid: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div data-testid="bento-grid" className={className}>
-      {children}
-    </div>
+vi.mock('@/components/ui/blur-fade', () => ({
+  BlurFade: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className}>{children}</div>
   ),
 }));
 

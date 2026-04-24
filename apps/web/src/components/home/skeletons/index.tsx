@@ -61,11 +61,31 @@ export function SkillsSkeleton() {
       <div className="space-y-2">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-4 w-full max-w-2xl" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {SKILL_SKELETON_KEYS.map((k) => (
-          <Skeleton key={k} className="h-16 rounded-xl" />
-        ))}
+      <div className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-4 md:p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {(['sk-a', 'sk-b', 'sk-c', 'sk-d'] as const).map((k) => (
+            <div
+              key={k}
+              className="rounded-2xl border border-zinc-800/80 bg-zinc-950/50 p-4 md:p-5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <Skeleton className="h-2.5 w-24" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+                <Skeleton className="h-7 w-10 rounded-full" />
+              </div>
+              <Skeleton className="my-4 h-px w-full" />
+              <div className="space-y-2">
+                {SKILL_SKELETON_KEYS.slice(0, 4).map((sk) => (
+                  <Skeleton key={sk} className="h-16 w-full rounded-xl" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
