@@ -28,6 +28,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import type { UseFormSetValue } from 'react-hook-form';
 import type { z } from 'zod';
+import { useResolveAiSuggestedTags } from '@/hooks/admin/use-admin-tags';
 import { useAiPostGenerationConfig } from '@/hooks/admin/use-ai-post-generation-config';
 import {
   useGeneratePostDraftRun,
@@ -145,6 +146,7 @@ export function PostGenerationAssistant({
   const topicsRunHook = useGeneratePostTopicsRun();
   const draftRunHook = useGeneratePostDraftRun();
   const { data: configState, isLoading: isLoadingConfig } = useAiPostGenerationConfig();
+  const resolveAiTagsMutation = useResolveAiSuggestedTags();
 
   function handleCategoryChange(nextCategory: AiPostRequestedCategory) {
     setCategory((currentCategory) => {
@@ -662,6 +664,12 @@ export function PostGenerationAssistant({
                     onBackToTopics={handleBackToTopics}
                     onDiscard={handleReset}
                     isRegenerating={draftRunHook.isPending}
+                    resolveAiTags={async (names) => {
+                      const result = await resolveAiTagsMutation.mutateAsync(names);
+                      const resolvedTags =
+                        (result?.data as import('@portfolio/shared').Tag[] | undefined) ?? [];
+                      return resolvedTags.map((t) => t.id);
+                    }}
                   />
                 )}
               </>

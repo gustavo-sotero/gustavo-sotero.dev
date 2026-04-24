@@ -52,7 +52,9 @@ const { useCreateProject, useUpdateProject, useDeleteProject } = await import(
   './admin/use-admin-projects'
 );
 
-const { useCreateTag, useUpdateTag, useDeleteTag } = await import('./admin/use-admin-tags');
+const { useCreateTag, useUpdateTag, useDeleteTag, useResolveAiSuggestedTags } = await import(
+  './admin/use-admin-tags'
+);
 
 const { useCreateSkill, useUpdateSkill, useDeleteSkill } = await import('./admin/use-admin-skills');
 
@@ -341,6 +343,34 @@ describe('admin mutation hooks — revalidation on success', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(mockRevalidatePublicTags).toHaveBeenCalledWith(tagMutationTags());
+    });
+  });
+
+  describe('useResolveAiSuggestedTags', () => {
+    it('calls revalidatePublicTags with tagMutationTags on success', async () => {
+      const resolvedTags = [makeTag({ id: 5, name: 'Redis', slug: 'redis', category: 'db' })];
+      mockApiPost.mockResolvedValueOnce({ success: true, data: resolvedTags });
+
+      const { result } = renderHook(() => useResolveAiSuggestedTags(), {
+        wrapper: wrapper(qc),
+      });
+      result.current.mutate(['Redis', 'TypeScript']);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockRevalidatePublicTags).toHaveBeenCalledWith(tagMutationTags());
+    });
+
+    it('mutation success is not blocked when revalidatePublicTags rejects', async () => {
+      const resolvedTags = [makeTag()];
+      mockApiPost.mockResolvedValueOnce({ success: true, data: resolvedTags });
+      mockRevalidatePublicTags.mockRejectedValueOnce(new Error('Cache down'));
+
+      const { result } = renderHook(() => useResolveAiSuggestedTags(), {
+        wrapper: wrapper(qc),
+      });
+      result.current.mutate(['TypeScript']);
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
     });
   });
 

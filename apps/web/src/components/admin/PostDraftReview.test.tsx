@@ -86,7 +86,7 @@ describe('PostDraftReview', () => {
     cleanup();
   });
 
-  it('applies the full draft payload with only matched tag IDs', () => {
+  it('applies the full draft payload with only matched tag IDs', async () => {
     const onApplyAll = vi.fn();
 
     render(
@@ -105,17 +105,19 @@ describe('PostDraftReview', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Aplicar tudo ao formulário/i }));
 
-    expect(onApplyAll).toHaveBeenCalledWith({
-      title: DRAFT.title,
-      slug: DRAFT.slug,
-      excerpt: DRAFT.excerpt,
-      content: DRAFT.content,
-      tagIds: [1],
+    await waitFor(() => {
+      expect(onApplyAll).toHaveBeenCalledWith({
+        title: DRAFT.title,
+        slug: DRAFT.slug,
+        excerpt: DRAFT.excerpt,
+        content: DRAFT.content,
+        tagIds: [1],
+      });
+      expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Draft aplicado ao formulário');
     });
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Draft aplicado ao formulário');
   });
 
-  it('applies only matched tag IDs and surfaces unmatched tag guidance', () => {
+  it('applies only matched tag IDs and surfaces unmatched tag guidance', async () => {
     const onApplyField = vi.fn();
 
     render(
@@ -140,10 +142,12 @@ describe('PostDraftReview', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Aplicar tags/i }));
 
-    expect(onApplyField).toHaveBeenCalledWith('tagIds', [1]);
+    await waitFor(() => {
+      expect(onApplyField).toHaveBeenCalledWith('tagIds', [1]);
+    });
   });
 
-  it('deduplicates tag IDs when multiple suggested names resolve to the same catalog tag', () => {
+  it('deduplicates tag IDs when multiple suggested names resolve to the same catalog tag', async () => {
     const onApplyAll = vi.fn();
     const onApplyField = vi.fn();
 
@@ -162,19 +166,23 @@ describe('PostDraftReview', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /Aplicar tudo ao formulário/i }));
-    expect(onApplyAll).toHaveBeenCalledWith({
-      title: DRAFT_WITH_DUPLICATE_TAG_MATCHES.title,
-      slug: DRAFT_WITH_DUPLICATE_TAG_MATCHES.slug,
-      excerpt: DRAFT_WITH_DUPLICATE_TAG_MATCHES.excerpt,
-      content: DRAFT_WITH_DUPLICATE_TAG_MATCHES.content,
-      tagIds: [1],
+    await waitFor(() => {
+      expect(onApplyAll).toHaveBeenCalledWith({
+        title: DRAFT_WITH_DUPLICATE_TAG_MATCHES.title,
+        slug: DRAFT_WITH_DUPLICATE_TAG_MATCHES.slug,
+        excerpt: DRAFT_WITH_DUPLICATE_TAG_MATCHES.excerpt,
+        content: DRAFT_WITH_DUPLICATE_TAG_MATCHES.content,
+        tagIds: [1],
+      });
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Aplicar tags/i }));
-    expect(onApplyField).toHaveBeenCalledWith('tagIds', [1]);
+    await waitFor(() => {
+      expect(onApplyField).toHaveBeenCalledWith('tagIds', [1]);
+    });
   });
 
-  it('matches suggested tag names using shared slug normalization', () => {
+  it('matches suggested tag names using shared slug normalization', async () => {
     const onApplyField = vi.fn();
 
     render(
@@ -199,7 +207,9 @@ describe('PostDraftReview', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Aplicar tags/i }));
 
-    expect(onApplyField).toHaveBeenCalledWith('tagIds', [2]);
+    await waitFor(() => {
+      expect(onApplyField).toHaveBeenCalledWith('tagIds', [2]);
+    });
   });
 
   it('applies the generated markdown content field without altering mermaid blocks', () => {
@@ -382,5 +392,115 @@ describe('PostDraftReview', () => {
         /Copie e cole diretamente no LinkedIn\. Não altera nenhum campo do formulário do post\./i
       )
     ).toBeInTheDocument();
+  });
+
+  describe('when resolveAiTags prop is provided', () => {
+    it('shows "serão criadas automaticamente" message for unmatched tag names', () => {
+      render(
+        <PostDraftReview
+          draft={DRAFT}
+          allTags={TAGS}
+          currentValues={{}}
+          onApplyAll={vi.fn()}
+          onApplyField={vi.fn()}
+          onRegenerate={vi.fn()}
+          onBackToTopics={vi.fn()}
+          onDiscard={vi.fn()}
+          isRegenerating={false}
+          resolveAiTags={vi.fn().mockResolvedValue([])}
+        />
+      );
+
+      expect(
+        screen.getByText(/Tags riscadas serão criadas automaticamente ao aplicar\./i)
+      ).toBeInTheDocument();
+      // Manual creation guidance must NOT appear
+      expect(screen.queryByText(/Crie-as manualmente para aplicar\./i)).not.toBeInTheDocument();
+    });
+
+    it('calls resolveAiTags with unmatched names then calls onApplyField with combined IDs', async () => {
+      const onApplyField = vi.fn();
+      const resolveAiTags = vi.fn().mockResolvedValue([99]);
+
+      render(
+        <PostDraftReview
+          draft={DRAFT}
+          allTags={TAGS}
+          currentValues={{}}
+          onApplyAll={vi.fn()}
+          onApplyField={onApplyField}
+          onRegenerate={vi.fn()}
+          onBackToTopics={vi.fn()}
+          onDiscard={vi.fn()}
+          isRegenerating={false}
+          resolveAiTags={resolveAiTags}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Aplicar tags/i }));
+
+      await waitFor(() => {
+        expect(resolveAiTags).toHaveBeenCalledWith(
+          expect.arrayContaining(['Redis']) // unmatched name in DRAFT
+        );
+        expect(onApplyField).toHaveBeenCalledWith('tagIds', expect.arrayContaining([1, 99]));
+      });
+    });
+
+    it('calls resolveAiTags with unmatched names then calls onApplyAll with combined IDs', async () => {
+      const onApplyAll = vi.fn();
+      const resolveAiTags = vi.fn().mockResolvedValue([99]);
+
+      render(
+        <PostDraftReview
+          draft={DRAFT}
+          allTags={TAGS}
+          currentValues={{}}
+          onApplyAll={onApplyAll}
+          onApplyField={vi.fn()}
+          onRegenerate={vi.fn()}
+          onBackToTopics={vi.fn()}
+          onDiscard={vi.fn()}
+          isRegenerating={false}
+          resolveAiTags={resolveAiTags}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Aplicar tudo ao formulário/i }));
+
+      await waitFor(() => {
+        expect(resolveAiTags).toHaveBeenCalled();
+        expect(onApplyAll).toHaveBeenCalledWith(
+          expect.objectContaining({ tagIds: expect.arrayContaining([1, 99]) })
+        );
+      });
+    });
+
+    it('shows toast error and does NOT call onApplyField when resolveAiTags throws', async () => {
+      const onApplyField = vi.fn();
+      const resolveAiTags = vi.fn().mockRejectedValue(new Error('Network error'));
+
+      render(
+        <PostDraftReview
+          draft={DRAFT}
+          allTags={TAGS}
+          currentValues={{}}
+          onApplyAll={vi.fn()}
+          onApplyField={onApplyField}
+          onRegenerate={vi.fn()}
+          onBackToTopics={vi.fn()}
+          onDiscard={vi.fn()}
+          isRegenerating={false}
+          resolveAiTags={resolveAiTags}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: /Aplicar tags/i }));
+
+      await waitFor(() => {
+        expect(vi.mocked(toast.error)).toHaveBeenCalled();
+        expect(onApplyField).not.toHaveBeenCalled();
+      });
+    });
   });
 });

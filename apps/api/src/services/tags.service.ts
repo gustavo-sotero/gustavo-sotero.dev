@@ -6,6 +6,10 @@
  * repository which wraps pivot operations in a DB transaction.
  */
 
+import {
+  canonicalizeSuggestedTagNames,
+  inferTagCategoryFromCatalog,
+} from '@portfolio/shared/lib/aiTagNormalizer';
 import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
 import type { CreateTagSchemaInput, UpdateTagSchemaInput } from '@portfolio/shared/schemas/tags';
 import type { Tag } from '@portfolio/shared/types/tags';
@@ -15,9 +19,11 @@ import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import {
   createTag,
   deleteTag,
+  findAllTagsForNormalization,
   findManyTags,
   findTagById,
   findTagByName,
+  findTagsBySlugs,
   syncPostTags,
   syncProjectTags,
   tagNameExists,
@@ -148,6 +154,72 @@ export async function deleteTagService(id: number) {
   await invalidateGroup('tagsContent');
 
   return result;
+}
+
+/**
+ * Resolve a list of AI-suggested tag names to persisted Tag records.
+ *
+ * For each canonicalized, deduplicated name:
+ *  - If a tag with the derived slug already exists, the existing record is reused.
+ *  - Otherwise, a new tag is created with the category inferred from the shared
+ *    ICON_CATALOG (fallback: `'other'`).
+ *
+ * Concurrent creation races are handled: when `createTagService` throws a
+ * CONFLICT error, the existing row is fetched by name and returned instead.
+ *
+ * @returns All resolved Tag objects (existing + newly created), deduplicated by ID.
+ */
+export async function resolveAiSuggestedTags(suggestedNames: string[]): Promise<Tag[]> {
+  // 1. Canonicalize and deduplicate names via shared normalizer
+  const allPersistedForNorm = await findAllTagsForNormalization();
+  const canonicalized = canonicalizeSuggestedTagNames(suggestedNames, allPersistedForNorm);
+
+  if (canonicalized.length === 0) return [];
+
+  // 2. Batch-lookup existing tags by derived slug — minimises DB round trips
+  const slugs = canonicalized.map((name) => generateSlug(name));
+  const existingRows = await findTagsBySlugs(slugs);
+  const existingBySlug = new Map(existingRows.map((row) => [row.slug, row]));
+
+  // 3. Resolve each canonical name — reuse or create
+  const resolvedTags: Tag[] = [];
+  const seenIds = new Set<number>();
+
+  for (const canonicalName of canonicalized) {
+    const slug = generateSlug(canonicalName);
+    const existing = existingBySlug.get(slug);
+
+    if (existing) {
+      if (!seenIds.has(existing.id)) {
+        seenIds.add(existing.id);
+        resolvedTags.push(mapTagRow(existing));
+      }
+      continue;
+    }
+
+    // Infer category from catalog and create
+    const category = inferTagCategoryFromCatalog(canonicalName);
+    try {
+      const created = await createTagService({ name: canonicalName, category });
+      if (!seenIds.has(created.id)) {
+        seenIds.add(created.id);
+        resolvedTags.push(created);
+      }
+    } catch (err) {
+      // Race condition: another concurrent request created this tag first
+      if ((err as Error).message.includes('CONFLICT')) {
+        const recovered = await findTagByName(canonicalName);
+        if (recovered && !seenIds.has(recovered.id)) {
+          seenIds.add(recovered.id);
+          resolvedTags.push(mapTagRow(recovered));
+        }
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  return resolvedTags;
 }
 
 /**

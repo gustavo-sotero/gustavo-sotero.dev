@@ -20,7 +20,8 @@
  *   const normalized = canonicalizeSuggestedTagNames(rawNames, persistedTags);
  */
 
-import { ICON_CATALOG } from './iconResolver';
+import type { TagCategory } from '../constants/enums';
+import { ICON_CATALOG, resolveCatalogEntry } from './iconResolver';
 import { generateSlug } from './slug';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -290,4 +291,18 @@ export function canonicalizeSuggestedTagNames(
   }
 
   return result;
+}
+
+/**
+ * Infers a tag's category from the shared ICON_CATALOG using the canonical
+ * display name resolution. Returns `'other'` when the name has no catalog match.
+ *
+ * Used by the backend when auto-creating tags from AI-suggested names so that
+ * category assignment is deterministic and consistent with the frontend catalog.
+ *
+ * @param name - Canonical tag name (any casing — will be normalized for lookup)
+ */
+export function inferTagCategoryFromCatalog(name: string): TagCategory {
+  const entry = resolveCatalogEntry(name);
+  return entry?.category ?? 'other';
 }

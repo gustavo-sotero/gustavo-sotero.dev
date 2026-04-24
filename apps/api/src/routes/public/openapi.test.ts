@@ -95,6 +95,7 @@ describe('openapi routes', () => {
       '/admin/projects/{id}',
       '/admin/tags',
       '/admin/tags/{id}',
+      '/admin/tags/resolve-ai-suggested',
       '/admin/comments',
       '/admin/comments/reply',
       '/admin/comments/{id}/approve',

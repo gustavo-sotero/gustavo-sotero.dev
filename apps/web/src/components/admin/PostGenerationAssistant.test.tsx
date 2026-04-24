@@ -19,6 +19,13 @@ vi.mock('@/hooks/admin/use-ai-post-generation-config', () => ({
   useAiPostGenerationConfig: () => useAiPostGenerationConfigMock(),
 }));
 
+vi.mock('@/hooks/admin/use-admin-tags', () => ({
+  useResolveAiSuggestedTags: () => ({
+    mutateAsync: vi.fn().mockResolvedValue({ data: [] }),
+    isPending: false,
+  }),
+}));
+
 vi.mock('@/hooks/admin/use-post-generation', () => ({
   useGeneratePostTopicsRun: () => ({
     start: startTopicRunMock,
@@ -131,6 +138,8 @@ vi.mock('@/components/admin/PostDraftReview', () => ({
     onDiscard: () => void;
     setValue: unknown;
     onTagsApplied?: (ids: number[]) => void;
+    isRegenerating?: boolean;
+    resolveAiTags?: (names: string[]) => Promise<number[]>;
   }) => (
     <div data-testid="draft-review">
       <button

@@ -203,6 +203,16 @@ export async function findAllTagsForNormalization() {
   return db.select({ name: tags.name, slug: tags.slug }).from(tags).orderBy(asc(tags.name));
 }
 
+/**
+ * Find tags by a list of canonical slugs in a single query.
+ * Returns only the tags that exist — unmatched slugs produce no entry.
+ * Returns an empty array for empty input.
+ */
+export async function findTagsBySlugs(slugs: string[]) {
+  if (slugs.length === 0) return [];
+  return db.select().from(tags).where(inArray(tags.slug, slugs)).orderBy(asc(tags.name));
+}
+
 /** Check if a slug is available, optionally excluding an ID. */
 export async function tagSlugExists(slug: string, excludeId?: number): Promise<boolean> {
   const conditions: SQL[] = [eq(tags.slug, slug)];

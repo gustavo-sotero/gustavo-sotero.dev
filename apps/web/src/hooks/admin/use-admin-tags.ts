@@ -57,3 +57,21 @@ export function useDeleteTag() {
     errorToast: 'Erro ao excluir tag.',
   });
 }
+
+/**
+ * Resolve AI-suggested tag names to persisted tag IDs.
+ * Missing tags are auto-created with category inferred from the shared ICON_CATALOG.
+ * Only call this when the admin explicitly accepts a draft.
+ */
+export function useResolveAiSuggestedTags() {
+  return useAdminMutation({
+    mutationFn: (names: string[]) => apiPost<Tag[]>('/admin/tags/resolve-ai-suggested', { names }),
+    invalidate: [
+      ['admin', 'tags'],
+      ['admin', 'posts'],
+      ['admin', 'projects'],
+    ],
+    revalidateTags: () => tagMutationTags(),
+    errorToast: 'Erro ao criar tags sugeridas pela IA.',
+  });
+}

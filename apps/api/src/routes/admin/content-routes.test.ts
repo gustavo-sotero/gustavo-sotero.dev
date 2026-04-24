@@ -14,6 +14,7 @@ const {
   createTagServiceMock,
   updateTagServiceMock,
   deleteTagServiceMock,
+  resolveAiSuggestedTagsMock,
 } = vi.hoisted(() => ({
   listPostsMock: vi.fn(),
   createPostServiceMock: vi.fn(),
@@ -27,6 +28,7 @@ const {
   createTagServiceMock: vi.fn(),
   updateTagServiceMock: vi.fn(),
   deleteTagServiceMock: vi.fn(),
+  resolveAiSuggestedTagsMock: vi.fn(),
 }));
 
 vi.mock('../../services/posts.service', () => ({
@@ -50,6 +52,7 @@ vi.mock('../../services/tags.service', () => ({
   createTagService: createTagServiceMock,
   updateTagService: updateTagServiceMock,
   deleteTagService: deleteTagServiceMock,
+  resolveAiSuggestedTags: resolveAiSuggestedTagsMock,
 }));
 
 import { adminPostsRouter } from './posts';
@@ -599,5 +602,66 @@ describe('admin content routes', () => {
     expect(body.error.message).toBe('Validation failed');
     expect(Array.isArray(body.error.details)).toBe(true);
     expect(body.error.details.some((d) => d.field === 'name')).toBe(true);
+  });
+
+  it('POST /admin/tags/resolve-ai-suggested returns resolved tags with status 200', async () => {
+    resolveAiSuggestedTagsMock.mockResolvedValueOnce([
+      {
+        id: 5,
+        name: 'Redis',
+        slug: 'redis',
+        category: 'db',
+        iconKey: 'si:SiRedis',
+        createdAt: '2026-04-24T00:00:00.000Z',
+      },
+    ]);
+
+    const app = new Hono();
+    app.route('/admin/tags', adminTagsRouter);
+
+    const response = await app.request('/admin/tags/resolve-ai-suggested', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ names: ['Redis', 'redis'] }),
+    });
+
+    const body = (await response.json()) as {
+      success: boolean;
+      data: Array<{ id: number; name: string }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toMatchObject({ id: 5, name: 'Redis' });
+    expect(resolveAiSuggestedTagsMock).toHaveBeenCalledWith(['Redis', 'redis']);
+  });
+
+  it('POST /admin/tags/resolve-ai-suggested returns 400 for empty names array', async () => {
+    const app = new Hono();
+    app.route('/admin/tags', adminTagsRouter);
+
+    const response = await app.request('/admin/tags/resolve-ai-suggested', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ names: [] }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(resolveAiSuggestedTagsMock).not.toHaveBeenCalled();
+  });
+
+  it('POST /admin/tags/resolve-ai-suggested returns 400 when names field is absent', async () => {
+    const app = new Hono();
+    app.route('/admin/tags', adminTagsRouter);
+
+    const response = await app.request('/admin/tags/resolve-ai-suggested', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(400);
+    expect(resolveAiSuggestedTagsMock).not.toHaveBeenCalled();
   });
 });

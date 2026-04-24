@@ -1362,6 +1362,66 @@ export const adminPaths = {
       },
     },
   },
+  '/admin/tags/resolve-ai-suggested': {
+    post: {
+      tags: ['Admin - Tags'],
+      summary: 'Resolve AI-suggested tag names to persisted IDs',
+      description:
+        'Accepts a list of raw AI-suggested tag names. Each name is canonicalized and ' +
+        'deduplicated. Existing tags are reused; missing tags are auto-created with the ' +
+        'category inferred from the shared ICON_CATALOG (fallback: `other`). ' +
+        'Only call this endpoint when the admin explicitly accepts a draft — never during ' +
+        'generation or polling.',
+      operationId: 'adminResolveAiSuggestedTags',
+      security: [{ cookieAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['names'],
+              properties: {
+                names: {
+                  type: 'array',
+                  items: { type: 'string', minLength: 1, maxLength: 100 },
+                  minItems: 1,
+                  maxItems: 50,
+                  description: 'Raw tag names as returned by the AI draft.',
+                  example: ['Redis', 'BullMQ', 'typescript'],
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': {
+          description: 'List of resolved (existing or newly created) tags',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/SuccessResponse' },
+              example: {
+                success: true,
+                data: [
+                  {
+                    id: 3,
+                    name: 'Redis',
+                    slug: 'redis',
+                    category: 'db',
+                    iconKey: 'si:SiRedis',
+                    createdAt: '2026-04-24T00:00:00.000Z',
+                  },
+                ],
+              },
+            },
+          },
+        },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthorized' },
+      },
+    },
+  },
   '/admin/tags/{id}': {
     patch: {
       tags: ['Admin - Tags'],

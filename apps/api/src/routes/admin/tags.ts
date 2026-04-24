@@ -11,7 +11,12 @@
  * Clients must NOT send `iconKey` in request bodies — it is ignored if present.
  */
 
-import { createTagSchema, tagQuerySchema, updateTagSchema } from '@portfolio/shared/schemas/tags';
+import {
+  createTagSchema,
+  resolveAiTagsSchema,
+  tagQuerySchema,
+  updateTagSchema,
+} from '@portfolio/shared/schemas/tags';
 import { Hono } from 'hono';
 import { errorResponse, successResponse } from '../../lib/response';
 import { parseAndValidateBody, validateQuery } from '../../lib/validate';
@@ -19,6 +24,7 @@ import {
   createTagService,
   deleteTagService,
   listTags,
+  resolveAiSuggestedTags,
   updateTagService,
 } from '../../services/tags.service';
 import type { AppEnv } from '../../types/index';
@@ -57,6 +63,20 @@ adminTagsRouter.post('/', async (c) => {
     }
     throw err;
   }
+});
+
+/**
+ * POST /admin/tags/resolve-ai-suggested
+ * Resolve a list of AI-suggested tag names to persisted tag IDs.
+ * Missing tags are auto-created with category inferred from the shared catalog.
+ * Only the admin flow (draft acceptance) should call this endpoint.
+ */
+adminTagsRouter.post('/resolve-ai-suggested', async (c) => {
+  const bv = await parseAndValidateBody(c, resolveAiTagsSchema);
+  if (!bv.ok) return bv.response;
+
+  const resolvedTags = await resolveAiSuggestedTags(bv.data.names);
+  return successResponse(c, resolvedTags, 200);
 });
 
 /**

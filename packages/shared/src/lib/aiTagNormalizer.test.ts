@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canonicalizeSuggestedTagNames,
   canonicalizeTagName,
+  inferTagCategoryFromCatalog,
   type PersistedTagForNormalization,
 } from './aiTagNormalizer';
 
@@ -202,5 +203,40 @@ describe('canonicalizeSuggestedTagNames', () => {
     // Node.js first, JWT second
     expect(result[0]).toBe('Node.js');
     expect(result[1]).toBe('JWT');
+  });
+});
+
+// ── inferTagCategoryFromCatalog ───────────────────────────────────────────────
+
+describe('inferTagCategoryFromCatalog', () => {
+  it('returns the correct category for a well-known catalog entry', () => {
+    expect(inferTagCategoryFromCatalog('TypeScript')).toBe('language');
+    expect(inferTagCategoryFromCatalog('React')).toBe('framework');
+    expect(inferTagCategoryFromCatalog('Docker')).toBe('infra');
+    expect(inferTagCategoryFromCatalog('PostgreSQL')).toBe('db');
+    expect(inferTagCategoryFromCatalog('AWS')).toBe('cloud');
+    expect(inferTagCategoryFromCatalog('GitHub Actions')).toBe('tool');
+  });
+
+  it('resolves via alias — "postgres" maps to the PostgreSQL catalog entry (db)', () => {
+    expect(inferTagCategoryFromCatalog('postgres')).toBe('db');
+  });
+
+  it('resolves via alias with different casing', () => {
+    expect(inferTagCategoryFromCatalog('typescript')).toBe('language');
+    expect(inferTagCategoryFromCatalog('REACT')).toBe('framework');
+  });
+
+  it('returns "other" for an unknown name with no catalog match', () => {
+    expect(inferTagCategoryFromCatalog('SomeObscureFramework2099')).toBe('other');
+  });
+
+  it('returns "other" for an empty string', () => {
+    expect(inferTagCategoryFromCatalog('')).toBe('other');
+  });
+
+  it('resolves via alias with diacritics stripped by normalizeTagName', () => {
+    // "nodejs" alias of Node.js → category "tool"
+    expect(inferTagCategoryFromCatalog('nodejs')).toBe('tool');
   });
 });

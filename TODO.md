@@ -5,5 +5,5 @@
 [x] Mudar sistema de tags/skills, skills deve ter um sistema de nível de expertise que será classificado em estrelas 1 estrela = básico, 3 estrelas avançando.
     - Sistema de destaque ainda deve ser mantido, mas deve ser adicionado o sistema de expertise.
     - Com isso a ui da stack e skills deverá ser revisada para se ajustar ao novo sistema.
-[ ] Criação automatica de tags na geração de post assitida de ia.
+[x] Criação automática de tags na geração de post assistida de ia.
 [ ] Sistema de ordenação de post, seja por relevancia ou por ordenação customizada pelo admin.

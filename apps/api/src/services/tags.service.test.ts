@@ -13,6 +13,8 @@ const {
   deleteTagMock,
   syncPostTagsMock,
   syncProjectTagsMock,
+  findAllTagsForNormalizationMock,
+  findTagsBySlugsM,
 } = vi.hoisted(() => ({
   cachedMock: vi.fn(),
   invalidatePatternMock: vi.fn(),
@@ -26,6 +28,8 @@ const {
   deleteTagMock: vi.fn(),
   syncPostTagsMock: vi.fn(),
   syncProjectTagsMock: vi.fn(),
+  findAllTagsForNormalizationMock: vi.fn(),
+  findTagsBySlugsM: vi.fn(),
 }));
 
 vi.mock('../lib/cache', () => ({
@@ -59,12 +63,15 @@ vi.mock('../repositories/tags.repo', () => ({
   deleteTag: deleteTagMock,
   syncPostTags: syncPostTagsMock,
   syncProjectTags: syncProjectTagsMock,
+  findAllTagsForNormalization: findAllTagsForNormalizationMock,
+  findTagsBySlugs: findTagsBySlugsM,
 }));
 
 import {
   createTagService,
   deleteTagService,
   listTags,
+  resolveAiSuggestedTags,
   syncTags,
   updateTagService,
 } from './tags.service';
@@ -76,6 +83,8 @@ describe('tags service', () => {
       fetcher()
     );
     tagSlugExistsMock.mockResolvedValue(false);
+    findAllTagsForNormalizationMock.mockResolvedValue([]);
+    findTagsBySlugsM.mockResolvedValue([]);
   });
 
   it('uses a source-aware cache key for public tag listings to avoid collisions', async () => {
@@ -385,5 +394,129 @@ describe('tags service', () => {
     expect(result).toBeNull();
     // No cache invalidation if delete didn't remove anything
     expect(invalidatePatternMock).not.toHaveBeenCalled();
+  });
+
+  // ── resolveAiSuggestedTags ───────────────────────────────────────────────────
+
+  describe('resolveAiSuggestedTags', () => {
+    const redisRow = {
+      id: 5,
+      name: 'Redis',
+      slug: 'redis',
+      category: 'db',
+      iconKey: 'si:SiRedis',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+
+    it('reuses an existing tag when the slug already exists in the database', async () => {
+      findTagsBySlugsM.mockResolvedValueOnce([redisRow]);
+
+      const result = await resolveAiSuggestedTags(['Redis']);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ id: 5, name: 'Redis', slug: 'redis' });
+      expect(createTagMock).not.toHaveBeenCalled();
+    });
+
+    it('creates a missing tag with category inferred from the shared catalog', async () => {
+      findTagsBySlugsM.mockResolvedValueOnce([]);
+      findTagByNameMock.mockResolvedValue(null);
+      tagSlugExistsMock.mockResolvedValue(false);
+      createTagMock.mockResolvedValueOnce({
+        id: 10,
+        name: 'Redis',
+        slug: 'redis',
+        category: 'db',
+        iconKey: 'si:SiRedis',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+
+      const result = await resolveAiSuggestedTags(['Redis']);
+
+      // createTagService internally calls createTagMock with category='db' from catalog
+      expect(createTagMock).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Redis', category: 'db' })
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ id: 10, name: 'Redis', category: 'db' });
+    });
+
+    it('infers "other" category when the name is not in the catalog', async () => {
+      findTagsBySlugsM.mockResolvedValueOnce([]);
+      findTagByNameMock.mockResolvedValue(null);
+      tagSlugExistsMock.mockResolvedValue(false);
+      createTagMock.mockResolvedValueOnce({
+        id: 20,
+        name: 'UnknownFramework2099',
+        slug: 'unknownframework2099',
+        category: 'other',
+        iconKey: 'lucide:Tag',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+
+      const result = await resolveAiSuggestedTags(['UnknownFramework2099']);
+
+      expect(createTagMock).toHaveBeenCalledWith(expect.objectContaining({ category: 'other' }));
+      expect(result[0]).toMatchObject({ category: 'other' });
+    });
+
+    it('deduplicates by slug — multiple AI name variants resolve to one tag', async () => {
+      findTagsBySlugsM.mockResolvedValueOnce([redisRow]);
+
+      // 'redis' and 'Redis' both canonicalize to 'Redis' (slug 'redis')
+      const result = await resolveAiSuggestedTags(['redis', 'Redis']);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ id: 5 });
+    });
+
+    it('returns empty array for an empty input list', async () => {
+      const result = await resolveAiSuggestedTags([]);
+      expect(result).toEqual([]);
+      expect(findTagsBySlugsM).not.toHaveBeenCalled();
+    });
+
+    it('recovers from a concurrent creation race by fetching the existing row', async () => {
+      findTagsBySlugsM.mockResolvedValueOnce([]);
+      findTagByNameMock.mockResolvedValueOnce(null); // conflict check inside createTagService
+      tagSlugExistsMock.mockResolvedValue(false);
+      // Simulate another worker created the tag first → createTag throws unique constraint
+      createTagMock.mockRejectedValueOnce(new Error('CONFLICT: Tag name "Redis" is already taken'));
+      // Recovery fetch
+      findTagByNameMock.mockResolvedValueOnce(redisRow);
+
+      const result = await resolveAiSuggestedTags(['Redis']);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ id: 5, name: 'Redis' });
+    });
+
+    it('invalidates the tags cache when at least one tag is created', async () => {
+      findTagsBySlugsM.mockResolvedValueOnce([]);
+      findTagByNameMock.mockResolvedValue(null);
+      tagSlugExistsMock.mockResolvedValue(false);
+      createTagMock.mockResolvedValueOnce({
+        id: 11,
+        name: 'Redis',
+        slug: 'redis',
+        category: 'db',
+        iconKey: 'si:SiRedis',
+        createdAt: new Date(),
+      });
+
+      await resolveAiSuggestedTags(['Redis']);
+
+      // createTagService calls invalidatePattern('tags:*')
+      expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
+    });
+
+    it('does not call createTag when all suggested names map to existing tags', async () => {
+      findTagsBySlugsM.mockResolvedValueOnce([redisRow]);
+
+      await resolveAiSuggestedTags(['Redis']);
+
+      expect(createTagMock).not.toHaveBeenCalled();
+      expect(invalidatePatternMock).not.toHaveBeenCalled();
+    });
   });
 });

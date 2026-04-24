@@ -76,3 +76,13 @@ export type CreateTagSchemaInput = z.input<typeof createTagSchema>;
 export type UpdateTagSchemaInput = z.infer<typeof updateTagSchema>;
 export type TagQuery = z.infer<typeof tagQuerySchema>;
 export type PublicTagQuery = z.infer<typeof publicTagQuerySchema>;
+
+/**
+ * Body schema for `POST /admin/tags/resolve-ai-suggested`.
+ * Accepts a list of raw AI-suggested tag names; the backend canonicalizes,
+ * deduplicates, resolves existing tags, and creates any missing ones.
+ */
+export const resolveAiTagsSchema = z.object({
+  names: z.array(z.string().min(1).max(100)).min(1).max(50),
+});
+export type ResolveAiTagsInput = z.infer<typeof resolveAiTagsSchema>;

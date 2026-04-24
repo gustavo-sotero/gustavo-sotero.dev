@@ -39,6 +39,12 @@ interface PostDraftReviewProps {
   onBackToTopics: () => void;
   onDiscard: () => void;
   isRegenerating: boolean;
+  /**
+   * When provided, clicking "apply tags" or "apply all" will auto-create any
+   * unmatched AI-suggested names before applying the resolved IDs to the form.
+   * Only fires when the admin explicitly accepts the draft.
+   */
+  resolveAiTags?: (names: string[]) => Promise<number[]>;
 }
 
 /**
@@ -173,10 +179,12 @@ export function PostDraftReview({
   onBackToTopics,
   onDiscard,
   isRegenerating,
+  resolveAiTags,
 }: PostDraftReviewProps) {
   const [applied, setApplied] = useState<Partial<Record<ApplyableField | 'all', true>>>({});
   const [imageCopied, setImageCopied] = useState(false);
   const [linkedinCopied, setLinkedinCopied] = useState(false);
+  const [isResolvingTags, setIsResolvingTags] = useState(false);
 
   const tagLookup = buildTagLookup(allTags);
   const { matchedIds, unmatchedNames } = resolveTagNames(draft.suggestedTagNames, allTags);
@@ -195,25 +203,57 @@ export function PostDraftReview({
     setApplied((prev) => ({ ...prev, [field]: true }));
   }
 
-  function applyAll() {
+  /**
+   * Resolve all AI-suggested names to tag IDs.
+   * Already-matched tags are kept; unmatched names are auto-created via `resolveAiTags`
+   * when the prop is provided. Returns the full deduplicated ID list.
+   */
+  async function resolveAllTagIds(): Promise<number[] | null> {
+    const allIds = [...matchedIds];
+
+    if (unmatchedNames.length > 0 && resolveAiTags) {
+      setIsResolvingTags(true);
+      try {
+        const createdIds = await resolveAiTags(unmatchedNames);
+        for (const id of createdIds) {
+          if (!allIds.includes(id)) allIds.push(id);
+        }
+      } catch {
+        toast.error('Erro ao criar tags sugeridas pela IA');
+        return null;
+      } finally {
+        setIsResolvingTags(false);
+      }
+    }
+
+    return allIds;
+  }
+
+  async function applyAll() {
+    const tagIds = await resolveAllTagIds();
+    if (tagIds === null) return;
+
     onApplyAll({
       title: draft.title,
       slug: draft.slug,
       excerpt: draft.excerpt,
       content: draft.content,
-      tagIds: matchedIds,
+      tagIds,
     });
     markApplied('all');
     toast.success('Draft aplicado ao formulário');
   }
 
-  function applyField(field: ApplyableField) {
+  async function applyField(field: ApplyableField) {
     if (field === 'tagIds') {
-      onApplyField('tagIds', matchedIds);
+      const tagIds = await resolveAllTagIds();
+      if (tagIds === null) return;
+      onApplyField('tagIds', tagIds);
+      markApplied('tagIds');
     } else {
       onApplyField(field, draft[field] as string);
+      markApplied(field);
     }
-    markApplied(field);
   }
 
   async function copyImagePrompt() {
@@ -280,8 +320,10 @@ export function PostDraftReview({
       {/* Apply all */}
       <Button
         type="button"
-        onClick={applyAll}
-        disabled={isRegenerating}
+        onClick={() => {
+          void applyAll();
+        }}
+        disabled={isRegenerating || isResolvingTags}
         className={cn(
           'w-full gap-2',
           applied.all
@@ -360,8 +402,15 @@ export function PostDraftReview({
             <FieldApplyButton
               label="Aplicar tags"
               applied={!!applied.tagIds || !!applied.all}
-              onClick={() => applyField('tagIds')}
-              disabled={isRegenerating || matchedIds.length === 0}
+              onClick={() => {
+                void applyField('tagIds');
+              }}
+              disabled={
+                isRegenerating ||
+                isResolvingTags ||
+                (matchedIds.length === 0 && unmatchedNames.length === 0) ||
+                (matchedIds.length === 0 && !resolveAiTags)
+              }
             />
           </div>
           <div className="flex flex-wrap gap-1">
@@ -385,7 +434,9 @@ export function PostDraftReview({
           </div>
           {unmatchedNames.length > 0 && (
             <p className="text-xs text-zinc-600">
-              Tags riscadas não existem no catálogo. Crie-as manualmente para aplicar.
+              {resolveAiTags
+                ? 'Tags riscadas serão criadas automaticamente ao aplicar.'
+                : 'Tags riscadas não existem no catálogo. Crie-as manualmente para aplicar.'}
             </p>
           )}
           {overwriteState.tagIds && !applied.tagIds && !applied.all && (
