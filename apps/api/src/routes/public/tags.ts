@@ -1,11 +1,11 @@
 /**
  * Public route for tags.
  *
- * Returns only tags that are actually used by at least one published entity.
+ * Returns only tags that are actually used by at least one published post.
  * Supports optional category and source filters.
  *
  * Route:
- *  GET /tags  - List tags used by published content
+ *  GET /tags  - List tags used by published posts
  */
 
 import { publicTagQuerySchema } from '@portfolio/shared/schemas/tags';
@@ -19,7 +19,7 @@ const publicTagsRouter = new Hono<AppEnv>();
 
 /**
  * GET /tags
- * Returns tags that appear on at least one published entity.
+ * Returns tags that appear on at least one published post.
  * Supports `?category=language,framework` (comma-separated category filter).
  * Supports `?source=post` (tags are post-only taxonomy; project/experience use skills).
  * When `source` is absent, all post-used tags are returned.

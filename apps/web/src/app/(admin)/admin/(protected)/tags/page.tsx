@@ -5,7 +5,7 @@ export default function AdminTagsPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold text-zinc-100">Tags</h1>
-        <p className="text-sm text-zinc-500 mt-0.5">Gerencie as tags usadas em posts e projetos</p>
+        <p className="text-sm text-zinc-500 mt-0.5">Gerencie as tags usadas nos posts</p>
       </div>
       <TagManager />
     </div>

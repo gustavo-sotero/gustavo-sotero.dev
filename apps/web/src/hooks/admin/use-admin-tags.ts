@@ -21,7 +21,6 @@ export function useCreateTag() {
     invalidate: [
       ['admin', 'tags'],
       ['admin', 'posts'],
-      ['admin', 'projects'],
     ],
     revalidateTags: () => tagMutationTags(),
     successToast: 'Tag criada com sucesso!',
@@ -36,7 +35,6 @@ export function useUpdateTag() {
     invalidate: [
       ['admin', 'tags'],
       ['admin', 'posts'],
-      ['admin', 'projects'],
     ],
     revalidateTags: () => tagMutationTags(),
     successToast: 'Tag atualizada.',
@@ -50,7 +48,6 @@ export function useDeleteTag() {
     invalidate: [
       ['admin', 'tags'],
       ['admin', 'posts'],
-      ['admin', 'projects'],
     ],
     revalidateTags: () => tagMutationTags(),
     successToast: 'Tag excluída.',
@@ -69,7 +66,6 @@ export function useResolveAiSuggestedTags() {
     invalidate: [
       ['admin', 'tags'],
       ['admin', 'posts'],
-      ['admin', 'projects'],
     ],
     revalidateTags: () => tagMutationTags(),
     errorToast: 'Erro ao criar tags sugeridas pela IA.',

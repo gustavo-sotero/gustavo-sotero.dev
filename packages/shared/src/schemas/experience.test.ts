@@ -199,25 +199,24 @@ describe('createExperienceSchema', () => {
     });
   });
 
-  describe('tagIds uniqueness', () => {
-    it('accepts unique tagIds', () => {
+  describe('legacy tagIds rejection', () => {
+    it('rejects tagIds on create', () => {
       const result = createExperienceSchema.safeParse({ ...valid, tagIds: [1, 2] });
-      expect(result.success).toBe(true);
-    });
-
-    it('rejects duplicate tagIds on create', () => {
-      const result = createExperienceSchema.safeParse({ ...valid, tagIds: [1, 1] });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((issue) => issue.path.join('.') === 'tagIds')).toBe(true);
+        expect(
+          result.error.issues.some((issue) => issue.message.includes('Unrecognized key'))
+        ).toBe(true);
       }
     });
 
-    it('rejects duplicate tagIds on update', () => {
+    it('rejects tagIds on update', () => {
       const result = updateExperienceSchema.safeParse({ tagIds: [3, 3] });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues.some((issue) => issue.path.join('.') === 'tagIds')).toBe(true);
+        expect(
+          result.error.issues.some((issue) => issue.message.includes('Unrecognized key'))
+        ).toBe(true);
       }
     });
   });

@@ -202,7 +202,7 @@ describe('developer-profile service — stack source alignment', () => {
           impactFacts: ['Reduziu latência em 40%'],
           createdAt: '2025-01-01T00:00:00.000Z',
           updatedAt: '2025-02-01T00:00:00.000Z',
-          tags: [],
+          skills: [],
         },
       ])
     );

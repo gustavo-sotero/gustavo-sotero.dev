@@ -363,8 +363,8 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
 /**
  * Returns the developer profile payload, with Redis-backed caching.
  *
- * The TTL is intentionally short (5 min) so updates to posts/projects/tags
- * are reflected quickly without requiring manual cache invalidation.
+ * The TTL is intentionally short (5 min) so updates to posts, projects,
+ * experience, skills, and post tags are reflected quickly.
  */
 export async function getDeveloperProfile(): Promise<DeveloperProfileDTO> {
   return cached('developer:profile', PROFILE_TTL, fetchDeveloperProfile);

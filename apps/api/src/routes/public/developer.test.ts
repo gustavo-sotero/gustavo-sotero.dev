@@ -94,7 +94,7 @@ const MOCK_PROFILE = {
       impactFacts: ['Reduziu latência em 40%', 'Automatizou a documentação OpenAPI'],
       createdAt: '2025-01-01T00:00:00.000Z',
       updatedAt: '2025-06-01T00:00:00.000Z',
-      tags: [
+      skills: [
         {
           id: 1,
           name: 'TypeScript',
@@ -252,9 +252,9 @@ describe('GET /developer/profile', () => {
       expect(project).toHaveProperty('title');
       expect(project).toHaveProperty('featured');
       expect(project).toHaveProperty('impactFacts');
-      expect(project).toHaveProperty('tags');
+      expect(project).toHaveProperty('skills');
       expect(Array.isArray(project.impactFacts)).toBe(true);
-      expect(Array.isArray(project.tags)).toBe(true);
+      expect(Array.isArray(project.skills)).toBe(true);
     }
   });
 

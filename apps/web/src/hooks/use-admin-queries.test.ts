@@ -68,7 +68,12 @@ const {
 } = await import('./admin/use-admin-comments');
 
 const {
+  TAG_HOME,
   TAG_EXPERIENCE_LIST,
+  TAG_POSTS_LIST,
+  TAG_PROJECTS_LIST,
+  TAG_TAGS_LIST,
+  experienceMutationTags,
   postMutationTags,
   postMutationTagsWithSlugTransition,
   projectMutationTags,
@@ -174,8 +179,14 @@ describe('admin mutation hooks — revalidation on success', () => {
     vi.restoreAllMocks();
   });
 
-  it('tagMutationTags includes experience-backed public cache tags', () => {
-    expect(tagMutationTags()).toContain(TAG_EXPERIENCE_LIST);
+  it('tagMutationTags only targets post-facing public cache tags', () => {
+    expect(tagMutationTags()).toEqual([TAG_HOME, TAG_TAGS_LIST, TAG_POSTS_LIST]);
+    expect(tagMutationTags()).not.toContain(TAG_PROJECTS_LIST);
+    expect(tagMutationTags()).not.toContain(TAG_EXPERIENCE_LIST);
+  });
+
+  it('experienceMutationTags revalidates home and experience caches', () => {
+    expect(experienceMutationTags()).toEqual([TAG_HOME, TAG_EXPERIENCE_LIST]);
   });
 
   // ── Posts ──────────────────────────────────────────────────────────────────

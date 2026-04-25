@@ -28,26 +28,28 @@ export const experienceImpactFactsSchema = z
 
 // Base object shape extracted so .partial() can be called without hitting Zod v4's
 // restriction that .partial() cannot be used on schemas containing refinements.
-const experienceBaseShape = z.object({
-  role: z.string().min(1).max(255),
-  company: z.string().min(1).max(255),
-  description: z.string().min(1),
-  slug: z
-    .string()
-    .regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens')
-    .optional(),
-  location: z.string().max(255).optional(),
-  employmentType: z.string().max(100).optional(),
-  startDate: dateString,
-  endDate: dateString.optional(),
-  isCurrent: z.boolean().default(false),
-  order: z.number().int().min(0).default(0),
-  status: z.enum(['draft', 'published']).default('draft'),
-  logoUrl: z.union([z.literal(''), z.string().url()]).optional(),
-  credentialUrl: z.union([z.literal(''), z.string().url()]).optional(),
-  impactFacts: experienceImpactFactsSchema,
-  skillIds: uniqueSkillIds.optional(),
-});
+const experienceBaseShape = z
+  .object({
+    role: z.string().min(1).max(255),
+    company: z.string().min(1).max(255),
+    description: z.string().min(1),
+    slug: z
+      .string()
+      .regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens')
+      .optional(),
+    location: z.string().max(255).optional(),
+    employmentType: z.string().max(100).optional(),
+    startDate: dateString,
+    endDate: dateString.optional(),
+    isCurrent: z.boolean().default(false),
+    order: z.number().int().min(0).default(0),
+    status: z.enum(['draft', 'published']).default('draft'),
+    logoUrl: z.union([z.literal(''), z.string().url()]).optional(),
+    credentialUrl: z.union([z.literal(''), z.string().url()]).optional(),
+    impactFacts: experienceImpactFactsSchema,
+    skillIds: uniqueSkillIds.optional(),
+  })
+  .strict();
 
 export const createExperienceSchema = experienceBaseShape
   .refine(

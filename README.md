@@ -79,8 +79,8 @@ Todos os caminhos abaixo são **internos** (o que o Hono recebe após o proxy re
 | `GET /ready`        | Readiness check (DB + Redis + schema parity)       |
 | `/posts`            | Posts do blog publicados                           |
 | `/projects`         | Projetos publicados                                |
-| `/skills`           | Catálogo público de skills para hero, Stack & Skills, currículo web e PDF |
-| `/tags`             | Taxonomia pública de conteúdo para chips e filtros (`?source=project\|post\|experience`; sem `source` retorna a união de todas as origens) |
+| `/skills`           | Catálogo público de skills para hero, Stack & Skills, projetos, experiências, currículo web e PDF |
+| `/tags`             | Taxonomia pública de posts para chips e filtros (`?source=post`; sem `source` retorna as tags públicas de posts) |
 | `/comments`         | Envio de comentários anônimos                      |
 | `/contact`          | Envio de formulário de contato                     |
 | `/developer/profile` | Dados do perfil (bio, disponibilidade)            |
@@ -109,7 +109,7 @@ Todas as rotas admin têm o prefixo `/admin`. GETs de detalhe usam `:slug`; PATC
 | `/admin/posts/generate/*` | Assistente IA para sugerir temas e gerar drafts (assíncronos, persistidos) |
 | `/admin/projects`         | CMS — projetos                                   |
 | `/admin/skills`           | Gerenciamento do catálogo de skills              |
-| `/admin/tags`             | Gerenciamento de tags de conteúdo                |
+| `/admin/tags`             | Gerenciamento de tags de posts                   |
 | `/admin/experience`       | Experiências profissionais                       |
 | `/admin/education`        | Formação acadêmica                               |
 | `/admin/comments`         | Moderação de comentários (aprovar/rejeitar)      |

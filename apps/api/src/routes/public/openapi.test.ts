@@ -285,10 +285,10 @@ describe('openapi routes', () => {
     const projectSchema = body.components.schemas.Project;
     const experienceSchema = body.components.schemas.Experience;
 
-    expect(projectSchema?.properties).toHaveProperty('tags');
     expect(projectSchema?.properties).toHaveProperty('skills');
-    expect(experienceSchema?.properties).toHaveProperty('tags');
     expect(experienceSchema?.properties).toHaveProperty('skills');
+    expect(projectSchema?.properties).not.toHaveProperty('tags');
+    expect(experienceSchema?.properties).not.toHaveProperty('tags');
   });
 
   it('GET /doc/spec keeps the developer profile stack example aligned with the Skill contract', async () => {

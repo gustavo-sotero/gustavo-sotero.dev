@@ -22,25 +22,29 @@ export const projectImpactFactsSchema = z
   .max(6, 'Maximum 6 impact facts allowed')
   .optional();
 
-export const createProjectSchema = z.object({
-  title: z.string().min(1).max(255),
-  slug: z
-    .string()
-    .regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens')
-    .optional(),
-  description: z.string().max(500).optional(),
-  content: z.string().optional(),
-  coverUrl: z.union([z.literal(''), z.string().url()]).optional(),
-  status: z.enum(['draft', 'published']).default('draft'),
-  repositoryUrl: z.union([z.literal(''), z.string().url()]).optional(),
-  liveUrl: z.union([z.literal(''), z.string().url()]).optional(),
-  featured: z.boolean().default(false),
-  order: z.number().int().default(0),
-  impactFacts: projectImpactFactsSchema,
-  skillIds: uniqueSkillIds.optional(),
-});
+const projectBaseShape = z
+  .object({
+    title: z.string().min(1).max(255),
+    slug: z
+      .string()
+      .regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens')
+      .optional(),
+    description: z.string().max(500).optional(),
+    content: z.string().optional(),
+    coverUrl: z.union([z.literal(''), z.string().url()]).optional(),
+    status: z.enum(['draft', 'published']).default('draft'),
+    repositoryUrl: z.union([z.literal(''), z.string().url()]).optional(),
+    liveUrl: z.union([z.literal(''), z.string().url()]).optional(),
+    featured: z.boolean().default(false),
+    order: z.number().int().default(0),
+    impactFacts: projectImpactFactsSchema,
+    skillIds: uniqueSkillIds.optional(),
+  })
+  .strict();
 
-export const updateProjectSchema = createProjectSchema.partial();
+export const createProjectSchema = projectBaseShape;
+
+export const updateProjectSchema = projectBaseShape.partial();
 
 /**
  * Query-string boolean: coerces the strings "true"/"false" correctly.

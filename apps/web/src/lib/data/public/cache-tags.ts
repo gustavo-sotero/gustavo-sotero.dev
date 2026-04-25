@@ -81,16 +81,17 @@ export function projectMutationTagsWithSlugTransition(
 
 /**
  * Tags to revalidate when a tag entity is created, updated, or deleted.
+ * Tags are post-only taxonomy, so this does not fan out into project/experience caches.
  */
 export function tagMutationTags(): string[] {
-  return [TAG_HOME, TAG_TAGS_LIST, TAG_POSTS_LIST, TAG_PROJECTS_LIST, TAG_EXPERIENCE_LIST];
+  return [TAG_HOME, TAG_TAGS_LIST, TAG_POSTS_LIST];
 }
 
 /**
  * Tags to revalidate when an experience entry is created, updated, or deleted.
  */
 export function experienceMutationTags(): string[] {
-  return [TAG_EXPERIENCE_LIST, TAG_TAGS_LIST];
+  return [TAG_HOME, TAG_EXPERIENCE_LIST];
 }
 
 /**

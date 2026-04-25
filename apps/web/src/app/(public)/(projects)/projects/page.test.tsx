@@ -146,7 +146,7 @@ describe('ProjectsContent', () => {
     );
   });
 
-  it('keeps projects visible and hides tag chips when tags loader is degraded', async () => {
+  it('keeps projects visible and hides skill chips when the skills loader is degraded', async () => {
     const projects = [{ id: 1, title: 'Project Alpha', slug: 'project-alpha' }];
     mockGetPublicProjects.mockResolvedValue({ state: 'ok', data: projects, meta: defaultMeta });
     mockGetHomeProjectSkills.mockResolvedValue({ state: 'degraded' });
@@ -156,7 +156,7 @@ describe('ProjectsContent', () => {
 
     expect(screen.getByTestId('project-card')).toBeInTheDocument();
     expect(
-      screen.queryByRole('navigation', { name: /filtrar por tecnologia/i })
+      screen.queryByRole('navigation', { name: /filtrar por skill/i })
     ).not.toBeInTheDocument();
   });
 

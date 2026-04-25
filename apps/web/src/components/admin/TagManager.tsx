@@ -398,7 +398,7 @@ export function TagManager() {
                       <AlertDialogTitle className="text-zinc-100">Excluir tag?</AlertDialogTitle>
                       <AlertDialogDescription className="text-zinc-400">
                         A tag <strong className="text-zinc-300">{tag.name}</strong> será removida de
-                        todos os posts e projetos. Esta ação é irreversível.
+                        todos os posts. Esta ação é irreversível.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

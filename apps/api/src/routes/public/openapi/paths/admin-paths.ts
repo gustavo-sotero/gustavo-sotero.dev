@@ -1321,14 +1321,15 @@ export const adminPaths = {
   '/admin/tags': {
     get: {
       tags: ['Admin - Tags'],
-      summary: 'List all tags',
+      summary: 'List all post tags',
+      description: 'Returns the post taxonomy catalog used by blog posts and AI post draft review.',
       operationId: 'adminListTags',
       security: [{ cookieAuth: [] }],
-      responses: { '200': { description: 'All tags' } },
+      responses: { '200': { description: 'All post tags' } },
     },
     post: {
       tags: ['Admin - Tags'],
-      summary: 'Create tag',
+      summary: 'Create post tag',
       operationId: 'adminCreateTag',
       security: [{ cookieAuth: [] }],
       requestBody: {
@@ -1354,7 +1355,7 @@ export const adminPaths = {
       },
       responses: {
         '201': {
-          description: 'Tag created',
+          description: 'Post tag created',
           content: {
             'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } },
           },
@@ -1367,12 +1368,12 @@ export const adminPaths = {
   '/admin/tags/resolve-ai-suggested': {
     post: {
       tags: ['Admin - Tags'],
-      summary: 'Resolve AI-suggested tag names to persisted IDs',
+      summary: 'Resolve AI-suggested post tag names to persisted IDs',
       description:
         'Accepts a list of raw AI-suggested tag names. Each name is canonicalized and ' +
         'deduplicated. Existing tags are reused; missing tags are auto-created with the ' +
         'category inferred from the shared ICON_CATALOG (fallback: `other`). ' +
-        'Only call this endpoint when the admin explicitly accepts a draft — never during ' +
+        'Only call this endpoint when the admin explicitly accepts a post draft — never during ' +
         'generation or polling.',
       operationId: 'adminResolveAiSuggestedTags',
       security: [{ cookieAuth: [] }],
@@ -1427,7 +1428,7 @@ export const adminPaths = {
   '/admin/tags/{id}': {
     patch: {
       tags: ['Admin - Tags'],
-      summary: 'Update tag',
+      summary: 'Update post tag',
       operationId: 'adminUpdateTag',
       security: [{ cookieAuth: [] }],
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
@@ -1452,7 +1453,7 @@ export const adminPaths = {
         },
       },
       responses: {
-        '200': { description: 'Tag updated' },
+        '200': { description: 'Post tag updated' },
         '400': { $ref: '#/components/responses/ValidationError' },
         '404': { $ref: '#/components/responses/NotFound' },
         '409': { description: 'Name conflict' },
@@ -1460,11 +1461,11 @@ export const adminPaths = {
     },
     delete: {
       tags: ['Admin - Tags'],
-      summary: 'Delete tag',
+      summary: 'Delete post tag',
       operationId: 'adminDeleteTag',
       security: [{ cookieAuth: [] }],
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-      responses: { '204': { description: 'Tag deleted' } },
+      responses: { '204': { description: 'Post tag deleted' } },
     },
   },
 

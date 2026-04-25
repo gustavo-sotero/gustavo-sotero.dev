@@ -151,7 +151,7 @@ export async function updateTagService(id: number, data: UpdateTagSchemaInput) {
 
 /**
  * Delete a tag by ID (hard delete).
- * The FK CASCADE on pivots ensures post_tags/project_tags are cleaned up.
+ * The FK CASCADE on pivots ensures post_tags rows are cleaned up.
  */
 export async function deleteTagService(id: number) {
   const current = await findTagById(id);
