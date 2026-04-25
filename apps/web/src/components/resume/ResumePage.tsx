@@ -95,14 +95,14 @@ function ExperienceSection({ experience }: { experience: ResumeViewModel['experi
                   ))}
                 </ul>
               )}
-              {item.tags && item.tags.length > 0 && (
+              {item.skills && item.skills.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {item.tags.map((tagName) => (
+                  {item.skills.map((skillName) => (
                     <span
-                      key={tagName}
+                      key={skillName}
                       className="text-[11px] text-zinc-500 bg-zinc-800/60 border border-zinc-700/50 px-2 py-0.5 rounded-full"
                     >
-                      {tagName}
+                      {skillName}
                     </span>
                   ))}
                 </div>

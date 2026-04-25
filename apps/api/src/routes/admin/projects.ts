@@ -36,7 +36,6 @@ type ValidationDetail = {
 function getValidationDetails(err: unknown): ValidationDetail[] | undefined {
   const error = err as {
     validationDetails?: ValidationDetail[];
-    invalidTagIds?: number[];
     invalidSkillIds?: number[];
   };
 
@@ -45,10 +44,6 @@ function getValidationDetails(err: unknown): ValidationDetail[] | undefined {
   }
 
   const details = [
-    ...(error.invalidTagIds?.map((id) => ({
-      field: 'tagIds',
-      message: `Tag with id ${id} does not exist`,
-    })) ?? []),
     ...(error.invalidSkillIds?.map((id) => ({
       field: 'skillIds',
       message: `Skill with id ${id} does not exist`,

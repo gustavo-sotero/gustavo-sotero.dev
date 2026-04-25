@@ -63,4 +63,11 @@ describe('migration manifest', () => {
     expect(repairSql).toContain("conname = 'skills_slug_unique'");
     expect(repairSql).toContain('UNIQUE USING INDEX "skills_slug_unique"');
   });
+
+  it('drops experience_tags and project_tags pivot tables in migration 0008', () => {
+    const dropSql = readFileSync(join(drizzleDir, '0008_overconfident_blacklash.sql'), 'utf8');
+
+    expect(dropSql).toContain('DROP TABLE "experience_tags"');
+    expect(dropSql).toContain('DROP TABLE "project_tags"');
+  });
 });

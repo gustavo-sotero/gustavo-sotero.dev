@@ -50,20 +50,15 @@ export const tagQuerySchema = z.object({
   category: tagCategoryCsvSchema.optional(), // comma-separated list of categories
 });
 
-export const tagSourceValues = ['project', 'post', 'experience'] as const;
+export const tagSourceValues = ['post'] as const;
 export type TagSource = (typeof tagSourceValues)[number];
 
 /**
  * Public query schema for GET /tags.
  *
- * Extends `tagQuerySchema` with an optional `source` filter that restricts
- * results to tags associated with a specific entity origin:
- * - `project`: only tags linked to published, non-deleted projects
- * - `post`: only tags linked to published, non-deleted posts
- * - `experience`: only tags linked to published, non-deleted experience entries
- *
- * When `source` is omitted the route returns the union of all origins
- * (legacy/default behavior) for backward compatibility.
+ * Tags are post-only taxonomy. The `source` filter is kept for backward
+ * compatibility but only accepts `post` — project and experience no longer
+ * expose tags.
  */
 export const publicTagQuerySchema = tagQuerySchema.extend({
   source: z.enum(tagSourceValues).optional(),

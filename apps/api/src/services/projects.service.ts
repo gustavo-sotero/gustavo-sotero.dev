@@ -13,10 +13,9 @@ import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
 import { normalizeProjectImpactFacts } from '../lib/impactFacts';
 import { renderMarkdown } from '../lib/markdown';
-import { flattenPivots, resolveSlugTaken } from '../lib/pivotHelpers';
+import { flattenPivotSkills, resolveSlugTaken } from '../lib/pivotHelpers';
 import { assertSkillsExist, normalizeSkillIds } from '../lib/skillValidation';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
-import { assertTagsExist, normalizeTagIds } from '../lib/tagValidation';
 import {
   createProject,
   findManyProjects,
@@ -25,7 +24,6 @@ import {
   updateProject,
 } from '../repositories/projects.repo';
 import { syncProjectSkillsInTx } from '../repositories/skills.repo';
-import { syncProjectTagsInTx } from '../repositories/tags.repo';
 
 // ── Cache TTLs ────────────────────────────────────────────────────────────────
 
@@ -47,7 +45,7 @@ async function projectSlugTaken(slug: string, excludeId?: number): Promise<boole
 
 export interface ProjectListFilters {
   status?: 'draft' | 'published';
-  tag?: string;
+  skill?: string;
   featured?: boolean;
   featuredFirst?: boolean;
   page?: string | number;
@@ -61,13 +59,13 @@ export interface ProjectListFilters {
 export async function listProjects(filters: ProjectListFilters, adminMode = false) {
   if (adminMode) {
     const result = await findManyProjects(filters, true);
-    return { ...result, data: result.data.map(flattenPivots) };
+    return { ...result, data: result.data.map(flattenPivotSkills) };
   }
 
-  const key = `projects:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}:featured=${String(filters.featured ?? false)}:featuredFirst=${String(filters.featuredFirst ?? false)}`;
+  const key = `projects:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:skill=${filters.skill ?? ''}:featured=${String(filters.featured ?? false)}:featuredFirst=${String(filters.featuredFirst ?? false)}`;
   return cached(key, LIST_TTL, async () => {
     const result = await findManyProjects(filters, false);
-    return { ...result, data: result.data.map(flattenPivots) };
+    return { ...result, data: result.data.map(flattenPivotSkills) };
   });
 }
 
@@ -79,14 +77,14 @@ export async function getProjectBySlug(slug: string, adminMode = false) {
   if (adminMode) {
     const project = await findProjectBySlug(slug, true);
     if (!project) return null;
-    return flattenPivots(project);
+    return flattenPivotSkills(project);
   }
 
   const key = `projects:slug:${slug}`;
   return cached(key, DETAIL_TTL, async () => {
     const project = await findProjectBySlug(slug, false);
     if (!project) return null;
-    return flattenPivots(project);
+    return flattenPivotSkills(project);
   });
 }
 
@@ -102,12 +100,11 @@ export async function createProjectService(data: CreateProjectInput) {
 
   // 2. Render Markdown content if provided
   const renderedContent = data.content ? await renderMarkdown(data.content) : undefined;
-  const normalizedTagIds = data.tagIds ? normalizeTagIds(data.tagIds) : [];
   const normalizedSkillIds = data.skillIds ? normalizeSkillIds(data.skillIds) : [];
   const normalizedImpactFacts = normalizeProjectImpactFacts(data.impactFacts) ?? [];
 
-  // Validate tag and skill references before the transaction
-  await Promise.all([assertTagsExist(normalizedTagIds), assertSkillsExist(normalizedSkillIds)]);
+  // Validate skill references before the transaction
+  await assertSkillsExist(normalizedSkillIds);
 
   const project = await db.transaction(async (tx) => {
     // Insert project via repo — passes tx so the operation joins the transaction
@@ -131,10 +128,7 @@ export async function createProjectService(data: CreateProjectInput) {
 
     if (!row) throw new Error('Failed to create project — database returned no row');
 
-    // Sync tags and skills atomically with the project insert
-    if (normalizedTagIds.length > 0) {
-      await syncProjectTagsInTx(tx, row.id, normalizedTagIds);
-    }
+    // Sync skills atomically with the project insert
     if (normalizedSkillIds.length > 0) {
       await syncProjectSkillsInTx(tx, row.id, normalizedSkillIds);
     }
@@ -194,17 +188,15 @@ export async function updateProjectService(id: number, data: UpdateProjectInput)
     patch.renderedContent = await renderMarkdown(data.content);
   }
 
-  // 5. Persist atomically: update project + tag/skill sync in one transaction
+  // 5. Persist atomically: update project + skill sync in one transaction
 
-  // Validate tag and skill references before the transaction.
-  const normalizedTagIds = data.tagIds !== undefined ? normalizeTagIds(data.tagIds) : undefined;
+  // Validate skill references before the transaction.
   const normalizedSkillIds =
     data.skillIds !== undefined ? normalizeSkillIds(data.skillIds) : undefined;
 
-  await Promise.all([
-    normalizedTagIds !== undefined ? assertTagsExist(normalizedTagIds) : Promise.resolve(),
-    normalizedSkillIds !== undefined ? assertSkillsExist(normalizedSkillIds) : Promise.resolve(),
-  ]);
+  await (normalizedSkillIds !== undefined
+    ? assertSkillsExist(normalizedSkillIds)
+    : Promise.resolve());
 
   const updated = await db.transaction(async (tx) => {
     // Update project via repo — passes tx so the operation joins the transaction
@@ -212,10 +204,7 @@ export async function updateProjectService(id: number, data: UpdateProjectInput)
 
     if (!row) return null;
 
-    // Sync tags and skills atomically with the project update
-    if (normalizedTagIds !== undefined) {
-      await syncProjectTagsInTx(tx, id, normalizedTagIds);
-    }
+    // Sync skills atomically with the project update
     if (normalizedSkillIds !== undefined) {
       await syncProjectSkillsInTx(tx, id, normalizedSkillIds);
     }

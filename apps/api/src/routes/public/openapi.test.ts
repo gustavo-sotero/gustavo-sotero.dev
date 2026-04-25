@@ -153,10 +153,8 @@ describe('openapi routes', () => {
       (param) => param.name === 'source' && param.in === 'query'
     );
 
-    expect(sourceParam?.schema?.enum).toEqual(['project', 'post', 'experience']);
-    expect(tagsGet?.description).toContain(
-      'When `source` is omitted, the union of all origins is returned'
-    );
+    expect(sourceParam?.schema?.enum).toEqual(['post']);
+    expect(tagsGet?.description).toContain('blog filter chips');
   });
 
   it('GET /doc/spec documents the AI suggested tag resolution endpoint contract', async () => {
@@ -414,7 +412,6 @@ describe('openapi routes', () => {
     const experiencePath = body.paths['/admin/experience/{identifier}'];
     const readyPath = body.paths['/ready']?.get;
 
-    expect(projectCreate?.properties?.tagIds?.uniqueItems).toBe(true);
     expect(projectCreate?.properties?.skillIds?.uniqueItems).toBe(true);
     expect(projectCreate?.properties?.featured?.default).toBe(false);
     expect(projectCreate?.properties?.impactFacts?.maxItems).toBe(6);
@@ -423,10 +420,6 @@ describe('openapi routes', () => {
     expect(experienceCreate?.properties?.impactFacts?.maxItems).toBe(6);
     expect(experienceCreate?.properties?.skillIds?.uniqueItems).toBe(true);
     expect(experiencePath?.get?.summary).toBe('Get experience entry by slug (admin)');
-    expect(
-      experiencePath?.patch?.requestBody?.content?.['application/json']?.schema?.properties?.tagIds
-        ?.uniqueItems
-    ).toBe(true);
     expect(
       experiencePath?.patch?.requestBody?.content?.['application/json']?.schema?.properties
         ?.skillIds?.uniqueItems

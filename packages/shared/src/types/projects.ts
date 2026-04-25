@@ -1,6 +1,5 @@
 import type { PostStatus } from '../constants/enums';
 import type { Skill } from './skills';
-import type { Tag } from './tags';
 
 // Full project entity (admin view)
 export interface Project {
@@ -20,7 +19,6 @@ export interface Project {
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  tags?: Tag[];
   skills?: Skill[];
 }
 
@@ -35,7 +33,7 @@ export interface ProjectListItem {
   featured: boolean;
   order: number;
   impactFacts: string[];
-  tags?: Tag[];
+  skills?: Skill[];
 }
 
 // Input for creating a project
@@ -51,7 +49,6 @@ export interface CreateProjectDto {
   featured?: boolean;
   order?: number;
   impactFacts?: string[];
-  tagIds?: number[];
   skillIds?: number[];
 }
 

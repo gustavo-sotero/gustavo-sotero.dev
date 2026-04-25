@@ -18,33 +18,26 @@ describe('verifyRequiredSchema', () => {
   });
 
   it('returns ok when all required schema objects exist', async () => {
-    // 4 table checks
+    // 3 table checks
     executeMock
-      .mockResolvedValueOnce([{ exists: true }])
       .mockResolvedValueOnce([{ exists: true }])
       .mockResolvedValueOnce([{ exists: true }])
       .mockResolvedValueOnce([{ exists: true }]);
 
     await expect(verifyRequiredSchema()).resolves.toEqual({ ok: true, missing: [] });
-    expect(executeMock).toHaveBeenCalledTimes(4);
+    expect(executeMock).toHaveBeenCalledTimes(3);
   });
 
   it('lists every missing object when schema parity is broken', async () => {
-    // 4 table checks — all missing
+    // 3 table checks — all missing
     executeMock
-      .mockResolvedValueOnce([{ exists: false }])
       .mockResolvedValueOnce([{ exists: false }])
       .mockResolvedValueOnce([{ exists: false }])
       .mockResolvedValueOnce([{ exists: false }]);
 
     await expect(verifyRequiredSchema()).resolves.toEqual({
       ok: false,
-      missing: [
-        'table:experience_tags',
-        'table:skills',
-        'table:project_skills',
-        'table:experience_skills',
-      ],
+      missing: ['table:skills', 'table:project_skills', 'table:experience_skills'],
     });
   });
 });

@@ -1233,12 +1233,6 @@ export const adminPaths = {
                   description:
                     'Ordered list of concise impact facts reused across portfolio and resume surfaces.',
                 },
-                tagIds: {
-                  type: 'array',
-                  items: { type: 'integer' },
-                  uniqueItems: true,
-                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
-                },
                 skillIds: {
                   type: 'array',
                   items: { type: 'integer' },
@@ -1288,12 +1282,6 @@ export const adminPaths = {
                   maxItems: 6,
                   description:
                     'Ordered list of concise impact facts reused across portfolio and resume surfaces.',
-                },
-                tagIds: {
-                  type: 'array',
-                  items: { type: 'integer' },
-                  uniqueItems: true,
-                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
                 },
                 skillIds: {
                   type: 'array',
@@ -1997,12 +1985,6 @@ export const adminPaths = {
                   description:
                     'Ordered list of concise impact facts reused across portfolio and resume surfaces.',
                 },
-                tagIds: {
-                  type: 'array',
-                  items: { type: 'integer' },
-                  uniqueItems: true,
-                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
-                },
                 skillIds: {
                   type: 'array',
                   items: { type: 'integer' },
@@ -2082,12 +2064,6 @@ export const adminPaths = {
                   maxItems: 6,
                   description:
                     'Ordered list of concise impact facts reused across portfolio and resume surfaces.',
-                },
-                tagIds: {
-                  type: 'array',
-                  items: { type: 'integer' },
-                  uniqueItems: true,
-                  description: 'Tag IDs. Every submitted ID must exist in the tags table.',
                 },
                 skillIds: {
                   type: 'array',

@@ -9,13 +9,9 @@ const {
   inArrayMock,
   isNullMock,
   lteMock,
-  neMock,
-  orMock,
   sqlMock,
   tagsTable,
   postsTable,
-  projectsTable,
-  experienceTable,
 } = vi.hoisted(() => ({
   andMock: vi.fn((...args: unknown[]) => ({ _op: 'and', args })),
   ascMock: vi.fn((field: unknown) => ({ _op: 'asc', field })),
@@ -25,8 +21,6 @@ const {
   inArrayMock: vi.fn((field: unknown, ids: unknown[]) => ({ _op: 'inArray', field, ids })),
   isNullMock: vi.fn((field: unknown) => ({ _op: 'isNull', field })),
   lteMock: vi.fn((...args: unknown[]) => ({ _op: 'lte', args })),
-  neMock: vi.fn((...args: unknown[]) => ({ _op: 'ne', args })),
-  orMock: vi.fn((...args: unknown[]) => ({ _op: 'or', args })),
   sqlMock: vi.fn((strings: TemplateStringsArray, ...values: unknown[]) =>
     strings.reduce((acc, part, index) => {
       const value = index < values.length ? String(values[index]) : '';
@@ -39,16 +33,6 @@ const {
     status: 'posts.status',
     deletedAt: 'posts.deletedAt',
     publishedAt: 'posts.publishedAt',
-  },
-  projectsTable: {
-    id: 'projects.id',
-    status: 'projects.status',
-    deletedAt: 'projects.deletedAt',
-  },
-  experienceTable: {
-    id: 'experience.id',
-    status: 'experience.status',
-    deletedAt: 'experience.deletedAt',
   },
 }));
 
@@ -71,22 +55,13 @@ vi.mock('drizzle-orm', () => ({
   inArray: inArrayMock,
   isNull: isNullMock,
   lte: lteMock,
-  ne: neMock,
-  or: orMock,
   sql: sqlMock,
 }));
 
 vi.mock('@portfolio/shared/db/schema', () => ({
   tags: tagsTable,
   postTags: { tagId: 'postTags.tagId', postId: 'postTags.postId' },
-  projectTags: { tagId: 'projectTags.tagId', projectId: 'projectTags.projectId' },
-  experienceTags: {
-    tagId: 'experienceTags.tagId',
-    experienceId: 'experienceTags.experienceId',
-  },
   posts: postsTable,
-  projects: projectsTable,
-  experience: experienceTable,
 }));
 
 vi.mock('../lib/pagination', () => ({
@@ -109,10 +84,8 @@ import {
 
 /** Helper to prime mocks for a publicOnly query with `n` total matching tags. */
 function setupPublicQuery(total: number, rows: unknown[]) {
-  // 3 EXISTS subquery chains (each: from → innerJoin → where)
-  for (let i = 0; i < 3; i++) {
-    whereMock.mockReturnValueOnce({ _subquery: true }); // subquery .where() → passed to exists()
-  }
+  // 1 EXISTS subquery chain: postTags → innerJoin(posts) → where()
+  whereMock.mockReturnValueOnce({ _subquery: true }); // subquery .where() → passed to exists()
   // Count query: from(tags).where()
   whereMock.mockResolvedValueOnce([{ total }]);
   // Main query: from(tags).where().orderBy()
@@ -136,17 +109,16 @@ beforeEach(() => {
 });
 
 describe('tags repository public usage — EXISTS approach', () => {
-  it('uses three EXISTS subqueries (posts, projects, experience) for public filter', async () => {
+  it('uses a single EXISTS subquery (posts only) for public filter', async () => {
     setupPublicQuery(0, []);
 
     await findManyTags({}, true);
 
-    // exists() must be called for each entity type
-    expect(existsMock).toHaveBeenCalledTimes(3);
-    expect(orMock).toHaveBeenCalledTimes(1);
+    // Tags are now exclusively linked to posts; one EXISTS subquery is sufficient.
+    expect(existsMock).toHaveBeenCalledTimes(1);
   });
 
-  it('returns tags used by at least one published entity', async () => {
+  it('returns tags used by at least one published post', async () => {
     const mockTag = { id: 42, name: 'Bun', category: 'tool' };
     setupPublicQuery(1, [mockTag]);
 
@@ -154,31 +126,26 @@ describe('tags repository public usage — EXISTS approach', () => {
 
     expect(result.data).toEqual([mockTag]);
     expect(result.meta.total).toBe(1);
-    expect(existsMock).toHaveBeenCalledTimes(3);
-    expect(orMock).toHaveBeenCalledTimes(1);
+    expect(existsMock).toHaveBeenCalledTimes(1);
   });
 
-  it('passes tag id to EXISTS correlated subqueries', async () => {
+  it('passes tag id to the EXISTS correlated subquery', async () => {
     setupPublicQuery(0, []);
 
     await findManyTags({}, true);
 
-    // Each eq() call for the tag correlation should reference tags.id
+    // eq() must be called with postTags.tagId and tags.id for the correlation
     const eqCalls = eqMock.mock.calls;
     const correlatedCalls = eqCalls.filter((args) => args[1] === tagsTable.id);
-    // One correlated condition per EXISTS subquery (postTags.tagId, projectTags.tagId, experienceTags.tagId)
-    expect(correlatedCalls.length).toBeGreaterThanOrEqual(3);
+    expect(correlatedCalls.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('applies isNull(deletedAt) filter inside each EXISTS subquery', async () => {
+  it('applies isNull(deletedAt) filter inside the posts EXISTS subquery', async () => {
     setupPublicQuery(0, []);
 
     await findManyTags({}, true);
 
-    // isNull called for posts.deletedAt, projects.deletedAt, experience.deletedAt
     expect(isNullMock).toHaveBeenCalledWith(postsTable.deletedAt);
-    expect(isNullMock).toHaveBeenCalledWith(projectsTable.deletedAt);
-    expect(isNullMock).toHaveBeenCalledWith(experienceTable.deletedAt);
   });
 
   it('returns empty list when no matching tags exist', async () => {
@@ -188,8 +155,7 @@ describe('tags repository public usage — EXISTS approach', () => {
 
     expect(result.data).toEqual([]);
     expect(result.meta.total).toBe(0);
-    // Unlike the old approach, there is no early-return path — the query always runs
-    expect(existsMock).toHaveBeenCalledTimes(3);
+    expect(existsMock).toHaveBeenCalledTimes(1);
   });
 
   it('applies publishedAt temporal guard inside the posts EXISTS subquery', async () => {
@@ -205,52 +171,29 @@ describe('tags repository public usage — EXISTS approach', () => {
 });
 
 describe('tags repository public usage — source filter', () => {
-  it('does not call or() when source=project (only projectExists used in WHERE)', async () => {
-    setupPublicQuery(0, []);
-
-    await findManyTags({ source: 'project' }, true);
-
-    // All three EXISTS subqueries are still constructed regardless of source
-    expect(existsMock).toHaveBeenCalledTimes(3);
-    // But the result is a single EXISTS condition — or() is never called
-    expect(orMock).not.toHaveBeenCalled();
-  });
-
-  it('does not call or() when source=post (only postExists used in WHERE)', async () => {
-    setupPublicQuery(0, []);
-
-    await findManyTags({ source: 'post' }, true);
-
-    expect(existsMock).toHaveBeenCalledTimes(3);
-    expect(orMock).not.toHaveBeenCalled();
-  });
-
-  it('does not call or() when source=experience (only experienceExists used in WHERE)', async () => {
-    setupPublicQuery(0, []);
-
-    await findManyTags({ source: 'experience' }, true);
-
-    expect(existsMock).toHaveBeenCalledTimes(3);
-    expect(orMock).not.toHaveBeenCalled();
-  });
-
-  it('calls or() to union all sources when source is absent', async () => {
+  it('uses a single postExists subquery when source is absent', async () => {
     setupPublicQuery(0, []);
 
     await findManyTags({}, true);
 
-    // Union of post + project + experience
-    expect(existsMock).toHaveBeenCalledTimes(3);
-    expect(orMock).toHaveBeenCalledTimes(1);
+    // Tags are exclusively linked to posts — one EXISTS is always sufficient.
+    expect(existsMock).toHaveBeenCalledTimes(1);
   });
 
-  it('combines category filter with source=project', async () => {
+  it('uses a single postExists subquery when source=post is explicit', async () => {
+    setupPublicQuery(0, []);
+
+    await findManyTags({ source: 'post' }, true);
+
+    expect(existsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('combines category filter with the single postExists subquery', async () => {
     setupPublicQuery(1, [{ id: 1, name: 'TypeScript', category: 'language' }]);
 
-    const result = await findManyTags({ source: 'project', category: 'language' }, true);
+    const result = await findManyTags({ source: 'post', category: 'language' }, true);
 
     expect(result.data).toHaveLength(1);
-    expect(orMock).not.toHaveBeenCalled();
     // inArray should have been called for the category filter
     expect(inArrayMock).toHaveBeenCalledWith(tagsTable.category, ['language']);
   });

@@ -605,7 +605,12 @@ export const publicPaths = {
       parameters: [
         { $ref: '#/components/parameters/page' },
         { $ref: '#/components/parameters/perPage' },
-        { $ref: '#/components/parameters/tag' },
+        {
+          name: 'skill',
+          in: 'query',
+          schema: { type: 'string', example: 'typescript' },
+          description: 'Filter by skill slug',
+        },
         {
           name: 'featured',
           in: 'query',
@@ -720,13 +725,9 @@ export const publicPaths = {
       tags: ['Tags'],
       summary: 'List tags in use',
       description:
-        'Returns content taxonomy tags used by at least one published entity (post, project, or experience).\n\n' +
-        'Use this endpoint for blog and project filter chips — NOT for portfolio stack surfaces.\n' +
-        'For home hero badges, Stack & Skills section, and the currículo skills list, use `GET /skills` instead.\n\n' +
-        'Use `?source=project` to restrict results to tags linked to published projects only, ' +
-        '`?source=post` or `?source=experience` for the corresponding origin. ' +
-        'When `source` is omitted, the union of all origins is returned.\n\n' +
-        'Both `category` and `source` can be combined in the same request.',
+        'Returns content taxonomy tags used by published posts.\n\n' +
+        'Use this endpoint for blog filter chips — NOT for portfolio stack surfaces.\n' +
+        'For home hero badges, Stack & Skills section, and the currículo skills list, use `GET /skills` instead.',
       operationId: 'listTags',
       parameters: [
         {
@@ -740,11 +741,11 @@ export const publicPaths = {
           in: 'query',
           schema: {
             type: 'string',
-            enum: ['project', 'post', 'experience'],
+            enum: ['post'],
           },
           description:
-            'Restrict results to tags associated with a specific entity origin. ' +
-            'When absent, the union of all origins is returned.',
+            'Restrict results to tags associated with posts. ' +
+            'Only `post` is supported; omitting returns all post tags.',
         },
       ],
       responses: {

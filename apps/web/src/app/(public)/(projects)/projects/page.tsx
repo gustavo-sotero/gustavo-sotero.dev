@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getHomeTags } from '@/lib/data/public/home';
+import { getHomeProjectSkills } from '@/lib/data/public/home';
 import { getPublicProjects } from '@/lib/data/public/projects';
 
 export const metadata: Metadata = {
@@ -24,9 +24,9 @@ function normalizeSortMode(raw?: string): SortMode {
 }
 
 /** Build the canonical query-string for internal navigation links. */
-function buildProjectsQs(params: { page?: number; tag?: string; sort?: SortMode }): string {
+function buildProjectsQs(params: { page?: number; skill?: string; sort?: SortMode }): string {
   const qs = new URLSearchParams();
-  if (params.tag) qs.set('tag', params.tag);
+  if (params.skill) qs.set('skill', params.skill);
   // omit `sort` when it equals the default to keep URLs clean
   if (params.sort && params.sort !== 'relevancia') qs.set('sort', params.sort);
   if (params.page && params.page > 1) qs.set('page', String(params.page));
@@ -75,7 +75,7 @@ function ProjectsPageFallback() {
 
 interface SortToggleProps {
   currentSort: SortMode;
-  tag?: string;
+  skill?: string;
 }
 
 /**
@@ -86,7 +86,7 @@ interface SortToggleProps {
  * Single toggle button: shows the current sort mode and links to the opposite.
  * Fully SSR — no client JS needed.
  */
-function SortToggle({ currentSort, tag }: SortToggleProps) {
+function SortToggle({ currentSort, skill }: SortToggleProps) {
   const isRelevancia = currentSort === 'relevancia';
   const nextSort: SortMode = isRelevancia ? 'recentes' : 'relevancia';
   const Icon = isRelevancia ? Star : Clock;
@@ -96,7 +96,7 @@ function SortToggle({ currentSort, tag }: SortToggleProps) {
     <div className="flex items-center gap-2">
       <span className="text-xs text-zinc-500 font-mono hidden sm:block">ordenar por</span>
       <Link
-        href={`/projects${buildProjectsQs({ tag, sort: nextSort })}`}
+        href={`/projects${buildProjectsQs({ skill, sort: nextSort })}`}
         title={`Ordenação atual: ${label} — clique para alternar`}
         className={[
           'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors',
@@ -116,16 +116,16 @@ function SortToggle({ currentSort, tag }: SortToggleProps) {
 
 export interface ProjectsContentProps {
   currentPage: number;
-  tag?: string;
+  skill?: string;
   sort: SortMode;
 }
 
-export async function ProjectsContent({ currentPage, tag, sort }: ProjectsContentProps) {
+export async function ProjectsContent({ currentPage, skill, sort }: ProjectsContentProps) {
   const featuredFirst = sort === 'relevancia';
 
-  const [projectsResult, tagsResult] = await Promise.all([
-    getPublicProjects({ page: currentPage, tag, featuredFirst }),
-    getHomeTags(),
+  const [projectsResult, skillsResult] = await Promise.all([
+    getPublicProjects({ page: currentPage, skill, featuredFirst }),
+    getHomeProjectSkills(),
   ]);
 
   if (projectsResult.state === 'degraded') {
@@ -141,7 +141,7 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
 
   const projects = projectsResult.data;
   const meta = projectsResult.meta;
-  const tags = tagsResult.state !== 'degraded' ? tagsResult.data : [];
+  const skills = skillsResult.state !== 'degraded' ? skillsResult.data : [];
 
   return (
     <>
@@ -157,17 +157,17 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
           )}
         </div>
 
-        <SortToggle currentSort={sort} tag={tag} />
+        <SortToggle currentSort={sort} skill={skill} />
       </div>
 
-      {/* ── Tag filter ──────────────────────────────────────────── */}
-      {tags.length > 0 && (
-        <nav className="mb-8 flex flex-wrap gap-2" aria-label="Filtrar por tag">
+      {/* ── Skill filter ──────────────────────────────────────────── */}
+      {skills.length > 0 && (
+        <nav className="mb-8 flex flex-wrap gap-2" aria-label="Filtrar por skill">
           <Link href={`/projects${buildProjectsQs({ sort })}`}>
             <Badge
-              variant={!tag ? 'default' : 'secondary'}
+              variant={!skill ? 'default' : 'secondary'}
               className={
-                !tag
+                !skill
                   ? 'bg-emerald-500 text-zinc-950 hover:bg-emerald-400 cursor-pointer'
                   : 'cursor-pointer hover:border-emerald-500/40 hover:text-zinc-100 transition-colors'
               }
@@ -175,17 +175,17 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
               Todos
             </Badge>
           </Link>
-          {tags.map((t) => (
-            <Link key={t.id} href={`/projects${buildProjectsQs({ tag: t.slug, sort })}`}>
+          {skills.map((s) => (
+            <Link key={s.id} href={`/projects${buildProjectsQs({ skill: s.slug, sort })}`}>
               <Badge
-                variant={tag === t.slug ? 'default' : 'secondary'}
+                variant={skill === s.slug ? 'default' : 'secondary'}
                 className={
-                  tag === t.slug
+                  skill === s.slug
                     ? 'bg-emerald-500 text-zinc-950 hover:bg-emerald-400 cursor-pointer'
                     : 'cursor-pointer hover:border-emerald-500/40 hover:text-zinc-100 transition-colors'
                 }
               >
-                {t.name}
+                {s.name}
               </Badge>
             </Link>
           ))}
@@ -202,7 +202,7 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
       ) : (
         <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
           <p className="text-zinc-500 font-mono text-sm">{'// nenhum projeto encontrado'}</p>
-          {tag && (
+          {skill && (
             <Link
               href={`/projects${buildProjectsQs({ sort })}`}
               className="text-sm text-emerald-400 hover:text-emerald-300 underline underline-offset-4"
@@ -221,7 +221,7 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
         >
           {currentPage > 1 && (
             <Link
-              href={`/projects${buildProjectsQs({ tag, sort, page: currentPage - 1 })}`}
+              href={`/projects${buildProjectsQs({ skill, sort, page: currentPage - 1 })}`}
               className="px-4 py-2 rounded-md text-sm border border-zinc-800 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-100 transition-colors"
             >
               ← Anterior
@@ -232,7 +232,7 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
             .map((p) => (
               <Link
                 key={p}
-                href={`/projects${buildProjectsQs({ tag, sort, page: p })}`}
+                href={`/projects${buildProjectsQs({ skill, sort, page: p })}`}
                 aria-current={p === currentPage ? 'page' : undefined}
                 className={`px-4 py-2 rounded-md text-sm transition-colors ${
                   p === currentPage
@@ -245,7 +245,7 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
             ))}
           {currentPage < meta.totalPages && (
             <Link
-              href={`/projects${buildProjectsQs({ tag, sort, page: currentPage + 1 })}`}
+              href={`/projects${buildProjectsQs({ skill, sort, page: currentPage + 1 })}`}
               className="px-4 py-2 rounded-md text-sm border border-zinc-800 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-100 transition-colors"
             >
               Próxima →
@@ -260,7 +260,7 @@ export async function ProjectsContent({ currentPage, tag, sort }: ProjectsConten
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 interface ProjectsPageProps {
-  searchParams: Promise<{ page?: string; tag?: string; sort?: string }>;
+  searchParams: Promise<{ page?: string; skill?: string; sort?: string }>;
 }
 
 export default function ProjectsPage({ searchParams }: ProjectsPageProps) {
@@ -280,8 +280,8 @@ export default function ProjectsPage({ searchParams }: ProjectsPageProps) {
  * cacheComponents can prerender the static shell without blocking.
  */
 async function ProjectsContentLoader({ searchParams }: ProjectsPageProps) {
-  const { page: rawPage, tag, sort: rawSort } = await searchParams;
+  const { page: rawPage, skill, sort: rawSort } = await searchParams;
   const currentPage = normalizePage(rawPage);
   const sort = normalizeSortMode(rawSort);
-  return <ProjectsContent currentPage={currentPage} tag={tag} sort={sort} />;
+  return <ProjectsContent currentPage={currentPage} skill={skill} sort={sort} />;
 }

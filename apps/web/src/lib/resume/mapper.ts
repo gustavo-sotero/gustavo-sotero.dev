@@ -37,7 +37,7 @@ export interface ResumeExperienceItem {
   isCurrent: boolean;
   formattedPeriod: string;
   impactFacts: string[];
-  tags: string[];
+  skills: string[];
 }
 
 export interface ResumeEducationItem {
@@ -73,7 +73,7 @@ export interface ResumeProjectItem {
   repositoryUrl: string | null;
   liveUrl: string | null;
   impactFacts: string[];
-  tags: string[];
+  skills: string[];
 }
 
 export interface ResumeLanguageItem {
@@ -206,7 +206,7 @@ export function buildResumeViewModel(opts: {
     isCurrent: e.isCurrent,
     formattedPeriod: formatPeriod(e.startDate, e.endDate ?? null, e.isCurrent),
     impactFacts: e.impactFacts ?? [],
-    tags: (e.tags ?? []).map((t) => t.name),
+    skills: (e.skills ?? []).map((s) => s.name),
   }));
 
   // Education — ordered by isCurrent desc, then endDate desc
@@ -278,7 +278,7 @@ export function buildResumeViewModel(opts: {
     repositoryUrl: p.repositoryUrl ?? null,
     liveUrl: p.liveUrl ?? null,
     impactFacts: p.impactFacts ?? [],
-    tags: (p.tags ?? []).map((t) => t.name),
+    skills: (p.skills ?? []).map((s) => s.name),
   }));
 
   // Languages

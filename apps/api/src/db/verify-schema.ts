@@ -7,7 +7,7 @@
  *
  * This is a targeted check — it is not a full schema diff. It verifies
  * the exact objects that have been historically absent in drifted
- * environments: the `experience_tags` pivot table and the skill domain tables.
+ * environments: the skill domain tables.
  */
 
 import { sql } from 'drizzle-orm';
@@ -28,7 +28,7 @@ export interface SchemaParity {
 export async function verifyRequiredSchema(): Promise<SchemaParity> {
   const missing: string[] = [];
 
-  const REQUIRED_TABLES = ['experience_tags', 'skills', 'project_skills', 'experience_skills'];
+  const REQUIRED_TABLES = ['skills', 'project_skills', 'experience_skills'];
 
   for (const tableName of REQUIRED_TABLES) {
     const [row] = await db.execute<{ exists: boolean }>(sql`

@@ -23,7 +23,7 @@ export type ProjectsListResult =
 export interface ProjectsListParams {
   page?: number;
   perPage?: number;
-  tag?: string;
+  skill?: string;
   featured?: boolean;
   featuredFirst?: boolean;
 }
@@ -37,7 +37,7 @@ export async function getPublicProjects(
 
   const qs = new URLSearchParams({ perPage: String(params.perPage ?? 9) });
   if (params.page && params.page > 1) qs.set('page', String(params.page));
-  if (params.tag) qs.set('tag', params.tag);
+  if (params.skill) qs.set('skill', params.skill);
   if (params.featured !== undefined) qs.set('featured', String(params.featured));
   if (params.featuredFirst !== undefined) qs.set('featuredFirst', String(params.featuredFirst));
 

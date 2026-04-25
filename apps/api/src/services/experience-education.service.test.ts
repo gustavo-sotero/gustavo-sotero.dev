@@ -25,9 +25,6 @@ const {
   updateEducationMock,
   softDeleteEducationMock,
   ensureUniqueSlugMock,
-  syncExperienceTagsMock,
-  syncExperienceTagsInTxMock,
-  assertTagsExistMock,
 } = vi.hoisted(() => ({
   dbSelectExperienceMock: vi.fn(),
   invalidatePatternMock: vi.fn(),
@@ -44,9 +41,6 @@ const {
   updateEducationMock: vi.fn(),
   softDeleteEducationMock: vi.fn(),
   ensureUniqueSlugMock: vi.fn(),
-  syncExperienceTagsMock: vi.fn(),
-  syncExperienceTagsInTxMock: vi.fn(),
-  assertTagsExistMock: vi.fn(),
 }));
 
 vi.mock('../config/db', () => ({
@@ -94,23 +88,6 @@ vi.mock('../repositories/experience.repo', () => ({
   createExperience: createExperienceMock,
   updateExperience: updateExperienceMock,
   softDeleteExperience: softDeleteExperienceMock,
-  // Inline real implementation so the service can call it without issues in tests
-  flattenExperienceTags: (item: { tags?: Array<{ tag: unknown }> }) => ({
-    ...item,
-    tags: (item.tags ?? []).map((pivot) => pivot.tag),
-  }),
-}));
-
-vi.mock('../repositories/tags.repo', () => ({
-  syncExperienceTags: syncExperienceTagsMock,
-  syncExperienceTagsInTx: syncExperienceTagsInTxMock,
-  syncPostTags: vi.fn(),
-  syncProjectTags: vi.fn(),
-}));
-
-vi.mock('../lib/tagValidation', () => ({
-  assertTagsExist: assertTagsExistMock,
-  normalizeTagIds: (tagIds: number[]) => Array.from(new Set(tagIds)),
 }));
 
 vi.mock('../repositories/education.repo', () => ({
@@ -155,7 +132,6 @@ const baseExperience = {
   deletedAt: null,
   createdAt: new Date('2022-01-01'),
   updatedAt: new Date('2022-01-01'),
-  tags: [] as Array<{ tag: unknown }>,
   skills: [] as Array<{ skill: unknown }>,
 };
 
@@ -186,8 +162,6 @@ const baseEducation = {
 describe('experience service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: all submitted tagIds are valid.
-    assertTagsExistMock.mockResolvedValue(undefined);
   });
 
   // List ──────────────────────────────────────────────────────────────────────
@@ -204,26 +178,6 @@ describe('experience service', () => {
 
       expect(result).toEqual(mockResult);
       expect(findManyExperienceMock).toHaveBeenCalledWith({ page: 1, perPage: 20 }, false);
-    });
-
-    it('flattens pivot tags to Tag[] in the returned entries', async () => {
-      const tag = {
-        id: 5,
-        name: 'TypeScript',
-        slug: 'typescript',
-        category: 'language',
-        iconKey: null,
-        createdAt: '2025-01-01T00:00:00.000Z',
-      };
-      const experienceWithTag = { ...baseExperience, tags: [{ tag }] };
-      findManyExperienceMock.mockResolvedValueOnce({
-        data: [experienceWithTag],
-        meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
-      });
-
-      const result = await listExperience({ page: 1, perPage: 20 }, false);
-
-      expect(result.data[0]?.tags).toEqual([tag]);
     });
 
     it('normalizes related skills to the public Skill DTO shape', async () => {
@@ -405,58 +359,6 @@ describe('experience service', () => {
         expect.anything()
       );
     });
-
-    it('returns experience with flattened tags after create', async () => {
-      const tag = {
-        id: 3,
-        name: 'Bun',
-        slug: 'bun',
-        category: 'tool',
-        iconKey: null,
-        createdAt: '2025-02-01T00:00:00.000Z',
-      };
-      const experienceWithTag = { ...baseExperience, tags: [{ tag }] };
-
-      ensureUniqueSlugMock.mockResolvedValueOnce('engineer-corp');
-      createExperienceMock.mockResolvedValueOnce(baseExperience);
-      findExperienceByIdMock.mockResolvedValueOnce(experienceWithTag); // post-create re-fetch
-      syncExperienceTagsInTxMock.mockResolvedValueOnce(undefined);
-
-      const result = await createExperienceService({
-        role: 'Engineer',
-        company: 'Corp',
-        description: 'D.',
-        startDate: '2022-01-01',
-        isCurrent: true,
-        status: 'draft',
-        order: 0,
-        tagIds: [3],
-      });
-
-      expect(result?.tags).toEqual([tag]);
-    });
-
-    it('rejects entirely when tag sync fails inside the transaction', async () => {
-      ensureUniqueSlugMock.mockResolvedValueOnce('engineer-corp');
-      createExperienceMock.mockResolvedValueOnce(baseExperience);
-      syncExperienceTagsInTxMock.mockRejectedValueOnce(new Error('tag sync failed'));
-
-      await expect(
-        createExperienceService({
-          role: 'Engineer',
-          company: 'Corp',
-          description: 'D.',
-          startDate: '2022-01-01',
-          isCurrent: true,
-          status: 'draft',
-          order: 0,
-          tagIds: [1],
-        })
-      ).rejects.toThrow('tag sync failed');
-
-      // Cache must NOT be invalidated when the transaction rolls back
-      expect(invalidatePatternMock).not.toHaveBeenCalled();
-    });
   });
 
   // Update ─────────────────────────────────────────────────────────────────────
@@ -532,136 +434,6 @@ describe('experience service', () => {
       await softDeleteExperienceService(1);
 
       expect(invalidatePatternMock).toHaveBeenCalledWith('experience:*');
-    });
-  });
-  // Tag sync ────────────────────────────────────────────────────────────────────────────
-
-  describe('tag synchronization', () => {
-    it('syncs tagIds during create when tagIds are provided', async () => {
-      ensureUniqueSlugMock.mockResolvedValueOnce('engineer-corp');
-      createExperienceMock.mockResolvedValueOnce(baseExperience);
-      findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
-      syncExperienceTagsInTxMock.mockResolvedValueOnce(undefined);
-
-      await createExperienceService({
-        role: 'Engineer',
-        company: 'Corp',
-        description: 'D.',
-        startDate: '2022-01-01',
-        isCurrent: true,
-        status: 'draft',
-        order: 0,
-        tagIds: [1, 2, 3],
-      });
-
-      expect(syncExperienceTagsInTxMock).toHaveBeenCalledWith({}, baseExperience.id, [1, 2, 3]);
-    });
-
-    it('does not sync tags during create when tagIds are not provided', async () => {
-      ensureUniqueSlugMock.mockResolvedValueOnce('engineer-corp');
-      createExperienceMock.mockResolvedValueOnce(baseExperience);
-
-      await createExperienceService({
-        role: 'Engineer',
-        company: 'Corp',
-        description: 'D.',
-        startDate: '2022-01-01',
-        isCurrent: true,
-        status: 'draft',
-        order: 0,
-      });
-
-      expect(syncExperienceTagsInTxMock).not.toHaveBeenCalled();
-    });
-
-    it('syncs tagIds during update when tagIds are provided', async () => {
-      findExperienceByIdMock
-        .mockResolvedValueOnce(baseExperience) // for initial load
-        .mockResolvedValueOnce(baseExperience); // for post-update refresh
-      updateExperienceMock.mockResolvedValueOnce({ ...baseExperience, role: 'New Role' });
-      syncExperienceTagsInTxMock.mockResolvedValueOnce(undefined);
-
-      await updateExperienceService(1, { role: 'New Role', tagIds: [5, 6] });
-
-      expect(syncExperienceTagsInTxMock).toHaveBeenCalledWith({}, 1, [5, 6]);
-    });
-
-    it('does not sync tags during update when tagIds is absent', async () => {
-      findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
-      updateExperienceMock.mockResolvedValueOnce({ ...baseExperience, role: 'New Role' });
-
-      await updateExperienceService(1, { role: 'New Role' });
-
-      expect(syncExperienceTagsInTxMock).not.toHaveBeenCalled();
-    });
-
-    it('syncs empty tagIds to clear all tags', async () => {
-      findExperienceByIdMock
-        .mockResolvedValueOnce(baseExperience)
-        .mockResolvedValueOnce(baseExperience);
-      updateExperienceMock.mockResolvedValueOnce(baseExperience);
-      syncExperienceTagsInTxMock.mockResolvedValueOnce(undefined);
-
-      await updateExperienceService(1, { tagIds: [] });
-
-      expect(syncExperienceTagsInTxMock).toHaveBeenCalledWith({}, 1, []);
-    });
-
-    // Tag referential integrity ───────────────────────────────────────────────
-
-    it('throws VALIDATION_ERROR when create is submitted with nonexistent tagIds', async () => {
-      ensureUniqueSlugMock.mockResolvedValueOnce('engineer-corp');
-      assertTagsExistMock.mockRejectedValueOnce(
-        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 999'), {
-          invalidTagIds: [999],
-        })
-      );
-
-      await expect(
-        createExperienceService({
-          role: 'Engineer',
-          company: 'Corp',
-          description: 'D.',
-          startDate: '2022-01-01',
-          isCurrent: true,
-          status: 'draft',
-          order: 0,
-          tagIds: [999],
-        })
-      ).rejects.toMatchObject({
-        message: expect.stringContaining('VALIDATION_ERROR'),
-        invalidTagIds: [999],
-      });
-
-      // Cache must NOT be invalidated when validation fails before the transaction
-      expect(invalidatePatternMock).not.toHaveBeenCalled();
-      expect(createExperienceMock).not.toHaveBeenCalled();
-    });
-
-    it('throws VALIDATION_ERROR when update is submitted with nonexistent tagIds', async () => {
-      findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
-      assertTagsExistMock.mockRejectedValueOnce(
-        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 7, 8'), {
-          invalidTagIds: [7, 8],
-        })
-      );
-
-      await expect(updateExperienceService(1, { tagIds: [7, 8] })).rejects.toMatchObject({
-        message: expect.stringContaining('VALIDATION_ERROR'),
-        invalidTagIds: [7, 8],
-      });
-
-      expect(invalidatePatternMock).not.toHaveBeenCalled();
-      expect(updateExperienceMock).not.toHaveBeenCalled();
-    });
-
-    it('does not call assertTagsExist when tagIds is absent from update payload', async () => {
-      findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
-      updateExperienceMock.mockResolvedValueOnce({ ...baseExperience, role: 'New Role' });
-
-      await updateExperienceService(1, { role: 'New Role' });
-
-      expect(assertTagsExistMock).not.toHaveBeenCalled();
     });
   });
 });

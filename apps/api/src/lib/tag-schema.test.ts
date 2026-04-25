@@ -41,10 +41,9 @@ describe('tagQuerySchema', () => {
 });
 
 describe('publicTagQuerySchema', () => {
-  it('aceita source=project', () => {
+  it('rejeita source=project (tags agora são exclusivas de posts)', () => {
     const parsed = publicTagQuerySchema.safeParse({ source: 'project' });
-    expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.source).toBe('project');
+    expect(parsed.success).toBe(false);
   });
 
   it('aceita source=post', () => {
@@ -53,10 +52,9 @@ describe('publicTagQuerySchema', () => {
     if (parsed.success) expect(parsed.data.source).toBe('post');
   });
 
-  it('aceita source=experience', () => {
+  it('rejeita source=experience (tags agora são exclusivas de posts)', () => {
     const parsed = publicTagQuerySchema.safeParse({ source: 'experience' });
-    expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.source).toBe('experience');
+    expect(parsed.success).toBe(false);
   });
 
   it('rejeita source inválido', () => {
@@ -67,12 +65,12 @@ describe('publicTagQuerySchema', () => {
   it('aceita combinação category + source', () => {
     const parsed = publicTagQuerySchema.safeParse({
       category: 'language,framework',
-      source: 'project',
+      source: 'post',
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.category).toBe('language,framework');
-      expect(parsed.data.source).toBe('project');
+      expect(parsed.data.source).toBe('post');
     }
   });
 

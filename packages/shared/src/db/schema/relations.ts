@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { comments } from './comments';
 import { experience } from './experience';
-import { experienceSkills, experienceTags, postTags, projectSkills, projectTags } from './pivots';
+import { experienceSkills, postTags, projectSkills } from './pivots';
 import { posts } from './posts';
 import { projects } from './projects';
 import { skills } from './skills';
@@ -24,25 +24,11 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
 }));
 
 export const projectsRelations = relations(projects, ({ many }) => ({
-  tags: many(projectTags),
   skills: many(projectSkills),
-}));
-
-export const projectTagsRelations = relations(projectTags, ({ one }) => ({
-  project: one(projects, {
-    fields: [projectTags.projectId],
-    references: [projects.id],
-  }),
-  tag: one(tags, {
-    fields: [projectTags.tagId],
-    references: [tags.id],
-  }),
 }));
 
 export const tagsRelations = relations(tags, ({ many }) => ({
   postTags: many(postTags),
-  projectTags: many(projectTags),
-  experienceTags: many(experienceTags),
 }));
 
 export const commentsRelations = relations(comments, ({ one, many }) => ({
@@ -61,19 +47,7 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
 }));
 
 export const experienceRelations = relations(experience, ({ many }) => ({
-  tags: many(experienceTags),
   skills: many(experienceSkills),
-}));
-
-export const experienceTagsRelations = relations(experienceTags, ({ one }) => ({
-  experience: one(experience, {
-    fields: [experienceTags.experienceId],
-    references: [experience.id],
-  }),
-  tag: one(tags, {
-    fields: [experienceTags.tagId],
-    references: [tags.id],
-  }),
 }));
 
 // ── Skill relations ───────────────────────────────────────────────────────────

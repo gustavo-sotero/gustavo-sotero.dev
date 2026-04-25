@@ -57,6 +57,13 @@
       "when": 1777072056710,
       "tag": "0007_repair_skills_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777081710400,
+      "tag": "0008_overconfident_blacklash",
+      "breakpoints": true
     }
   ]
 }

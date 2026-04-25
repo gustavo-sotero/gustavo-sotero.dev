@@ -2,7 +2,6 @@ import { experience } from '@portfolio/shared/db/schema';
 import { and, count, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import { db } from '../config/db';
 import { buildPaginationMeta, parsePagination } from '../lib/pagination';
-import { flattenPivotTags } from '../lib/pivotHelpers';
 import type { DbOrTx } from './tags.repo';
 
 export interface ExperienceFilters {
@@ -10,14 +9,6 @@ export interface ExperienceFilters {
   page?: string | number;
   perPage?: string | number;
 }
-
-/**
- * Re-export from lib/pivotHelpers for backward compatibility.
- * Prefer importing `flattenPivotTags` directly from `../lib/pivotHelpers` in new code.
- *
- * @deprecated Use `flattenPivotTags` from `../lib/pivotHelpers` directly.
- */
-export const flattenExperienceTags = flattenPivotTags;
 
 /**
  * Deterministic ordering:
@@ -34,7 +25,7 @@ const ORDER_BY = [
 ] as const;
 
 /**
- * List experience entries (with their associated tags).
+ * List experience entries (with their associated skills).
  * Public mode enforces `published` + non-deleted.
  * Admin mode includes all; optionally filters by status.
  */
@@ -62,9 +53,6 @@ export async function findManyExperience(filters: ExperienceFilters, adminMode =
       limit,
       offset,
       with: {
-        tags: {
-          with: { tag: true },
-        },
         skills: {
           with: { skill: true },
         },
@@ -76,7 +64,7 @@ export async function findManyExperience(filters: ExperienceFilters, adminMode =
   return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
 }
 
-/** Find a single experience entry by slug (with tags). */
+/** Find a single experience entry by slug (with skills). */
 export async function findExperienceBySlug(slug: string, adminMode = false) {
   const conditions: SQL[] = [eq(experience.slug, slug), isNull(experience.deletedAt)];
 
@@ -87,9 +75,6 @@ export async function findExperienceBySlug(slug: string, adminMode = false) {
   const row = await db.query.experience.findFirst({
     where: and(...conditions),
     with: {
-      tags: {
-        with: { tag: true },
-      },
       skills: {
         with: { skill: true },
       },
@@ -99,14 +84,11 @@ export async function findExperienceBySlug(slug: string, adminMode = false) {
   return row ?? null;
 }
 
-/** Find a single experience entry by numeric ID (admin only, with tags). */
+/** Find a single experience entry by numeric ID (admin only, with skills). */
 export async function findExperienceById(id: number) {
   const row = await db.query.experience.findFirst({
     where: and(eq(experience.id, id), isNull(experience.deletedAt)),
     with: {
-      tags: {
-        with: { tag: true },
-      },
       skills: {
         with: { skill: true },
       },

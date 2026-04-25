@@ -197,30 +197,6 @@ describe('admin experience routes', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('POST /admin/experience passes tagIds to service', async () => {
-    createExperienceServiceMock.mockResolvedValueOnce({
-      id: 1,
-      slug: 'engineer-acme',
-      ...validExperienceBody,
-      tags: [{ id: 7, name: 'Hono', slug: 'hono', category: 'framework' }],
-    });
-
-    const app = new Hono();
-    app.route('/admin/experience', adminExperienceRouter);
-
-    const bodyWithTags = { ...validExperienceBody, tagIds: [7] };
-    const res = await app.request('/admin/experience', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyWithTags),
-    });
-
-    expect(res.status).toBe(201);
-    expect(createExperienceServiceMock).toHaveBeenCalledWith(
-      expect.objectContaining({ tagIds: [7] })
-    );
-  });
-
   it('POST /admin/experience returns 400 with field-level details when service throws invalid skillIds error', async () => {
     createExperienceServiceMock.mockRejectedValueOnce(
       Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 99'), {
@@ -458,64 +434,6 @@ describe('admin experience routes', () => {
 
     expect(res.status).toBe(204);
     expect(softDeleteExperienceServiceMock).toHaveBeenCalledWith(1);
-  });
-
-  // ── tagIds validation (service-thrown) ─────────────────────────────────────
-
-  it('POST /admin/experience returns 400 with field-level details when service throws invalid tagIds error', async () => {
-    createExperienceServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 99'), {
-        invalidTagIds: [99],
-      })
-    );
-
-    const app = new Hono();
-    app.route('/admin/experience', adminExperienceRouter);
-
-    const res = await app.request('/admin/experience', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...validExperienceBody, tagIds: [99] }),
-    });
-
-    const body = (await res.json()) as {
-      success: boolean;
-      error: { code: string; message: string; details?: Array<{ field?: string }> };
-    };
-
-    expect(res.status).toBe(400);
-    expect(body.success).toBe(false);
-    expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(Array.isArray(body.error.details)).toBe(true);
-    expect(body.error.details?.some((d) => d.field === 'tagIds')).toBe(true);
-  });
-
-  it('PATCH /admin/experience/:id returns 400 with field-level details when service throws invalid tagIds error', async () => {
-    updateExperienceServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 99'), {
-        invalidTagIds: [99],
-      })
-    );
-
-    const app = new Hono();
-    app.route('/admin/experience', adminExperienceRouter);
-
-    const res = await app.request('/admin/experience/1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tagIds: [99] }),
-    });
-
-    const body = (await res.json()) as {
-      success: boolean;
-      error: { code: string; message: string; details?: Array<{ field?: string }> };
-    };
-
-    expect(res.status).toBe(400);
-    expect(body.success).toBe(false);
-    expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(Array.isArray(body.error.details)).toBe(true);
-    expect(body.error.details?.some((d) => d.field === 'tagIds')).toBe(true);
   });
 });
 

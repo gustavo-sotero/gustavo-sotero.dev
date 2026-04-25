@@ -1,11 +1,5 @@
 import { z } from 'zod';
 
-const uniqueTagIds = z
-  .array(z.number().int().positive())
-  .refine((ids) => new Set(ids).size === ids.length, {
-    message: 'tagIds cannot contain duplicates',
-  });
-
 const uniqueSkillIds = z
   .array(z.number().int().positive())
   .refine((ids) => new Set(ids).size === ids.length, {
@@ -43,7 +37,6 @@ export const createProjectSchema = z.object({
   featured: z.boolean().default(false),
   order: z.number().int().default(0),
   impactFacts: projectImpactFactsSchema,
-  tagIds: uniqueTagIds.optional(),
   skillIds: uniqueSkillIds.optional(),
 });
 
@@ -61,7 +54,7 @@ const queryBool = z.preprocess(
 export const projectQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   perPage: z.coerce.number().int().positive().max(100).default(20),
-  tag: z.string().optional(),
+  skill: z.string().optional(),
   featured: queryBool,
   featuredFirst: queryBool,
 });

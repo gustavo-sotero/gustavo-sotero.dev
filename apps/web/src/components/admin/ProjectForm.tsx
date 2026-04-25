@@ -7,7 +7,6 @@ import {
   generateSlug,
   type Project,
   type Skill,
-  type Tag,
 } from '@portfolio/shared';
 import type { z } from 'zod';
 
@@ -32,7 +31,6 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useCreateProject, useUpdateProject } from '@/hooks/admin/use-admin-projects';
 import { useAdminSkills } from '@/hooks/admin/use-admin-skills';
-import { useAdminTags } from '@/hooks/admin/use-admin-tags';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -42,7 +40,6 @@ import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
 import { CreateSkillDialogForm } from './CreateSkillDialogForm';
-import { CreateTagDialogForm } from './CreateTagDialogForm';
 import { ImpactFactsEditor } from './ImpactFactsEditor';
 import { MarkdownEditor } from './MarkdownEditor';
 import { TagCheckboxGroup } from './TagCheckboxGroup';
@@ -54,12 +51,10 @@ interface ProjectFormProps {
 
 export function ProjectForm({ mode, project }: ProjectFormProps) {
   const router = useRouter();
-  const { data: allTags = [], isLoading: tagsLoading } = useAdminTags();
   const { data: allSkills = [], isLoading: skillsLoading } = useAdminSkills();
   const createMutation = useCreateProject();
   const updateMutation = useUpdateProject(project?.id ?? 0, project?.slug);
   const [autoSlug, setAutoSlug] = useState(mode === 'create');
-  const [createTagOpen, setCreateTagOpen] = useState(false);
   const [createSkillOpen, setCreateSkillOpen] = useState(false);
 
   const {
@@ -83,7 +78,6 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
       featured: project?.featured ?? false,
       order: project?.order ?? 0,
       impactFacts: project?.impactFacts ?? [],
-      tagIds: project?.tags?.map((t) => t.id) ?? [],
       skillIds: project?.skills?.map((s) => s.id) ?? [],
     },
   });
@@ -103,14 +97,6 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
       }
       return next;
     });
-  }
-
-  function handleTagCreated(tag: Tag) {
-    const current = getValues('tagIds') ?? [];
-    if (!current.includes(tag.id)) {
-      setValue('tagIds', [...current, tag.id]);
-    }
-    setCreateTagOpen(false);
   }
 
   function handleSkillCreated(skill: Skill) {
@@ -339,27 +325,6 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
         )}
       />
 
-      {/* Tags */}
-      {!tagsLoading && (
-        <Controller
-          name="tagIds"
-          control={control}
-          render={({ field }) => (
-            <TagCheckboxGroup
-              label="Tags"
-              tags={allTags}
-              selectedIds={field.value ?? []}
-              onToggle={(tagId) => {
-                const current = field.value ?? [];
-                const exists = current.includes(tagId);
-                field.onChange(exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
-              }}
-              onCreateTag={() => setCreateTagOpen(true)}
-            />
-          )}
-        />
-      )}
-
       {/* Skills */}
       {!skillsLoading && (
         <Controller
@@ -403,12 +368,6 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
         </Button>
       </div>
 
-      {/* Inline tag creation — opens without leaving the page */}
-      <CreateTagDialogForm
-        open={createTagOpen}
-        onClose={() => setCreateTagOpen(false)}
-        onTagCreated={handleTagCreated}
-      />
       {/* Inline skill creation — opens without leaving the page */}
       <CreateSkillDialogForm
         open={createSkillOpen}

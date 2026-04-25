@@ -28,9 +28,9 @@ import {
   getHomeEducation,
   getHomeExperience,
   getHomeFeaturedProjects,
+  getHomeProjectSkills,
   getHomeRecentPosts,
   getHomeSkills,
-  getHomeTags,
 } from './home';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -127,31 +127,31 @@ describe('getHomeRecentPosts', () => {
   });
 });
 
-describe('getHomeTags', () => {
+describe('getHomeProjectSkills', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('calls /tags?source=project to restrict to project-only tags', async () => {
+  it('calls /skills endpoint to get project skills', async () => {
     apiServerGetMock.mockResolvedValueOnce([]);
 
-    await getHomeTags();
+    await getHomeProjectSkills();
 
-    expect(apiServerGetMock).toHaveBeenCalledWith('/tags?source=project');
+    expect(apiServerGetMock).toHaveBeenCalledWith('/skills');
   });
 
-  it('returns ok state with tags when API responds with tags array', async () => {
-    const tag = { id: 1, name: 'TypeScript', slug: 'typescript', category: 'language' };
-    apiServerGetMock.mockResolvedValueOnce([tag]);
+  it('returns ok state with skills when API responds with skills array', async () => {
+    const skill = { id: 1, name: 'TypeScript', slug: 'typescript', category: 'language' };
+    apiServerGetMock.mockResolvedValueOnce([skill]);
 
-    const result = await getHomeTags();
+    const result = await getHomeProjectSkills();
 
     expect(result.state).toBe('ok');
-    expect((result as { state: 'ok'; data: unknown[] }).data).toEqual([tag]);
+    expect((result as { state: 'ok'; data: unknown[] }).data).toEqual([skill]);
   });
 
   it('returns empty state when API responds with empty array', async () => {
     apiServerGetMock.mockResolvedValueOnce([]);
 
-    const result = await getHomeTags();
+    const result = await getHomeProjectSkills();
 
     expect(result.state).toBe('empty');
   });
@@ -159,7 +159,7 @@ describe('getHomeTags', () => {
   it('returns degraded state when API throws', async () => {
     apiServerGetMock.mockRejectedValueOnce(new Error('api unreachable'));
 
-    const result = await getHomeTags();
+    const result = await getHomeProjectSkills();
 
     expect(result.state).toBe('degraded');
   });

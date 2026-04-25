@@ -14,10 +14,9 @@ import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
 import { normalizeExperienceImpactFacts } from '../lib/impactFacts';
-import { flattenPivots, resolveSlugTaken } from '../lib/pivotHelpers';
+import { flattenPivotSkills, resolveSlugTaken } from '../lib/pivotHelpers';
 import { assertSkillsExist, normalizeSkillIds } from '../lib/skillValidation';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
-import { assertTagsExist, normalizeTagIds } from '../lib/tagValidation';
 import type { ExperienceFilters } from '../repositories/experience.repo';
 import {
   createExperience,
@@ -28,7 +27,6 @@ import {
   updateExperience,
 } from '../repositories/experience.repo';
 import { syncExperienceSkillsInTx } from '../repositories/skills.repo';
-import { syncExperienceTagsInTx } from '../repositories/tags.repo';
 
 // ── Cache TTLs ────────────────────────────────────────────────────────────────
 
@@ -68,13 +66,13 @@ export type { ExperienceFilters };
 export async function listExperience(filters: ExperienceFilters, adminMode = false) {
   if (adminMode) {
     const result = await findManyExperience(filters, true);
-    return { ...result, data: result.data.map(flattenPivots) };
+    return { ...result, data: result.data.map(flattenPivotSkills) };
   }
 
   const key = `experience:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}`;
   return cached(key, LIST_TTL, async () => {
     const result = await findManyExperience(filters, false);
-    return { ...result, data: result.data.map(flattenPivots) };
+    return { ...result, data: result.data.map(flattenPivotSkills) };
   });
 }
 
@@ -85,14 +83,14 @@ export async function getExperienceBySlug(slug: string, adminMode = false) {
   if (adminMode) {
     const entry = await findExperienceBySlug(slug, true);
     if (!entry) return null;
-    return flattenPivots(entry);
+    return flattenPivotSkills(entry);
   }
 
   const key = `experience:slug:${slug}`;
   return cached(key, DETAIL_TTL, async () => {
     const entry = await findExperienceBySlug(slug, false);
     if (!entry) return null;
-    return flattenPivots(entry);
+    return flattenPivotSkills(entry);
   });
 }
 
@@ -102,7 +100,7 @@ export async function getExperienceBySlug(slug: string, adminMode = false) {
 export async function getExperienceById(id: number) {
   const entry = await findExperienceById(id);
   if (!entry) return null;
-  return flattenPivots(entry);
+  return flattenPivotSkills(entry);
 }
 
 /**
@@ -117,10 +115,9 @@ export async function createExperienceService(data: CreateExperienceInput) {
   const slug = await ensureUniqueSlug(baseSlug, (s) => experienceSlugTaken(s));
 
   // Validate tag and skill references before entering the transaction
-  const normalizedTagIds = data.tagIds ? normalizeTagIds(data.tagIds) : [];
   const normalizedSkillIds = data.skillIds ? normalizeSkillIds(data.skillIds) : [];
   const normalizedImpactFacts = normalizeExperienceImpactFacts(data.impactFacts) ?? [];
-  await Promise.all([assertTagsExist(normalizedTagIds), assertSkillsExist(normalizedSkillIds)]);
+  await assertSkillsExist(normalizedSkillIds);
 
   // Atomically write the experience row and sync tags/skills in one transaction,
   // matching the same consistency guarantee used in posts/projects services.
@@ -147,9 +144,6 @@ export async function createExperienceService(data: CreateExperienceInput) {
 
     if (!row) throw new Error('Failed to create experience — database returned no row');
 
-    if (normalizedTagIds.length > 0) {
-      await syncExperienceTagsInTx(tx, row.id, normalizedTagIds);
-    }
     if (normalizedSkillIds.length > 0) {
       await syncExperienceSkillsInTx(tx, row.id, normalizedSkillIds);
     }
@@ -159,9 +153,9 @@ export async function createExperienceService(data: CreateExperienceInput) {
 
   await invalidateGroup('experienceContent');
 
-  // Return with tags and skills populated
+  // Return with skills populated
   const full = await findExperienceById(entry.id);
-  return full ? flattenPivots(full) : flattenPivots({ ...entry, tags: [], skills: [] });
+  return full ? flattenPivotSkills(full) : flattenPivotSkills({ ...entry, skills: [] });
 }
 
 /**
@@ -184,15 +178,13 @@ export async function updateExperienceService(id: number, data: UpdateExperience
     slug = await ensureUniqueSlug(data.slug, (s) => experienceSlugTaken(s, id));
   }
 
-  // Validate tag and skill references before entering the transaction.
-  const normalizedTagIds = data.tagIds !== undefined ? normalizeTagIds(data.tagIds) : undefined;
+  // Validate skill references before entering the transaction.
   const normalizedSkillIds =
     data.skillIds !== undefined ? normalizeSkillIds(data.skillIds) : undefined;
 
-  await Promise.all([
-    normalizedTagIds !== undefined ? assertTagsExist(normalizedTagIds) : Promise.resolve(),
-    normalizedSkillIds !== undefined ? assertSkillsExist(normalizedSkillIds) : Promise.resolve(),
-  ]);
+  await (normalizedSkillIds !== undefined
+    ? assertSkillsExist(normalizedSkillIds)
+    : Promise.resolve());
 
   // Atomically write the update and sync tags/skills in one transaction.
   const updated = await db.transaction(async (tx) => {
@@ -222,9 +214,6 @@ export async function updateExperienceService(id: number, data: UpdateExperience
 
     if (!row) return null;
 
-    if (normalizedTagIds !== undefined) {
-      await syncExperienceTagsInTx(tx, id, normalizedTagIds);
-    }
     if (normalizedSkillIds !== undefined) {
       await syncExperienceSkillsInTx(tx, id, normalizedSkillIds);
     }
@@ -236,9 +225,9 @@ export async function updateExperienceService(id: number, data: UpdateExperience
 
   await invalidateGroup('experienceContent');
 
-  // Return with refreshed tags and skills
+  // Return with refreshed skills
   const full = await findExperienceById(id);
-  return full ? flattenPivots(full) : flattenPivots({ ...updated, tags: [], skills: [] });
+  return full ? flattenPivotSkills(full) : flattenPivotSkills({ ...updated, skills: [] });
 }
 
 /**

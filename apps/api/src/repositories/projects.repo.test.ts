@@ -8,8 +8,8 @@ const {
   countMock,
   sqlMock,
   projectsTable,
-  projectTagsTable,
-  tagsTable,
+  projectSkillsTable,
+  skillsTable,
 } = vi.hoisted(() => ({
   andMock: vi.fn((...args: unknown[]) => ({ _op: 'and', args })),
   eqMock: vi.fn((..._args: unknown[]) => ({ _op: 'eq' })),
@@ -26,13 +26,13 @@ const {
     createdAt: 'projects.createdAt',
     order: 'projects.order',
   },
-  projectTagsTable: {
-    projectId: 'projectTags.projectId',
-    tagId: 'projectTags.tagId',
+  projectSkillsTable: {
+    projectId: 'projectSkills.projectId',
+    skillId: 'projectSkills.skillId',
   },
-  tagsTable: {
-    id: 'tags.id',
-    slug: 'tags.slug',
+  skillsTable: {
+    id: 'skills.id',
+    slug: 'skills.slug',
   },
 }));
 
@@ -67,8 +67,8 @@ vi.mock('drizzle-orm', () => ({
 
 vi.mock('@portfolio/shared/db/schema', () => ({
   projects: projectsTable,
-  projectTags: projectTagsTable,
-  tags: tagsTable,
+  projectSkills: projectSkillsTable,
+  skills: skillsTable,
 }));
 
 vi.mock('../lib/pagination', () => ({
@@ -139,27 +139,27 @@ describe('projects repository — public listing', () => {
   });
 });
 
-describe('projects repository — tag filtering via EXISTS', () => {
-  it('uses EXISTS subquery for tag filter (no in-memory ID array)', async () => {
-    await findManyProjects({ tag: 'typescript' }, false);
+describe('projects repository — skill filtering via EXISTS', () => {
+  it('uses EXISTS subquery for skill filter (no in-memory ID array)', async () => {
+    await findManyProjects({ skill: 'typescript' }, false);
 
     expect(existsMock).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call exists() when no tag filter is provided', async () => {
+  it('does not call exists() when no skill filter is provided', async () => {
     await findManyProjects({}, false);
 
     expect(existsMock).not.toHaveBeenCalled();
   });
 
-  it('filters by tag slug inside the EXISTS subquery', async () => {
-    await findManyProjects({ tag: 'postgresql' }, false);
+  it('filters by skill slug inside the EXISTS subquery', async () => {
+    await findManyProjects({ skill: 'postgresql' }, false);
 
     const eqCalls = eqMock.mock.calls;
-    const tagSlugCall = eqCalls.find(
-      (args) => args[0] === tagsTable.slug && args[1] === 'postgresql'
+    const skillSlugCall = eqCalls.find(
+      (args) => args[0] === skillsTable.slug && args[1] === 'postgresql'
     );
-    expect(tagSlugCall).toBeDefined();
+    expect(skillSlugCall).toBeDefined();
   });
 });
 

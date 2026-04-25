@@ -27,6 +27,7 @@ vi.mock('../lib/cache', () => ({
 
 vi.mock('../lib/pivotHelpers', () => ({
   flattenPivotTagArray: vi.fn((arr: Array<{ tag: unknown }>) => arr.map((r) => r.tag)),
+  flattenPivotSkillArray: vi.fn((arr: Array<{ skill: unknown }>) => arr.map((r) => r.skill)),
 }));
 
 vi.mock('../repositories/skills.repo', () => ({ findManySkills: findManySkillsMock }));

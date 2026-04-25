@@ -304,62 +304,6 @@ describe('admin content routes', () => {
     expect(body.error.code).toBe('CONFLICT');
   });
 
-  it('POST /admin/projects returns 400 with field-level details when service throws invalid tagIds error', async () => {
-    createProjectServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 77'), {
-        invalidTagIds: [77],
-      })
-    );
-
-    const app = new Hono();
-    app.route('/admin/projects', adminProjectsRouter);
-
-    const response = await app.request('/admin/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Projeto', content: 'C', status: 'draft', tagIds: [77] }),
-    });
-
-    const body = (await response.json()) as {
-      success: boolean;
-      error: { code: string; details?: Array<{ field?: string }> };
-    };
-
-    expect(response.status).toBe(400);
-    expect(body.success).toBe(false);
-    expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(Array.isArray(body.error.details)).toBe(true);
-    expect(body.error.details?.some((d) => d.field === 'tagIds')).toBe(true);
-  });
-
-  it('PATCH /admin/projects/:id returns 400 with field-level details when service throws invalid tagIds error', async () => {
-    updateProjectServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 66'), {
-        invalidTagIds: [66],
-      })
-    );
-
-    const app = new Hono();
-    app.route('/admin/projects', adminProjectsRouter);
-
-    const response = await app.request('/admin/projects/1', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tagIds: [66] }),
-    });
-
-    const body = (await response.json()) as {
-      success: boolean;
-      error: { code: string; details?: Array<{ field?: string }> };
-    };
-
-    expect(response.status).toBe(400);
-    expect(body.success).toBe(false);
-    expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(Array.isArray(body.error.details)).toBe(true);
-    expect(body.error.details?.some((d) => d.field === 'tagIds')).toBe(true);
-  });
-
   it('POST /admin/projects returns 400 with field-level details when service throws invalid skillIds error', async () => {
     createProjectServiceMock.mockRejectedValueOnce(
       Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 55'), {

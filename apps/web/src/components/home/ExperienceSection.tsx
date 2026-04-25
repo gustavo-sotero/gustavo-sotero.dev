@@ -153,16 +153,16 @@ function ExperienceCard({ item, index }: { item: Experience; index: number }) {
             </ul>
           )}
 
-          {/* Tags */}
-          {item.tags && item.tags.length > 0 && (
+          {/* Skills */}
+          {item.skills && item.skills.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-3">
-              {item.tags.map((tag) => (
+              {item.skills.map((skill) => (
                 <Badge
-                  key={tag.id}
+                  key={skill.id}
                   variant="outline"
                   className="text-zinc-500 border-zinc-700/60 bg-zinc-800/40 text-xs px-2 py-0.5"
                 >
-                  {tag.name}
+                  {skill.name}
                 </Badge>
               ))}
             </div>

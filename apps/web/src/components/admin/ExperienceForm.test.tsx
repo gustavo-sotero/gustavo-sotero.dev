@@ -2,16 +2,6 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExperienceForm } from './ExperienceForm';
 
-var adminTagsData = [
-  {
-    id: 1,
-    name: 'TypeScript',
-    slug: 'typescript',
-    category: 'language',
-    iconKey: 'si:SiTypescript',
-  },
-];
-
 var adminSkillsData = [
   {
     id: 10,
@@ -26,26 +16,10 @@ var adminSkillsData = [
 
 const pushMock = vi.fn();
 const mutateAsyncMock = vi.fn();
-let onTagCreatedCb:
-  | ((tag: {
-      id: number;
-      name: string;
-      slug: string;
-      category: string;
-      iconKey: string | null;
-    }) => void)
-  | undefined;
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: pushMock,
-  }),
-}));
-
-vi.mock('@/hooks/admin/use-admin-tags', () => ({
-  useAdminTags: () => ({
-    data: adminTagsData,
-    isLoading: false,
   }),
 }));
 
@@ -60,32 +34,9 @@ vi.mock('@/hooks/admin/use-admin-experience', () => ({
   }),
 }));
 
+// CreateTagDialogForm is no longer used in ExperienceForm; mock kept minimal for safety
 vi.mock('./CreateTagDialogForm', () => ({
-  CreateTagDialogForm: ({
-    open,
-    onClose,
-    onTagCreated,
-  }: {
-    open: boolean;
-    onClose: () => void;
-    onTagCreated?: (tag: {
-      id: number;
-      name: string;
-      slug: string;
-      category: string;
-      iconKey: string | null;
-    }) => void;
-  }) => {
-    onTagCreatedCb = onTagCreated;
-    if (!open) return null;
-    return (
-      <div data-testid="create-tag-dialog">
-        <button type="button" onClick={onClose}>
-          Fechar dialog
-        </button>
-      </div>
-    );
-  },
+  CreateTagDialogForm: () => null,
 }));
 
 vi.mock('@/hooks/admin/use-admin-skills', () => ({
@@ -147,16 +98,6 @@ describe('ExperienceForm', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
     pushMock.mockReset();
-    onTagCreatedCb = undefined;
-    adminTagsData = [
-      {
-        id: 1,
-        name: 'TypeScript',
-        slug: 'typescript',
-        category: 'language',
-        iconKey: 'si:SiTypescript',
-      },
-    ];
     adminSkillsData = [
       {
         id: 10,
@@ -174,53 +115,30 @@ describe('ExperienceForm', () => {
     cleanup();
   });
 
-  it('opens create-tag dialog when Criar tag button is clicked', () => {
+  it('opens create-skill dialog when Criar skill button is clicked', () => {
     render(<ExperienceForm mode="create" />);
 
-    expect(screen.queryByTestId('create-tag-dialog')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('create-skill-dialog')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/Criar tag/i));
+    fireEvent.click(screen.getByText(/Criar skill/i));
 
-    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('create-skill-dialog')).toBeInTheDocument();
   });
 
-  it('auto-closes dialog when a new tag is created', async () => {
+  it('renders skills as native checkboxes and toggles selection', () => {
     render(<ExperienceForm mode="create" />);
 
-    fireEvent.click(screen.getByText(/Criar tag/i));
-    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
-
-    onTagCreatedCb?.({
-      id: 99,
-      name: 'Bun',
-      slug: 'bun',
-      category: 'tool',
-      iconKey: 'si:SiBun',
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('create-tag-dialog')).not.toBeInTheDocument();
-    });
-  });
-
-  it('renders tags as native checkboxes and toggles selection', () => {
-    render(<ExperienceForm mode="create" />);
-
-    const checkbox = screen.getByRole('checkbox', { name: 'TypeScript' });
+    const checkbox = screen.getByRole('checkbox', { name: 'Docker' });
     expect(checkbox).not.toBeChecked();
 
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
   });
 
-  it('keeps create tag and skill actions visible when registries are empty', () => {
-    adminTagsData = [];
+  it('keeps create skill action visible when registry is empty', () => {
     adminSkillsData = [];
 
     render(<ExperienceForm mode="create" />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Criar tag/i }));
-    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Criar skill/i }));
     expect(screen.getByTestId('create-skill-dialog')).toBeInTheDocument();
@@ -290,7 +208,6 @@ describe('ExperienceForm', () => {
       deletedAt: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
-      tags: [],
     };
 
     render(<ExperienceForm mode="edit" experience={experience} />);
@@ -325,7 +242,6 @@ describe('ExperienceForm', () => {
       deletedAt: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
-      tags: [],
     };
 
     render(<ExperienceForm mode="edit" experience={experience} />);

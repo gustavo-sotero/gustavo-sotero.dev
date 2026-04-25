@@ -71,7 +71,7 @@ describe('runMigrations', () => {
   it('fails when schema parity is still broken after migrations', async () => {
     verifyRequiredSchemaMock.mockResolvedValueOnce({
       ok: false,
-      missing: ['table:experience_tags'],
+      missing: ['table:skills'],
     });
 
     await expect(runMigrations()).rejects.toThrow('Schema parity check failed after migrations');

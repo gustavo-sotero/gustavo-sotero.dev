@@ -1,6 +1,5 @@
 import type { PostStatus } from '../constants/enums';
 import type { Skill } from './skills';
-import type { Tag } from './tags';
 
 // Full experience entity (admin view)
 export interface Experience {
@@ -22,7 +21,6 @@ export interface Experience {
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  tags?: Tag[];
   skills?: Skill[];
 }
 
@@ -42,7 +40,7 @@ export interface ExperienceListItem {
   impactFacts: string[];
   logoUrl: string | null;
   credentialUrl: string | null;
-  tags?: Tag[];
+  skills?: Skill[];
 }
 
 // Input for creating an experience entry
@@ -61,7 +59,6 @@ export interface CreateExperienceDto {
   logoUrl?: string;
   credentialUrl?: string;
   impactFacts?: string[];
-  tagIds?: number[];
   skillIds?: number[];
 }
 

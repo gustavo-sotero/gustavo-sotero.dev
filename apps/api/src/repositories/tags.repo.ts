@@ -1,15 +1,7 @@
 import type * as schema from '@portfolio/shared/db/schema';
-import {
-  experience,
-  experienceTags,
-  posts,
-  postTags,
-  projects,
-  projectTags,
-  tags,
-} from '@portfolio/shared/db/schema';
+import { posts, postTags, tags } from '@portfolio/shared/db/schema';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
-import { and, asc, count, eq, exists, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, count, eq, exists, inArray, type SQL, sql } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import { db } from '../config/db';
@@ -35,8 +27,8 @@ export interface TagFilters {
   category?: string | string[];
   page?: string | number;
   perPage?: string | number;
-  /** Restrict public tags to a specific entity origin. When absent, the union of all origins is returned. */
-  source?: 'project' | 'post' | 'experience';
+  /** Restrict public tags to a specific entity origin. Tags are now only associated with posts. */
+  source?: 'post';
 }
 
 /** Find all tags (admin: all; public: only those in use by published content). */
@@ -77,12 +69,9 @@ export async function findManyTags(filters: TagFilters = {}, publicOnly = false)
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   if (publicOnly) {
-    // Only tags used by at least one published entity.
-    // Uses EXISTS subqueries to avoid materializing an intermediate ID array in memory —
+    // Only tags used by at least one published post.
+    // Uses an EXISTS subquery to avoid materializing an intermediate ID array in memory —
     // the filter is pushed entirely to the database engine as a correlated subquery.
-    //
-    // When `source` is specified, only the corresponding pivot table is checked;
-    // when absent the union of post + project + experience is used (legacy default).
     const postExists = exists(
       db
         .select({ one: sql<number>`1` })
@@ -91,44 +80,7 @@ export async function findManyTags(filters: TagFilters = {}, publicOnly = false)
         .where(and(eq(postTags.tagId, tags.id), ...publicPostVisibilityClauses(posts)))
     );
 
-    const projectExists = exists(
-      db
-        .select({ one: sql<number>`1` })
-        .from(projectTags)
-        .innerJoin(projects, eq(projectTags.projectId, projects.id))
-        .where(
-          and(
-            eq(projectTags.tagId, tags.id),
-            eq(projects.status, 'published'),
-            isNull(projects.deletedAt)
-          )
-        )
-    );
-
-    const experienceExists = exists(
-      db
-        .select({ one: sql<number>`1` })
-        .from(experienceTags)
-        .innerJoin(experience, eq(experienceTags.experienceId, experience.id))
-        .where(
-          and(
-            eq(experienceTags.tagId, tags.id),
-            eq(experience.status, 'published'),
-            isNull(experience.deletedAt)
-          )
-        )
-    );
-
-    const isUsedCondition =
-      filters.source === 'project'
-        ? projectExists
-        : filters.source === 'post'
-          ? postExists
-          : filters.source === 'experience'
-            ? experienceExists
-            : or(postExists, projectExists, experienceExists);
-
-    const publicConditions: SQL[] = [...conditions, isUsedCondition as SQL];
+    const publicConditions: SQL[] = [...conditions, postExists as SQL];
     const publicWhere = publicConditions.length > 0 ? and(...publicConditions) : undefined;
 
     const [countResult, rows] = await Promise.all([
@@ -278,45 +230,5 @@ export async function syncPostTagsInTx(tx: DbOrTx, postId: number, tagIds: numbe
   await tx.delete(postTags).where(eq(postTags.postId, postId));
   if (tagIds.length > 0) {
     await tx.insert(postTags).values(tagIds.map((tagId) => ({ postId, tagId })));
-  }
-}
-
-/** Sync tags for a project: replace all existing pivot entries. */
-export async function syncProjectTags(projectId: number, tagIds: number[]) {
-  await db.transaction(async (tx) => {
-    await tx.delete(projectTags).where(eq(projectTags.projectId, projectId));
-    if (tagIds.length > 0) {
-      await tx.insert(projectTags).values(tagIds.map((tagId) => ({ projectId, tagId })));
-    }
-  });
-}
-
-/**
- * Sync tags for a project within an existing transaction.
- * Use this inside `db.transaction()` blocks so the tag sync is atomic with
- * the surrounding project create/update, avoiding partial updates on failure.
- */
-export async function syncProjectTagsInTx(tx: DbOrTx, projectId: number, tagIds: number[]) {
-  await tx.delete(projectTags).where(eq(projectTags.projectId, projectId));
-  if (tagIds.length > 0) {
-    await tx.insert(projectTags).values(tagIds.map((tagId) => ({ projectId, tagId })));
-  }
-}
-
-/** Sync tags for an experience: replace all existing pivot entries. */
-export async function syncExperienceTags(experienceId: number, tagIds: number[]) {
-  await db.transaction(async (tx) => {
-    await tx.delete(experienceTags).where(eq(experienceTags.experienceId, experienceId));
-    if (tagIds.length > 0) {
-      await tx.insert(experienceTags).values(tagIds.map((tagId) => ({ experienceId, tagId })));
-    }
-  });
-}
-
-/** Sync tags for an experience within an existing transaction. */
-export async function syncExperienceTagsInTx(tx: DbOrTx, experienceId: number, tagIds: number[]) {
-  await tx.delete(experienceTags).where(eq(experienceTags.experienceId, experienceId));
-  if (tagIds.length > 0) {
-    await tx.insert(experienceTags).values(tagIds.map((tagId) => ({ experienceId, tagId })));
   }
 }

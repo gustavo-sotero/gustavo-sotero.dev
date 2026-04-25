@@ -10,16 +10,6 @@ globalThis.ResizeObserver = class ResizeObserver {
 
 import { ProjectForm } from './ProjectForm';
 
-var adminTagsData = [
-  {
-    id: 1,
-    name: 'Docker',
-    slug: 'docker',
-    category: 'infra',
-    iconKey: 'si:SiDocker',
-  },
-];
-
 var adminSkillsData = [
   {
     id: 10,
@@ -34,26 +24,10 @@ var adminSkillsData = [
 
 const pushMock = vi.fn();
 const mutateAsyncMock = vi.fn();
-let onTagCreatedCb:
-  | ((tag: {
-      id: number;
-      name: string;
-      slug: string;
-      category: string;
-      iconKey: string | null;
-    }) => void)
-  | undefined;
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: pushMock,
-  }),
-}));
-
-vi.mock('@/hooks/admin/use-admin-tags', () => ({
-  useAdminTags: () => ({
-    data: adminTagsData,
-    isLoading: false,
   }),
 }));
 
@@ -68,33 +42,9 @@ vi.mock('@/hooks/admin/use-admin-projects', () => ({
   }),
 }));
 
-// Mock CreateTagDialogForm to capture onTagCreated callback
+// CreateTagDialogForm is no longer used in ProjectForm; mock kept minimal for safety
 vi.mock('./CreateTagDialogForm', () => ({
-  CreateTagDialogForm: ({
-    open,
-    onClose,
-    onTagCreated,
-  }: {
-    open: boolean;
-    onClose: () => void;
-    onTagCreated?: (tag: {
-      id: number;
-      name: string;
-      slug: string;
-      category: string;
-      iconKey: string | null;
-    }) => void;
-  }) => {
-    onTagCreatedCb = onTagCreated;
-    if (!open) return null;
-    return (
-      <div data-testid="create-tag-dialog">
-        <button type="button" onClick={onClose}>
-          Fechar dialog
-        </button>
-      </div>
-    );
-  },
+  CreateTagDialogForm: () => null,
 }));
 
 vi.mock('@/hooks/admin/use-admin-skills', () => ({
@@ -166,16 +116,6 @@ describe('ProjectForm', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
     pushMock.mockReset();
-    onTagCreatedCb = undefined;
-    adminTagsData = [
-      {
-        id: 1,
-        name: 'Docker',
-        slug: 'docker',
-        category: 'infra',
-        iconKey: 'si:SiDocker',
-      },
-    ];
     adminSkillsData = [
       {
         id: 10,
@@ -211,50 +151,21 @@ describe('ProjectForm', () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  // Plan §13.1.7 — Inline tag creation in ProjectForm auto-selects new tag
-  it('opens create-tag dialog when Criar tag button is clicked', () => {
+  // Plan §13.1.7 — Inline skill creation in ProjectForm auto-selects new skill
+  it('opens create-skill dialog when Criar skill button is clicked', () => {
     render(<ProjectForm mode="create" />);
 
-    expect(screen.queryByTestId('create-tag-dialog')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('create-skill-dialog')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/Criar tag/i));
+    fireEvent.click(screen.getByText(/Criar skill/i));
 
-    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('create-skill-dialog')).toBeInTheDocument();
   });
 
-  it('auto-selects newly created tag in ProjectForm and closes dialog', async () => {
-    render(<ProjectForm mode="create" />);
-
-    fireEvent.click(screen.getByText(/Criar tag/i));
-    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
-
-    const newTag = {
-      id: 88,
-      name: 'Kubernetes',
-      slug: 'kubernetes',
-      category: 'infra',
-      iconKey: 'si:SiKubernetes',
-    };
-    onTagCreatedCb?.(newTag);
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('create-tag-dialog')).not.toBeInTheDocument();
-    });
-  });
-
-  it('renders existing tags as native checkboxes', () => {
-    render(<ProjectForm mode="create" />);
-    expect(screen.getByRole('checkbox', { name: 'Docker' })).toBeInTheDocument();
-  });
-
-  it('keeps create tag and skill actions visible when registries are empty', () => {
-    adminTagsData = [];
+  it('keeps create skill action visible when registry is empty', () => {
     adminSkillsData = [];
 
     render(<ProjectForm mode="create" />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Criar tag/i }));
-    expect(screen.getByTestId('create-tag-dialog')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Criar skill/i }));
     expect(screen.getByTestId('create-skill-dialog')).toBeInTheDocument();
@@ -384,7 +295,6 @@ describe('ProjectForm', () => {
       deletedAt: null,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
-      tags: [],
     };
 
     render(<ProjectForm mode="edit" project={project} />);

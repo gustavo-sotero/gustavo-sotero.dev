@@ -90,7 +90,7 @@ describe('health routes', () => {
     pingMock.mockResolvedValueOnce('PONG');
     verifyRequiredSchemaMock.mockResolvedValueOnce({
       ok: false,
-      missing: ['table:experience_tags'],
+      missing: ['table:skills'],
     });
 
     const app = new Hono();

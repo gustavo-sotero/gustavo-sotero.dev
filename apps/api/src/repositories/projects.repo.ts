@@ -1,4 +1,4 @@
-import { projects, projectTags, tags } from '@portfolio/shared/db/schema';
+import { projectSkills, projects, skills } from '@portfolio/shared/db/schema';
 import { and, count, eq, exists, isNull, type SQL, sql } from 'drizzle-orm';
 import { db } from '../config/db';
 import { buildPaginationMeta, parsePagination } from '../lib/pagination';
@@ -6,7 +6,7 @@ import type { DbOrTx } from './tags.repo';
 
 export interface ProjectFilters {
   status?: 'draft' | 'published';
-  tag?: string;
+  skill?: string;
   featured?: boolean;
   featuredFirst?: boolean;
   page?: string | number;
@@ -39,15 +39,15 @@ export async function findManyProjects(filters: ProjectFilters, adminMode = fals
     conditions.push(eq(projects.featured, filters.featured));
   }
 
-  // Tag filter via EXISTS subquery (single query, avoids in-memory ID list)
-  if (filters.tag) {
+  // Skill filter via EXISTS subquery (single query, avoids in-memory ID list)
+  if (filters.skill) {
     conditions.push(
       exists(
         db
           .select({ one: sql`1` })
-          .from(projectTags)
-          .innerJoin(tags, eq(projectTags.tagId, tags.id))
-          .where(and(eq(projectTags.projectId, projects.id), eq(tags.slug, filters.tag)))
+          .from(projectSkills)
+          .innerJoin(skills, eq(projectSkills.skillId, skills.id))
+          .where(and(eq(projectSkills.projectId, projects.id), eq(skills.slug, filters.skill)))
       )
     );
   }
@@ -64,9 +64,6 @@ export async function findManyProjects(filters: ProjectFilters, adminMode = fals
       limit,
       offset,
       with: {
-        tags: {
-          with: { tag: true },
-        },
         skills: {
           with: { skill: true },
         },
@@ -78,7 +75,7 @@ export async function findManyProjects(filters: ProjectFilters, adminMode = fals
   return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
 }
 
-/** Find a project by slug. Returns with tags. */
+/** Find a project by slug. Returns with skills. */
 export async function findProjectBySlug(slug: string, adminMode = false) {
   const conditions: SQL[] = [eq(projects.slug, slug)];
   if (adminMode) {
@@ -91,9 +88,6 @@ export async function findProjectBySlug(slug: string, adminMode = false) {
   const row = await db.query.projects.findFirst({
     where: and(...conditions),
     with: {
-      tags: {
-        with: { tag: true },
-      },
       skills: {
         with: { skill: true },
       },

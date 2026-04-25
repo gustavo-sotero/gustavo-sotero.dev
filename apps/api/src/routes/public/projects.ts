@@ -2,8 +2,8 @@
  * Public routes for projects (authenticated reads not required).
  *
  * Routes:
- *  GET /projects         - Paginated list of published projects (tag/featured filters)
- *  GET /projects/:slug   - Project detail with tags
+ *  GET /projects         - Paginated list of published projects (skill/featured filters)
+ *  GET /projects/:slug   - Project detail with skills
  */
 
 import { projectQuerySchema } from '@portfolio/shared/schemas/projects';
@@ -17,14 +17,14 @@ const publicProjectsRouter = new Hono<AppEnv>();
 
 /**
  * GET /projects
- * Returns paginated published projects. Supports `?page`, `?perPage`, `?tag`, `?featured`.
+ * Returns paginated published projects. Supports `?page`, `?perPage`, `?skill`, `?featured`.
  * Results are cached (TTL 5 min).
  */
 publicProjectsRouter.get('/', async (c) => {
   const qv = validateQuery(c, projectQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
-    tag: c.req.query('tag'),
+    skill: c.req.query('skill'),
     featured: c.req.query('featured'),
     featuredFirst: c.req.query('featuredFirst'),
   });
@@ -36,7 +36,7 @@ publicProjectsRouter.get('/', async (c) => {
 
 /**
  * GET /projects/:slug
- * Returns a published project with its pre-rendered HTML content and tags.
+ * Returns a published project with its pre-rendered HTML content and skills.
  * Cached for 1 hour.
  */
 publicProjectsRouter.get('/:slug', async (c) => {

@@ -1,5 +1,5 @@
 import 'server-only';
-import type { Education, Experience, Post, Project, Skill, Tag } from '@portfolio/shared';
+import type { Education, Experience, Post, Project, Skill } from '@portfolio/shared';
 import { cacheLife, cacheTag } from 'next/cache';
 import { apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';
@@ -60,18 +60,18 @@ export async function getHomeRecentPosts(): Promise<HomeLoaderResult<Post>> {
   }
 }
 
-/** Project tags for content taxonomy (project filter chips). */
-export async function getHomeTags(): Promise<HomeLoaderResult<Tag>> {
+/** Skills associated with projects (for project filter chips). */
+export async function getHomeProjectSkills(): Promise<HomeLoaderResult<Skill>> {
   'use cache';
   cacheLife({ stale: 3600, revalidate: 3600, expire: 86400 });
-  cacheTag(TAG_HOME, TAG_TAGS_LIST);
+  cacheTag(TAG_HOME, TAG_SKILLS_LIST);
 
   try {
-    const data = await apiServerGet<Tag[]>('/tags?source=project');
-    const tags = Array.isArray(data) ? data : [];
-    return tags.length > 0 ? { state: 'ok', data: tags } : { state: 'empty', data: [] };
+    const data = await apiServerGet<Skill[]>('/skills');
+    const skills = Array.isArray(data) ? data : [];
+    return skills.length > 0 ? { state: 'ok', data: skills } : { state: 'empty', data: [] };
   } catch (err) {
-    logServerError('data:home', 'Failed to fetch tags', {
+    logServerError('data:home', 'Failed to fetch project skills', {
       error: err instanceof Error ? err.message : String(err),
     });
     return { state: 'degraded' };

@@ -4,12 +4,6 @@ const dateString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be a valid date in YYYY-MM-DD format');
 
-const uniqueTagIds = z
-  .array(z.number().int().positive())
-  .refine((ids) => new Set(ids).size === ids.length, {
-    message: 'tagIds cannot contain duplicates',
-  });
-
 const uniqueSkillIds = z
   .array(z.number().int().positive())
   .refine((ids) => new Set(ids).size === ids.length, {
@@ -52,7 +46,6 @@ const experienceBaseShape = z.object({
   logoUrl: z.union([z.literal(''), z.string().url()]).optional(),
   credentialUrl: z.union([z.literal(''), z.string().url()]).optional(),
   impactFacts: experienceImpactFactsSchema,
-  tagIds: uniqueTagIds.optional(),
   skillIds: uniqueSkillIds.optional(),
 });
 

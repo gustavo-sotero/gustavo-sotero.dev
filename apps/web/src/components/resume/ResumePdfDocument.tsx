@@ -231,14 +231,14 @@ const s = StyleSheet.create({
     borderRadius: 3,
   },
 
-  // ── Experience tags ───────────────────────────────────────────────────────
-  experienceTagsRow: {
+  // ── Experience skills ─────────────────────────────────────────────────────────────────
+  experienceSkillsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 3,
     marginTop: 3,
   },
-  experienceTag: {
+  experienceSkill: {
     fontSize: 7.5,
     color: C.muted,
     backgroundColor: '#f0f0f0',
@@ -273,12 +273,12 @@ const s = StyleSheet.create({
     lineHeight: 1.5,
     marginBottom: 3,
   },
-  projectTags: {
+  projectSkills: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 3,
   },
-  projectTag: {
+  projectSkill: {
     fontSize: 7.5,
     color: C.muted,
     paddingHorizontal: 4,
@@ -463,11 +463,11 @@ function ExperienceEntry({ item }: { item: ResumeViewModel['experience'][number]
           ))}
         </View>
       ) : null}
-      {item.tags && item.tags.length > 0 ? (
-        <View style={s.experienceTagsRow}>
-          {item.tags.map((tagName) => (
-            <Text key={tagName} style={s.experienceTag}>
-              {tagName}
+      {item.skills && item.skills.length > 0 ? (
+        <View style={s.experienceSkillsRow}>
+          {item.skills.map((skillName) => (
+            <Text key={skillName} style={s.experienceSkill}>
+              {skillName}
             </Text>
           ))}
         </View>
@@ -527,11 +527,11 @@ function ProjectEntry({ item }: { item: ResumeViewModel['projects'][number] }) {
           ))}
         </View>
       ) : null}
-      {item.tags.length > 0 ? (
-        <View style={s.projectTags}>
-          {item.tags.map((tag) => (
-            <Text key={tag} style={s.projectTag}>
-              {tag}
+      {item.skills.length > 0 ? (
+        <View style={s.projectSkills}>
+          {item.skills.map((skill) => (
+            <Text key={skill} style={s.projectSkill}>
+              {skill}
             </Text>
           ))}
         </View>

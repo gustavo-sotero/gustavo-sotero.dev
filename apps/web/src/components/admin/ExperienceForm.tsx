@@ -7,7 +7,6 @@ import {
   type Experience,
   generateSlug,
   type Skill,
-  type Tag,
 } from '@portfolio/shared';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -17,7 +16,6 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import { useCreateExperience, useUpdateExperience } from '@/hooks/admin/use-admin-experience';
 import { useAdminSkills } from '@/hooks/admin/use-admin-skills';
-import { useAdminTags } from '@/hooks/admin/use-admin-tags';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -27,7 +25,6 @@ import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
 import { CreateSkillDialogForm } from './CreateSkillDialogForm';
-import { CreateTagDialogForm } from './CreateTagDialogForm';
 import { ImpactFactsEditor } from './ImpactFactsEditor';
 import { TagCheckboxGroup } from './TagCheckboxGroup';
 
@@ -132,9 +129,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
   const createMutation = useCreateExperience();
   const updateMutation = useUpdateExperience(experience?.id ?? 0);
   const [autoSlug, setAutoSlug] = useState(mode === 'create');
-  const [createTagOpen, setCreateTagOpen] = useState(false);
   const [createSkillOpen, setCreateSkillOpen] = useState(false);
-  const { data: allTags = [], isLoading: tagsLoading } = useAdminTags();
   const { data: allSkills = [], isLoading: skillsLoading } = useAdminSkills();
 
   const {
@@ -161,7 +156,6 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
       logoUrl: experience?.logoUrl ?? '',
       credentialUrl: experience?.credentialUrl ?? '',
       impactFacts: experience?.impactFacts ?? [],
-      tagIds: experience?.tags?.map((t) => t.id) ?? [],
       skillIds: experience?.skills?.map((s) => s.id) ?? [],
     },
   });
@@ -195,14 +189,6 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
 
       return next;
     });
-  }
-
-  function handleTagCreated(tag: Tag) {
-    const current = getValues('tagIds') ?? [];
-    if (!current.includes(tag.id)) {
-      setValue('tagIds', [...current, tag.id]);
-    }
-    setCreateTagOpen(false);
   }
 
   function handleSkillCreated(skill: Skill) {
@@ -437,27 +423,6 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
         )}
       />
 
-      {/* Tags */}
-      {!tagsLoading && (
-        <Controller
-          name="tagIds"
-          control={control}
-          render={({ field }) => (
-            <TagCheckboxGroup
-              label="Tags"
-              tags={allTags}
-              selectedIds={field.value ?? []}
-              onToggle={(tagId) => {
-                const current = field.value ?? [];
-                const exists = current.includes(tagId);
-                field.onChange(exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
-              }}
-              onCreateTag={() => setCreateTagOpen(true)}
-            />
-          )}
-        />
-      )}
-
       {/* Skills */}
       {!skillsLoading && (
         <Controller
@@ -505,11 +470,6 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
         </Button>
       </div>
 
-      <CreateTagDialogForm
-        open={createTagOpen}
-        onClose={() => setCreateTagOpen(false)}
-        onTagCreated={handleTagCreated}
-      />
       <CreateSkillDialogForm
         open={createSkillOpen}
         onClose={() => setCreateSkillOpen(false)}

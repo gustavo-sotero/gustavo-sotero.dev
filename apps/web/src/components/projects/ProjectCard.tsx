@@ -13,7 +13,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const tags = project.tags ?? [];
+  const skills = project.skills ?? [];
 
   return (
     <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-all duration-300">
@@ -85,19 +85,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </ul>
         )}
 
-        {/* Tags + Links — pinned to bottom */}
-        {(tags.length > 0 || project.repositoryUrl || project.liveUrl) && (
+        {/* Skills + Links — pinned to bottom */}
+        {(skills.length > 0 || project.repositoryUrl || project.liveUrl) && (
           <div className="flex flex-col gap-2 mt-auto">
-            {/* Tags */}
-            {tags.length > 0 && (
+            {/* Skills */}
+            {skills.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-2 border-t border-zinc-800/60">
-                {tags.map((tag) => (
+                {skills.map((skill) => (
                   <Badge
-                    key={tag.id}
+                    key={skill.id}
                     variant="secondary"
                     className="text-xs border bg-zinc-800/80 text-zinc-400 border-zinc-700/50"
                   >
-                    {tag.name}
+                    {skill.name}
                   </Badge>
                 ))}
               </div>

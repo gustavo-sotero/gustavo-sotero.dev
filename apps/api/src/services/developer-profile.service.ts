@@ -12,7 +12,7 @@
 
 import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
 import { cached } from '../lib/cache';
-import { flattenPivotTagArray } from '../lib/pivotHelpers';
+import { flattenPivotSkillArray, flattenPivotTagArray } from '../lib/pivotHelpers';
 import { getPageviewCount } from '../repositories/analytics.repo';
 import { findManyEducation } from '../repositories/education.repo';
 import { findManyExperience } from '../repositories/experience.repo';
@@ -127,7 +127,7 @@ export interface ProjectSummaryDTO {
   impactFacts: string[];
   createdAt: string;
   updatedAt: string;
-  tags: TagDTO[];
+  skills: SkillDTO[];
 }
 
 export interface MetricsDTO {
@@ -332,9 +332,9 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
     impactFacts: pr.impactFacts ?? [],
     createdAt: toIsoRequired(pr.createdAt),
     updatedAt: toIsoRequired(pr.updatedAt),
-    tags: flattenPivotTagArray((pr.tags ?? []) as Array<{ tag: Parameters<typeof mapTag>[0] }>).map(
-      mapTag
-    ),
+    skills: flattenPivotSkillArray(
+      (pr.skills ?? []) as Array<{ skill: Parameters<typeof mapSkill>[0] }>
+    ).map(mapSkill),
   }));
 
   // ── Metrics ────────────────────────────────────────────────────────────────
