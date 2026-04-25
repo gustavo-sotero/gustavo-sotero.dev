@@ -146,7 +146,11 @@ describe('HeroSection', () => {
     render(<HeroSection skills={[]} experienceLabel="3+ anos" />);
 
     // Developer name is the primary LCP candidate — must be in a heading.
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Gustavo Sotero');
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveTextContent('Gustavo Sotero');
+
+    // Hero should fill the viewport height so the landing fold feels intentional.
+    expect(heading.closest('section')).toHaveClass('min-h-svh');
 
     // Role text is the second most prominent element.
     expect(screen.getByText('Desenvolvedor Fullstack')).toBeInTheDocument();

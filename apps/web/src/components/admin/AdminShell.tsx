@@ -120,17 +120,10 @@ export function AdminShell({ children }: AdminShellProps) {
           <div
             className={cn(
               'flex items-center border-b border-zinc-800/60 py-4 px-3',
-              collapsed ? 'justify-center' : 'gap-3 px-4'
+              collapsed ? 'justify-center' : 'px-4'
             )}
           >
-            {collapsed ? (
-              <span className="text-emerald-400 font-mono font-bold text-lg">&gt;_</span>
-            ) : (
-              <>
-                <span className="text-emerald-400 font-mono font-bold text-lg">&gt;_</span>
-                <span className="font-semibold text-zinc-100 text-sm truncate">Admin</span>
-              </>
-            )}
+            <span className="text-emerald-400 font-mono font-bold text-lg">&gt;_</span>
           </div>
 
           {/* Navigation */}

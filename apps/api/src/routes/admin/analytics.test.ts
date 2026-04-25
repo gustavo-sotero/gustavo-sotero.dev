@@ -64,7 +64,7 @@ describe('admin analytics routes', () => {
     expect(body.data.pageviews).toBe(120);
     expect(cachedMock).toHaveBeenCalledWith(
       'analytics:summary:2026-03-01:2026-03-15',
-      300,
+      5,
       expect.any(Function)
     );
   });
@@ -119,7 +119,7 @@ describe('admin analytics routes', () => {
     expect(body.data).toHaveLength(2);
     expect(cachedMock).toHaveBeenCalledWith(
       'analytics:top-posts:2026-03-01:2026-03-15:10',
-      300,
+      5,
       expect.any(Function)
     );
   });
@@ -168,7 +168,7 @@ describe('admin analytics routes', () => {
     // The fetcher was captured — verify that cachedMock was called with a stable key
     expect(cachedMock).toHaveBeenCalledWith(
       expect.stringMatching(/^analytics:summary:/),
-      300,
+      5,
       expect.any(Function)
     );
   });
