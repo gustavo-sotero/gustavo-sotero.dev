@@ -23,8 +23,8 @@ export function useCreateTag() {
       ['admin', 'posts'],
     ],
     revalidateTags: () => tagMutationTags(),
-    successToast: 'Tag criada com sucesso!',
-    errorToast: 'Erro ao criar tag.',
+    successToast: 'Tag de post criada com sucesso!',
+    errorToast: 'Erro ao criar tag de post.',
   });
 }
 
@@ -37,8 +37,8 @@ export function useUpdateTag() {
       ['admin', 'posts'],
     ],
     revalidateTags: () => tagMutationTags(),
-    successToast: 'Tag atualizada.',
-    errorToast: 'Erro ao atualizar tag.',
+    successToast: 'Tag de post atualizada.',
+    errorToast: 'Erro ao atualizar tag de post.',
   });
 }
 
@@ -50,8 +50,8 @@ export function useDeleteTag() {
       ['admin', 'posts'],
     ],
     revalidateTags: () => tagMutationTags(),
-    successToast: 'Tag excluída.',
-    errorToast: 'Erro ao excluir tag.',
+    successToast: 'Tag de post excluída.',
+    errorToast: 'Erro ao excluir tag de post.',
   });
 }
 
@@ -68,6 +68,6 @@ export function useResolveAiSuggestedTags() {
       ['admin', 'posts'],
     ],
     revalidateTags: () => tagMutationTags(),
-    errorToast: 'Erro ao criar tags sugeridas pela IA.',
+    errorToast: 'Erro ao criar tags de post sugeridas pela IA.',
   });
 }

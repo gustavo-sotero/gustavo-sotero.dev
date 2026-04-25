@@ -62,6 +62,18 @@ const MOCK_PROFILE = {
       order: 0,
       impactFacts: ['Reduziu tempo de deploy em 60%', 'Liderou squad de 4 devs'],
       logoUrl: null,
+      skills: [
+        {
+          id: 1,
+          name: 'TypeScript',
+          slug: 'typescript',
+          category: 'language',
+          iconKey: 'si:SiTypescript',
+          expertiseLevel: 3,
+          isHighlighted: true,
+          createdAt: '2025-01-01T00:00:00.000Z',
+        },
+      ],
     },
   ],
   education: [
@@ -220,7 +232,9 @@ describe('GET /developer/profile', () => {
       expect(item).toHaveProperty('startDate');
       expect(item).toHaveProperty('isCurrent');
       expect(item).toHaveProperty('impactFacts');
+      expect(item).toHaveProperty('skills');
       expect(Array.isArray(item.impactFacts)).toBe(true);
+      expect(Array.isArray(item.skills)).toBe(true);
     }
   });
 

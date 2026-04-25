@@ -118,7 +118,16 @@ export const publicPaths = {
                         description: 'Published professional experience entries',
                         items: {
                           type: 'object',
-                          required: ['id', 'slug', 'company', 'role', 'startDate', 'isCurrent'],
+                          required: [
+                            'id',
+                            'slug',
+                            'company',
+                            'role',
+                            'startDate',
+                            'isCurrent',
+                            'impactFacts',
+                            'skills',
+                          ],
                           properties: {
                             id: { type: 'integer' },
                             slug: { type: 'string' },
@@ -136,6 +145,10 @@ export const publicPaths = {
                               items: { type: 'string' },
                             },
                             logoUrl: { type: 'string', nullable: true },
+                            skills: {
+                              type: 'array',
+                              items: { $ref: '#/components/schemas/Skill' },
+                            },
                           },
                         },
                       },
@@ -327,6 +340,18 @@ export const publicPaths = {
                       order: 0,
                       impactFacts: ['Reduziu tempo de deploy em 60%', 'Liderou squad de 4 devs'],
                       logoUrl: null,
+                      skills: [
+                        {
+                          id: 1,
+                          name: 'TypeScript',
+                          slug: 'typescript',
+                          category: 'language',
+                          iconKey: 'si:SiTypescript',
+                          expertiseLevel: 3,
+                          isHighlighted: true,
+                          createdAt: '2026-01-01T00:00:00.000Z',
+                        },
+                      ],
                     },
                   ],
                   education: [

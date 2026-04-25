@@ -185,6 +185,7 @@ describe('developer-profile service — stack source alignment', () => {
           order: 0,
           impactFacts: ['Reduziu tempo de deploy em 60%'],
           logoUrl: null,
+          skills: [{ skill: makeMockSkill({ id: 10, name: 'TypeScript', category: 'language' }) }],
         },
       ])
     );
@@ -210,6 +211,18 @@ describe('developer-profile service — stack source alignment', () => {
     const result = await getDeveloperProfile();
 
     expect(result.experience[0]?.impactFacts).toEqual(['Reduziu tempo de deploy em 60%']);
+    expect(result.experience[0]?.skills).toEqual([
+      {
+        id: 10,
+        name: 'TypeScript',
+        slug: 'typescript',
+        category: 'language',
+        iconKey: null,
+        expertiseLevel: 3,
+        isHighlighted: false,
+        createdAt: '2025-01-01T00:00:00.000Z',
+      },
+    ]);
     expect(result.projects[0]?.impactFacts).toEqual(['Reduziu latência em 40%']);
   });
 });

@@ -617,13 +617,23 @@ describe('openapi routes', () => {
     const experienceProps =
       json?.schema?.properties?.data?.properties?.experience?.items?.properties;
     const projectProps = json?.schema?.properties?.data?.properties?.projects?.items?.properties;
+    const exampleExperienceSkill = (
+      json?.example?.data?.experience?.[0]?.skills as Array<Record<string, unknown>> | undefined
+    )?.[0];
 
     expect(experienceProps && Object.hasOwn(experienceProps, 'impactFacts')).toBe(true);
+    expect(experienceProps && Object.hasOwn(experienceProps, 'skills')).toBe(true);
     expect(projectProps && Object.hasOwn(projectProps, 'impactFacts')).toBe(true);
     expect(projectProps && Object.hasOwn(projectProps, 'skills')).toBe(true);
     expect(Array.isArray(json?.example?.data?.experience?.[0]?.impactFacts)).toBe(true);
+    expect(Array.isArray(json?.example?.data?.experience?.[0]?.skills)).toBe(true);
     expect(Array.isArray(json?.example?.data?.projects?.[0]?.impactFacts)).toBe(true);
     expect(Array.isArray(json?.example?.data?.projects?.[0]?.skills)).toBe(true);
+    expect(exampleExperienceSkill).toMatchObject({
+      expertiseLevel: expect.any(Number),
+      isHighlighted: expect.any(Boolean),
+      createdAt: expect.any(String),
+    });
   });
 
   it('GET /doc/spec documents AI post generation contracts with concrete examples', async () => {

@@ -85,6 +85,7 @@ export interface ExperienceItemDTO {
   order: number;
   impactFacts: string[];
   logoUrl: string | null;
+  skills: SkillDTO[];
 }
 
 export interface EducationItemDTO {
@@ -285,6 +286,9 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
     order: e.order ?? 0,
     impactFacts: e.impactFacts ?? [],
     logoUrl: e.logoUrl ?? null,
+    skills: flattenPivotSkillArray(
+      (e.skills ?? []) as Array<{ skill: Parameters<typeof mapSkill>[0] }>
+    ).map(mapSkill),
   }));
 
   // ── Education ──────────────────────────────────────────────────────────────
