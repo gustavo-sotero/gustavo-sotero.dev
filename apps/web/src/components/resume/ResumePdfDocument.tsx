@@ -281,9 +281,11 @@ const s = StyleSheet.create({
   projectSkill: {
     fontSize: 7.5,
     color: C.muted,
+    backgroundColor: '#f0f0f0',
     paddingHorizontal: 4,
     paddingTop: 2,
     paddingBottom: 0,
+    borderRadius: 2,
   },
 
   // ── Languages ────────────────────────────────────────────────────────────
@@ -429,6 +431,19 @@ function IcoBullet() {
   );
 }
 
+function IcoImpactBullet() {
+  return (
+    <Svg
+      width={7}
+      height={7}
+      viewBox="0 0 24 24"
+      style={{ marginTop: 3, marginRight: 4, flexShrink: 0 }}
+    >
+      <Path d="M8 5v14l11-7z" fill={C.accent} />
+    </Svg>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -457,7 +472,7 @@ function ExperienceEntry({ item }: { item: ResumeViewModel['experience'][number]
         <View style={s.impactFactsList}>
           {item.impactFacts.map((fact) => (
             <View key={fact} style={s.impactFactRow}>
-              <Text style={s.impactFactBullet}>▸</Text>
+              <IcoImpactBullet />
               <Text style={s.impactFactText}>{fact}</Text>
             </View>
           ))}
@@ -521,7 +536,7 @@ function ProjectEntry({ item }: { item: ResumeViewModel['projects'][number] }) {
         <View style={s.impactFactsList}>
           {item.impactFacts.map((fact) => (
             <View key={fact} style={s.impactFactRow}>
-              <Text style={s.impactFactBullet}>▸</Text>
+              <IcoImpactBullet />
               <Text style={s.impactFactText}>{fact}</Text>
             </View>
           ))}
@@ -668,7 +683,7 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
             <SectionTitle>Habilidades Técnicas</SectionTitle>
             <View style={s.skillsGrid}>
               {skills.map((group) => (
-                <View key={group.category} style={s.skillGroup}>
+                <View key={group.category} style={s.skillGroup} wrap={false}>
                   <Text style={s.skillGroupLabel}>{group.label}</Text>
                   <View style={s.skillsRow}>
                     {group.skills.map((skill) => (
