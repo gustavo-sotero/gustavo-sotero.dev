@@ -3,29 +3,29 @@
 import { Check, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface TagCheckboxOption {
+interface SelectableChipOption {
   id: number;
   name: string;
 }
 
-interface TagCheckboxGroupProps {
+interface SelectableChipGroupProps {
   label: string;
-  tags: TagCheckboxOption[];
+  options: SelectableChipOption[];
   selectedIds: number[];
-  onToggle: (tagId: number) => void;
-  onCreateTag: () => void;
+  onToggle: (optionId: number) => void;
+  onCreateOption: () => void;
   createLabel?: string;
 }
 
-export function TagCheckboxGroup({
+export function SelectableChipGroup({
   label,
-  tags,
+  options,
   selectedIds,
   onToggle,
-  onCreateTag,
-  createLabel = 'Criar tag',
-}: TagCheckboxGroupProps) {
-  const groupId = `tag-group-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  onCreateOption,
+  createLabel = 'Criar item',
+}: SelectableChipGroupProps) {
+  const groupId = `selection-group-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
   return (
     <fieldset className="space-y-2">
@@ -33,7 +33,7 @@ export function TagCheckboxGroup({
         <span className="text-zinc-300">{label}</span>
         <button
           type="button"
-          onClick={onCreateTag}
+          onClick={onCreateOption}
           className="flex items-center gap-1 rounded-sm text-xs text-zinc-500 transition-colors hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
         >
           <Plus className="h-3 w-3" />
@@ -41,19 +41,19 @@ export function TagCheckboxGroup({
         </button>
       </legend>
 
-      {tags.length > 0 ? (
+      {options.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => {
-            const checked = selectedIds.includes(tag.id);
-            const inputId = `${groupId}-${tag.id}`;
+          {options.map((option) => {
+            const checked = selectedIds.includes(option.id);
+            const inputId = `${groupId}-${option.id}`;
 
             return (
-              <label key={tag.id} htmlFor={inputId} className="cursor-pointer">
+              <label key={option.id} htmlFor={inputId} className="cursor-pointer">
                 <input
                   id={inputId}
                   type="checkbox"
                   checked={checked}
-                  onChange={() => onToggle(tag.id)}
+                  onChange={() => onToggle(option.id)}
                   className="peer sr-only"
                 />
                 <span
@@ -69,7 +69,7 @@ export function TagCheckboxGroup({
                     aria-hidden="true"
                     className={cn('h-3 w-3', checked ? 'opacity-100' : 'opacity-40')}
                   />
-                  <span>{tag.name}</span>
+                  <span>{option.name}</span>
                 </span>
               </label>
             );

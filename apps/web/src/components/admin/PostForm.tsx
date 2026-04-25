@@ -26,7 +26,7 @@ import { CoverMediaField } from './CoverMediaField';
 import { CreateTagDialogForm } from './CreateTagDialogForm';
 import { MarkdownEditor } from './MarkdownEditor';
 import { PostGenerationAssistant } from './PostGenerationAssistant';
-import { TagCheckboxGroup } from './TagCheckboxGroup';
+import { SelectableChipGroup } from './SelectableChipGroup';
 
 // Use the Zod INPUT type (pre-transform) for the form's internal state.
 // The resolver returns the OUTPUT type (Post transforms) to `onSubmit`.
@@ -368,16 +368,17 @@ export function PostForm({ mode, post }: PostFormProps) {
           name="tagIds"
           control={control}
           render={({ field }) => (
-            <TagCheckboxGroup
+            <SelectableChipGroup
               label="Tags"
-              tags={allTags}
+              options={allTags}
               selectedIds={field.value ?? []}
               onToggle={(tagId) => {
                 const current = field.value ?? [];
                 const exists = current.includes(tagId);
                 field.onChange(exists ? current.filter((id) => id !== tagId) : [...current, tagId]);
               }}
-              onCreateTag={() => setCreateTagOpen(true)}
+              onCreateOption={() => setCreateTagOpen(true)}
+              createLabel="Criar tag"
             />
           )}
         />

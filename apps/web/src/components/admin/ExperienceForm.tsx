@@ -26,7 +26,7 @@ import { Textarea } from '../ui/textarea';
 import { CoverMediaField } from './CoverMediaField';
 import { CreateSkillDialogForm } from './CreateSkillDialogForm';
 import { ImpactFactsEditor } from './ImpactFactsEditor';
-import { TagCheckboxGroup } from './TagCheckboxGroup';
+import { SelectableChipGroup } from './SelectableChipGroup';
 
 interface ExperienceFormProps {
   mode: 'create' | 'edit';
@@ -429,9 +429,9 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
           name="skillIds"
           control={control}
           render={({ field }) => (
-            <TagCheckboxGroup
+            <SelectableChipGroup
               label="Skills"
-              tags={allSkills}
+              options={allSkills}
               selectedIds={field.value ?? []}
               onToggle={(skillId) => {
                 const current = field.value ?? [];
@@ -440,7 +440,7 @@ export function ExperienceForm({ mode, experience }: ExperienceFormProps) {
                   exists ? current.filter((id) => id !== skillId) : [...current, skillId]
                 );
               }}
-              onCreateTag={() => setCreateSkillOpen(true)}
+              onCreateOption={() => setCreateSkillOpen(true)}
               createLabel="Criar skill"
             />
           )}

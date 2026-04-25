@@ -2,7 +2,7 @@
  * Service layer for experience entries.
  *
  * Handles: slug generation, uniqueness enforcement, date consistency
- * validation, cache invalidation, and tag synchronization.
+ * validation, cache invalidation, and skills synchronization.
  */
 
 import { experience } from '@portfolio/shared/db/schema';
@@ -114,7 +114,7 @@ export async function createExperienceService(data: CreateExperienceInput) {
   const baseSlug = data.slug ?? generateSlug(`${data.role} ${data.company}`);
   const slug = await ensureUniqueSlug(baseSlug, (s) => experienceSlugTaken(s));
 
-  // Validate tag and skill references before entering the transaction
+  // Validate skill references before entering the transaction
   const normalizedSkillIds = data.skillIds ? normalizeSkillIds(data.skillIds) : [];
   const normalizedImpactFacts = normalizeExperienceImpactFacts(data.impactFacts) ?? [];
   await assertSkillsExist(normalizedSkillIds);

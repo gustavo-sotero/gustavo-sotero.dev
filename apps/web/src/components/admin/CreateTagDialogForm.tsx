@@ -193,10 +193,10 @@ export function CreateTagDialogForm({
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-zinc-100">Nova Tag</DialogTitle>
+          <DialogTitle className="text-zinc-100">Nova Tag de Post</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Informe o nome da tecnologia para sugerir categoria automaticamente ou escolha
-            manualmente.
+            Crie uma tag da taxonomia de posts. Informe o nome da tecnologia para sugerir a
+            categoria automaticamente ou escolha manualmente.
           </DialogDescription>
         </DialogHeader>
 

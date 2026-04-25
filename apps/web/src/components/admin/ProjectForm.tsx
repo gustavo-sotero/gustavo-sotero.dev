@@ -42,7 +42,7 @@ import { CoverMediaField } from './CoverMediaField';
 import { CreateSkillDialogForm } from './CreateSkillDialogForm';
 import { ImpactFactsEditor } from './ImpactFactsEditor';
 import { MarkdownEditor } from './MarkdownEditor';
-import { TagCheckboxGroup } from './TagCheckboxGroup';
+import { SelectableChipGroup } from './SelectableChipGroup';
 
 interface ProjectFormProps {
   mode: 'create' | 'edit';
@@ -331,9 +331,9 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
           name="skillIds"
           control={control}
           render={({ field }) => (
-            <TagCheckboxGroup
+            <SelectableChipGroup
               label="Skills"
-              tags={allSkills}
+              options={allSkills}
               selectedIds={field.value ?? []}
               onToggle={(skillId) => {
                 const current = field.value ?? [];
@@ -342,7 +342,7 @@ export function ProjectForm({ mode, project }: ProjectFormProps) {
                   exists ? current.filter((id) => id !== skillId) : [...current, skillId]
                 );
               }}
-              onCreateTag={() => setCreateSkillOpen(true)}
+              onCreateOption={() => setCreateSkillOpen(true)}
               createLabel="Criar skill"
             />
           )}

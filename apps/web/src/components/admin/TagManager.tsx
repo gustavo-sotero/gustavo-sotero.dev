@@ -164,7 +164,7 @@ function EditTagDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-zinc-100">Editar Tag</DialogTitle>
+          <DialogTitle className="text-zinc-100">Editar Tag de Post</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Category */}
@@ -297,11 +297,16 @@ export function TagManager() {
     <div className="space-y-5">
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Tag className="h-4 w-4 text-zinc-400" />
-          <span className="text-sm text-zinc-400">
-            {Array.isArray(tags) ? `${tags.length} tag${tags.length !== 1 ? 's' : ''}` : ''}
-          </span>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Tag className="h-4 w-4 text-zinc-400" />
+            <span className="text-sm text-zinc-400">
+              {Array.isArray(tags) ? `${tags.length} tag${tags.length !== 1 ? 's' : ''}` : ''}
+            </span>
+          </div>
+          <p className="text-xs text-zinc-500">
+            Taxonomia usada apenas nos posts. Projetos e experiência usam skills.
+          </p>
         </div>
         <Button
           size="sm"
@@ -309,7 +314,7 @@ export function TagManager() {
           onClick={() => setCreateDialogOpen(true)}
         >
           <Plus className="h-3.5 w-3.5" />
-          Nova Tag
+          Nova Tag de Post
         </Button>
       </div>
 

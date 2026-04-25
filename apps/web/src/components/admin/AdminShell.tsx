@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Projetos', href: '/admin/projects', icon: Terminal },
   { label: 'Experiência', href: '/admin/experience', icon: Briefcase },
   { label: 'Formação', href: '/admin/education', icon: GraduationCap },
-  { label: 'Tags', href: '/admin/tags', icon: Tag },
+  { label: 'Tags de posts', href: '/admin/tags', icon: Tag },
   { label: 'Skills', href: '/admin/skills', icon: Zap },
   { label: 'Comentários', href: '/admin/comments', icon: MessageSquare },
   { label: 'Uploads', href: '/admin/uploads', icon: ImageIcon },
@@ -240,7 +240,7 @@ function Breadcrumb({ pathname }: { pathname: string }) {
   const labels: Record<string, string> = {
     posts: 'Posts',
     projects: 'Projetos',
-    tags: 'Tags',
+    tags: 'Tags de posts',
     comments: 'Comentários',
     uploads: 'Uploads',
     analytics: 'Analytics',

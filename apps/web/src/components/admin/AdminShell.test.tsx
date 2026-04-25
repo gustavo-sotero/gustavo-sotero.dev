@@ -70,10 +70,10 @@ vi.mock('@/components/ui/separator', () => ({
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('AdminShell navigation', () => {
-  it('keeps only the icon in the sidebar brand header', () => {
+  it('renders the Admin brand label when the sidebar is expanded', () => {
     render(<AdminShell>content</AdminShell>);
 
-    expect(screen.queryByText('Admin')).not.toBeInTheDocument();
+    expect(screen.getByText('Admin')).toBeInTheDocument();
   });
 
   it('renders a link to /admin/uploads', () => {
