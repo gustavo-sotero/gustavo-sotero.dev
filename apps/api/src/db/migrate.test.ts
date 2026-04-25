@@ -35,6 +35,10 @@ vi.mock('../config/logger', () => ({
 }));
 
 vi.mock('./verify-schema', () => ({
+  formatSchemaParityIssues: vi.fn((result: { missing: string[]; unexpected: string[] }) => [
+    ...result.missing.map((item) => `${item} (missing)`),
+    ...result.unexpected.map((item) => `${item} (should be absent)`),
+  ]),
   verifyRequiredSchema: verifyRequiredSchemaMock,
 }));
 
@@ -47,7 +51,7 @@ describe('runMigrations', () => {
     existsSyncMock.mockReturnValue(true);
     migrateMock.mockResolvedValue(undefined);
     executeMock.mockResolvedValue([]);
-    verifyRequiredSchemaMock.mockResolvedValue({ ok: true, missing: [] });
+    verifyRequiredSchemaMock.mockResolvedValue({ ok: true, missing: [], unexpected: [] });
   });
 
   it('fails fast when the migrations folder is missing by default', async () => {
@@ -72,6 +76,7 @@ describe('runMigrations', () => {
     verifyRequiredSchemaMock.mockResolvedValueOnce({
       ok: false,
       missing: ['table:skills'],
+      unexpected: ['table:project_tags'],
     });
 
     await expect(runMigrations()).rejects.toThrow('Schema parity check failed after migrations');

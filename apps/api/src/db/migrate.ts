@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { db, pgClient } from '../config/db';
 import { getLogger } from '../config/logger';
-import { verifyRequiredSchema } from './verify-schema';
+import { formatSchemaParityIssues, verifyRequiredSchema } from './verify-schema';
 
 const logger = getLogger('db', 'migrate');
 
@@ -60,7 +60,7 @@ export async function runMigrations(): Promise<void> {
   const parity = await verifyRequiredSchema();
   if (!parity.ok) {
     throw new Error(
-      `Schema parity check failed after migrations. Missing: ${parity.missing.join(', ')}. ` +
+      `Schema parity check failed after migrations. Issues: ${formatSchemaParityIssues(parity).join(', ')}. ` +
         "Inspect '__drizzle_migrations' and re-run migrations against the target database."
     );
   }

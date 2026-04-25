@@ -18,26 +18,35 @@ describe('verifyRequiredSchema', () => {
   });
 
   it('returns ok when all required schema objects exist', async () => {
-    // 3 table checks
+    // 3 required-table checks + 2 legacy-pivot absence checks
     executeMock
       .mockResolvedValueOnce([{ exists: true }])
       .mockResolvedValueOnce([{ exists: true }])
-      .mockResolvedValueOnce([{ exists: true }]);
-
-    await expect(verifyRequiredSchema()).resolves.toEqual({ ok: true, missing: [] });
-    expect(executeMock).toHaveBeenCalledTimes(3);
-  });
-
-  it('lists every missing object when schema parity is broken', async () => {
-    // 3 table checks — all missing
-    executeMock
-      .mockResolvedValueOnce([{ exists: false }])
+      .mockResolvedValueOnce([{ exists: true }])
       .mockResolvedValueOnce([{ exists: false }])
       .mockResolvedValueOnce([{ exists: false }]);
 
     await expect(verifyRequiredSchema()).resolves.toEqual({
+      ok: true,
+      missing: [],
+      unexpected: [],
+    });
+    expect(executeMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('lists missing required tables and unexpected legacy pivots', async () => {
+    // 3 required-table checks + 2 legacy-pivot absence checks
+    executeMock
+      .mockResolvedValueOnce([{ exists: false }])
+      .mockResolvedValueOnce([{ exists: false }])
+      .mockResolvedValueOnce([{ exists: false }])
+      .mockResolvedValueOnce([{ exists: true }])
+      .mockResolvedValueOnce([{ exists: true }]);
+
+    await expect(verifyRequiredSchema()).resolves.toEqual({
       ok: false,
       missing: ['table:skills', 'table:project_skills', 'table:experience_skills'],
+      unexpected: ['table:project_tags', 'table:experience_tags'],
     });
   });
 });

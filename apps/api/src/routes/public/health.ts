@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from '../../config/db';
 import { redis } from '../../config/redis';
-import { verifyRequiredSchema } from '../../db/verify-schema';
+import { formatSchemaParityIssues, verifyRequiredSchema } from '../../db/verify-schema';
 import { errorResponse, successResponse } from '../../lib/response';
 import type { AppEnv } from '../../types/index';
 
@@ -52,13 +52,15 @@ health.get('/ready', async (c) => {
       details.push({ field: 'redis', message: 'Redis is unavailable' });
     }
     if (dbOk && !schemaOk) {
-      const missing =
+      const issues =
         schemaResult.status === 'fulfilled'
-          ? (schemaResult.value as Awaited<ReturnType<typeof verifyRequiredSchema>>).missing
+          ? formatSchemaParityIssues(
+              schemaResult.value as Awaited<ReturnType<typeof verifyRequiredSchema>>
+            )
           : ['unknown (schema check threw)'];
       details.push({
         field: 'db-schema',
-        message: `Required schema objects are missing: ${missing.join(', ')}`,
+        message: `Schema parity issues: ${issues.join(', ')}`,
       });
     }
 

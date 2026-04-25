@@ -20,6 +20,10 @@ vi.mock('../../config/redis', () => ({
 }));
 
 vi.mock('../../db/verify-schema', () => ({
+  formatSchemaParityIssues: vi.fn((result: { missing: string[]; unexpected: string[] }) => [
+    ...result.missing.map((item) => `${item} (missing)`),
+    ...result.unexpected.map((item) => `${item} (should be absent)`),
+  ]),
   verifyRequiredSchema: verifyRequiredSchemaMock,
 }));
 
@@ -28,7 +32,7 @@ import { healthRouter } from './health';
 describe('health routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    verifyRequiredSchemaMock.mockResolvedValue({ ok: true, missing: [] });
+    verifyRequiredSchemaMock.mockResolvedValue({ ok: true, missing: [], unexpected: [] });
   });
 
   it('GET /health returns liveness payload', async () => {
@@ -91,6 +95,7 @@ describe('health routes', () => {
     verifyRequiredSchemaMock.mockResolvedValueOnce({
       ok: false,
       missing: ['table:skills'],
+      unexpected: ['table:project_tags'],
     });
 
     const app = new Hono();

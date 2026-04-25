@@ -57,6 +57,12 @@ interface SkillLookupMaps {
   byName: Map<string, ExistingSkillRow>;
 }
 
+const LEGACY_BACKFILL_DIRECT_RUN_MESSAGE =
+  'Legacy tag-to-skill backfill cannot run against the current schema. ' +
+  'Migration 0008 dropped project_tags and experience_tags, so any required data convergence ' +
+  'had to happen before that migration. Use this module only with injected loaders against a ' +
+  'pre-0008 snapshot or other offline recovery source.';
+
 function normalizeLookupValue(value: string) {
   return value.trim().toLowerCase();
 }
@@ -234,16 +240,7 @@ export async function runSkillsCatalogBackfill({
 
 if (import.meta.main) {
   await setupLogger();
-
-  runSkillsCatalogBackfill()
-    .then(async () => {
-      await pgClient.end();
-    })
-    .catch(async (err) => {
-      logger.error('Skill catalog backfill failed', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await pgClient.end();
-      process.exit(1);
-    });
+  logger.error(LEGACY_BACKFILL_DIRECT_RUN_MESSAGE);
+  await pgClient.end();
+  process.exit(1);
 }

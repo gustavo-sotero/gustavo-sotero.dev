@@ -16,7 +16,7 @@
  */
 
 import { pgClient } from '../config/db';
-import { verifyRequiredSchema } from './verify-schema';
+import { formatSchemaParityIssues, verifyRequiredSchema } from './verify-schema';
 
 async function main() {
   console.log('Checking schema parity...\n');
@@ -24,13 +24,15 @@ async function main() {
   const result = await verifyRequiredSchema();
 
   if (result.ok) {
-    console.log('✅ Schema parity OK — all required objects are present.');
+    console.log(
+      '✅ Schema parity OK — required objects are present and legacy pivots stay absent.'
+    );
     await pgClient.end();
     process.exit(0);
   }
 
-  console.error('❌ Schema parity FAILED — the following objects are missing:\n');
-  for (const item of result.missing) {
+  console.error('❌ Schema parity FAILED — the following issues were found:\n');
+  for (const item of formatSchemaParityIssues(result)) {
     console.error(`  • ${item}`);
   }
   console.error(
