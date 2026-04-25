@@ -98,7 +98,18 @@ describe('ProjectDetailContent', () => {
         renderedContent: '<p>Descricao</p>',
         createdAt: '2026-03-10T00:00:00.000Z',
         updatedAt: '2026-03-10T00:00:00.000Z',
-        tags: [],
+        skills: [
+          {
+            id: 7,
+            name: 'TypeScript',
+            slug: 'typescript',
+            category: 'language',
+            iconKey: 'si:SiTypescript',
+            expertiseLevel: 3,
+            isHighlighted: true,
+            createdAt: '2026-03-10T00:00:00.000Z',
+          },
+        ],
       },
     });
 
@@ -108,6 +119,7 @@ describe('ProjectDetailContent', () => {
     render(element as React.ReactElement);
 
     expect(screen.getByText('Project 1')).toBeDefined();
+    expect(screen.getByText('TypeScript')).toBeDefined();
     expect(screen.getByTestId('trusted-html')).toBeDefined();
   });
 
@@ -125,7 +137,7 @@ describe('ProjectDetailContent', () => {
         renderedContent: '<p>Descricao</p>',
         createdAt: '2026-03-10T00:00:00.000Z',
         updatedAt: '2026-03-10T00:00:00.000Z',
-        tags: [],
+        skills: [],
       },
     });
 

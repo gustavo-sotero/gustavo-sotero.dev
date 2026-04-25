@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-const tagKeys = ['tag-1', 'tag-2', 'tag-3', 'tag-4'];
+const skillKeys = ['skill-1', 'skill-2', 'skill-3', 'skill-4'];
 const contentKeys = ['c-1', 'c-2', 'c-3', 'c-4', 'c-5', 'c-6', 'c-7', 'c-8', 'c-9', 'c-10'];
 
 export default function ProjectDetailLoading() {
@@ -20,9 +20,9 @@ export default function ProjectDetailLoading() {
         <Skeleton className="h-6 w-full" />
         <Skeleton className="h-6 w-2/3" />
 
-        {/* Tags */}
+        {/* Skills */}
         <div className="flex flex-wrap gap-2 pt-2">
-          {tagKeys.map((k) => (
+          {skillKeys.map((k) => (
             <Skeleton key={k} className="h-6 w-16 rounded-full" />
           ))}
         </div>

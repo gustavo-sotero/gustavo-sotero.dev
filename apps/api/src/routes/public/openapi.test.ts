@@ -211,7 +211,7 @@ describe('openapi routes', () => {
 
     expect(resolvePost?.operationId).toBe('adminResolveAiSuggestedTags');
     expect(resolvePost?.description).toContain(
-      'Only call this endpoint when the admin explicitly accepts a draft'
+      'Only call this endpoint when the admin explicitly accepts a post draft'
     );
     expect(resolvePost?.requestBody?.content?.['application/json']?.schema?.required).toContain(
       'names'
@@ -342,6 +342,65 @@ describe('openapi routes', () => {
         createdAt: expect.any(String),
       });
     }
+  });
+
+  it('GET /doc/spec documents developer profile projects with skills instead of tags', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<
+        string,
+        {
+          get?: {
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    schema?: {
+                      properties?: {
+                        data?: {
+                          properties?: {
+                            projects?: {
+                              items?: {
+                                properties?: Record<string, unknown>;
+                              };
+                            };
+                          };
+                        };
+                      };
+                    };
+                    example?: {
+                      data?: {
+                        projects?: Array<Record<string, unknown>>;
+                      };
+                    };
+                  };
+                };
+              }
+            >;
+          };
+        }
+      >;
+    };
+
+    const json =
+      body.paths['/developer/profile']?.get?.responses?.['200']?.content?.['application/json'];
+    const projectProps = json?.schema?.properties?.data?.properties?.projects?.items?.properties;
+    const exampleProject = json?.example?.data?.projects?.[0] ?? {};
+    const exampleSkill = (exampleProject.skills as Array<Record<string, unknown>> | undefined)?.[0];
+
+    expect(projectProps).toHaveProperty('skills');
+    expect(projectProps).not.toHaveProperty('tags');
+    expect(exampleProject).toHaveProperty('skills');
+    expect(exampleProject).not.toHaveProperty('tags');
+    expect(exampleSkill).toMatchObject({
+      expertiseLevel: expect.any(Number),
+      isHighlighted: expect.any(Boolean),
+      createdAt: expect.any(String),
+    });
   });
 
   it('GET /doc/spec documents admin project and experience write contracts truthfully', async () => {
@@ -561,8 +620,10 @@ describe('openapi routes', () => {
 
     expect(experienceProps && Object.hasOwn(experienceProps, 'impactFacts')).toBe(true);
     expect(projectProps && Object.hasOwn(projectProps, 'impactFacts')).toBe(true);
+    expect(projectProps && Object.hasOwn(projectProps, 'skills')).toBe(true);
     expect(Array.isArray(json?.example?.data?.experience?.[0]?.impactFacts)).toBe(true);
     expect(Array.isArray(json?.example?.data?.projects?.[0]?.impactFacts)).toBe(true);
+    expect(Array.isArray(json?.example?.data?.projects?.[0]?.skills)).toBe(true);
   });
 
   it('GET /doc/spec documents AI post generation contracts with concrete examples', async () => {

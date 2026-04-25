@@ -50,7 +50,6 @@ vi.mock('../lib/cache', () => ({
     }
     if (group === 'projectsContent') {
       await invalidatePatternMock('projects:*');
-      await invalidatePatternMock('tags:*');
       await invalidatePatternMock('feed:*');
       await invalidatePatternMock('sitemap:*');
       await invalidatePatternMock('developer:profile');
@@ -145,7 +144,7 @@ describe('content services cache invalidation', () => {
     expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 
-  it('invalidates projects and tags caches when creating a project', async () => {
+  it('invalidates project-facing caches when creating a project', async () => {
     dbLimitMock.mockResolvedValueOnce([]);
     createProjectMock.mockResolvedValueOnce({ id: 10, slug: 'novo-projeto' });
 
@@ -158,32 +157,29 @@ describe('content services cache invalidation', () => {
     });
 
     expect(invalidatePatternMock).toHaveBeenCalledWith('projects:*');
-    expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 
-  it('invalidates projects and tags caches when updating a project', async () => {
+  it('invalidates project-facing caches when updating a project', async () => {
     dbLimitMock.mockResolvedValueOnce([{ id: 10, slug: 'projeto-antigo' }]);
     updateProjectMock.mockResolvedValueOnce({ id: 10, slug: 'projeto-antigo' });
 
     await updateProjectService(10, { content: 'Conteúdo atualizado' });
 
     expect(invalidatePatternMock).toHaveBeenCalledWith('projects:*');
-    expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');
   });
 
-  it('invalidates projects and tags caches when soft-deleting a project', async () => {
+  it('invalidates project-facing caches when soft-deleting a project', async () => {
     softDeleteProjectMock.mockResolvedValueOnce({ id: 10 });
 
     await softDeleteProjectService(10);
 
     expect(invalidatePatternMock).toHaveBeenCalledWith('projects:*');
-    expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('feed:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('sitemap:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('developer:profile');

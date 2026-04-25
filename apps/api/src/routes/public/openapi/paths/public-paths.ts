@@ -167,7 +167,16 @@ export const publicPaths = {
                         description: 'Recent/featured published projects (up to 5)',
                         items: {
                           type: 'object',
-                          required: ['id', 'slug', 'title', 'featured', 'createdAt', 'updatedAt'],
+                          required: [
+                            'id',
+                            'slug',
+                            'title',
+                            'featured',
+                            'impactFacts',
+                            'skills',
+                            'createdAt',
+                            'updatedAt',
+                          ],
                           properties: {
                             id: { type: 'integer' },
                             slug: { type: 'string' },
@@ -183,9 +192,9 @@ export const publicPaths = {
                             },
                             createdAt: { type: 'string', format: 'date-time' },
                             updatedAt: { type: 'string', format: 'date-time' },
-                            tags: {
+                            skills: {
                               type: 'array',
-                              items: { $ref: '#/components/schemas/TagPublic' },
+                              items: { $ref: '#/components/schemas/Skill' },
                             },
                           },
                         },
@@ -353,13 +362,16 @@ export const publicPaths = {
                       ],
                       createdAt: '2025-01-01T00:00:00.000Z',
                       updatedAt: '2025-06-01T00:00:00.000Z',
-                      tags: [
+                      skills: [
                         {
                           id: 1,
                           name: 'TypeScript',
                           slug: 'typescript',
                           category: 'language',
                           iconKey: 'si:SiTypescript',
+                          expertiseLevel: 3,
+                          isHighlighted: true,
+                          createdAt: '2025-01-01T00:00:00.000Z',
                         },
                       ],
                     },

@@ -71,7 +71,7 @@ export async function listProjects(filters: ProjectListFilters, adminMode = fals
 
 /**
  * Get a single project by slug.
- * Public: includes tags, returns pre-rendered HTML. Admin: no cache.
+ * Public/admin responses are skills-only and return pre-rendered HTML. Admin: no cache.
  */
 export async function getProjectBySlug(slug: string, adminMode = false) {
   if (adminMode) {
@@ -90,7 +90,7 @@ export async function getProjectBySlug(slug: string, adminMode = false) {
 
 /**
  * Create a new project.
- * Generates a slug, renders Markdown (if content provided), syncs tags
+ * Generates a slug, renders Markdown (if content provided), syncs skills
  * atomically with the insert, and invalidates cache.
  */
 export async function createProjectService(data: CreateProjectInput) {
@@ -145,7 +145,7 @@ export async function createProjectService(data: CreateProjectInput) {
 /**
  * Update an existing project by ID.
  * Re-renders Markdown if content changed, handles slug uniqueness,
- * syncs tags, invalidates cache.
+ * syncs skills, invalidates cache.
  */
 export async function updateProjectService(id: number, data: UpdateProjectInput) {
   // 1. Fetch current project

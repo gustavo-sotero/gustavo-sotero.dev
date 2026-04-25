@@ -16,9 +16,9 @@ const logger = getLogger('cache');
 
 export const CACHE_INVALIDATION_GROUPS = {
   postsContent: ['posts:*', 'tags:*', 'feed:*', 'sitemap:*', 'developer:profile'],
-  projectsContent: ['projects:*', 'tags:*', 'feed:*', 'sitemap:*', 'developer:profile'],
+  projectsContent: ['projects:*', 'feed:*', 'sitemap:*', 'developer:profile'],
   skillsContent: ['skills:*', 'projects:*', 'experience:*', 'developer:profile'],
-  tagsContent: ['tags:*', 'posts:*', 'projects:*', 'developer:profile'],
+  tagsContent: ['tags:*', 'posts:*', 'developer:profile'],
   postTagsSync: ['posts:*', 'tags:*'],
   commentsModeration: ['posts:slug:*'],
   experienceContent: ['experience:*', 'developer:profile'],

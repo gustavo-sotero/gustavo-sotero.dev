@@ -103,6 +103,7 @@ export function flattenPivotSkillArray<TSkill>(pivots?: Array<{ skill: TSkill }>
  */
 export function flattenPivotSkills<
   T extends {
+    tags?: unknown;
     skills?: Array<{
       skill: {
         id: number;
@@ -117,8 +118,10 @@ export function flattenPivotSkills<
     }>;
   },
 >(item: T) {
+  const { tags: _legacyTags, ...rest } = item as T & { tags?: unknown };
+
   return {
-    ...item,
+    ...rest,
     skills: flattenPivotSkillArray(item.skills).map((skill) => toSkillDto(skill)),
   };
 }

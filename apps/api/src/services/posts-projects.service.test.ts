@@ -365,7 +365,6 @@ describe('posts/projects services', () => {
     findProjectBySlugMock.mockResolvedValueOnce({
       id: 1,
       slug: 'projeto-a',
-      tags: [],
       skills: [
         {
           projectId: 1,
@@ -404,6 +403,7 @@ describe('posts/projects services', () => {
       })
     );
     expect(result?.skills?.[0]).not.toHaveProperty('updatedAt');
+    expect(result).not.toHaveProperty('tags');
   });
 
   // ── Scheduling tests ──────────────────────────────────────────────────────
