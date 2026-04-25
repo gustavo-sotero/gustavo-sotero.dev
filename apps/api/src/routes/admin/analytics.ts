@@ -34,8 +34,6 @@ const topPostsQuerySchema = summaryQuerySchema.extend({
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
-const ADMIN_ANALYTICS_CACHE_TTL_SECONDS = 5;
-
 /**
  * Normalize a Date to a YYYY-MM-DD string for stable cache keys.
  * Millisecond-precision ISO strings would produce near-cache-miss for every
@@ -71,7 +69,7 @@ adminAnalyticsRouter.get('/summary', async (c) => {
   // resolve to the same cache entry instead of thrashing on millisecond precision.
   const cacheKey = `analytics:summary:${toDateKey(from)}:${toDateKey(to)}`;
 
-  const data = await cached(cacheKey, ADMIN_ANALYTICS_CACHE_TTL_SECONDS, async () => {
+  const data = await cached(cacheKey, 300, async () => {
     const [pageviews, publishedPosts, publishedProjects, pendingCommentsResult] = await Promise.all(
       [
         getPageviewCount({ from, to }),
@@ -134,7 +132,7 @@ adminAnalyticsRouter.get('/top-posts', async (c) => {
 
   const cacheKey = `analytics:top-posts:${toDateKey(from)}:${toDateKey(to)}:${limit}`;
 
-  const rows = await cached(cacheKey, ADMIN_ANALYTICS_CACHE_TTL_SECONDS, async () => {
+  const rows = await cached(cacheKey, 300, async () => {
     return getTopPaths({ from, to, limit });
   });
 

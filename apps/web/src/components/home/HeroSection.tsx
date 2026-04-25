@@ -64,7 +64,7 @@ export function HeroSection({ skills = [], experienceLabel }: HeroSectionProps) 
       : FALLBACK_STACK.map((name) => ({ name, isHighlighted: false }));
   const terminalStack = stack.map((t) => (t.isHighlighted ? `${t.name} ★` : t.name));
   return (
-    <section className="relative overflow-hidden min-h-svh flex items-center">
+    <section className="relative overflow-hidden min-h-[88vh] flex items-center">
       {/* Background effects */}
       <div className="absolute inset-0 -z-10">
         {/* Animated grid — deferred so it doesn't block initial paint */}
@@ -74,7 +74,7 @@ export function HeroSection({ skills = [], experienceLabel }: HeroSectionProps) 
         <div className="absolute bottom-0 right-1/4 w-100 h-100 rounded-full bg-cyan-500/4 blur-[100px]" />
       </div>
 
-      <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-20 md:py-28">
+      <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 py-16 md:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left: Text content — rendered without entrance animation so the LCP
               text is immediately visible in the initial HTML. The terminal on the

@@ -10,8 +10,6 @@ interface AnalyticsParams {
   to?: string;
 }
 
-const LIVE_ANALYTICS_REFRESH_INTERVAL_MS = 5_000;
-
 export function useAnalyticsSummary(params: AnalyticsParams = {}) {
   const qs = new URLSearchParams();
   if (params.from) qs.set('from', params.from);
@@ -23,11 +21,6 @@ export function useAnalyticsSummary(params: AnalyticsParams = {}) {
       apiGet<AnalyticsSummary>(`/admin/analytics/summary${query ? `?${query}` : ''}`).then(
         (r) => r?.data as AnalyticsSummary
       ),
-    staleTime: 0,
-    refetchInterval: LIVE_ANALYTICS_REFRESH_INTERVAL_MS,
-    refetchIntervalInBackground: true,
-    refetchOnReconnect: true,
-    refetchOnWindowFocus: true,
   });
 }
 
@@ -43,10 +36,5 @@ export function useAnalyticsTopPosts(params: AnalyticsParams & { limit?: number 
       apiGet<TopPost[]>(`/admin/analytics/top-posts${query ? `?${query}` : ''}`).then(
         (r) => r?.data as TopPost[]
       ),
-    staleTime: 0,
-    refetchInterval: LIVE_ANALYTICS_REFRESH_INTERVAL_MS,
-    refetchIntervalInBackground: true,
-    refetchOnReconnect: true,
-    refetchOnWindowFocus: true,
   });
 }
