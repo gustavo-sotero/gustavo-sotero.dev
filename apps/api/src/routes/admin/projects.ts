@@ -61,7 +61,7 @@ adminProjectsRouter.get('/', async (c) => {
   const qv = validateQuery(c, adminProjectQuerySchema, {
     page: c.req.query('page'),
     perPage: c.req.query('perPage'),
-    tag: c.req.query('tag'),
+    skill: c.req.query('skill'),
     status: c.req.query('status'),
     featured: c.req.query('featured'),
   });

@@ -119,7 +119,7 @@ export async function createExperienceService(data: CreateExperienceInput) {
   const normalizedImpactFacts = normalizeExperienceImpactFacts(data.impactFacts) ?? [];
   await assertSkillsExist(normalizedSkillIds);
 
-  // Atomically write the experience row and sync tags/skills in one transaction,
+  // Atomically write the experience row and sync skills in one transaction,
   // matching the same consistency guarantee used in posts/projects services.
   const entry = await db.transaction(async (tx) => {
     const row = await createExperience(
@@ -186,7 +186,7 @@ export async function updateExperienceService(id: number, data: UpdateExperience
     ? assertSkillsExist(normalizedSkillIds)
     : Promise.resolve());
 
-  // Atomically write the update and sync tags/skills in one transaction.
+  // Atomically write the update and sync skills in one transaction.
   const updated = await db.transaction(async (tx) => {
     const row = await updateExperience(
       id,

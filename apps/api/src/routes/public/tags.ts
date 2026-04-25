@@ -21,8 +21,8 @@ const publicTagsRouter = new Hono<AppEnv>();
  * GET /tags
  * Returns tags that appear on at least one published entity.
  * Supports `?category=language,framework` (comma-separated category filter).
- * Supports `?source=project|post|experience` (restrict by entity origin).
- * When `source` is absent, the union of all origins is returned (legacy default).
+ * Supports `?source=post` (tags are post-only taxonomy; project/experience use skills).
+ * When `source` is absent, all post-used tags are returned.
  * Cached for 5 minutes.
  */
 publicTagsRouter.get('/', async (c) => {
