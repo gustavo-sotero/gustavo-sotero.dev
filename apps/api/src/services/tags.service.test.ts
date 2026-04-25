@@ -13,7 +13,6 @@ const {
   updateTagMock,
   deleteTagMock,
   syncPostTagsMock,
-  syncProjectTagsMock,
   findAllTagsForNormalizationMock,
   findTagsBySlugsM,
 } = vi.hoisted(() => ({
@@ -29,7 +28,6 @@ const {
   updateTagMock: vi.fn(),
   deleteTagMock: vi.fn(),
   syncPostTagsMock: vi.fn(),
-  syncProjectTagsMock: vi.fn(),
   findAllTagsForNormalizationMock: vi.fn(),
   findTagsBySlugsM: vi.fn(),
 }));
@@ -47,10 +45,6 @@ vi.mock('../lib/cache', () => ({
       await invalidatePatternMock('posts:*');
       await invalidatePatternMock('tags:*');
     }
-    if (group === 'projectTagsSync') {
-      await invalidatePatternMock('projects:*');
-      await invalidatePatternMock('tags:*');
-    }
   }),
 }));
 
@@ -65,7 +59,6 @@ vi.mock('../repositories/tags.repo', () => ({
   updateTag: updateTagMock,
   deleteTag: deleteTagMock,
   syncPostTags: syncPostTagsMock,
-  syncProjectTags: syncProjectTagsMock,
   findAllTagsForNormalization: findAllTagsForNormalizationMock,
   findTagsBySlugs: findTagsBySlugsM,
 }));
@@ -108,15 +101,15 @@ describe('tags service', () => {
     };
     findManyTagsMock.mockResolvedValue(repoResult);
 
-    const result = await listTags({ category: 'language,framework', source: 'project' }, true);
+    const result = await listTags({ category: 'language,framework', source: 'post' }, true);
 
     expect(cachedMock).toHaveBeenCalledWith(
-      'tags:public:category=language,framework:source=project',
+      'tags:public:category=language,framework:source=post',
       300,
       expect.any(Function)
     );
     expect(findManyTagsMock).toHaveBeenCalledWith(
-      { category: 'language,framework', source: 'project' },
+      { category: 'language,framework', source: 'post' },
       true
     );
     expect(result.meta).toEqual(repoResult.meta);
@@ -295,20 +288,10 @@ describe('tags service', () => {
   it('invalidates both resource and tags caches when syncing post tags', async () => {
     syncPostTagsMock.mockResolvedValue(undefined);
 
-    await syncTags('post', 5, [1, 2]);
+    await syncTags(5, [1, 2]);
 
     expect(syncPostTagsMock).toHaveBeenCalledWith(5, [1, 2]);
     expect(invalidatePatternMock).toHaveBeenCalledWith('posts:*');
-    expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
-  });
-
-  it('invalidates both resource and tags caches when syncing project tags', async () => {
-    syncProjectTagsMock.mockResolvedValue(undefined);
-
-    await syncTags('project', 9, [3]);
-
-    expect(syncProjectTagsMock).toHaveBeenCalledWith(9, [3]);
-    expect(invalidatePatternMock).toHaveBeenCalledWith('projects:*');
     expect(invalidatePatternMock).toHaveBeenCalledWith('tags:*');
   });
 

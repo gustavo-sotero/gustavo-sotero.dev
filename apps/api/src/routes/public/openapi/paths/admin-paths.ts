@@ -1186,7 +1186,12 @@ export const adminPaths = {
       parameters: [
         { $ref: '#/components/parameters/page' },
         { $ref: '#/components/parameters/perPage' },
-        { $ref: '#/components/parameters/tag' },
+        {
+          name: 'skill',
+          in: 'query',
+          schema: { type: 'string' },
+          description: 'Filter by skill slug',
+        },
         {
           name: 'status',
           in: 'query',

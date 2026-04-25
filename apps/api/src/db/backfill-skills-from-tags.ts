@@ -1,13 +1,6 @@
-import {
-  experienceSkills,
-  experienceTags,
-  projectSkills,
-  projectTags,
-  skills,
-  tags,
-} from '@portfolio/shared/db/schema';
+import { experienceSkills, projectSkills, skills } from '@portfolio/shared/db/schema';
 import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { asc } from 'drizzle-orm';
 import { db, pgClient } from '../config/db';
 import { getLogger, setupLogger } from '../config/logger';
 
@@ -102,40 +95,24 @@ function uniqueByKey<T>(rows: T[], keyFn: (row: T) => string) {
   return unique;
 }
 
+/**
+ * Returns an empty array: the `project_tags` pivot was dropped in migration
+ * 0008. All project tag-to-skill associations were migrated into `project_skills`
+ * before the table was removed. This stub preserves the dependency-injection
+ * contract so the backfill remains idempotent on fresh environments.
+ */
 async function defaultLoadProjectTagRows(): Promise<SkillSourceRow[]> {
-  const rows = await db
-    .select({
-      entityId: projectTags.projectId,
-      tagId: tags.id,
-      name: tags.name,
-      slug: tags.slug,
-      category: tags.category,
-      isHighlighted: tags.isHighlighted,
-    })
-    .from(projectTags)
-    .innerJoin(tags, eq(projectTags.tagId, tags.id))
-    .where(inArray(tags.category, TECHNICAL_SKILL_CATEGORIES))
-    .orderBy(asc(projectTags.projectId), asc(tags.name));
-
-  return rows as SkillSourceRow[];
+  return [];
 }
 
+/**
+ * Returns an empty array: the `experience_tags` pivot was dropped in migration
+ * 0008. All experience tag-to-skill associations were migrated into `experience_skills`
+ * before the table was removed. This stub preserves the dependency-injection
+ * contract so the backfill remains idempotent on fresh environments.
+ */
 async function defaultLoadExperienceTagRows(): Promise<SkillSourceRow[]> {
-  const rows = await db
-    .select({
-      entityId: experienceTags.experienceId,
-      tagId: tags.id,
-      name: tags.name,
-      slug: tags.slug,
-      category: tags.category,
-      isHighlighted: tags.isHighlighted,
-    })
-    .from(experienceTags)
-    .innerJoin(tags, eq(experienceTags.tagId, tags.id))
-    .where(inArray(tags.category, TECHNICAL_SKILL_CATEGORIES))
-    .orderBy(asc(experienceTags.experienceId), asc(tags.name));
-
-  return rows as SkillSourceRow[];
+  return [];
 }
 
 async function defaultListExistingSkills(): Promise<ExistingSkillRow[]> {

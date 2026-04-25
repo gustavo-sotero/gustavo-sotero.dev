@@ -11,7 +11,6 @@ const {
   createProjectMock,
   updateProjectMock,
   softDeleteProjectMock,
-  syncProjectTagsMock,
 } = vi.hoisted(() => ({
   dbLimitMock: vi.fn(),
   invalidatePatternMock: vi.fn(),
@@ -23,7 +22,6 @@ const {
   createProjectMock: vi.fn(),
   updateProjectMock: vi.fn(),
   softDeleteProjectMock: vi.fn(),
-  syncProjectTagsMock: vi.fn(),
 }));
 
 vi.mock('../config/db', () => ({
@@ -86,9 +84,7 @@ vi.mock('../repositories/comments.repo', () => ({
 
 vi.mock('../repositories/tags.repo', () => ({
   syncPostTags: syncPostTagsMock,
-  syncProjectTags: syncProjectTagsMock,
   syncPostTagsInTx: vi.fn(),
-  syncProjectTagsInTx: vi.fn(),
 }));
 
 import { createPostService, softDeletePostService, updatePostService } from './posts.service';

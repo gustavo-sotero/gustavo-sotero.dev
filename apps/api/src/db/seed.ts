@@ -1,12 +1,10 @@
 import {
   experience,
   experienceSkills,
-  experienceTags,
   posts,
   postTags,
   projectSkills,
   projects,
-  projectTags,
   skills,
   tags,
 } from '@portfolio/shared/db/schema';
@@ -617,7 +615,7 @@ async function seed() {
   // ── Projects ─────────────────────────────────────────────────────────────────
   logger.info('Seeding projects...');
   for (const project of SEED_PROJECTS) {
-    const { tagSlugs, skillSlugs, ...projectData } = project;
+    const { tagSlugs: _tagSlugs, skillSlugs, ...projectData } = project;
 
     const [inserted] = await db
       .insert(projects)
@@ -640,15 +638,6 @@ async function seed() {
       logger.info(`Project already exists: ${projectData.slug}`);
     }
 
-    const tagPivots = tagSlugs
-      .map((s) => tagIdBySlug[s])
-      .filter((id): id is number => id !== undefined)
-      .map((tagId) => ({ projectId: projectRecord.id, tagId }));
-
-    if (tagPivots.length > 0) {
-      await db.insert(projectTags).values(tagPivots).onConflictDoNothing();
-    }
-
     const skillPivots = (skillSlugs ?? [])
       .map((s) => skillIdBySlug[s])
       .filter((id): id is number => id !== undefined)
@@ -662,7 +651,7 @@ async function seed() {
   // ── Experience ───────────────────────────────────────────────────────────────
   logger.info('Seeding experience...');
   for (const entry of SEED_EXPERIENCE) {
-    const { tagSlugs, skillSlugs, ...experienceData } = entry;
+    const { tagSlugs: _tagSlugs2, skillSlugs, ...experienceData } = entry;
 
     const [inserted] = await db
       .insert(experience)
@@ -683,15 +672,6 @@ async function seed() {
       logger.info(`Experience inserted: ${inserted.slug}`);
     } else {
       logger.info(`Experience already exists: ${experienceData.slug}`);
-    }
-
-    const tagPivots = tagSlugs
-      .map((slug) => tagIdBySlug[slug])
-      .filter((id): id is number => id !== undefined)
-      .map((tagId) => ({ experienceId: experienceRecord.id, tagId }));
-
-    if (tagPivots.length > 0) {
-      await db.insert(experienceTags).values(tagPivots).onConflictDoNothing();
     }
 
     const skillPivots = (skillSlugs ?? [])

@@ -26,7 +26,6 @@ import {
   findTagBySlug,
   findTagsBySlugs,
   syncPostTags,
-  syncProjectTags,
   tagNameExists,
   tagSlugExists,
   updateTag,
@@ -55,8 +54,8 @@ export interface TagListFilters {
   category?: string;
   page?: string | number;
   perPage?: string | number;
-  /** Restrict public tags to a specific entity origin (project | post | experience). */
-  source?: 'project' | 'post' | 'experience';
+  /** Restrict public tags to a specific entity origin. Tags are associated with posts only. */
+  source?: 'post';
 }
 
 /**
@@ -235,23 +234,13 @@ export async function resolveAiSuggestedTags(suggestedNames: string[]): Promise<
 }
 
 /**
- * Synchronize tags for a post or project.
+ * Synchronize tags for a post.
  * Wraps the repository-level transactional sync.
  *
- * @param entityType - 'post' or 'project'
- * @param entityId   - ID of the post or project
- * @param tagIds     - Complete list of desired tag IDs (replaces existing)
+ * @param entityId - ID of the post
+ * @param tagIds   - Complete list of desired tag IDs (replaces existing)
  */
-export async function syncTags(
-  entityType: 'post' | 'project',
-  entityId: number,
-  tagIds: number[]
-): Promise<void> {
-  if (entityType === 'post') {
-    await syncPostTags(entityId, tagIds);
-    await invalidateGroup('postTagsSync');
-  } else {
-    await syncProjectTags(entityId, tagIds);
-    await invalidateGroup('projectTagsSync');
-  }
+export async function syncTags(entityId: number, tagIds: number[]): Promise<void> {
+  await syncPostTags(entityId, tagIds);
+  await invalidateGroup('postTagsSync');
 }

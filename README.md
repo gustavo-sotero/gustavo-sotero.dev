@@ -294,7 +294,6 @@ bun run --env-file .env apps/api/src/db/audit-schema-parity.ts
 ```
 
 Objetos verificados:
-- `table:experience_tags` — pivô entre experience e tags
 - `table:skills` — catálogo canônico de skills
 - `table:project_skills` — pivô entre projetos e skills
 - `table:experience_skills` — pivô entre experience e skills
@@ -309,7 +308,6 @@ SELECT * FROM __drizzle_migrations ORDER BY created_at DESC;
 
 -- 2. Verifique se todas as tabelas obrigatórias existem
 SELECT
-  to_regclass('public.experience_tags') AS experience_tags_table,
   to_regclass('public.skills') AS skills_table,
   to_regclass('public.project_skills') AS project_skills_table,
   to_regclass('public.experience_skills') AS experience_skills_table;
@@ -342,7 +340,7 @@ Caso específico do rollout de skills:
 
 ### Erros de tagIds em endpoints admin
 
-Se `POST /admin/experience`, `POST /admin/posts` ou `POST /admin/projects` retornar `400 VALIDATION_ERROR` com `field: tagIds`, significa que um ou mais IDs submetidos não existem na tabela `tags`. Isso é comportamento correto — substitui a falha opaca `500` que ocorria anteriormente.
+Se `POST /admin/posts` retornar `400 VALIDATION_ERROR` com `field: tagIds`, significa que um ou mais IDs submetidos não existem na tabela `tags`. Isso é comportamento correto — substitui a falha opaca `500` que ocorria anteriormente. Projetos e experience usam `skillIds` exclusivamente.
 
 Para diagnosticar:
 ```sql

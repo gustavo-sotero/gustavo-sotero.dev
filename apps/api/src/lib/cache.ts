@@ -20,7 +20,6 @@ export const CACHE_INVALIDATION_GROUPS = {
   skillsContent: ['skills:*', 'projects:*', 'experience:*', 'developer:profile'],
   tagsContent: ['tags:*', 'posts:*', 'projects:*', 'developer:profile'],
   postTagsSync: ['posts:*', 'tags:*'],
-  projectTagsSync: ['projects:*', 'tags:*'],
   commentsModeration: ['posts:slug:*'],
   experienceContent: ['experience:*', 'developer:profile'],
   educationContent: ['education:*', 'developer:profile'],
