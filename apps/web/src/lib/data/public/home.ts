@@ -1,5 +1,5 @@
 import 'server-only';
-import type { Education, Experience, Post, Project, Skill } from '@portfolio/shared';
+import type { Education, Experience, Post, Project, Skill, Tag } from '@portfolio/shared';
 import { cacheLife, cacheTag } from 'next/cache';
 import { apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';

@@ -276,14 +276,14 @@ function ProjectsSection({ projects }: { projects: ResumeViewModel['projects'] }
                 ))}
               </ul>
             )}
-            {item.tags.length > 0 && (
+            {item.skills.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-1">
-                {item.tags.map((tag) => (
+                {item.skills.map((skill) => (
                   <span
-                    key={tag}
+                    key={skill}
                     className="text-[11px] text-zinc-500 border border-zinc-700/60 px-2 py-0.5 rounded-full"
                   >
-                    {tag}
+                    {skill}
                   </span>
                 ))}
               </div>

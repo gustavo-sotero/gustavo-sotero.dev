@@ -70,8 +70,8 @@ function makeProject(
     deletedAt: overrides.deletedAt ?? null,
     createdAt: overrides.createdAt ?? '2026-01-01T00:00:00.000Z',
     updatedAt: overrides.updatedAt ?? '2026-01-01T00:00:00.000Z',
-    tags: overrides.tags ?? [],
     impactFacts: overrides.impactFacts ?? [],
+    skills: overrides.skills ?? [],
   };
 }
 

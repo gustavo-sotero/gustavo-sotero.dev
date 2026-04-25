@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 
 /**
- * Tests for ProjectCard — tag rendering without truncation.
+ * Tests for ProjectCard — skill rendering without truncation.
  *
  * Covers:
- *  - All tags are rendered (no slice/truncation)
+ *  - All skills are rendered (no slice/truncation)
  *  - No "+N" overflow badge is shown
- *  - Projects with 0 tags render without the tags section
+ *  - Projects with 0 skills render without the skills section
  *  - Title and featured badge rendered correctly
  */
-import type { Project } from '@portfolio/shared';
+import type { Project, Skill } from '@portfolio/shared';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,13 +45,15 @@ import { ProjectCard } from './ProjectCard';
 
 // ── Factory ────────────────────────────────────────────────────────────────────
 
-function makeTag(id: number, name: string) {
+function makeSkill(id: number, name: string): Skill {
   return {
     id,
     name,
     slug: name.toLowerCase(),
     category: 'tool' as const,
     iconKey: null,
+    expertiseLevel: 1,
+    isHighlighted: false,
     createdAt: '2026-01-01T00:00:00.000Z',
   };
 }
@@ -74,7 +76,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     impactFacts: [],
-    tags: [],
+    skills: [],
     ...overrides,
   };
 }
@@ -83,31 +85,31 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 
 afterEach(cleanup);
 
-describe('ProjectCard — tag rendering', () => {
-  it('renders all tags when the project has exactly 3', () => {
-    const tags = [makeTag(1, 'TypeScript'), makeTag(2, 'Docker'), makeTag(3, 'Redis')];
-    render(<ProjectCard project={makeProject({ tags })} />);
+describe('ProjectCard — skill rendering', () => {
+  it('renders all skills when the project has exactly 3', () => {
+    const skills = [makeSkill(1, 'TypeScript'), makeSkill(2, 'Docker'), makeSkill(3, 'Redis')];
+    render(<ProjectCard project={makeProject({ skills })} />);
     expect(screen.getByText('TypeScript')).toBeInTheDocument();
     expect(screen.getByText('Docker')).toBeInTheDocument();
     expect(screen.getByText('Redis')).toBeInTheDocument();
   });
 
-  it('renders all tags when the project has more than 3 (e.g., 7)', () => {
-    const tags = Array.from({ length: 7 }, (_, i) => makeTag(i + 1, `Tag${i + 1}`));
-    render(<ProjectCard project={makeProject({ tags })} />);
-    for (const tag of tags) {
-      expect(screen.getByText(tag.name)).toBeInTheDocument();
+  it('renders all skills when the project has more than 3 (e.g., 7)', () => {
+    const skills = Array.from({ length: 7 }, (_, i) => makeSkill(i + 1, `Skill${i + 1}`));
+    render(<ProjectCard project={makeProject({ skills })} />);
+    for (const skill of skills) {
+      expect(screen.getByText(skill.name)).toBeInTheDocument();
     }
   });
 
-  it('does NOT render "+N" overflow badge when there are more than 3 tags', () => {
-    const tags = Array.from({ length: 7 }, (_, i) => makeTag(i + 1, `Tag${i + 1}`));
-    render(<ProjectCard project={makeProject({ tags })} />);
+  it('does NOT render "+N" overflow badge when there are more than 3 skills', () => {
+    const skills = Array.from({ length: 7 }, (_, i) => makeSkill(i + 1, `Skill${i + 1}`));
+    render(<ProjectCard project={makeProject({ skills })} />);
     expect(screen.queryByText(/^\+\d+$/)).toBeNull();
   });
 
-  it('renders nothing for tags section when tags array is empty', () => {
-    const { container } = render(<ProjectCard project={makeProject({ tags: [] })} />);
+  it('renders nothing for skills section when skills array is empty', () => {
+    const { container } = render(<ProjectCard project={makeProject({ skills: [] })} />);
     expect(screen.queryByText(/^\+\d+$/)).toBeNull();
     expect(container.querySelectorAll('[data-slot="badge"]').length).toBe(0);
   });

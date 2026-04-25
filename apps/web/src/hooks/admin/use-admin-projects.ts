@@ -14,7 +14,7 @@ interface ProjectsQueryParams {
   page?: number;
   perPage?: number;
   status?: PostStatus;
-  tag?: string;
+  skill?: string;
   featured?: boolean;
 }
 
@@ -23,7 +23,7 @@ export function useAdminProjects(params: ProjectsQueryParams = {}) {
   if (params.page) qs.set('page', String(params.page));
   if (params.perPage) qs.set('perPage', String(params.perPage));
   if (params.status) qs.set('status', params.status);
-  if (params.tag) qs.set('tag', params.tag);
+  if (params.skill) qs.set('skill', params.skill);
   if (params.featured !== undefined) qs.set('featured', String(params.featured));
   const query = qs.toString();
   return useQuery<PaginatedResponse<Project>>({

@@ -1,17 +1,6 @@
-import type { Education, Experience, Project, Skill, Tag } from '@portfolio/shared';
+import type { Education, Experience, Project, Skill } from '@portfolio/shared';
 import { describe, expect, it } from 'vitest';
 import { buildResumeViewModel } from './mapper';
-
-function createTag(id: number, name: string, category: Tag['category'] = 'tool'): Tag {
-  return {
-    id,
-    name,
-    slug: name.toLowerCase(),
-    category,
-    iconKey: null,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  };
-}
 
 function createExperience(overrides: Partial<Experience> = {}): Experience {
   return {
@@ -33,7 +22,7 @@ function createExperience(overrides: Partial<Experience> = {}): Experience {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     impactFacts: [],
-    tags: [],
+    skills: [],
     ...overrides,
   };
 }
@@ -81,7 +70,7 @@ function createProject(overrides: Partial<Project> = {}): Project {
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     impactFacts: [],
-    tags: [],
+    skills: [],
     ...overrides,
   };
 }
@@ -146,10 +135,13 @@ describe('resume mapper timestamp contract', () => {
   });
 });
 
-describe('resume mapper experience tags', () => {
-  it('maps experience tags into the resume view model', () => {
-    const tags = [createTag(1, 'TypeScript', 'language'), createTag(2, 'Hono', 'framework')];
-    const experience = [createExperience({ tags })];
+describe('resume mapper experience skills', () => {
+  it('maps experience skills into the resume view model', () => {
+    const skills = [
+      createSkill({ id: 1, name: 'TypeScript', category: 'language' }),
+      createSkill({ id: 2, name: 'Hono', category: 'framework' }),
+    ];
+    const experience = [createExperience({ skills })];
 
     const resume = buildResumeViewModel({
       experience,
@@ -159,18 +151,18 @@ describe('resume mapper experience tags', () => {
       now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
-    expect(resume.experience[0]?.tags).toEqual(['TypeScript', 'Hono']);
+    expect(resume.experience[0]?.skills).toEqual(['TypeScript', 'Hono']);
   });
 
-  it('keeps experience tags empty when payload has no tags', () => {
+  it('keeps experience skills empty when payload has no skills', () => {
     const resume = buildResumeViewModel({
-      experience: [createExperience({ tags: undefined })],
+      experience: [createExperience({ skills: undefined })],
       education: [],
       projects: [],
       now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
-    expect(resume.experience[0]?.tags).toEqual([]);
+    expect(resume.experience[0]?.skills).toEqual([]);
   });
 });
 

@@ -1,4 +1,3 @@
-import type { Tag } from '@portfolio/shared';
 import { ExternalLink } from 'lucide-react';
 import type { Metadata } from 'next';
 import Image from 'next/image';
@@ -71,8 +70,7 @@ export async function ProjectDetailContent({ params }: ProjectDetailPageProps) {
   const project = result.data;
 
   const hasMermaid = project.renderedContent?.includes('class="mermaid"') ?? false;
-
-  const tags = (project as typeof project & { tags?: Tag[] }).tags ?? [];
+  const skills = project.skills ?? [];
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -123,17 +121,17 @@ export async function ProjectDetailContent({ params }: ProjectDetailPageProps) {
             <p className="text-zinc-400 text-lg leading-relaxed">{project.description}</p>
           )}
 
-          {/* Tags */}
-          {tags.length > 0 && (
+          {/* Skills */}
+          {skills.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
-              {tags.map((tag) => (
+              {skills.map((skill) => (
                 <Badge
-                  key={tag.id}
+                  key={skill.id}
                   variant="secondary"
                   className="gap-1.5 text-xs font-mono border transition-colors border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-emerald-500/30 hover:text-zinc-100"
                 >
-                  <TechIcon iconKey={tag.iconKey} category={tag.category} size={12} />
-                  {tag.name}
+                  <TechIcon iconKey={skill.iconKey} category={skill.category} size={12} />
+                  {skill.name}
                 </Badge>
               ))}
             </div>

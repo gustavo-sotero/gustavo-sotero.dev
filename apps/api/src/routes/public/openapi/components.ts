@@ -149,7 +149,6 @@ export const openApiComponents = {
         status: { type: 'string', enum: ['draft', 'published'] },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
-        tags: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
         skills: {
           type: 'array',
           items: { $ref: '#/components/schemas/Skill' },
@@ -220,7 +219,6 @@ export const openApiComponents = {
         credentialUrl: { type: 'string', nullable: true },
         createdAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
-        tags: { type: 'array', items: { $ref: '#/components/schemas/Tag' } },
         skills: {
           type: 'array',
           items: { $ref: '#/components/schemas/Skill' },
