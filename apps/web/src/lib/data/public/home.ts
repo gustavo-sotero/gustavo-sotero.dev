@@ -147,3 +147,83 @@ export async function getHomeEducation(): Promise<HomeLoaderResult<Education>> {
     return { state: 'degraded' };
   }
 }
+
+// ── Aggregate loader ──────────────────────────────────────────────────────────
+
+export interface HomeAggregate {
+  posts: HomeLoaderResult<Post>;
+  projects: HomeLoaderResult<Project>;
+  skills: HomeLoaderResult<Skill>;
+  blogTags: HomeLoaderResult<Tag>;
+  experience: HomeLoaderResult<Experience>;
+  education: HomeLoaderResult<Education>;
+}
+
+/**
+ * Fetches all home-page sections in a single API call (`GET /home`).
+ * Eliminates 7 separate round-trips and removes COUNT queries that the
+ * individual paginated loaders trigger for `total` meta.
+ *
+ * Falls back to a fully-degraded aggregate when the request fails.
+ * Any empty array maps to `empty`, non-empty to `ok`.
+ */
+export async function getHomeAggregate(): Promise<HomeAggregate> {
+  'use cache';
+  cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
+  cacheTag(
+    TAG_HOME,
+    TAG_POSTS_LIST,
+    TAG_PROJECTS_LIST,
+    TAG_SKILLS_LIST,
+    TAG_TAGS_LIST,
+    TAG_EXPERIENCE_LIST,
+    TAG_EDUCATION_LIST
+  );
+
+  const degraded: HomeAggregate = {
+    posts: { state: 'degraded' },
+    projects: { state: 'degraded' },
+    skills: { state: 'degraded' },
+    blogTags: { state: 'degraded' },
+    experience: { state: 'degraded' },
+    education: { state: 'degraded' },
+  };
+
+  try {
+    const raw = await apiServerGet<{
+      posts: Post[];
+      projects: Project[];
+      skills: Skill[];
+      blogTags: Tag[];
+      experience: Experience[];
+      education: Education[];
+    }>('/home');
+
+    return {
+      posts: raw.posts.length > 0 ? { state: 'ok', data: raw.posts } : { state: 'empty', data: [] },
+      projects:
+        raw.projects.length > 0
+          ? { state: 'ok', data: raw.projects }
+          : { state: 'empty', data: [] },
+      skills:
+        raw.skills.length > 0 ? { state: 'ok', data: raw.skills } : { state: 'empty', data: [] },
+      blogTags:
+        raw.blogTags.length > 0
+          ? { state: 'ok', data: raw.blogTags }
+          : { state: 'empty', data: [] },
+      experience:
+        raw.experience.length > 0
+          ? { state: 'ok', data: raw.experience }
+          : { state: 'empty', data: [] },
+      education:
+        raw.education.length > 0
+          ? { state: 'ok', data: raw.education }
+          : { state: 'empty', data: [] },
+    };
+  } catch (err) {
+    logServerError('data:home', 'Failed to fetch home aggregate', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return degraded;
+  }
+}

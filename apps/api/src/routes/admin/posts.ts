@@ -18,6 +18,7 @@ import {
   updatePostSchema,
 } from '@portfolio/shared/schemas/posts';
 import { Hono } from 'hono';
+import { ConflictError, DomainValidationError } from '../../lib/errors';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
 import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
@@ -60,23 +61,9 @@ adminPostsRouter.post('/', async (c) => {
     const post = await createPostService(bv.data);
     return successResponse(c, post, 201);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.startsWith('CONFLICT:') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
-    }
-    if (message.startsWith('VALIDATION_ERROR:')) {
-      const details = (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
-        field: 'tagIds',
-        message: `Tag with id ${id} does not exist`,
-      }));
-      return errorResponse(
-        c,
-        400,
-        'VALIDATION_ERROR',
-        message.replace('VALIDATION_ERROR: ', ''),
-        details
-      );
-    }
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
+    if (err instanceof DomainValidationError)
+      return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
     throw err;
   }
 });
@@ -116,23 +103,9 @@ adminPostsRouter.patch('/:id', async (c) => {
     }
     return successResponse(c, updated);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.startsWith('CONFLICT:') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
-    }
-    if (message.startsWith('VALIDATION_ERROR:')) {
-      const details = (err as { invalidTagIds?: number[] }).invalidTagIds?.map((id) => ({
-        field: 'tagIds',
-        message: `Tag with id ${id} does not exist`,
-      }));
-      return errorResponse(
-        c,
-        400,
-        'VALIDATION_ERROR',
-        message.replace('VALIDATION_ERROR: ', ''),
-        details
-      );
-    }
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
+    if (err instanceof DomainValidationError)
+      return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
     throw err;
   }
 });

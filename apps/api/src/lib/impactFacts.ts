@@ -1,14 +1,6 @@
 import { experienceImpactFactsSchema } from '@portfolio/shared/schemas/experience';
 import { projectImpactFactsSchema } from '@portfolio/shared/schemas/projects';
-
-type ValidationDetail = {
-  field: string;
-  message: string;
-};
-
-type ValidationError = Error & {
-  validationDetails?: ValidationDetail[];
-};
+import { DomainValidationError } from './errors';
 
 function normalizeImpactFacts(
   impactFacts: string[] | undefined,
@@ -21,14 +13,10 @@ function normalizeImpactFacts(
     return result.data ?? [];
   }
 
-  const error = new Error(
-    `VALIDATION_ERROR: ${result.error.issues[0]?.message ?? 'impactFacts is invalid'}`
-  ) as ValidationError;
-  error.validationDetails = result.error.issues.map((issue) => ({
-    field: 'impactFacts',
-    message: issue.message,
-  }));
-  throw error;
+  throw new DomainValidationError(
+    result.error.issues[0]?.message ?? 'impactFacts is invalid',
+    result.error.issues.map((issue) => ({ field: 'impactFacts', message: issue.message }))
+  );
 }
 
 export function normalizeProjectImpactFacts(impactFacts: string[] | undefined) {

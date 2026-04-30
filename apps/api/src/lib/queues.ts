@@ -9,7 +9,11 @@
  * monorepo. BullMQ creates its own internal connection.
  */
 
-import { legacyScheduledPostPublishJobId, scheduledPostPublishJobId } from '@portfolio/shared';
+import {
+  legacyScheduledPostPublishJobId,
+  QUEUE_NAMES,
+  scheduledPostPublishJobId,
+} from '@portfolio/shared';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
 import { Queue } from 'bullmq';
 import { env } from '../config/env';
@@ -28,7 +32,7 @@ function makeQueueOpts(defaultJobOptions?: object) {
 // ── Queue instances ───────────────────────────────────────────────────────────
 
 export const telegramQueue = new Queue(
-  'telegram-notifications',
+  QUEUE_NAMES.TELEGRAM_NOTIFICATIONS,
   makeQueueOpts({
     attempts: 5,
     backoff: { type: 'exponential', delay: 1000 },
@@ -38,7 +42,7 @@ export const telegramQueue = new Queue(
 );
 
 export const analyticsQueue = new Queue(
-  'analytics-events',
+  QUEUE_NAMES.ANALYTICS_EVENTS,
   makeQueueOpts({
     removeOnComplete: { count: 500 },
     removeOnFail: { count: 50 },
@@ -46,7 +50,7 @@ export const analyticsQueue = new Queue(
 );
 
 export const imageQueue = new Queue(
-  'image-optimize',
+  QUEUE_NAMES.IMAGE_OPTIMIZE,
   makeQueueOpts({
     attempts: 3,
     backoff: { type: 'exponential', delay: 1000 },
@@ -57,18 +61,18 @@ export const imageQueue = new Queue(
 
 /** Dead-letter queues — used for monitoring failed jobs. */
 export const telegramDlqQueue = new Queue(
-  'telegram-notifications-dlq',
+  QUEUE_NAMES.TELEGRAM_NOTIFICATIONS_DLQ,
   makeQueueOpts({ removeOnComplete: { count: 500 } })
 );
 
 export const imageDlqQueue = new Queue(
-  'image-optimize-dlq',
+  QUEUE_NAMES.IMAGE_OPTIMIZE_DLQ,
   makeQueueOpts({ removeOnComplete: { count: 500 } })
 );
 
 /** Queue for scheduled post publication jobs. */
 export const postPublishQueue = new Queue(
-  'post-publish',
+  QUEUE_NAMES.POST_PUBLISH,
   makeQueueOpts({
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },
@@ -79,7 +83,7 @@ export const postPublishQueue = new Queue(
 
 /** Queue for async AI post draft generation jobs. */
 export const aiPostDraftGenerationQueue = new Queue(
-  'ai-post-draft-generation',
+  QUEUE_NAMES.AI_POST_DRAFT_GENERATION,
   makeQueueOpts({
     attempts: 2,
     backoff: { type: 'exponential', delay: 2000 },

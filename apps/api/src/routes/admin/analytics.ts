@@ -6,15 +6,11 @@
  *  GET /admin/analytics/top-posts - Top paths by view count for a date range
  */
 
-import { comments, posts, projects } from '@portfolio/shared/db/schema';
-import { and, count as drizzleCount, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { db } from '../../config/db';
-import { cached } from '../../lib/cache';
 import { errorResponse, successResponse } from '../../lib/response';
 import { validateQuery } from '../../lib/validate';
-import { getPageviewCount, getTopPaths } from '../../repositories/analytics.repo';
+import { getAnalyticsSummary, getAnalyticsTopPosts } from '../../services/analytics.service';
 import type { AppEnv } from '../../types/index';
 
 const adminAnalyticsRouter = new Hono<AppEnv>();
@@ -33,15 +29,6 @@ const summaryQuerySchema = z.object({
 const topPostsQuerySchema = summaryQuerySchema.extend({
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
-
-/**
- * Normalize a Date to a YYYY-MM-DD string for stable cache keys.
- * Millisecond-precision ISO strings would produce near-cache-miss for every
- * request even with the same logical date window.
- */
-function toDateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 /**
  * GET /admin/analytics/summary
@@ -65,44 +52,7 @@ adminAnalyticsRouter.get('/summary', async (c) => {
     return errorResponse(c, 400, 'VALIDATION_ERROR', '"from" must be before "to"');
   }
 
-  // Normalize to date-only keys: two requests for "today 09:00" and "today 09:01"
-  // resolve to the same cache entry instead of thrashing on millisecond precision.
-  const cacheKey = `analytics:summary:${toDateKey(from)}:${toDateKey(to)}`;
-
-  const data = await cached(cacheKey, 300, async () => {
-    const [pageviews, publishedPosts, publishedProjects, pendingCommentsResult] = await Promise.all(
-      [
-        getPageviewCount({ from, to }),
-        db
-          .select({ total: drizzleCount() })
-          .from(posts)
-          // Exclude soft-deleted posts so the dashboard reflects the actual
-          // lifecycle state of content (matches what public visitors see).
-          .where(and(eq(posts.status, 'published'), isNull(posts.deletedAt)))
-          .then(([r]) => r?.total ?? 0),
-        db
-          .select({ total: drizzleCount() })
-          .from(projects)
-          .where(and(eq(projects.status, 'published'), isNull(projects.deletedAt)))
-          .then(([r]) => r?.total ?? 0),
-        db
-          .select({ total: drizzleCount() })
-          .from(comments)
-          .where(eq(comments.status, 'pending'))
-          .then(([r]) => r?.total ?? 0),
-      ]
-    );
-
-    return {
-      pageviews,
-      pendingComments: pendingCommentsResult,
-      publishedPosts,
-      publishedProjects,
-      from: from.toISOString(),
-      to: to.toISOString(),
-    };
-  });
-
+  const data = await getAnalyticsSummary({ from, to });
   return successResponse(c, data);
 });
 
@@ -130,12 +80,7 @@ adminAnalyticsRouter.get('/top-posts', async (c) => {
     return errorResponse(c, 400, 'VALIDATION_ERROR', '"from" must be before "to"');
   }
 
-  const cacheKey = `analytics:top-posts:${toDateKey(from)}:${toDateKey(to)}:${limit}`;
-
-  const rows = await cached(cacheKey, 300, async () => {
-    return getTopPaths({ from, to, limit });
-  });
-
+  const rows = await getAnalyticsTopPosts({ from, to, limit });
   return successResponse(c, rows);
 });
 

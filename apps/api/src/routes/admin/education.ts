@@ -15,6 +15,7 @@ import {
   updateEducationSchema,
 } from '@portfolio/shared/schemas/education';
 import { Hono } from 'hono';
+import { ConflictError, DomainValidationError } from '../../lib/errors';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
 import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
@@ -56,13 +57,9 @@ adminEducationRouter.post('/', async (c) => {
     const entry = await createEducationService(bv.data);
     return successResponse(c, entry, 201);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.startsWith('CONFLICT:') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
-    }
-    if (message.startsWith('VALIDATION_ERROR:')) {
-      return errorResponse(c, 400, 'VALIDATION_ERROR', message.replace('VALIDATION_ERROR: ', ''));
-    }
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
+    if (err instanceof DomainValidationError)
+      return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
     throw err;
   }
 });
@@ -102,13 +99,9 @@ adminEducationRouter.patch('/:id', async (c) => {
     }
     return successResponse(c, updated);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.startsWith('CONFLICT:') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
-    }
-    if (message.startsWith('VALIDATION_ERROR:')) {
-      return errorResponse(c, 400, 'VALIDATION_ERROR', message.replace('VALIDATION_ERROR: ', ''));
-    }
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
+    if (err instanceof DomainValidationError)
+      return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
     throw err;
   }
 });

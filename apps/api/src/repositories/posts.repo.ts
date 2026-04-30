@@ -21,6 +21,21 @@ export interface PostFilters {
 }
 
 /**
+ * Find a published post by ID for public consumption.
+ * Returns `{ id, title }` or `null` when not found or not publicly visible.
+ */
+export async function findPublicPostById(
+  id: number
+): Promise<{ id: number; title: string } | null> {
+  const [row] = await db
+    .select({ id: posts.id, title: posts.title })
+    .from(posts)
+    .where(and(eq(posts.id, id), ...publicPostVisibilityClauses()))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
  * List posts for public consumption (published + not deleted)
  * or admin (all statuses, filter optional).
  */

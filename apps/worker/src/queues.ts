@@ -1,12 +1,4 @@
-/**
- * BullMQ Queue and Worker definitions for the Worker process.
- *
- * Connection strategy: pass plain ioredis options (host/port/etc.) parsed from the
- * REDIS_URL env var so BullMQ creates its own internal connection. This avoids
- * ioredis version-mismatch TypeScript errors in the monorepo caused by BullMQ
- * bundling a slightly different patch version than our top-level ioredis dep.
- */
-
+import { QUEUE_NAMES } from '@portfolio/shared';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
 import { Queue } from 'bullmq';
 import { env } from './config/env';
@@ -15,38 +7,38 @@ const baseConnection = parseRedisUrl(env.REDIS_URL);
 
 // ── Queue instances (for DLQ and repeatable job registration) ─────────────────
 
-export const telegramQueue = new Queue('telegram-notifications', {
+export const telegramQueue = new Queue(QUEUE_NAMES.TELEGRAM_NOTIFICATIONS, {
   connection: baseConnection,
 });
 
-export const telegramDlqQueue = new Queue('telegram-notifications-dlq', {
+export const telegramDlqQueue = new Queue(QUEUE_NAMES.TELEGRAM_NOTIFICATIONS_DLQ, {
   connection: baseConnection,
 });
 
-export const analyticsQueue = new Queue('analytics-events', {
+export const analyticsQueue = new Queue(QUEUE_NAMES.ANALYTICS_EVENTS, {
   connection: baseConnection,
 });
 
-export const imageQueue = new Queue('image-optimize', {
+export const imageQueue = new Queue(QUEUE_NAMES.IMAGE_OPTIMIZE, {
   connection: baseConnection,
 });
 
-export const imageDlqQueue = new Queue('image-optimize-dlq', {
+export const imageDlqQueue = new Queue(QUEUE_NAMES.IMAGE_OPTIMIZE_DLQ, {
   connection: baseConnection,
 });
 
-export const retentionQueue = new Queue('data-retention', {
+export const retentionQueue = new Queue(QUEUE_NAMES.DATA_RETENTION, {
   connection: baseConnection,
 });
 
-export const postPublishQueue = new Queue('post-publish', {
+export const postPublishQueue = new Queue(QUEUE_NAMES.POST_PUBLISH, {
   connection: baseConnection,
 });
 
-export const aiPostDraftGenerationQueue = new Queue('ai-post-draft-generation', {
+export const aiPostDraftGenerationQueue = new Queue(QUEUE_NAMES.AI_POST_DRAFT_GENERATION, {
   connection: baseConnection,
 });
 
-export const aiPostTopicGenerationQueue = new Queue('ai-post-topic-generation', {
+export const aiPostTopicGenerationQueue = new Queue(QUEUE_NAMES.AI_POST_TOPIC_GENERATION, {
   connection: baseConnection,
 });

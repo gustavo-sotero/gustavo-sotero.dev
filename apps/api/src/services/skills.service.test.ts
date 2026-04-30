@@ -1,4 +1,5 @@
 ﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError, HighlightLimitError } from '../lib/errors';
 
 const {
   cachedMock,
@@ -175,7 +176,7 @@ describe('skills service', () => {
 
       await expect(
         createSkillService({ name: 'TypeScript', category: 'language' })
-      ).rejects.toThrow(/CONFLICT/);
+      ).rejects.toThrow(ConflictError);
     });
 
     it('throws HIGHLIGHT_LIMIT when category already has 2 highlighted skills', async () => {
@@ -184,7 +185,7 @@ describe('skills service', () => {
 
       await expect(
         createSkillService({ name: 'NewLang', category: 'language', isHighlighted: true })
-      ).rejects.toThrow(/HIGHLIGHT_LIMIT/);
+      ).rejects.toThrow(HighlightLimitError);
     });
 
     it('does not check highlight limit when isHighlighted is false', async () => {
@@ -220,7 +221,7 @@ describe('skills service', () => {
       findSkillByIdMock.mockResolvedValueOnce(baseRow);
       skillNameExistsMock.mockResolvedValueOnce(true);
 
-      await expect(updateSkillService(1, { name: 'DuplicateName' })).rejects.toThrow(/CONFLICT/);
+      await expect(updateSkillService(1, { name: 'DuplicateName' })).rejects.toThrow(ConflictError);
     });
 
     it('throws HIGHLIGHT_LIMIT when setting isHighlighted=true exceeds cap', async () => {
@@ -228,7 +229,7 @@ describe('skills service', () => {
       countHighlightedSkillsByCategoryMock.mockResolvedValueOnce(2);
 
       await expect(updateSkillService(1, { isHighlighted: true })).rejects.toThrow(
-        /HIGHLIGHT_LIMIT/
+        HighlightLimitError
       );
     });
 

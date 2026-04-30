@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError, HighlightLimitError } from '../../lib/errors';
 
 const {
   listSkillsMock,
@@ -132,7 +133,7 @@ describe('admin skills routes', () => {
 
     it('returns 409 on CONFLICT error', async () => {
       createSkillServiceMock.mockRejectedValueOnce(
-        new Error('CONFLICT: Skill name "TypeScript" is already taken')
+        new ConflictError('Skill name "TypeScript" is already taken')
       );
 
       const response = await app.request('/admin/skills', {
@@ -148,7 +149,7 @@ describe('admin skills routes', () => {
 
     it('returns 409 on HIGHLIGHT_LIMIT error', async () => {
       createSkillServiceMock.mockRejectedValueOnce(
-        new Error('HIGHLIGHT_LIMIT: Category "language" already has 2 highlighted skills.')
+        new HighlightLimitError('Category "language" already has 2 highlighted skills.')
       );
 
       const response = await app.request('/admin/skills', {
@@ -203,7 +204,7 @@ describe('admin skills routes', () => {
 
     it('returns 409 on CONFLICT error', async () => {
       updateSkillServiceMock.mockRejectedValueOnce(
-        new Error('CONFLICT: Skill name "Hono" is already taken')
+        new ConflictError('Skill name "Hono" is already taken')
       );
 
       const response = await app.request('/admin/skills/1', {

@@ -4,6 +4,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { env } from './config/env';
+import { iframeCspTokens } from './lib/iframe-policy';
 import { analyticsMiddleware } from './middleware/analytics';
 import { authAdmin } from './middleware/auth';
 import { cacheControlMiddleware } from './middleware/cacheControl';
@@ -30,6 +31,7 @@ import { publicEducationRouter } from './routes/public/education';
 import { publicExperienceRouter } from './routes/public/experience';
 import { feedRouter } from './routes/public/feed';
 import { healthRouter } from './routes/public/health';
+import { publicHomeRouter } from './routes/public/home';
 import { openApiRouter } from './routes/public/openapi';
 import { publicPostsRouter } from './routes/public/posts';
 import { publicProjectsRouter } from './routes/public/projects';
@@ -66,12 +68,15 @@ app.use(
 app.use('*', requestId);
 
 // 3. CORS
+// allowMethods must cover every HTTP method used by admin mutating routes so
+// that preflight OPTIONS requests succeed and CSRF-protected mutations work.
+// PUT is required for PUT /admin/posts/generate/config.
 app.use(
   '*',
   cors({
     origin: env.ALLOWED_ORIGIN,
     credentials: true,
-    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'X-CSRF-Token'],
     exposeHeaders: ['X-Request-Id'],
     maxAge: 600,
@@ -126,7 +131,7 @@ app.use('*', async (c, next) => {
         `style-src 'self' 'unsafe-inline'`,
         `img-src 'self' ${s3Domain} data:`,
         `font-src 'self'`,
-        `frame-src https://www.youtube.com https://player.vimeo.com`,
+        `frame-src ${iframeCspTokens().join(' ')}`,
         `connect-src 'self' ${apiUrl}`,
         `base-uri 'self'`,
         `form-action 'self'`,
@@ -143,9 +148,15 @@ app.onError(globalErrorHandler);
 // All /admin/* requests require a valid JWT session
 app.use('/admin/*', authAdmin);
 
-// All /admin/* mutating requests require a matching CSRF token
+// All /admin/* mutating requests require a matching CSRF token.
+// PUT is included because PUT /admin/posts/generate/config is a mutating route.
 app.use('/admin/*', async (c, next) => {
-  if (c.req.method === 'POST' || c.req.method === 'PATCH' || c.req.method === 'DELETE') {
+  if (
+    c.req.method === 'POST' ||
+    c.req.method === 'PUT' ||
+    c.req.method === 'PATCH' ||
+    c.req.method === 'DELETE'
+  ) {
     return csrfProtection(c, next);
   }
   await next();
@@ -161,6 +172,7 @@ app.route('/contact', contactRouter);
 app.route('/developer', publicDeveloperRouter);
 app.route('/education', publicEducationRouter);
 app.route('/experience', publicExperienceRouter);
+app.route('/home', publicHomeRouter);
 app.route('/posts', publicPostsRouter);
 app.route('/projects', publicProjectsRouter);
 app.route('/skills', publicSkillsRouter);

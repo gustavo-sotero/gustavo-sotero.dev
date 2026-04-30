@@ -25,6 +25,7 @@ import remarkRehype from 'remark-rehype';
 import { type Plugin, unified } from 'unified';
 import type { Parent } from 'unist';
 import { visit } from 'unist-util-visit';
+import { ALLOWED_IFRAME_ORIGINS } from './iframe-policy';
 
 /**
  * Rehype plugin that converts Mermaid code blocks emitted by remark/rehype:
@@ -155,18 +156,12 @@ const sanitizeSchema = {
  * Post-sanitize rehype plugin that enforces iframe domain allowlist.
  * Removes any <iframe> whose src does not start with an allowed domain.
  */
-const allowedIframeDomains = [
-  'https://www.youtube.com/',
-  'https://www.youtube-nocookie.com/',
-  'https://player.vimeo.com/',
-];
-
 const rehypeEnforceIframeAllowlist: Plugin<[], Root> = () => {
   return (tree) => {
     visit(tree, 'element', (node, index, parent) => {
       if (!isElementNode(node) || node.tagName !== 'iframe') return;
       const src = String(node.properties?.src ?? '');
-      const allowed = allowedIframeDomains.some((domain) => src.startsWith(domain));
+      const allowed = ALLOWED_IFRAME_ORIGINS.some((domain) => src.startsWith(domain));
       if (!allowed && isParentNode(parent) && typeof index === 'number') {
         parent.children.splice(index, 1);
       }

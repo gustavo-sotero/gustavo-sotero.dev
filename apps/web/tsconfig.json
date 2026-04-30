@@ -1,18 +1,25 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    // ── Next.js / SWC overrides ───────────────────────────────────────────────
+    // module must be "esnext" for the Next.js bundler; base uses "Preserve"
+    "module": "esnext",
+    // verbatimModuleSyntax is incompatible with SWC's CommonJS transform
+    "verbatimModuleSyntax": false,
+    // noUncheckedIndexedAccess would require pervasive changes across web code
+    "noUncheckedIndexedAccess": false,
+    // ── Browser / DOM target ─────────────────────────────────────────────────
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
+    // ── React / JSX ──────────────────────────────────────────────────────────
+    "jsx": "react-jsx",
+    // ── Module resolution ────────────────────────────────────────────────────
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    // ── Build ────────────────────────────────────────────────────────────────
     "incremental": true,
+    // ── Next.js plugin (powers IDE go-to-definition and type checking) ───────
     "plugins": [
       {
         "name": "next"

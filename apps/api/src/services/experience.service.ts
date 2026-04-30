@@ -13,6 +13,7 @@ import type {
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
+import { DomainValidationError } from '../lib/errors';
 import { normalizeExperienceImpactFacts } from '../lib/impactFacts';
 import { flattenPivotSkills, resolveSlugTaken } from '../lib/pivotHelpers';
 import { assertSkillsExist, normalizeSkillIds } from '../lib/skillValidation';
@@ -48,10 +49,14 @@ async function experienceSlugTaken(slug: string, excludeId?: number): Promise<bo
 
 function validateDates(startDate: string, endDate?: string | null, isCurrent?: boolean): void {
   if (!isCurrent && !endDate) {
-    throw new Error('VALIDATION_ERROR: endDate is required when isCurrent is false');
+    throw new DomainValidationError('endDate is required when isCurrent is false', [
+      { field: 'endDate', message: 'endDate is required when isCurrent is false' },
+    ]);
   }
   if (endDate && startDate && endDate < startDate) {
-    throw new Error('VALIDATION_ERROR: endDate must be on or after startDate');
+    throw new DomainValidationError('endDate must be on or after startDate', [
+      { field: 'endDate', message: 'endDate must be on or after startDate' },
+    ]);
   }
 }
 

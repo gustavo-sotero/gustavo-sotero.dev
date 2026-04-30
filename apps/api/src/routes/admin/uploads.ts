@@ -11,6 +11,7 @@
 
 import { presignRequestSchema } from '@portfolio/shared/schemas/uploads';
 import { Hono } from 'hono';
+import { ConflictError, DomainValidationError, NotFoundError } from '../../lib/errors';
 import { errorResponse, successResponse } from '../../lib/response';
 import { parseAndValidateBody } from '../../lib/validate';
 import { confirmUpload, generatePresignedUrl, getUploadById } from '../../services/uploads.service';
@@ -44,10 +45,7 @@ adminUploadsRouter.get('/:id', async (c) => {
     const upload = await getUploadById(id);
     return successResponse(c, serializeUpload(upload));
   } catch (err) {
-    const error = err as Error & { code?: string };
-    if (error.code === 'NOT_FOUND') {
-      return errorResponse(c, 404, 'NOT_FOUND', 'Upload not found');
-    }
+    if (err instanceof NotFoundError) return errorResponse(c, 404, 'NOT_FOUND', err.message);
     throw err;
   }
 });
@@ -70,10 +68,8 @@ adminUploadsRouter.post('/presign', async (c) => {
     const result = await generatePresignedUrl(bv.data);
     return successResponse(c, result, 201);
   } catch (err) {
-    const error = err as Error & { code?: string };
-    if (error.code === 'VALIDATION_ERROR') {
-      return errorResponse(c, 400, 'VALIDATION_ERROR', error.message);
-    }
+    if (err instanceof DomainValidationError)
+      return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
     throw err;
   }
 });
@@ -100,23 +96,8 @@ adminUploadsRouter.post('/:id/confirm', async (c) => {
       message: 'Upload confirmado com sucesso.',
     });
   } catch (err) {
-    const error = err as Error & { code?: string };
-
-    if (error.code === 'NOT_FOUND') {
-      return errorResponse(c, 404, 'NOT_FOUND', 'Upload not found');
-    }
-    if (error.code === 'CONFLICT') {
-      return errorResponse(c, 409, 'CONFLICT', error.message);
-    }
-    if (error.code === 'NOT_FOUND_IN_BUCKET') {
-      return errorResponse(
-        c,
-        404,
-        'NOT_FOUND',
-        'File not found in storage. Upload the file before confirming.'
-      );
-    }
-
+    if (err instanceof NotFoundError) return errorResponse(c, 404, 'NOT_FOUND', err.message);
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
     throw err;
   }
 });

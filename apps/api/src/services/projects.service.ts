@@ -11,6 +11,7 @@ import type { CreateProjectInput, UpdateProjectInput } from '@portfolio/shared/s
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
+import { ConflictError } from '../lib/errors';
 import { normalizeProjectImpactFacts } from '../lib/impactFacts';
 import { renderMarkdown } from '../lib/markdown';
 import { flattenPivotSkills, resolveSlugTaken } from '../lib/pivotHelpers';
@@ -164,7 +165,7 @@ export async function updateProjectService(id: number, data: UpdateProjectInput)
   if (data.slug !== undefined && data.slug !== current.slug) {
     const taken = await projectSlugTaken(data.slug, id);
     if (taken) {
-      throw new Error(`CONFLICT: Slug "${data.slug}" is already taken`);
+      throw new ConflictError(`Slug "${data.slug}" is already taken`);
     }
     patch.slug = data.slug;
   }

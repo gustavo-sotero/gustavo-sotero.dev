@@ -145,3 +145,41 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/portfolio_smoke
           NODE_ENV: test
         run: bun run --no-env-file apps/api/src/db/audit-schema-parity.ts
+
+  build:
+    name: Build (web)
+    runs-on: ubuntu-latest
+    needs: [type-check]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Cache bun modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Create stub .env for web build
+        # The web build script loads ../../.env via --env-file.
+        # In CI this file does not exist, so we create it with non-secret
+        # placeholder values that satisfy the env schema contract.
+        # These placeholders are never deployed; the build only validates
+        # that TypeScript compiles and Next.js config is structurally valid.
+        run: |
+          cat > .env << 'EOF'
+          NEXT_PUBLIC_API_URL=https://api.example.com
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY=ci-placeholder
+          NEXT_PUBLIC_S3_PUBLIC_DOMAIN=https://cdn.example.com
+          EOF
+
+      - name: Build web app
+        env:
+          NODE_ENV: production
+        run: bun run --filter @portfolio/web build

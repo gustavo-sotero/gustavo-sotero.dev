@@ -6,6 +6,7 @@
  */
 
 import { findExistingSkillIds } from '../repositories/skills.repo';
+import { DomainValidationError } from './errors';
 
 export function normalizeSkillIds(skillIds: number[]): number[] {
   return Array.from(new Set(skillIds));
@@ -27,9 +28,9 @@ export async function assertSkillsExist(skillIds: number[]): Promise<void> {
   const missingIds = normalizedSkillIds.filter((id) => !existingSet.has(id));
 
   if (missingIds.length > 0) {
-    throw Object.assign(
-      new Error(`VALIDATION_ERROR: One or more skillIds do not exist: ${missingIds.join(', ')}`),
-      { invalidSkillIds: missingIds }
+    throw new DomainValidationError(
+      `One or more skillIds do not exist: ${missingIds.join(', ')}`,
+      missingIds.map((id) => ({ field: 'skillIds', message: `Skill with id ${id} does not exist` }))
     );
   }
 }

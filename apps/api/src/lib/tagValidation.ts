@@ -8,6 +8,7 @@
  */
 
 import { findExistingTagIds } from '../repositories/tags.repo';
+import { DomainValidationError } from './errors';
 
 export function normalizeTagIds(tagIds: number[]): number[] {
   return Array.from(new Set(tagIds));
@@ -31,9 +32,9 @@ export async function assertTagsExist(tagIds: number[]): Promise<void> {
   const missingIds = normalizedTagIds.filter((id) => !existingSet.has(id));
 
   if (missingIds.length > 0) {
-    throw Object.assign(
-      new Error(`VALIDATION_ERROR: One or more tagIds do not exist: ${missingIds.join(', ')}`),
-      { invalidTagIds: missingIds }
+    throw new DomainValidationError(
+      `One or more tagIds do not exist: ${missingIds.join(', ')}`,
+      missingIds.map((id) => ({ field: 'tagIds', message: `Tag with id ${id} does not exist` }))
     );
   }
 }

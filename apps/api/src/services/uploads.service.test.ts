@@ -1,5 +1,6 @@
 import { OutboxEventType } from '@portfolio/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError, DomainValidationError, NotFoundError } from '../lib/errors';
 
 const {
   presignMock,
@@ -147,29 +148,29 @@ describe('uploads service', () => {
   it('generatePresignedUrl rejects unsupported mime defensively', async () => {
     await expect(
       generatePresignedUrl({ mime: 'application/pdf', size: 100, filename: 'x.pdf' })
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toThrow(DomainValidationError);
   });
 
   it('generatePresignedUrl rejects empty filename defensively', async () => {
     await expect(
       generatePresignedUrl({ mime: 'image/png', size: 100, filename: '   ' })
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toThrow(DomainValidationError);
   });
 
   it('generatePresignedUrl rejects out-of-range size defensively', async () => {
     await expect(
       generatePresignedUrl({ mime: 'image/png', size: 0, filename: 'x.png' })
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toThrow(DomainValidationError);
 
     await expect(
       generatePresignedUrl({ mime: 'image/png', size: 5_242_881, filename: 'x.png' })
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toThrow(DomainValidationError);
   });
 
   it('confirmUpload throws NOT_FOUND when upload id does not exist', async () => {
     findUploadByIdMock.mockResolvedValue(null);
 
-    await expect(confirmUpload('missing-id')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(confirmUpload('missing-id')).rejects.toThrow(NotFoundError);
   });
 
   it('confirmUpload throws CONFLICT when upload is not pending', async () => {
@@ -180,7 +181,7 @@ describe('uploads service', () => {
       status: 'processed',
     });
 
-    await expect(confirmUpload('upload-1')).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(confirmUpload('upload-1')).rejects.toThrow(ConflictError);
   });
 
   it('confirmUpload throws NOT_FOUND_IN_BUCKET when object does not exist', async () => {
@@ -192,7 +193,7 @@ describe('uploads service', () => {
     });
     existsMock.mockResolvedValue(false);
 
-    await expect(confirmUpload('upload-1')).rejects.toMatchObject({ code: 'NOT_FOUND_IN_BUCKET' });
+    await expect(confirmUpload('upload-1')).rejects.toThrow(NotFoundError);
   });
 
   it('confirmUpload updates status and writes an outbox event on success', async () => {
@@ -230,7 +231,7 @@ describe('uploads service', () => {
     // tx.update returns no row — the WHERE guard prevents double-processing
     txUpdateReturningMock.mockResolvedValueOnce([]);
 
-    await expect(confirmUpload('upload-1')).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(confirmUpload('upload-1')).rejects.toThrow(ConflictError);
     expect(enqueueImageOptimizeMock).not.toHaveBeenCalled();
   });
 
@@ -283,7 +284,7 @@ describe('getUploadById service', () => {
   it('throws NOT_FOUND when upload does not exist', async () => {
     findUploadByIdMock.mockResolvedValue(null);
 
-    await expect(getUploadById('missing-id')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(getUploadById('missing-id')).rejects.toThrow(NotFoundError);
   });
 
   it('returns upload with uploaded status while still processing', async () => {

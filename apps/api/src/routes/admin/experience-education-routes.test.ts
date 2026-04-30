@@ -7,6 +7,7 @@
 
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError, DomainValidationError } from '../../lib/errors';
 
 // ── hoisted mocks ─────────────────────────────────────────────────────────────
 
@@ -199,9 +200,9 @@ describe('admin experience routes', () => {
 
   it('POST /admin/experience returns 400 with field-level details when service throws invalid skillIds error', async () => {
     createExperienceServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 99'), {
-        invalidSkillIds: [99],
-      })
+      new DomainValidationError('One or more skillIds do not exist: 99', [
+        { field: 'skillIds', message: 'Skill ID 99 not found' },
+      ])
     );
 
     const app = new Hono();
@@ -252,7 +253,7 @@ describe('admin experience routes', () => {
   });
 
   it('POST /admin/experience returns 409 on slug conflict', async () => {
-    createExperienceServiceMock.mockRejectedValueOnce(new Error('CONFLICT: Slug already taken'));
+    createExperienceServiceMock.mockRejectedValueOnce(new ConflictError('Slug already taken'));
 
     const app = new Hono();
     app.route('/admin/experience', adminExperienceRouter);
@@ -270,10 +271,11 @@ describe('admin experience routes', () => {
 
   it('POST /admin/experience returns 400 with exact message for service-thrown date validation', async () => {
     // Service-level validation (cross-field date ordering) is translated into a
-    // scalar 400 VALIDATION_ERROR without a details array — the message itself
-    // carries the diagnostic.
+    // 400 VALIDATION_ERROR with a details array containing the endDate field.
     createExperienceServiceMock.mockRejectedValueOnce(
-      new Error('VALIDATION_ERROR: endDate must be on or after startDate')
+      new DomainValidationError('endDate must be on or after startDate', [
+        { field: 'endDate', message: 'endDate must be on or after startDate' },
+      ])
     );
 
     const app = new Hono();
@@ -289,15 +291,14 @@ describe('admin experience routes', () => {
 
     const body = (await res.json()) as {
       success: boolean;
-      error: { code: string; message: string };
+      error: { code: string; message: string; details?: Array<{ field?: string }> };
     };
 
     expect(res.status).toBe(400);
     expect(body.success).toBe(false);
     expect(body.error.code).toBe('VALIDATION_ERROR');
-    // Service-thrown errors carry the diagnostic message directly (no details array)
+    // Service-thrown errors carry the diagnostic message directly
     expect(body.error.message).toBe('endDate must be on or after startDate');
-    expect(body.error).not.toHaveProperty('details');
   });
 
   // PATCH ───────────────────────────────────────────────────────────────────────
@@ -332,9 +333,9 @@ describe('admin experience routes', () => {
 
   it('PATCH /admin/experience/:id returns 400 with field-level details when service throws invalid skillIds error', async () => {
     updateExperienceServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 77'), {
-        invalidSkillIds: [77],
-      })
+      new DomainValidationError('One or more skillIds do not exist: 77', [
+        { field: 'skillIds', message: 'Skill ID 77 not found' },
+      ])
     );
 
     const app = new Hono();
@@ -523,7 +524,7 @@ describe('admin education routes', () => {
   });
 
   it('POST /admin/education returns 409 on slug conflict', async () => {
-    createEducationServiceMock.mockRejectedValueOnce(new Error('CONFLICT: Slug already taken'));
+    createEducationServiceMock.mockRejectedValueOnce(new ConflictError('Slug already taken'));
 
     const app = new Hono();
     app.route('/admin/education', adminEducationRouter);
@@ -541,7 +542,9 @@ describe('admin education routes', () => {
 
   it('POST /admin/education returns 400 on date validation error from service', async () => {
     createEducationServiceMock.mockRejectedValueOnce(
-      new Error('VALIDATION_ERROR: endDate must be on or after startDate')
+      new DomainValidationError('endDate must be on or after startDate', [
+        { field: 'endDate', message: 'endDate must be on or after startDate' },
+      ])
     );
 
     const app = new Hono();

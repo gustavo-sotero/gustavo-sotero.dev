@@ -12,6 +12,7 @@ import type { CreatePostInput, UpdatePostInput } from '@portfolio/shared/schemas
 import { and, eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
+import { ConflictError } from '../lib/errors';
 import { renderMarkdown } from '../lib/markdown';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { cancelScheduledPostPublish } from '../lib/queues';
@@ -181,7 +182,7 @@ export async function updatePostService(id: number, data: UpdatePostInput) {
   if (data.slug !== undefined && data.slug !== current.slug) {
     const taken = await postSlugTaken(data.slug, id);
     if (taken) {
-      throw new Error(`CONFLICT: Slug "${data.slug}" is already taken`);
+      throw new ConflictError(`Slug "${data.slug}" is already taken`);
     }
     patch.slug = data.slug;
   }

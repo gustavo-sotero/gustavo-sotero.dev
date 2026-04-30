@@ -48,7 +48,7 @@ class FixedDate extends Date {
     super(args[0] as string | number | Date);
   }
 
-  static now() {
+  static override now() {
     return FIXED_NOW.getTime();
   }
 }

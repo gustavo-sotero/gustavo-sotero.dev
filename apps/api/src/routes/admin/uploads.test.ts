@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError, NotFoundError } from '../../lib/errors';
 
 const {
   generatePresignedUrlMock,
@@ -81,9 +82,7 @@ describe('admin uploads routes', () => {
   });
 
   it('returns 404 for confirm when upload is not found', async () => {
-    confirmUploadMock.mockRejectedValue(
-      Object.assign(new Error('Upload not found'), { code: 'NOT_FOUND' })
-    );
+    confirmUploadMock.mockRejectedValue(new NotFoundError('Upload not found'));
 
     const res = await app.request('/admin/uploads/upload-missing/confirm', { method: 'POST' });
 
@@ -94,9 +93,7 @@ describe('admin uploads routes', () => {
   });
 
   it('returns 409 for confirm conflict', async () => {
-    confirmUploadMock.mockRejectedValue(
-      Object.assign(new Error('Already processed'), { code: 'CONFLICT' })
-    );
+    confirmUploadMock.mockRejectedValue(new ConflictError('Already processed'));
 
     const res = await app.request('/admin/uploads/upload-1/confirm', { method: 'POST' });
 
@@ -108,7 +105,7 @@ describe('admin uploads routes', () => {
 
   it('returns 404 for confirm when file is missing in storage', async () => {
     confirmUploadMock.mockRejectedValue(
-      Object.assign(new Error('File not found in storage'), { code: 'NOT_FOUND_IN_BUCKET' })
+      new NotFoundError('File not found in storage — upload the file before confirming.')
     );
 
     const res = await app.request('/admin/uploads/upload-1/confirm', { method: 'POST' });
@@ -178,9 +175,7 @@ describe('admin uploads routes', () => {
     });
 
     it('returns 404 when upload not found', async () => {
-      getUploadByIdMock.mockRejectedValue(
-        Object.assign(new Error('Upload not found'), { code: 'NOT_FOUND' })
-      );
+      getUploadByIdMock.mockRejectedValue(new NotFoundError('Upload not found'));
 
       const res = await app.request('/admin/uploads/missing-id', { method: 'GET' });
 

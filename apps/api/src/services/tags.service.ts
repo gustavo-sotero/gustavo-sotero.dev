@@ -14,6 +14,7 @@ import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
 import type { CreateTagSchemaInput, UpdateTagSchemaInput } from '@portfolio/shared/schemas/tags';
 import type { Tag } from '@portfolio/shared/types/tags';
 import { cached, invalidateGroup, invalidatePattern } from '../lib/cache';
+import { ConflictError } from '../lib/errors';
 import { toTagDto } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import {
@@ -37,15 +38,6 @@ const LIST_TTL = 300; // 5 minutes
 
 function mapTagRow(row: Parameters<typeof toTagDto>[0]): Tag {
   return toTagDto(row) as Tag;
-}
-
-function isTagConflictError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-
-  const message = error.message.toLowerCase();
-  return (
-    message.includes('conflict') || message.includes('unique') || message.includes('duplicate key')
-  );
 }
 
 // ── Service methods ───────────────────────────────────────────────────────────
@@ -80,7 +72,7 @@ export async function listTags(filters: TagListFilters = {}, publicOnly = false)
 export async function createTagService(data: CreateTagSchemaInput) {
   const nameTaken = await findTagByName(data.name);
   if (nameTaken) {
-    throw new Error(`CONFLICT: Tag name "${data.name}" is already taken`);
+    throw new ConflictError(`Tag name "${data.name}" is already taken`);
   }
 
   const baseSlug = generateSlug(data.name);
@@ -118,7 +110,7 @@ export async function updateTagService(id: number, data: UpdateTagSchemaInput) {
   if (data.name !== undefined && data.name !== current.name) {
     const nameTaken = await tagNameExists(data.name, id);
     if (nameTaken) {
-      throw new Error(`CONFLICT: Tag name "${data.name}" is already taken`);
+      throw new ConflictError(`Tag name "${data.name}" is already taken`);
     }
 
     patch.name = data.name;
@@ -216,8 +208,13 @@ export async function resolveAiSuggestedTags(suggestedNames: string[]): Promise<
       }
     } catch (err) {
       // Race condition: another concurrent request created this tag first.
-      // Recover both from explicit name conflicts and raw DB unique violations.
-      if (isTagConflictError(err)) {
+      // Recover from typed ConflictError or raw DB unique violations.
+      const isConflict =
+        err instanceof ConflictError ||
+        (err instanceof Error &&
+          (err.message.includes('unique') || err.message.includes('duplicate key')));
+
+      if (isConflict) {
         const recovered = (await findTagByName(canonicalName)) ?? (await findTagBySlug(slug));
         if (recovered && !seenIds.has(recovered.id)) {
           seenIds.add(recovered.id);

@@ -30,7 +30,7 @@ import {
 } from '@portfolio/shared';
 import { outbox, uploads } from '@portfolio/shared/db/schema';
 import type { Job, Queue } from 'bullmq';
-import { and, asc, eq, lte } from 'drizzle-orm';
+import { and, asc, count, eq, lte, min } from 'drizzle-orm';
 import { db } from '../config/db';
 import { getLogger } from '../config/logger';
 
@@ -176,7 +176,25 @@ export async function processOutboxEvents(
   aiPostDraftGenerationQueue: Queue,
   aiPostTopicGenerationQueue: Queue
 ): Promise<void> {
+  const cycleStartAt = Date.now();
   let events: (typeof outbox.$inferSelect)[];
+
+  // ── Backlog measurement ─────────────────────────────────────────────────────
+  let backlogSize = 0;
+  let oldestPendingAgeMs: number | undefined;
+  try {
+    const [metrics] = await db
+      .select({ backlog: count(), oldest: min(outbox.createdAt) })
+      .from(outbox)
+      .where(and(eq(outbox.status, 'pending'), lte(outbox.attempts, OUTBOX_MAX_ATTEMPTS - 1)));
+    backlogSize = metrics?.backlog ?? 0;
+    if (metrics?.oldest) {
+      oldestPendingAgeMs = cycleStartAt - new Date(metrics.oldest).getTime();
+    }
+  } catch {
+    // Non-fatal: instrumentation must not interrupt relay processing
+  }
+  // ── End of backlog measurement ──────────────────────────────────────────────
 
   try {
     events = await db
@@ -207,6 +225,9 @@ export async function processOutboxEvents(
     outboxSchemaMissing = false;
     logger.info('Outbox relay: outbox schema detected; resuming relay processing');
   }
+
+  let processedCount = 0;
+  let failedCount = 0;
 
   for (const event of events) {
     // Extract uploadId eagerly from the raw payload for reconciliation purposes.
@@ -334,6 +355,7 @@ export async function processOutboxEvents(
         eventId: event.id,
         eventType: event.eventType,
       });
+      processedCount++;
     } catch (err) {
       const newAttempts = event.attempts + 1;
       const isFinal = newAttempts >= OUTBOX_MAX_ATTEMPTS;
@@ -410,6 +432,18 @@ export async function processOutboxEvents(
         ...(resolvedUploadId ? { uploadId: resolvedUploadId } : {}),
         error: err instanceof Error ? err.message : String(err),
       });
+      failedCount++;
     }
+  }
+
+  // ── Cycle summary ───────────────────────────────────────────────────────────
+  if (events.length > 0 || backlogSize > 0) {
+    logger.info('Outbox relay: cycle complete', {
+      backlogSize,
+      ...(oldestPendingAgeMs !== undefined ? { oldestPendingAgeMs } : {}),
+      cycleDurationMs: Date.now() - cycleStartAt,
+      processedCount,
+      failedCount,
+    });
   }
 }

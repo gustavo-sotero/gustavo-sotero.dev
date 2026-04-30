@@ -18,6 +18,7 @@ import {
   updateTagSchema,
 } from '@portfolio/shared/schemas/tags';
 import { Hono } from 'hono';
+import { ConflictError } from '../../lib/errors';
 import { errorResponse, successResponse } from '../../lib/response';
 import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
@@ -57,10 +58,7 @@ adminTagsRouter.post('/', async (c) => {
     const tag = await createTagService(bv.data);
     return successResponse(c, tag, 201);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.toLowerCase().includes('conflict') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', 'A tag with this name already exists');
-    }
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
     throw err;
   }
 });
@@ -100,10 +98,7 @@ adminTagsRouter.patch('/:id', async (c) => {
     }
     return successResponse(c, updated);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.toLowerCase().includes('conflict') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', 'A tag with this name already exists');
-    }
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
     throw err;
   }
 });

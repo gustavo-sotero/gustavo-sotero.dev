@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError, DomainValidationError } from '../lib/errors';
 
 const {
   dbLimitMock,
@@ -208,7 +209,7 @@ describe('posts/projects services', () => {
       .mockResolvedValueOnce([{ id: 1, slug: 'post-a', publishedAt: null }])
       .mockResolvedValueOnce([{ id: 2 }]);
 
-    await expect(updatePostService(1, { slug: 'slug-existente' })).rejects.toThrow('CONFLICT:');
+    await expect(updatePostService(1, { slug: 'slug-existente' })).rejects.toThrow(ConflictError);
     expect(updatePostMock).not.toHaveBeenCalled();
   });
 
@@ -273,8 +274,7 @@ describe('posts/projects services', () => {
     dbLimitMock.mockResolvedValueOnce([{ id: 1, slug: 'projeto-a' }]);
 
     await expect(updateProjectService(1, { impactFacts: ['   '] })).rejects.toMatchObject({
-      message: expect.stringContaining('VALIDATION_ERROR'),
-      validationDetails: [{ field: 'impactFacts', message: 'Impact fact cannot be empty' }],
+      details: [{ field: 'impactFacts', message: 'Impact fact cannot be empty' }],
     });
 
     expect(updateProjectMock).not.toHaveBeenCalled();
@@ -618,16 +618,15 @@ describe('posts/projects services', () => {
     it('throws VALIDATION_ERROR when tagIds contain nonexistent ids', async () => {
       dbLimitMock.mockResolvedValueOnce([]); // slug check → no collision
       assertTagsExistMock.mockRejectedValueOnce(
-        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 999'), {
-          invalidTagIds: [999],
-        })
+        new DomainValidationError('One or more tagIds do not exist: 999', [
+          { field: 'tagIds', message: 'Tag with id 999 does not exist' },
+        ])
       );
       const { invalidateGroup } = await import('../lib/cache');
       await expect(
         createPostService({ title: 'T', content: 'C', status: 'draft', order: 0, tagIds: [999] })
       ).rejects.toMatchObject({
-        message: expect.stringContaining('VALIDATION_ERROR'),
-        invalidTagIds: [999],
+        details: [{ field: 'tagIds', message: 'Tag with id 999 does not exist' }],
       });
       expect(invalidateGroup).not.toHaveBeenCalled();
       expect(createPostMock).not.toHaveBeenCalled();
@@ -656,14 +655,13 @@ describe('posts/projects services', () => {
         { id: 1, slug: 'my-post', status: 'draft', publishedAt: null, scheduledAt: null },
       ]);
       assertTagsExistMock.mockRejectedValueOnce(
-        Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 777'), {
-          invalidTagIds: [777],
-        })
+        new DomainValidationError('One or more tagIds do not exist: 777', [
+          { field: 'tagIds', message: 'Tag with id 777 does not exist' },
+        ])
       );
       const { invalidateGroup } = await import('../lib/cache');
       await expect(updatePostService(1, { tagIds: [777] })).rejects.toMatchObject({
-        message: expect.stringContaining('VALIDATION_ERROR'),
-        invalidTagIds: [777],
+        details: [{ field: 'tagIds', message: 'Tag with id 777 does not exist' }],
       });
       expect(invalidateGroup).not.toHaveBeenCalled();
       expect(updatePostMock).not.toHaveBeenCalled();

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ALLOWED_IFRAME_ORIGINS, iframeCspTokens } from './iframe-policy';
 import { renderMarkdown } from './markdown';
 import { renderCommentMarkdown } from './markdownComment';
 
@@ -72,5 +73,47 @@ describe('markdown pipeline', () => {
 
     expect(html).toContain('class="shiki shiki-themes github-light github-dark"');
     expect(html).toContain('--shiki-dark');
+  });
+});
+
+describe('iframe policy parity (sanitization ↔ CSP)', () => {
+  it('ALLOWED_IFRAME_ORIGINS and iframeCspTokens() are derived from the same list', () => {
+    const tokens = iframeCspTokens();
+    // Every CSP token must correspond to an allowed origin (with trailing slash added back)
+    for (const token of tokens) {
+      expect(ALLOWED_IFRAME_ORIGINS).toContain(`${token}/`);
+    }
+    // Every allowed origin must produce a CSP token
+    expect(tokens).toHaveLength(ALLOWED_IFRAME_ORIGINS.length);
+  });
+
+  it('youtube-nocookie embed is rendered by sanitization pipeline', async () => {
+    const html = await renderMarkdown(
+      '<iframe src="https://www.youtube-nocookie.com/embed/abc" title="video"></iframe>'
+    );
+    expect(html).toContain('<iframe');
+    expect(html).toContain('youtube-nocookie.com');
+  });
+
+  it('youtube embed is rendered by sanitization pipeline', async () => {
+    const html = await renderMarkdown(
+      '<iframe src="https://www.youtube.com/embed/abc" title="video"></iframe>'
+    );
+    expect(html).toContain('<iframe');
+  });
+
+  it('vimeo embed is rendered by sanitization pipeline', async () => {
+    const html = await renderMarkdown(
+      '<iframe src="https://player.vimeo.com/video/123" title="video"></iframe>'
+    );
+    expect(html).toContain('<iframe');
+  });
+
+  it('all allowed origins in ALLOWED_IFRAME_ORIGINS are present in iframeCspTokens output', () => {
+    const tokens = iframeCspTokens();
+    for (const origin of ALLOWED_IFRAME_ORIGINS) {
+      const tokenForOrigin = origin.replace(/\/$/, '');
+      expect(tokens).toContain(tokenForOrigin);
+    }
   });
 });

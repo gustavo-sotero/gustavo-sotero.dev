@@ -6,6 +6,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DomainValidationError } from '../lib/errors';
 
 // ── hoisted mocks (must be before any dynamic import) ─────────────────────────
 
@@ -287,7 +288,7 @@ describe('experience service', () => {
           status: 'draft',
           order: 0,
         })
-      ).rejects.toThrow('VALIDATION_ERROR');
+      ).rejects.toThrow(DomainValidationError);
     });
 
     it('throws VALIDATION_ERROR when isCurrent=false and endDate is missing', async () => {
@@ -301,7 +302,7 @@ describe('experience service', () => {
           status: 'draft',
           order: 0,
         })
-      ).rejects.toThrow('VALIDATION_ERROR');
+      ).rejects.toThrow(DomainValidationError);
     });
 
     it('invalidates experience cache after successful create', async () => {
@@ -389,7 +390,7 @@ describe('experience service', () => {
       });
 
       await expect(updateExperienceService(1, { endDate: '2022-01-01' })).rejects.toThrow(
-        'VALIDATION_ERROR'
+        DomainValidationError
       );
     });
 
@@ -401,7 +402,7 @@ describe('experience service', () => {
       });
 
       await expect(updateExperienceService(1, { isCurrent: false })).rejects.toThrow(
-        'VALIDATION_ERROR'
+        DomainValidationError
       );
     });
 
@@ -409,8 +410,7 @@ describe('experience service', () => {
       findExperienceByIdMock.mockResolvedValueOnce(baseExperience);
 
       await expect(updateExperienceService(1, { impactFacts: ['   '] })).rejects.toMatchObject({
-        message: expect.stringContaining('VALIDATION_ERROR'),
-        validationDetails: [{ field: 'impactFacts', message: 'Impact fact cannot be empty' }],
+        details: [{ field: 'impactFacts', message: 'Impact fact cannot be empty' }],
       });
 
       expect(updateExperienceMock).not.toHaveBeenCalled();
@@ -502,7 +502,7 @@ describe('education service', () => {
           status: 'draft',
           order: 0,
         })
-      ).rejects.toThrow('VALIDATION_ERROR');
+      ).rejects.toThrow(DomainValidationError);
     });
 
     it('invalidates education cache after create', async () => {
@@ -563,7 +563,7 @@ describe('education service', () => {
       });
 
       await expect(updateEducationService(2, { endDate: '2022-01-01' })).rejects.toThrow(
-        'VALIDATION_ERROR'
+        DomainValidationError
       );
     });
   });

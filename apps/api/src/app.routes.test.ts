@@ -28,7 +28,7 @@ vi.mock('./middleware/errorHandler', () => ({
 }));
 
 function makeRouter(
-  definitions: Array<{ method: 'get' | 'post' | 'patch' | 'delete'; path: string }>
+  definitions: Array<{ method: 'get' | 'post' | 'put' | 'patch' | 'delete'; path: string }>
 ) {
   const router = new Hono();
 
@@ -132,6 +132,46 @@ vi.mock('./routes/admin/skills', () => ({
   ]),
 }));
 
+vi.mock('./routes/admin/post-generation', () => ({
+  adminPostGenerationRouter: makeRouter([
+    { method: 'get', path: '/config' },
+    { method: 'put', path: '/config' },
+    { method: 'get', path: '/models' },
+    { method: 'post', path: '/topics' },
+    { method: 'post', path: '/topic-runs' },
+    { method: 'get', path: '/topic-runs/:id' },
+    { method: 'post', path: '/draft' },
+    { method: 'post', path: '/draft-runs' },
+    { method: 'get', path: '/draft-runs/:id' },
+  ]),
+}));
+
+vi.mock('./routes/admin/experience', () => ({
+  adminExperienceRouter: makeRouter([
+    { method: 'get', path: '/' },
+    { method: 'post', path: '/' },
+    { method: 'patch', path: '/:id' },
+    { method: 'delete', path: '/:id' },
+  ]),
+}));
+
+vi.mock('./routes/admin/education', () => ({
+  adminEducationRouter: makeRouter([
+    { method: 'get', path: '/' },
+    { method: 'post', path: '/' },
+    { method: 'patch', path: '/:id' },
+    { method: 'delete', path: '/:id' },
+  ]),
+}));
+
+vi.mock('./routes/public/experience', () => ({
+  publicExperienceRouter: makeRouter([{ method: 'get', path: '/' }]),
+}));
+
+vi.mock('./routes/public/education', () => ({
+  publicEducationRouter: makeRouter([{ method: 'get', path: '/' }]),
+}));
+
 import { app } from './app';
 
 describe('app route mounting (module 8 smoke)', () => {
@@ -176,5 +216,73 @@ describe('app route mounting (module 8 smoke)', () => {
       expect(body.success).toBe(true);
       expect(body.data).toBeDefined();
     }
+  });
+});
+
+describe('admin post-generation routes', () => {
+  it('exposes GET /admin/posts/generate/config', async () => {
+    const response = await app.request('/admin/posts/generate/config', { method: 'GET' });
+    const body = (await response.json()) as { success?: boolean; data?: unknown };
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+  });
+
+  it('exposes PUT /admin/posts/generate/config', async () => {
+    const response = await app.request('/admin/posts/generate/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    // authAdmin is mocked as passThrough and csrfProtection is mocked as passThrough,
+    // so the route itself is reachable and returns 200 with the mock payload.
+    const body = (await response.json()) as { success?: boolean; data?: unknown };
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+  });
+});
+
+describe('CORS configuration', () => {
+  it('allows PUT in Access-Control-Allow-Methods on preflight', async () => {
+    const response = await app.request('/admin/posts/generate/config', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://web.example.com',
+        'Access-Control-Request-Method': 'PUT',
+        'Access-Control-Request-Headers': 'Content-Type, X-CSRF-Token',
+      },
+    });
+    const allow = response.headers.get('Access-Control-Allow-Methods') ?? '';
+    expect(allow).toContain('PUT');
+  });
+
+  it('allows POST in Access-Control-Allow-Methods on preflight', async () => {
+    const response = await app.request('/admin/posts', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'https://web.example.com',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'Content-Type, X-CSRF-Token',
+      },
+    });
+    const allow = response.headers.get('Access-Control-Allow-Methods') ?? '';
+    expect(allow).toContain('POST');
+    expect(allow).toContain('PATCH');
+    expect(allow).toContain('DELETE');
+  });
+});
+
+describe('Content-Security-Policy', () => {
+  it('includes youtube-nocookie in frame-src for non-doc routes', async () => {
+    const response = await app.request('/health');
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain('frame-src');
+    expect(csp).toContain('https://www.youtube-nocookie.com');
+    expect(csp).toContain('https://www.youtube.com');
+    expect(csp).toContain('https://player.vimeo.com');
+  });
+
+  it('omits frame-src for doc routes', async () => {
+    const response = await app.request('/doc');
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).not.toContain('frame-src');
   });
 });

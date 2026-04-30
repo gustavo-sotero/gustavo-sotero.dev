@@ -15,6 +15,7 @@ import {
   updateExperienceSchema,
 } from '@portfolio/shared/schemas/experience';
 import { Hono } from 'hono';
+import { ConflictError, DomainValidationError } from '../../lib/errors';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
 import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
@@ -27,31 +28,6 @@ import {
 import type { AppEnv } from '../../types/index';
 
 const adminExperienceRouter = new Hono<AppEnv>();
-
-type ValidationDetail = {
-  field: string;
-  message: string;
-};
-
-function getValidationDetails(err: unknown): ValidationDetail[] | undefined {
-  const error = err as {
-    validationDetails?: ValidationDetail[];
-    invalidSkillIds?: number[];
-  };
-
-  if (error.validationDetails) {
-    return error.validationDetails;
-  }
-
-  const details = [
-    ...(error.invalidSkillIds?.map((id) => ({
-      field: 'skillIds',
-      message: `Skill with id ${id} does not exist`,
-    })) ?? []),
-  ];
-
-  return details.length > 0 ? details : undefined;
-}
 
 /**
  * GET /admin/experience
@@ -81,20 +57,9 @@ adminExperienceRouter.post('/', async (c) => {
     const entry = await createExperienceService(bv.data);
     return successResponse(c, entry, 201);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.startsWith('CONFLICT:') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
-    }
-    if (message.startsWith('VALIDATION_ERROR:')) {
-      const details = getValidationDetails(err);
-      return errorResponse(
-        c,
-        400,
-        'VALIDATION_ERROR',
-        message.replace('VALIDATION_ERROR: ', ''),
-        details
-      );
-    }
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
+    if (err instanceof DomainValidationError)
+      return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
     throw err;
   }
 });
@@ -134,20 +99,9 @@ adminExperienceRouter.patch('/:id', async (c) => {
     }
     return successResponse(c, updated);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.startsWith('CONFLICT:') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', message.replace('CONFLICT: ', ''));
-    }
-    if (message.startsWith('VALIDATION_ERROR:')) {
-      const details = getValidationDetails(err);
-      return errorResponse(
-        c,
-        400,
-        'VALIDATION_ERROR',
-        message.replace('VALIDATION_ERROR: ', ''),
-        details
-      );
-    }
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
+    if (err instanceof DomainValidationError)
+      return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
     throw err;
   }
 });

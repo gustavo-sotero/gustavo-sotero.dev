@@ -12,6 +12,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { getLogger } from '../config/logger';
 import { getPublicUrl, s3 } from '../config/s3';
+import { ConflictError, DomainValidationError, NotFoundError } from '../lib/errors';
 import { createUpload, findUploadById } from '../repositories/uploads.repo';
 
 export type UploadRecord = NonNullable<Awaited<ReturnType<typeof findUploadById>>>;
@@ -45,19 +46,23 @@ export async function generatePresignedUrl(input: {
   filename: string;
 }): Promise<PresignResult> {
   if (!input.filename?.trim()) {
-    throw Object.assign(new Error('Filename is required'), { code: 'VALIDATION_ERROR' });
+    throw new DomainValidationError('Filename is required', [
+      { field: 'filename', message: 'Filename is required' },
+    ]);
   }
 
   if (!Number.isInteger(input.size) || input.size <= 0 || input.size > 5_242_880) {
-    throw Object.assign(new Error('File size must be between 1 byte and 5MB'), {
-      code: 'VALIDATION_ERROR',
-    });
+    throw new DomainValidationError('File size must be between 1 byte and 5MB', [
+      { field: 'size', message: 'File size must be between 1 byte and 5MB' },
+    ]);
   }
 
   const ext = MIME_TO_EXT[input.mime];
 
   if (!ext) {
-    throw Object.assign(new Error('Unsupported MIME type'), { code: 'VALIDATION_ERROR' });
+    throw new DomainValidationError('Unsupported MIME type', [
+      { field: 'mime', message: 'Unsupported MIME type' },
+    ]);
   }
 
   const now = new Date();
@@ -103,7 +108,7 @@ export async function generatePresignedUrl(input: {
 export async function getUploadById(uploadId: string): Promise<UploadRecord> {
   const record = await findUploadById(uploadId);
   if (!record) {
-    throw Object.assign(new Error('Upload not found'), { code: 'NOT_FOUND' });
+    throw new NotFoundError('Upload not found');
   }
   return record;
 }
@@ -124,19 +129,17 @@ export async function getUploadById(uploadId: string): Promise<UploadRecord> {
 export async function confirmUpload(uploadId: string): Promise<ConfirmedUpload> {
   const record = await findUploadById(uploadId);
   if (!record) {
-    throw Object.assign(new Error('Upload not found'), { code: 'NOT_FOUND' });
+    throw new NotFoundError('Upload not found');
   }
 
   if (record.status !== 'pending') {
-    throw Object.assign(new Error(`Upload is already in status '${record.status}'`), {
-      code: 'CONFLICT',
-    });
+    throw new ConflictError(`Upload is already in status '${record.status}'`);
   }
 
   // Verify object exists in S3 before opening the transaction.
   const exists = await s3.file(record.storageKey).exists();
   if (!exists) {
-    throw Object.assign(new Error('File not found in storage'), { code: 'NOT_FOUND_IN_BUCKET' });
+    throw new NotFoundError('File not found in storage — upload the file before confirming.');
   }
 
   // Atomic transaction:
@@ -163,9 +166,7 @@ export async function confirmUpload(uploadId: string): Promise<ConfirmedUpload> 
 
   if (!updated) {
     // Another concurrent request already updated the status — treat as conflict.
-    throw Object.assign(new Error('Upload was already processed by a concurrent request'), {
-      code: 'CONFLICT',
-    });
+    throw new ConflictError('Upload was already processed by a concurrent request');
   }
 
   logger.info('Upload confirmed, outbox event written', { uploadId, key: record.storageKey });

@@ -17,6 +17,7 @@ import {
   updateSkillSchema,
 } from '@portfolio/shared/schemas/skills';
 import { Hono } from 'hono';
+import { ConflictError, HighlightLimitError } from '../../lib/errors';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
 import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import {
@@ -76,18 +77,8 @@ adminSkillsRouter.post('/', async (c) => {
     const skill = await createSkillService(bv.data);
     return successResponse(c, skill, 201);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.startsWith('HIGHLIGHT_LIMIT:')) {
-      return errorResponse(
-        c,
-        409,
-        'CONFLICT',
-        'Máximo de 2 skills destacadas por categoria. Remova um destaque existente antes de adicionar outro.'
-      );
-    }
-    if (message.toLowerCase().includes('conflict') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', 'A skill with this name already exists');
-    }
+    if (err instanceof HighlightLimitError) return errorResponse(c, 409, 'CONFLICT', err.message);
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
     throw err;
   }
 });
@@ -112,18 +103,8 @@ adminSkillsRouter.patch('/:id', async (c) => {
     }
     return successResponse(c, updated);
   } catch (err) {
-    const message = (err as Error).message;
-    if (message.startsWith('HIGHLIGHT_LIMIT:')) {
-      return errorResponse(
-        c,
-        409,
-        'CONFLICT',
-        'Máximo de 2 skills destacadas por categoria. Remova um destaque existente antes de adicionar outro.'
-      );
-    }
-    if (message.toLowerCase().includes('conflict') || message.toLowerCase().includes('unique')) {
-      return errorResponse(c, 409, 'CONFLICT', 'A skill with this name already exists');
-    }
+    if (err instanceof HighlightLimitError) return errorResponse(c, 409, 'CONFLICT', err.message);
+    if (err instanceof ConflictError) return errorResponse(c, 409, 'CONFLICT', err.message);
     throw err;
   }
 });

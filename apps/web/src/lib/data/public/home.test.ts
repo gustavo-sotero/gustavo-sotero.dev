@@ -322,3 +322,79 @@ describe('getBlogTags', () => {
     expect(result.state).toBe('degraded');
   });
 });
+
+// ── Aggregate loader tests ───────────────────────────────────────────────────
+
+import { getHomeAggregate } from './home';
+
+describe('getHomeAggregate', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('issues exactly 1 API call to GET /home', async () => {
+    apiServerGetMock.mockResolvedValueOnce({
+      posts: [],
+      projects: [],
+      skills: [],
+      blogTags: [],
+      experience: [],
+      education: [],
+    });
+
+    await getHomeAggregate();
+
+    expect(apiServerGetMock).toHaveBeenCalledOnce();
+    expect(apiServerGetMock).toHaveBeenCalledWith('/home');
+    expect(apiServerGetPaginatedMock).not.toHaveBeenCalled();
+  });
+
+  it('maps non-empty arrays to ok state', async () => {
+    const post = { id: 1, title: 'Hello', slug: 'hello' };
+    apiServerGetMock.mockResolvedValueOnce({
+      posts: [post],
+      projects: [],
+      skills: [],
+      blogTags: [],
+      experience: [],
+      education: [],
+    });
+
+    const result = await getHomeAggregate();
+
+    expect(result.posts.state).toBe('ok');
+    expect((result.posts as { state: 'ok'; data: unknown[] }).data).toEqual([post]);
+  });
+
+  it('maps empty arrays to empty state', async () => {
+    apiServerGetMock.mockResolvedValueOnce({
+      posts: [],
+      projects: [],
+      skills: [],
+      blogTags: [],
+      experience: [],
+      education: [],
+    });
+
+    const result = await getHomeAggregate();
+
+    expect(result.posts.state).toBe('empty');
+    expect(result.projects.state).toBe('empty');
+    expect(result.skills.state).toBe('empty');
+    expect(result.blogTags.state).toBe('empty');
+    expect(result.experience.state).toBe('empty');
+    expect(result.education.state).toBe('empty');
+  });
+
+  it('returns all sections as degraded when API throws', async () => {
+    apiServerGetMock.mockRejectedValueOnce(new Error('aggregate endpoint down'));
+
+    const result = await getHomeAggregate();
+
+    expect(result.posts.state).toBe('degraded');
+    expect(result.projects.state).toBe('degraded');
+    expect(result.skills.state).toBe('degraded');
+    expect(result.blogTags.state).toBe('degraded');
+    expect(result.experience.state).toBe('degraded');
+    expect(result.education.state).toBe('degraded');
+    expect(apiServerGetMock).toHaveBeenCalledOnce();
+  });
+});

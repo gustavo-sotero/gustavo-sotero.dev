@@ -64,19 +64,7 @@ async function loadPersistedTagsForNormalization(): Promise<PersistedTagForNorma
   return db.select({ name: tags.name, slug: tags.slug }).from(tags).orderBy(asc(tags.name));
 }
 
-function classifyJobError(error: unknown): 'config' | 'internal' {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/OPENROUTER_API_KEY|model ID|modelId/i.test(message)) {
-    return 'config';
-  }
-
-  return 'internal';
-}
-
-function shouldRetryProviderFailure(job: Job<AiPostDraftJobData>, errorKind: string): boolean {
-  const configuredAttempts = job.opts?.attempts ?? 1;
-  return errorKind === 'provider' && (job.attemptsMade ?? 0) + 1 < configuredAttempts;
-}
+import { classifyJobError, shouldRetryProviderFailure } from '../lib/ai-job-utils';
 
 export interface AiPostDraftJobData {
   runId: string;

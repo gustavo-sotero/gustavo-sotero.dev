@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError, DomainValidationError } from '../../lib/errors';
 
 const {
   listPostsMock,
@@ -89,7 +90,7 @@ describe('admin content routes', () => {
   });
 
   it('POST /admin/posts returns 409 on conflict with error envelope', async () => {
-    createPostServiceMock.mockRejectedValueOnce(new Error('CONFLICT: Slug already taken'));
+    createPostServiceMock.mockRejectedValueOnce(new ConflictError('Slug already taken'));
 
     const app = new Hono();
     app.route('/admin/posts', adminPostsRouter);
@@ -116,9 +117,9 @@ describe('admin content routes', () => {
 
   it('POST /admin/posts returns 400 with field-level details when service throws invalid tagIds error', async () => {
     createPostServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 99'), {
-        invalidTagIds: [99],
-      })
+      new DomainValidationError('One or more tagIds do not exist: 99', [
+        { field: 'tagIds', message: 'Tag ID 99 not found' },
+      ])
     );
 
     const app = new Hono();
@@ -144,9 +145,9 @@ describe('admin content routes', () => {
 
   it('PATCH /admin/posts/:id returns 400 with field-level details when service throws invalid tagIds error', async () => {
     updatePostServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more tagIds do not exist: 88'), {
-        invalidTagIds: [88],
-      })
+      new DomainValidationError('One or more tagIds do not exist: 88', [
+        { field: 'tagIds', message: 'Tag ID 88 not found' },
+      ])
     );
 
     const app = new Hono();
@@ -279,7 +280,7 @@ describe('admin content routes', () => {
   });
 
   it('POST /admin/projects returns 409 on conflict with error envelope', async () => {
-    createProjectServiceMock.mockRejectedValueOnce(new Error('CONFLICT: Slug already taken'));
+    createProjectServiceMock.mockRejectedValueOnce(new ConflictError('Slug already taken'));
 
     const app = new Hono();
     app.route('/admin/projects', adminProjectsRouter);
@@ -306,9 +307,9 @@ describe('admin content routes', () => {
 
   it('POST /admin/projects returns 400 with field-level details when service throws invalid skillIds error', async () => {
     createProjectServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 55'), {
-        invalidSkillIds: [55],
-      })
+      new DomainValidationError('One or more skillIds do not exist: 55', [
+        { field: 'skillIds', message: 'Skill ID 55 not found' },
+      ])
     );
 
     const app = new Hono();
@@ -334,9 +335,9 @@ describe('admin content routes', () => {
 
   it('PATCH /admin/projects/:id returns 400 with field-level details when service throws invalid skillIds error', async () => {
     updateProjectServiceMock.mockRejectedValueOnce(
-      Object.assign(new Error('VALIDATION_ERROR: One or more skillIds do not exist: 44'), {
-        invalidSkillIds: [44],
-      })
+      new DomainValidationError('One or more skillIds do not exist: 44', [
+        { field: 'skillIds', message: 'Skill ID 44 not found' },
+      ])
     );
 
     const app = new Hono();

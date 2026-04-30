@@ -12,6 +12,7 @@ import type {
 } from '@portfolio/shared/schemas/skills';
 import type { Skill } from '@portfolio/shared/types/skills';
 import { cached, invalidateGroup } from '../lib/cache';
+import { ConflictError, HighlightLimitError } from '../lib/errors';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { SkillFilters } from '../repositories/skills.repo';
 import {
@@ -78,7 +79,7 @@ export async function listSkills(filters: SkillListFilters = {}, useCache = fals
 
 export async function createSkillService(data: CreateSkillSchemaInput): Promise<Skill> {
   const nameTaken = await findSkillByName(data.name);
-  if (nameTaken) throw new Error(`CONFLICT: Skill name "${data.name}" is already taken`);
+  if (nameTaken) throw new ConflictError(`Skill name "${data.name}" is already taken`);
 
   const expertiseLevel = data.expertiseLevel ?? 1;
   const isHighlighted = data.isHighlighted ?? false;
@@ -86,8 +87,8 @@ export async function createSkillService(data: CreateSkillSchemaInput): Promise<
   if (isHighlighted) {
     const highlightCount = await countHighlightedSkillsByCategory(data.category);
     if (highlightCount >= MAX_HIGHLIGHTED_PER_CATEGORY) {
-      throw new Error(
-        `HIGHLIGHT_LIMIT: Category "${data.category}" already has ${MAX_HIGHLIGHTED_PER_CATEGORY} highlighted skills. Remove one before adding another.`
+      throw new HighlightLimitError(
+        `Category "${data.category}" already has ${MAX_HIGHLIGHTED_PER_CATEGORY} highlighted skills. Remove one before adding another.`
       );
     }
   }
@@ -122,7 +123,7 @@ export async function updateSkillService(
 
   if (data.name !== undefined && data.name !== current.name) {
     const nameTaken = await skillNameExists(data.name, id);
-    if (nameTaken) throw new Error(`CONFLICT: Skill name "${data.name}" is already taken`);
+    if (nameTaken) throw new ConflictError(`Skill name "${data.name}" is already taken`);
     patch.name = data.name;
     const baseSlug = generateSlug(data.name);
     patch.slug = await ensureUniqueSlug(baseSlug, (s) => skillSlugExists(s, id));
@@ -145,8 +146,8 @@ export async function updateSkillService(
   if (finalHighlighted) {
     const highlightCount = await countHighlightedSkillsByCategory(finalCategory, id);
     if (highlightCount >= MAX_HIGHLIGHTED_PER_CATEGORY) {
-      throw new Error(
-        `HIGHLIGHT_LIMIT: Category "${finalCategory}" already has ${MAX_HIGHLIGHTED_PER_CATEGORY} highlighted skills. Remove one before adding another.`
+      throw new HighlightLimitError(
+        `Category "${finalCategory}" already has ${MAX_HIGHLIGHTED_PER_CATEGORY} highlighted skills. Remove one before adding another.`
       );
     }
   }

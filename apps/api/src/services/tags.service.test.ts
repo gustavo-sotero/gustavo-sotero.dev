@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError } from '../lib/errors';
 
 const {
   cachedMock,
@@ -154,7 +155,7 @@ describe('tags service', () => {
     findTagByNameMock.mockResolvedValue({ id: 10, name: 'React' });
 
     await expect(createTagService({ name: 'React', category: 'framework' })).rejects.toThrow(
-      'CONFLICT:'
+      ConflictError
     );
 
     expect(createTagMock).not.toHaveBeenCalled();
@@ -169,7 +170,7 @@ describe('tags service', () => {
     });
     tagNameExistsMock.mockResolvedValue(true);
 
-    await expect(updateTagService(1, { name: 'TypeScript' })).rejects.toThrow('CONFLICT:');
+    await expect(updateTagService(1, { name: 'TypeScript' })).rejects.toThrow(ConflictError);
 
     expect(updateTagMock).not.toHaveBeenCalled();
   });
@@ -468,7 +469,7 @@ describe('tags service', () => {
       findTagByNameMock.mockResolvedValueOnce(null); // conflict check inside createTagService
       tagSlugExistsMock.mockResolvedValue(false);
       // Simulate another worker created the tag first → createTag throws unique constraint
-      createTagMock.mockRejectedValueOnce(new Error('CONFLICT: Tag name "Redis" is already taken'));
+      createTagMock.mockRejectedValueOnce(new ConflictError('Tag name "Redis" is already taken'));
       // Recovery fetch
       findTagByNameMock.mockResolvedValueOnce(redisRow);
 

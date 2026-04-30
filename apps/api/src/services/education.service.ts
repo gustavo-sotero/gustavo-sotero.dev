@@ -13,6 +13,7 @@ import type {
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
+import { DomainValidationError } from '../lib/errors';
 import { resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { EducationFilters } from '../repositories/education.repo';
@@ -45,7 +46,9 @@ async function educationSlugTaken(slug: string, excludeId?: number): Promise<boo
 
 function validateDates(startDate?: string | null, endDate?: string | null): void {
   if (startDate && endDate && endDate < startDate) {
-    throw new Error('VALIDATION_ERROR: endDate must be on or after startDate');
+    throw new DomainValidationError('endDate must be on or after startDate', [
+      { field: 'endDate', message: 'endDate must be on or after startDate' },
+    ]);
   }
 }
 

@@ -2,6 +2,13 @@ import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { ZodError } from 'zod';
 import { getLogger } from '../config/logger';
+import {
+  ConflictError,
+  DomainValidationError,
+  HighlightLimitError,
+  NotFoundError,
+  RateLimitedError,
+} from '../lib/errors';
 import { errorResponse } from '../lib/response';
 import { mapZodIssues } from '../lib/validate';
 import type { AppEnv } from '../types/index';
@@ -96,6 +103,20 @@ export function globalErrorHandler(err: Error, c: Context<AppEnv>): Response {
     });
 
     return errorResponse(c, 400, 'VALIDATION_ERROR', 'Validation failed', mapZodIssues(err));
+  }
+
+  // ── Domain typed errors (fallback for unhandled bubbling) ─────────────────
+  if (err instanceof RateLimitedError) {
+    return errorResponse(c, 429, 'RATE_LIMITED', err.message);
+  }
+  if (err instanceof ConflictError || err instanceof HighlightLimitError) {
+    return errorResponse(c, 409, 'CONFLICT', err.message);
+  }
+  if (err instanceof DomainValidationError) {
+    return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
+  }
+  if (err instanceof NotFoundError) {
+    return errorResponse(c, 404, 'NOT_FOUND', err.message);
   }
 
   // ── Hono HTTP exceptions ────────────────────────────────────────────────────
