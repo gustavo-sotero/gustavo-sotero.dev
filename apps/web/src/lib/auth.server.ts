@@ -2,6 +2,9 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { resolveServerApiBaseUrl } from '@/lib/api-base-url.server';
 
+/** Session validation deadline — keeps SSR from stalling on a hung API. */
+const SESSION_CHECK_TIMEOUT_MS = 5_000;
+
 /**
  * Validate the admin session server-side before rendering protected chrome.
  *
@@ -24,6 +27,9 @@ export async function validateAdminSession(): Promise<boolean> {
     return false;
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SESSION_CHECK_TIMEOUT_MS);
+
   try {
     const res = await fetch(`${baseUrl}/auth/session`, {
       method: 'GET',
@@ -32,12 +38,15 @@ export async function validateAdminSession(): Promise<boolean> {
       },
       // Never cache — this must reflect the current token validity
       cache: 'no-store',
+      signal: controller.signal,
     });
 
     return res.ok;
   } catch {
-    // API unreachable — fail closed to avoid rendering the admin shell with
-    // an invalid session that will produce 401s on every data request.
+    // API unreachable or timed out — fail closed to avoid rendering the admin
+    // shell with an invalid session that will produce 401s on every data request.
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
