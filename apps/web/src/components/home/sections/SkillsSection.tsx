@@ -1,11 +1,11 @@
 import { SectionUnavailable } from '@/components/shared/SectionUnavailable';
-import { getHomeSkills } from '@/lib/data/public/home';
+import { getHomeAggregate } from '@/lib/data/public/home';
 import { SkillsBentoBox } from '../SkillsBentoBox';
 
-/** Server wrapper: fetches skills independently for streaming. */
+/** Server wrapper: resolves skills from the home aggregate (single API call shared across all sections). */
 export async function SkillsSection() {
-  const result = await getHomeSkills();
-  if (result.state === 'degraded') return <SectionUnavailable />;
-  if (result.state === 'empty') return null;
-  return <SkillsBentoBox skills={result.data} />;
+  const { skills } = await getHomeAggregate();
+  if (skills.state === 'degraded') return <SectionUnavailable />;
+  if (skills.state === 'empty') return null;
+  return <SkillsBentoBox skills={skills.data} />;
 }

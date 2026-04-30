@@ -1,20 +1,20 @@
 import { SectionUnavailable } from '@/components/shared/SectionUnavailable';
 import { getCachedExperienceLabel } from '@/lib/cache/time';
-import { getHomeSkills } from '@/lib/data/public/home';
+import { getHomeAggregate } from '@/lib/data/public/home';
 import { HeroSection } from '../HeroSection';
 
 /**
  * Server wrapper for HeroSection.
- * Fetches skills in parallel with the cached experience label so the hero
- * can render without any client-side data round-trips for the copy.
+ * Skills are resolved from the home aggregate (shared cache entry with all other
+ * home sections) so the hero participates in the same single round-trip budget.
  * Falls back to empty skills (Hero shows FALLBACK_STACK) if the API is unavailable.
  *
  * resume data is now fetched client-side inside HeroResumeDownloadButtonInner
  * so this wrapper stays fully static/prerenderable and never calls new Date().
  */
 export async function HeroSectionWrapper() {
-  const [skillsResult, experienceLabel] = await Promise.all([
-    getHomeSkills(),
+  const [{ skills: skillsResult }, experienceLabel] = await Promise.all([
+    getHomeAggregate(),
     getCachedExperienceLabel(),
   ]);
   const skills = skillsResult.state !== 'degraded' ? skillsResult.data : [];

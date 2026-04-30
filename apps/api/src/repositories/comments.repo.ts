@@ -19,7 +19,11 @@ export interface CommentFilters {
 /**
  * Build a nested comment tree from a flat rows array.
  * Single-pass O(n) via a Map — no recursive DB queries.
- * Root nodes (parentCommentId == null) are returned sorted by createdAt.
+ *
+ * Callers must supply rows pre-ordered by `createdAt ASC` (guaranteed by every
+ * query that feeds this function via `orderBy(asc(comments.createdAt))`).
+ * Map iteration preserves insertion order, so roots and replies are already in
+ * chronological order after the single pass — no secondary sort is required.
  */
 export function buildCommentTree(
   rows: Array<{
@@ -60,22 +64,14 @@ export function buildCommentTree(
       if (parent) {
         parent.replies.push(node);
       } else {
-        // Parent not found (deleted) — promote to root
+        // Parent not found (deleted or filtered out) — promote to root.
+        // Because rows arrive in createdAt ASC order and a parent is always
+        // created before its reply, the orphan is appended in the correct
+        // chronological position without any secondary sort.
         roots.push(node);
       }
     }
   }
-
-  const sortByCreatedAt = (nodes: PublicCommentNode[]) => {
-    nodes.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    for (const node of nodes) {
-      if (node.replies.length > 0) {
-        sortByCreatedAt(node.replies);
-      }
-    }
-  };
-
-  sortByCreatedAt(roots);
 
   return roots;
 }

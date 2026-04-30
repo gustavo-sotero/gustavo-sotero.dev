@@ -2,26 +2,21 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  getHomeFeaturedProjectsMock,
-  getHomeRecentPostsMock,
-  getHomeSkillsMock,
-  getHomeExperienceMock,
-  getHomeEducationMock,
-} = vi.hoisted(() => ({
-  getHomeFeaturedProjectsMock: vi.fn(),
-  getHomeRecentPostsMock: vi.fn(),
-  getHomeSkillsMock: vi.fn(),
-  getHomeExperienceMock: vi.fn(),
-  getHomeEducationMock: vi.fn(),
+const { getHomeAggregateMock } = vi.hoisted(() => ({
+  getHomeAggregateMock: vi.fn(),
 }));
 
+const baseAggregate = {
+  posts: { state: 'ok' as const, data: [] },
+  projects: { state: 'ok' as const, data: [] },
+  skills: { state: 'ok' as const, data: [] },
+  blogTags: { state: 'ok' as const, data: [] },
+  experience: { state: 'ok' as const, data: [] },
+  education: { state: 'ok' as const, data: [] },
+};
+
 vi.mock('@/lib/data/public/home', () => ({
-  getHomeFeaturedProjects: getHomeFeaturedProjectsMock,
-  getHomeRecentPosts: getHomeRecentPostsMock,
-  getHomeSkills: getHomeSkillsMock,
-  getHomeExperience: getHomeExperienceMock,
-  getHomeEducation: getHomeEducationMock,
+  getHomeAggregate: getHomeAggregateMock,
 }));
 
 vi.mock('../FeaturedProjects', () => ({
@@ -61,7 +56,7 @@ describe('home section wrappers', () => {
   });
 
   it('renders degraded UI for featured projects failures', async () => {
-    getHomeFeaturedProjectsMock.mockResolvedValue({ state: 'degraded' });
+    getHomeAggregateMock.mockResolvedValue({ ...baseAggregate, projects: { state: 'degraded' } });
 
     await renderServerComponent(FeaturedProjectsSection());
 
@@ -69,7 +64,10 @@ describe('home section wrappers', () => {
   });
 
   it('renders null for legitimate empty featured projects', async () => {
-    getHomeFeaturedProjectsMock.mockResolvedValue({ state: 'empty', data: [] });
+    getHomeAggregateMock.mockResolvedValue({
+      ...baseAggregate,
+      projects: { state: 'empty', data: [] },
+    });
 
     await renderServerComponent(FeaturedProjectsSection());
 
@@ -77,7 +75,7 @@ describe('home section wrappers', () => {
   });
 
   it('renders degraded UI for recent posts failures', async () => {
-    getHomeRecentPostsMock.mockResolvedValue({ state: 'degraded' });
+    getHomeAggregateMock.mockResolvedValue({ ...baseAggregate, posts: { state: 'degraded' } });
 
     await renderServerComponent(RecentPostsSection());
 
@@ -85,7 +83,7 @@ describe('home section wrappers', () => {
   });
 
   it('renders degraded UI for skills dependency failures in skills section', async () => {
-    getHomeSkillsMock.mockResolvedValue({ state: 'degraded' });
+    getHomeAggregateMock.mockResolvedValue({ ...baseAggregate, skills: { state: 'degraded' } });
 
     await renderServerComponent(SkillsSection());
 
@@ -93,7 +91,7 @@ describe('home section wrappers', () => {
   });
 
   it('renders degraded UI for experience failures', async () => {
-    getHomeExperienceMock.mockResolvedValue({ state: 'degraded' });
+    getHomeAggregateMock.mockResolvedValue({ ...baseAggregate, experience: { state: 'degraded' } });
 
     await renderServerComponent(ExperienceSectionWrapper());
 
@@ -101,7 +99,7 @@ describe('home section wrappers', () => {
   });
 
   it('renders degraded UI for education failures', async () => {
-    getHomeEducationMock.mockResolvedValue({ state: 'degraded' });
+    getHomeAggregateMock.mockResolvedValue({ ...baseAggregate, education: { state: 'degraded' } });
 
     await renderServerComponent(EducationSectionWrapper());
 

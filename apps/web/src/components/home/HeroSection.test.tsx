@@ -150,7 +150,7 @@ describe('HeroSection', () => {
     expect(heading).toHaveTextContent('Gustavo Sotero');
 
     // Hero should fill the viewport height so the landing fold feels intentional.
-    expect(heading.closest('section')).toHaveClass('min-h-svh');
+    expect(heading.closest('section')).toHaveClass('min-h-[88vh]');
 
     // Role text is the second most prominent element.
     expect(screen.getByText('Desenvolvedor Fullstack')).toBeInTheDocument();

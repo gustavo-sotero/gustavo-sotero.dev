@@ -2,16 +2,25 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getHomeSkillsMock } = vi.hoisted(() => ({
-  getHomeSkillsMock: vi.fn(),
+const { getHomeAggregateMock } = vi.hoisted(() => ({
+  getHomeAggregateMock: vi.fn(),
 }));
 
 const { heroSectionMock } = vi.hoisted(() => ({
   heroSectionMock: vi.fn(),
 }));
 
+const baseAggregate = {
+  posts: { state: 'ok' as const, data: [] },
+  projects: { state: 'ok' as const, data: [] },
+  skills: { state: 'ok' as const, data: [] },
+  blogTags: { state: 'ok' as const, data: [] },
+  experience: { state: 'ok' as const, data: [] },
+  education: { state: 'ok' as const, data: [] },
+};
+
 vi.mock('@/lib/data/public/home', () => ({
-  getHomeSkills: getHomeSkillsMock,
+  getHomeAggregate: getHomeAggregateMock,
 }));
 
 // `getCachedExperienceLabel` uses `cacheLife()` which is a Next.js build-time
@@ -42,7 +51,7 @@ describe('HeroSectionWrapper', () => {
   });
 
   it('shows a visible degraded-state notice when skills dependency is degraded', async () => {
-    getHomeSkillsMock.mockResolvedValue({ state: 'degraded' });
+    getHomeAggregateMock.mockResolvedValue({ ...baseAggregate, skills: { state: 'degraded' } });
 
     await renderServerComponent(HeroSectionWrapper());
 
@@ -51,7 +60,7 @@ describe('HeroSectionWrapper', () => {
   });
 
   it('does not show degraded-state notice when all dependencies are healthy', async () => {
-    getHomeSkillsMock.mockResolvedValue({ state: 'ok', data: [] });
+    getHomeAggregateMock.mockResolvedValue(baseAggregate);
 
     await renderServerComponent(HeroSectionWrapper());
 
@@ -62,7 +71,7 @@ describe('HeroSectionWrapper', () => {
   it('supplies experience label from the cache-safe server helper', async () => {
     const { getCachedExperienceLabel } = await import('@/lib/cache/time');
     (getCachedExperienceLabel as ReturnType<typeof vi.fn>).mockResolvedValue('5+ anos');
-    getHomeSkillsMock.mockResolvedValue({ state: 'ok', data: [] });
+    getHomeAggregateMock.mockResolvedValue(baseAggregate);
 
     await renderServerComponent(HeroSectionWrapper());
 

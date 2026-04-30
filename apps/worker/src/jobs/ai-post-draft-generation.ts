@@ -30,7 +30,7 @@ import {
   providerRoutingConfigSchema,
 } from '@portfolio/shared';
 import { aiPostDraftRuns, tags } from '@portfolio/shared/db/schema';
-import type { Job } from 'bullmq';
+import { type Job, UnrecoverableError } from 'bullmq';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { env } from '../config/env';
@@ -339,7 +339,9 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       error: errorMessage,
     });
 
-    // Re-throw so BullMQ can handle retries
-    throw err;
+    // Terminal state persisted — prevent BullMQ from retrying.
+    // Only transient provider failures (handled by shouldRetryProviderFailure above)
+    // are allowed to retry via a normal re-throw.
+    throw new UnrecoverableError(errorMessage);
   }
 }
