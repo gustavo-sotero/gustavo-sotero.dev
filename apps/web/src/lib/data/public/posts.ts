@@ -57,7 +57,11 @@ export async function getPublicPosts(params: PostsListParams = {}): Promise<Post
 
 // ─── Detail ───────────────────────────────────────────────────────────────────
 
-export type PostWithComments = Post & { comments?: Comment[] };
+export type PostWithComments = Post & {
+  comments?: Comment[];
+  /** Total number of approved comments. Present when > initial preview limit. */
+  commentCount?: number;
+};
 
 export type PostDetailResult =
   | { state: 'ok'; data: PostWithComments }

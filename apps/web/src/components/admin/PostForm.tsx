@@ -48,8 +48,7 @@ function ScheduledAtSection({
   setValue,
   error,
 }: {
-  // biome-ignore lint/suspicious/noExplicitAny: RHF zodResolver widens TContext to `unknown`; `any` lets the prop accept both
-  control: Control<PostFormValues, any, any>;
+  control: Control<PostFormValues, unknown, CreatePostInput>;
   setValue: UseFormSetValue<PostFormValues>;
   error: FieldError | undefined;
 }) {

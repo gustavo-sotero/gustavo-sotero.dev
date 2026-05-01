@@ -82,7 +82,7 @@ export async function BlogDetailContent({ params }: BlogDetailPageProps) {
   const post = result.data;
 
   const tags = post.tags ?? [];
-  // The API returns only approved non-deleted comments as a nested tree.
+  // The API returns only approved non-deleted comments as a nested tree (initial preview ≤30).
   const approvedComments: PublicCommentNode[] = post.comments ?? [];
   const hasMermaid = post.renderedContent?.includes('class="mermaid"') ?? false;
 
@@ -170,7 +170,12 @@ export async function BlogDetailContent({ params }: BlogDetailPageProps) {
         {/* Comments section */}
         <Separator className="my-12 bg-zinc-800" />
 
-        <CommentsSection postId={post.id} initialComments={approvedComments} />
+        <CommentsSection
+          postId={post.id}
+          postSlug={post.slug}
+          initialComments={approvedComments}
+          commentCount={post.commentCount}
+        />
       </article>
     </>
   );

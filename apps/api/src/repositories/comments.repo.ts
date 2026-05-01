@@ -78,27 +78,44 @@ export function buildCommentTree(
 
 // ── Public reads ─────────────────────────────────────────────────────────────
 
+/** Shared column projection for public comment rows. */
+const publicCommentColumns = {
+  id: comments.id,
+  postId: comments.postId,
+  parentCommentId: comments.parentCommentId,
+  authorName: comments.authorName,
+  authorRole: comments.authorRole,
+  content: comments.content,
+  renderedContent: comments.renderedContent,
+  status: comments.status,
+  createdAt: comments.createdAt,
+} as const;
+
+/**
+ * Returns the total count of approved, non-deleted comments for a post.
+ * Used alongside the limited initial preview in the post detail payload.
+ */
+export async function countApprovedCommentsByPostId(postId: number): Promise<number> {
+  const [result] = await db
+    .select({ total: count() })
+    .from(comments)
+    .where(
+      and(eq(comments.postId, postId), eq(comments.status, 'approved'), isNull(comments.deletedAt))
+    );
+  return result?.total ?? 0;
+}
+
 /**
  * Returns a nested tree of approved, non-deleted comments for a post.
- * Used in the public post detail payload. Capped at `limit` root+reply rows
- * (default 200) to prevent unbounded memory growth on heavily-commented posts.
+ * Capped at `limit` rows (default 30) for the post detail initial preview.
+ * Use `findPaginatedApprovedCommentsByPostId` for subsequent pages.
  */
 export async function findApprovedCommentsByPostId(
   postId: number,
-  limit = 200
+  limit = 30
 ): Promise<PublicCommentNode[]> {
   const rows = await db
-    .select({
-      id: comments.id,
-      postId: comments.postId,
-      parentCommentId: comments.parentCommentId,
-      authorName: comments.authorName,
-      authorRole: comments.authorRole,
-      content: comments.content,
-      renderedContent: comments.renderedContent,
-      status: comments.status,
-      createdAt: comments.createdAt,
-    })
+    .select(publicCommentColumns)
     .from(comments)
     .where(
       and(eq(comments.postId, postId), eq(comments.status, 'approved'), isNull(comments.deletedAt))
@@ -107,6 +124,44 @@ export async function findApprovedCommentsByPostId(
     .limit(limit);
 
   return buildCommentTree(rows);
+}
+
+/**
+ * Returns a paginated page of approved, non-deleted comments for a post,
+ * assembled into a tree from the page's flat rows.
+ *
+ * Callers must pass a `page` ≥ 1. The first page overlaps with the
+ * initial detail preview; consumers should start from page 2 when using
+ * the detail payload's initial comments.
+ */
+export async function findPaginatedApprovedCommentsByPostId(
+  postId: number,
+  page: number,
+  perPage: number
+): Promise<{ data: PublicCommentNode[]; meta: ReturnType<typeof buildPaginationMeta> }> {
+  const { offset, limit } = parsePagination({ page, perPage });
+  const where = and(
+    eq(comments.postId, postId),
+    eq(comments.status, 'approved'),
+    isNull(comments.deletedAt)
+  );
+
+  const [countResult, rows] = await Promise.all([
+    db.select({ total: count() }).from(comments).where(where),
+    db
+      .select(publicCommentColumns)
+      .from(comments)
+      .where(where)
+      .orderBy(asc(comments.createdAt))
+      .limit(limit)
+      .offset(offset),
+  ]);
+
+  const total = countResult[0]?.total ?? 0;
+  return {
+    data: buildCommentTree(rows),
+    meta: buildPaginationMeta(total, page, perPage),
+  };
 }
 
 // ── Admin reads ─────────────────────────────────────────────────────────────

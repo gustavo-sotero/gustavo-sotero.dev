@@ -24,8 +24,12 @@ import { hashIp } from '../lib/hash';
 import { renderCommentMarkdown } from '../lib/markdownComment';
 import { enqueueTelegramNotification } from '../lib/queues';
 import { isCommentEmailInCooldown, setCommentEmailCooldown } from '../middleware/rateLimit';
-import { createComment, findCommentById } from '../repositories/comments.repo';
-import { findPublicPostById } from '../repositories/posts.repo';
+import {
+  createComment,
+  findCommentById,
+  findPaginatedApprovedCommentsByPostId,
+} from '../repositories/comments.repo';
+import { findPostBySlug, findPublicPostById } from '../repositories/posts.repo';
 
 export interface SubmitCommentInput {
   postId: number;
@@ -106,4 +110,18 @@ export async function submitComment(input: SubmitCommentInput): Promise<void> {
     authorName,
     contentPreview: content.slice(0, 200),
   });
+}
+
+/**
+ * Fetch a paginated page of approved comments for a published post by slug.
+ * Returns `null` when the post slug is not found or not publicly visible.
+ */
+export async function getPostComments(
+  slug: string,
+  page: number,
+  perPage: number
+): Promise<ReturnType<typeof findPaginatedApprovedCommentsByPostId> | null> {
+  const post = await findPostBySlug(slug, false);
+  if (!post) return null;
+  return findPaginatedApprovedCommentsByPostId(post.id, page, perPage);
 }

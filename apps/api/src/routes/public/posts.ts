@@ -2,14 +2,17 @@
  * Public routes for posts (authenticated reads not required).
  *
  * Routes:
- *  GET /posts         - Paginated list of published posts (optional tag filter)
- *  GET /posts/:slug   - Post detail with approved comments
+ *  GET /posts              - Paginated list of published posts (optional tag filter)
+ *  GET /posts/:slug        - Post detail with initial comment preview + commentCount
+ *  GET /posts/:slug/comments - Paginated approved comments for a post
  */
 
 import { postQuerySchema } from '@portfolio/shared/schemas/posts';
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
 import { validateQuery } from '../../lib/validate';
+import { getPostComments } from '../../services/comments.service';
 import { getPostBySlug, listPosts } from '../../services/posts.service';
 import type { AppEnv } from '../../types/index';
 
@@ -42,7 +45,7 @@ publicPostsRouter.get('/', async (c) => {
 
 /**
  * GET /posts/:slug
- * Returns a published post with its pre-rendered HTML content and approved comments.
+ * Returns a published post with initial comment preview (≤30) plus commentCount.
  * Cached for 1 hour.
  */
 publicPostsRouter.get('/:slug', async (c) => {
@@ -54,6 +57,34 @@ publicPostsRouter.get('/:slug', async (c) => {
   }
 
   return successResponse(c, post);
+});
+
+const commentPageSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  perPage: z.coerce.number().int().positive().max(50).default(20),
+});
+
+/**
+ * GET /posts/:slug/comments
+ * Returns paginated approved comments for a published post.
+ * Use this endpoint to load additional comments beyond the initial preview
+ * included in the post detail payload.
+ */
+publicPostsRouter.get('/:slug/comments', async (c) => {
+  const slug = c.req.param('slug');
+
+  const qv = validateQuery(c, commentPageSchema, {
+    page: c.req.query('page'),
+    perPage: c.req.query('perPage'),
+  });
+  if (!qv.ok) return qv.response;
+
+  const result = await getPostComments(slug, qv.data.page, qv.data.perPage);
+  if (!result) {
+    return errorResponse(c, 404, 'NOT_FOUND', 'Post not found');
+  }
+
+  return paginatedResponse(c, result.data, result.meta);
 });
 
 export { publicPostsRouter };

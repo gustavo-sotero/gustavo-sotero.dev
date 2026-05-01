@@ -584,7 +584,8 @@ export const publicPaths = {
     get: {
       tags: ['Posts'],
       summary: 'Get post by slug',
-      description: 'Returns a published post with pre-rendered HTML and approved comments.',
+      description:
+        'Returns a published post with pre-rendered HTML, an initial comment preview (≤30), and the total approved comment count.',
       operationId: 'getPostBySlug',
       parameters: [
         {
@@ -619,10 +620,58 @@ export const publicPaths = {
                             type: 'array',
                             items: { $ref: '#/components/schemas/Comment' },
                           },
+                          commentCount: {
+                            type: 'integer',
+                            description:
+                              'Total number of approved comments. Use with GET /posts/{slug}/comments for pagination.',
+                            example: 42,
+                          },
                         },
                       },
                     ],
                   },
+                },
+              },
+            },
+          },
+        },
+        '404': { $ref: '#/components/responses/NotFound' },
+      },
+    },
+  },
+  '/posts/{slug}/comments': {
+    get: {
+      tags: ['Posts'],
+      summary: 'Get paginated comments for a post',
+      description:
+        'Returns paginated approved comments for a published post. Use this to load additional comments beyond the initial preview included in the post detail response.',
+      operationId: 'getPostComments',
+      parameters: [
+        {
+          name: 'slug',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', example: 'hello-world' },
+        },
+        { $ref: '#/components/parameters/page' },
+        {
+          name: 'perPage',
+          in: 'query',
+          schema: { type: 'integer', minimum: 1, maximum: 50, default: 20 },
+          description: 'Number of top-level comment trees per page (max 50)',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Paginated comment trees',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  data: { type: 'array', items: { $ref: '#/components/schemas/Comment' } },
+                  meta: { $ref: '#/components/schemas/PaginationMeta' },
                 },
               },
             },

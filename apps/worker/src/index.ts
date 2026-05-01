@@ -4,7 +4,6 @@ await setupLogger();
 
 import { QUEUE_CATALOG, QUEUE_NAMES } from '@portfolio/shared/constants/queues';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
-import { Worker } from 'bullmq';
 import { client as pgClient } from './config/db';
 import { env } from './config/env';
 import {
@@ -24,6 +23,7 @@ import { closeCacheRedis } from './lib/cache';
 import { processOutboxEvents } from './lib/outbox-relay';
 import { createOutboxRelayPollGuard } from './lib/outbox-relay-poll-guard';
 import { logQueueSnapshots } from './lib/queue-observability';
+import { createWorker } from './lib/worker-registry';
 import {
   aiPostDraftGenerationQueue,
   aiPostTopicGenerationQueue,
@@ -42,172 +42,104 @@ logger.info('Worker starting', { env: env.NODE_ENV, pid: process.pid });
 
 const workerConnection = parseRedisUrl(env.REDIS_URL);
 
-// ── Telegram Worker ───────────────────────────────────────────────────────────
-const telegramWorker = new Worker<TelegramJobPayload>(
-  QUEUE_NAMES.TELEGRAM_NOTIFICATIONS,
-  async (job) => {
-    await processTelegram(job);
-  },
+// ── Worker definitions ────────────────────────────────────────────────────────
+
+const telegramWorker = createWorker<TelegramJobPayload>(
   {
-    connection: workerConnection,
+    queueName: QUEUE_NAMES.TELEGRAM_NOTIFICATIONS,
+    processor: (job) => processTelegram(job),
     concurrency: 2,
-  }
+    dlq: {
+      queue: telegramDlqQueue,
+      jobName: QUEUE_CATALOG.TELEGRAM_NOTIFICATIONS_DLQ.jobName,
+      maxAttempts: 5,
+    },
+    logLabel: 'Telegram notification',
+    completedLogFields: (job) => ({ type: job.data.type }),
+    failedLogFields: (job) => ({ type: job.data.type }),
+  },
+  workerConnection,
+  logger
 );
 
-telegramWorker.on('failed', async (job, err) => {
-  if (!job) return;
-  const maxAttempts = job.opts.attempts ?? 5;
-  if (job.attemptsMade >= maxAttempts) {
-    logger.error('Telegram job moved to DLQ after all retries exhausted', {
-      jobId: job.id,
-      type: job.data.type,
-      error: err.message,
-    });
-    await telegramDlqQueue
-      .add(QUEUE_CATALOG.TELEGRAM_NOTIFICATIONS_DLQ.jobName, {
-        originalJob: job.data,
-        error: err.message,
-        failedAt: new Date().toISOString(),
-        jobId: job.id,
-      })
-      .catch((dlqErr) => {
-        logger.error('Failed to add Telegram job to DLQ', {
-          error: (dlqErr as Error).message,
-        });
-      });
-  }
-});
-
-telegramWorker.on('completed', (job) => {
-  logger.info('Telegram notification sent', { jobId: job.id, type: job.data.type });
-});
-
-telegramWorker.on('error', (err) => {
-  logger.error('Telegram worker error', { error: err.message });
-});
-
-// ── Analytics Worker ──────────────────────────────────────────────────────────
-const analyticsWorker = new Worker<AnalyticsEventPayload>(
-  QUEUE_NAMES.ANALYTICS_EVENTS,
-  async (job) => {
-    await processAnalytics(job);
-  },
+const analyticsWorker = createWorker<AnalyticsEventPayload>(
   {
-    connection: workerConnection,
+    queueName: QUEUE_NAMES.ANALYTICS_EVENTS,
+    processor: (job) => processAnalytics(job),
     concurrency: 10,
-  }
+    logLabel: 'Analytics event',
+  },
+  workerConnection,
+  logger
 );
 
-analyticsWorker.on('failed', (job, err) => {
-  if (!job) return;
-  logger.error('Analytics job failed', { jobId: job.id, error: err.message });
-});
-
-analyticsWorker.on('error', (err) => {
-  logger.error('Analytics worker error', { error: err.message });
-});
-
-// ── Image Optimize Worker ─────────────────────────────────────────────────────
-const imageWorker = new Worker<ImageOptimizePayload>(
-  QUEUE_NAMES.IMAGE_OPTIMIZE,
-  async (job) => {
-    await processImageOptimize(job);
-  },
+const imageWorker = createWorker<ImageOptimizePayload>(
   {
-    connection: workerConnection,
+    queueName: QUEUE_NAMES.IMAGE_OPTIMIZE,
+    processor: (job) => processImageOptimize(job),
     concurrency: 2,
-  }
+    dlq: {
+      queue: imageDlqQueue,
+      jobName: QUEUE_CATALOG.IMAGE_OPTIMIZE_DLQ.jobName,
+      maxAttempts: 3,
+    },
+    logLabel: 'Image optimize',
+    completedLogFields: (job) => ({ uploadId: job.data.uploadId }),
+    failedLogFields: (job) => ({ uploadId: job.data.uploadId }),
+  },
+  workerConnection,
+  logger
 );
 
-imageWorker.on('failed', async (job, err) => {
-  if (!job) return;
-  const maxAttempts = job.opts.attempts ?? 3;
-  if (job.attemptsMade >= maxAttempts) {
-    logger.error('Image optimize job moved to DLQ after all retries exhausted', {
-      jobId: job.id,
-      uploadId: job.data.uploadId,
-      error: err.message,
-    });
-    await imageDlqQueue
-      .add(QUEUE_CATALOG.IMAGE_OPTIMIZE_DLQ.jobName, {
-        originalJob: job.data,
-        error: err.message,
-        failedAt: new Date().toISOString(),
-        jobId: job.id,
-      })
-      .catch((dlqErr) => {
-        logger.error('Failed to add image job to DLQ', {
-          error: (dlqErr as Error).message,
-        });
-      });
-  }
-});
-
-imageWorker.on('completed', (job) => {
-  logger.info('Image optimization job completed', {
-    jobId: job.id,
-    uploadId: job.data.uploadId,
-  });
-});
-
-imageWorker.on('error', (err) => {
-  logger.error('Image worker error', { error: err.message });
-});
-
-// ── Post Publish Worker ───────────────────────────────────────────────────────
-const postPublishWorker = new Worker<PostPublishJobData>(
-  QUEUE_NAMES.POST_PUBLISH,
-  async (job, token) => {
-    await processPostPublish(job, token);
-  },
+const postPublishWorker = createWorker<PostPublishJobData>(
   {
-    connection: workerConnection,
+    queueName: QUEUE_NAMES.POST_PUBLISH,
+    processor: (job, token) => processPostPublish(job, token),
     concurrency: 5,
-  }
-);
-
-postPublishWorker.on('completed', (job) => {
-  logger.info('Post-publish job completed', { jobId: job.id, postId: job.data.postId });
-});
-
-postPublishWorker.on('failed', (job, err) => {
-  if (!job) return;
-  logger.error('Post-publish job failed', {
-    jobId: job.id,
-    postId: job.data.postId,
-    attempt: job.attemptsMade,
-    error: err.message,
-  });
-});
-
-postPublishWorker.on('error', (err) => {
-  logger.error('Post-publish worker error', { error: err.message });
-});
-
-// ── Retention Worker ──────────────────────────────────────────────────────────
-const retentionWorker = new Worker(
-  QUEUE_NAMES.DATA_RETENTION,
-  async () => {
-    await processRetention();
+    logLabel: 'Post-publish',
+    completedLogFields: (job) => ({ postId: job.data.postId }),
+    failedLogFields: (job) => ({ postId: job.data.postId }),
   },
-  {
-    connection: workerConnection,
-    concurrency: 1,
-  }
+  workerConnection,
+  logger
 );
 
-retentionWorker.on('completed', (job) => {
-  logger.info('Retention job completed', { jobId: job.id });
-});
+const retentionWorker = createWorker(
+  {
+    queueName: QUEUE_NAMES.DATA_RETENTION,
+    processor: () => processRetention(),
+    concurrency: 1,
+    logLabel: 'Retention',
+  },
+  workerConnection,
+  logger
+);
 
-retentionWorker.on('failed', (job, err) => {
-  if (!job) return;
-  logger.error('Retention job failed', { jobId: job.id, error: err.message });
-});
+const aiPostDraftWorker = createWorker<AiPostDraftJobData>(
+  {
+    queueName: QUEUE_NAMES.AI_POST_DRAFT_GENERATION,
+    processor: (job) => processAiPostDraftGeneration(job),
+    concurrency: 2,
+    logLabel: 'AI draft generation',
+    completedLogFields: (job) => ({ runId: job.data.runId }),
+    failedLogFields: (job) => ({ runId: job.data.runId }),
+  },
+  workerConnection,
+  logger
+);
 
-retentionWorker.on('error', (err) => {
-  logger.error('Retention worker error', { error: err.message });
-});
+const aiPostTopicWorker = createWorker<AiPostTopicJobData>(
+  {
+    queueName: QUEUE_NAMES.AI_POST_TOPIC_GENERATION,
+    processor: (job) => processAiPostTopicGeneration(job),
+    concurrency: 2,
+    logLabel: 'AI topic generation',
+    completedLogFields: (job) => ({ runId: job.data.runId }),
+    failedLogFields: (job) => ({ runId: job.data.runId }),
+  },
+  workerConnection,
+  logger
+);
 
 // ── Register repeatable retention job (daily at 03:00 UTC) ───────────────────
 await retentionQueue
@@ -217,66 +149,6 @@ await retentionQueue
       error: (err as Error).message,
     });
   });
-
-// ── AI Post Draft Generation Worker ──────────────────────────────────────────
-const aiPostDraftWorker = new Worker<AiPostDraftJobData>(
-  QUEUE_NAMES.AI_POST_DRAFT_GENERATION,
-  async (job) => {
-    await processAiPostDraftGeneration(job);
-  },
-  {
-    connection: workerConnection,
-    concurrency: 2,
-  }
-);
-
-aiPostDraftWorker.on('completed', (job) => {
-  logger.info('AI draft generation job completed', { jobId: job.id, runId: job.data.runId });
-});
-
-aiPostDraftWorker.on('failed', (job, err) => {
-  if (!job) return;
-  logger.error('AI draft generation job failed', {
-    jobId: job.id,
-    runId: job.data.runId,
-    attempt: job.attemptsMade,
-    error: err.message,
-  });
-});
-
-aiPostDraftWorker.on('error', (err) => {
-  logger.error('AI draft generation worker error', { error: err.message });
-});
-
-// ── AI Post Topic Generation Worker ──────────────────────────────────────────
-const aiPostTopicWorker = new Worker<AiPostTopicJobData>(
-  QUEUE_NAMES.AI_POST_TOPIC_GENERATION,
-  async (job) => {
-    await processAiPostTopicGeneration(job);
-  },
-  {
-    connection: workerConnection,
-    concurrency: 2,
-  }
-);
-
-aiPostTopicWorker.on('completed', (job) => {
-  logger.info('AI topic generation job completed', { jobId: job.id, runId: job.data.runId });
-});
-
-aiPostTopicWorker.on('failed', (job, err) => {
-  if (!job) return;
-  logger.error('AI topic generation job failed', {
-    jobId: job.id,
-    runId: job.data.runId,
-    attempt: job.attemptsMade,
-    error: err.message,
-  });
-});
-
-aiPostTopicWorker.on('error', (err) => {
-  logger.error('AI topic generation worker error', { error: err.message });
-});
 
 logger.info('All workers ready', {
   queues: [

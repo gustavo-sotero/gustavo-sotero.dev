@@ -19,7 +19,10 @@ import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { cancelScheduledPostPublish } from '../lib/queues';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import { assertTagsExist, normalizeTagIds } from '../lib/tagValidation';
-import { findApprovedCommentsByPostId } from '../repositories/comments.repo';
+import {
+  countApprovedCommentsByPostId,
+  findApprovedCommentsByPostId,
+} from '../repositories/comments.repo';
 import {
   createPost,
   findManyPosts,
@@ -75,7 +78,8 @@ export async function listPosts(
 
 /**
  * Get a single post by slug.
- * Public: includes approved comments, returns pre-rendered HTML.
+ * Public: includes an initial preview of approved comments (up to 30) plus
+ * the total comment count so the client can offer lazy-loading.
  * Admin: includes all data, no cache.
  */
 export async function getPostBySlug(slug: string, adminMode = false) {
@@ -90,8 +94,12 @@ export async function getPostBySlug(slug: string, adminMode = false) {
     const post = await findPostBySlug(slug, false);
     if (!post) return null;
 
-    const comments = await findApprovedCommentsByPostId(post.id);
-    return { ...flattenPivotTags(post), comments };
+    const [initialComments, commentCount] = await Promise.all([
+      findApprovedCommentsByPostId(post.id, 30),
+      countApprovedCommentsByPostId(post.id),
+    ]);
+
+    return { ...flattenPivotTags(post), comments: initialComments, commentCount };
   });
 }
 
