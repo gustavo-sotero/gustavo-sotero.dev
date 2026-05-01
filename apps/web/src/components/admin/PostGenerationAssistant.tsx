@@ -199,7 +199,7 @@ export function PostGenerationAssistant({
           },
           {
             onCompleted: (run) => {
-              const draft = run.result as import('@portfolio/shared').GenerateDraftResponse;
+              const draft = run.result as GenerateDraftResponse;
               if (!draft) {
                 reject(new Error('O draft gerado está vazio. Tente novamente.'));
                 return;
@@ -667,8 +667,7 @@ export function PostGenerationAssistant({
                     isRegenerating={draftRunHook.isPending}
                     resolveAiTags={async (names) => {
                       const result = await resolveAiTagsMutation.mutateAsync(names);
-                      const resolvedTags =
-                        (result?.data as import('@portfolio/shared').Tag[] | undefined) ?? [];
+                      const resolvedTags = (result?.data as Tag[] | undefined) ?? [];
                       return resolvedTags.map((t) => t.id);
                     }}
                   />

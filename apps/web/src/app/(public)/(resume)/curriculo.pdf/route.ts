@@ -23,7 +23,9 @@ export async function GET() {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${RESUME_PDF_FILENAME}"`,
-        'Cache-Control': 'no-store',
+        // Allow CDN and browser caches to serve the PDF for up to 10 minutes
+        // before revalidating. The PDF is public and contains no per-user data.
+        'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=300',
       },
     });
   } catch (err) {
