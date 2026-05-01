@@ -1,5 +1,8 @@
 import 'server-only';
-import { DEVELOPER_PUBLIC_PROFILE, getExperienceLabel } from '@portfolio/shared';
+import {
+  DEVELOPER_PUBLIC_PROFILE,
+  getExperienceLabel,
+} from '@portfolio/shared/constants/developerProfile';
 import { cacheLife } from 'next/cache';
 
 /**

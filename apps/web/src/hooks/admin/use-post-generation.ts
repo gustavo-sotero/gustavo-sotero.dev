@@ -1,5 +1,9 @@
 'use client';
 
+import {
+  AI_POST_DRAFT_RUN_INITIAL_POLL_MS,
+  AI_POST_TOPIC_RUN_INITIAL_POLL_MS,
+} from '@portfolio/shared/constants/ai-posts';
 import type {
   CreateDraftRunRequest,
   CreateDraftRunResponse,
@@ -11,11 +15,7 @@ import type {
   GenerateTopicsRequest,
   GenerateTopicsResponse,
   TopicRunStatusResponse,
-} from '@portfolio/shared';
-import {
-  AI_POST_DRAFT_RUN_INITIAL_POLL_MS,
-  AI_POST_TOPIC_RUN_INITIAL_POLL_MS,
-} from '@portfolio/shared';
+} from '@portfolio/shared/types/ai-post-generation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiPost } from '@/lib/api';

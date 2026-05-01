@@ -1,6 +1,6 @@
 'use client';
 
-import type { CreateSkillInput, Skill, UpdateSkillInput } from '@portfolio/shared';
+import type { CreateSkillInput, Skill, UpdateSkillInput } from '@portfolio/shared/types/skills';
 import { useQuery } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api';
 import { skillMutationTags } from '@/lib/data/public/cache-tags';

@@ -1,5 +1,6 @@
 import 'server-only';
-import type { PaginationMeta, Project } from '@portfolio/shared';
+import type { PaginationMeta } from '@portfolio/shared/types/api';
+import type { Project } from '@portfolio/shared/types/projects';
 import { cacheLife, cacheTag } from 'next/cache';
 import { ApiNotFoundError, apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';

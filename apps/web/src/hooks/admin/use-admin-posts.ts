@@ -1,12 +1,9 @@
 'use client';
 
-import type {
-  CreatePostInput,
-  PaginatedResponse,
-  Post,
-  PostStatus,
-  UpdatePostInput,
-} from '@portfolio/shared';
+import type { PostStatus } from '@portfolio/shared/constants/enums';
+import type { CreatePostInput, UpdatePostInput } from '@portfolio/shared/schemas/posts';
+import type { PaginatedResponse } from '@portfolio/shared/types/api';
+import type { Post } from '@portfolio/shared/types/posts';
 import { type UseQueryOptions, useQuery } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from '@/lib/api';
 import { postMutationTags, postMutationTagsWithSlugTransition } from '@/lib/data/public/cache-tags';

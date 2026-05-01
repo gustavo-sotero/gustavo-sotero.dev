@@ -1,6 +1,7 @@
 'use client';
 
-import type { Contact, PaginatedResponse } from '@portfolio/shared';
+import type { PaginatedResponse } from '@portfolio/shared/types/api';
+import type { Contact } from '@portfolio/shared/types/contacts';
 import { useQuery } from '@tanstack/react-query';
 import { apiGetPaginated, apiPatch } from '@/lib/api';
 import { useAdminMutation } from './mutation';

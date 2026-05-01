@@ -1,4 +1,4 @@
-import { AiGenerationError } from '@portfolio/shared';
+import { AiGenerationError } from '@portfolio/shared/lib/ai-error';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────

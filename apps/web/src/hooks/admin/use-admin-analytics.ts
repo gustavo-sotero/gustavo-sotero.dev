@@ -1,6 +1,6 @@
 'use client';
 
-import type { AnalyticsSummary, TopPost } from '@portfolio/shared';
+import type { AnalyticsSummary, TopPost } from '@portfolio/shared/types/analytics';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api';
 import { adminKeys } from './query-keys';

@@ -1,12 +1,12 @@
 'use client';
 
+import type { PostStatus } from '@portfolio/shared/constants/enums';
 import type {
   CreateExperienceInput,
-  Experience,
-  PaginatedResponse,
-  PostStatus,
   UpdateExperienceInput,
-} from '@portfolio/shared';
+} from '@portfolio/shared/schemas/experience';
+import type { PaginatedResponse } from '@portfolio/shared/types/api';
+import type { Experience } from '@portfolio/shared/types/experience';
 import { type UseQueryOptions, useQuery } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from '@/lib/api';
 import { experienceMutationTags } from '@/lib/data/public/cache-tags';

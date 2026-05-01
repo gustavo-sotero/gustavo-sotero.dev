@@ -6,7 +6,11 @@
  *  - no `onSuccess`, chama helper de revalidate
  *  - falha de revalidate não interrompe fluxo de sucesso
  */
-import type { Post, Project, Skill, Tag } from '@portfolio/shared';
+
+import type { Post } from '@portfolio/shared/types/posts';
+import type { Project } from '@portfolio/shared/types/projects';
+import type { Skill } from '@portfolio/shared/types/skills';
+import type { Tag } from '@portfolio/shared/types/tags';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import React from 'react';

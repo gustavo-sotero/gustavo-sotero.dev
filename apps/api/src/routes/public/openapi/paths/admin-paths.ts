@@ -8,7 +8,7 @@ import {
   AI_POST_MAX_TOPIC_TAG_NAMES,
   AI_POST_MIN_SUGGESTIONS,
   AI_POST_REQUESTED_CATEGORIES,
-} from '@portfolio/shared';
+} from '@portfolio/shared/constants/ai-posts';
 
 /**
  * OpenAPI path definitions for all admin (JWT-required) routes.

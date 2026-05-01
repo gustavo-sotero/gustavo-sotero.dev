@@ -4,7 +4,7 @@ import type {
   AiPostGenerationConfigState,
   AiPostGenerationModelSummary,
   UpdateAiPostGenerationConfig,
-} from '@portfolio/shared';
+} from '@portfolio/shared/schemas/ai-post-generation-config';
 import type { PaginatedResponse } from '@portfolio/shared/types/api';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet, apiGetPaginated, apiPut } from '@/lib/api';

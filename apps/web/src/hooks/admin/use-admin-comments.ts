@@ -1,6 +1,8 @@
 'use client';
 
-import type { AdminComment, CommentStatus, PaginatedResponse } from '@portfolio/shared';
+import type { CommentStatus } from '@portfolio/shared/constants/enums';
+import type { PaginatedResponse } from '@portfolio/shared/types/api';
+import type { AdminComment } from '@portfolio/shared/types/comments';
 import { type QueryKey, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiFetch, apiGetPaginated, apiPatch, apiPost } from '@/lib/api';

@@ -1,15 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { fetchMock, resolveServerApiBaseUrlMock } = vi.hoisted(() => ({
-  fetchMock: vi.fn(),
-  resolveServerApiBaseUrlMock: vi.fn(() => 'https://example.com/api'),
-}));
+const fetchMock = vi.fn();
+const originalFetch = globalThis.fetch;
+
+vi.mock('server-only', () => ({}));
 
 vi.mock('@/lib/api-base-url.server', () => ({
-  resolveServerApiBaseUrl: resolveServerApiBaseUrlMock,
+  resolveServerApiBaseUrl: () => 'https://example.com/api',
 }));
-
-vi.stubGlobal('fetch', fetchMock);
 
 const { ApiNotFoundError, ApiResponseError, ApiTimeoutError, apiServerGet, apiServerGetPaginated } =
   await import('./api.server');
@@ -33,11 +31,25 @@ function makeResponse(
 describe('api.server', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resolveServerApiBaseUrlMock.mockReturnValue('https://example.com/api');
+    Object.defineProperty(globalThis, 'fetch', {
+      value: fetchMock,
+      configurable: true,
+      writable: true,
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    if (originalFetch) {
+      Object.defineProperty(globalThis, 'fetch', {
+        value: originalFetch,
+        configurable: true,
+        writable: true,
+      });
+      return;
+    }
+
+    Reflect.deleteProperty(globalThis, 'fetch');
   });
 
   it('preserves status, code, message, and details on non-2xx responses', async () => {
@@ -65,14 +77,27 @@ describe('api.server', () => {
 
   it('throws ApiNotFoundError on 404 responses', async () => {
     fetchMock.mockResolvedValueOnce(makeResponse(404, null));
+    const promise = apiServerGet('/posts/missing');
 
-    await expect(apiServerGet('/posts/missing')).rejects.toBeInstanceOf(ApiNotFoundError);
+    await expect(promise).rejects.toBeInstanceOf(ApiNotFoundError);
+    await expect(promise).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+      path: '/posts/missing',
+    });
   });
 
   it('throws ApiTimeoutError when fetch aborts before the deadline', async () => {
     fetchMock.mockRejectedValueOnce(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    const promise = apiServerGet('/slow', { timeoutMs: 10 });
 
-    await expect(apiServerGet('/slow', { timeoutMs: 10 })).rejects.toBeInstanceOf(ApiTimeoutError);
+    await expect(promise).rejects.toBeInstanceOf(ApiTimeoutError);
+    await expect(promise).rejects.toMatchObject({
+      status: 504,
+      code: 'TIMEOUT',
+      path: 'https://example.com/api/slow',
+      timeoutMs: 10,
+    });
   });
 
   it('returns paginated payloads unchanged on success', async () => {

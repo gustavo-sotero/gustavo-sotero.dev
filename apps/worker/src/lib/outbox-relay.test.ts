@@ -1,10 +1,10 @@
+import { OutboxEventType } from '@portfolio/shared/constants/enums';
 import {
   aiPostDraftRunJobId,
   aiPostTopicRunJobId,
   imageOptimizeJobId,
-  OutboxEventType,
   scheduledPostPublishJobId,
-} from '@portfolio/shared';
+} from '@portfolio/shared/lib/jobIds';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ───────────────────────────────────────────────────────────────────

@@ -1,12 +1,12 @@
 'use client';
 
+import type { PostStatus } from '@portfolio/shared/constants/enums';
 import type {
   CreateEducationInput,
-  Education,
-  PaginatedResponse,
-  PostStatus,
   UpdateEducationInput,
-} from '@portfolio/shared';
+} from '@portfolio/shared/schemas/education';
+import type { PaginatedResponse } from '@portfolio/shared/types/api';
+import type { Education } from '@portfolio/shared/types/education';
 import { type UseQueryOptions, useQuery } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from '@/lib/api';
 import { educationMutationTags } from '@/lib/data/public/cache-tags';

@@ -5,7 +5,7 @@
  * This module re-exports it with the frontend-specific type alias and
  * provides convenience helpers for the admin UI.
  */
-import type { TagCategory } from '@portfolio/shared';
+import type { TagCategory } from '@portfolio/shared/constants/enums';
 import {
   ICON_CATALOG,
   type IconCatalogEntry,

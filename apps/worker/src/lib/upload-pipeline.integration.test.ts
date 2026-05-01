@@ -16,7 +16,8 @@
  * completion, final upload status retrieval."
  */
 
-import { imageOptimizeJobId, OutboxEventType } from '@portfolio/shared';
+import { OutboxEventType } from '@portfolio/shared/constants/enums';
+import { imageOptimizeJobId } from '@portfolio/shared/lib/jobIds';
 import type { Job } from 'bullmq';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -4,7 +4,7 @@
  * Skill creation should reuse the same canonical technology metadata used by tags,
  * but only for categories accepted by the Skill domain.
  */
-import type { SkillCategory } from '@portfolio/shared';
+import type { SkillCategory } from '@portfolio/shared/constants/enums';
 import {
   ICON_CATALOG,
   type IconCatalogEntry,

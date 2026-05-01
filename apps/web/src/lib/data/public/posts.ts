@@ -1,5 +1,7 @@
 import 'server-only';
-import type { Comment, PaginationMeta, Post } from '@portfolio/shared';
+import type { PaginationMeta } from '@portfolio/shared/types/api';
+import type { Comment } from '@portfolio/shared/types/comments';
+import type { Post } from '@portfolio/shared/types/posts';
 import { cacheLife, cacheTag } from 'next/cache';
 import { ApiNotFoundError, apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';

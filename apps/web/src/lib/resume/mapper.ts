@@ -1,5 +1,8 @@
-import type { Education, Experience, Project, Skill } from '@portfolio/shared';
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
+import type { Education } from '@portfolio/shared/types/education';
+import type { Experience } from '@portfolio/shared/types/experience';
+import type { Project } from '@portfolio/shared/types/projects';
+import type { Skill } from '@portfolio/shared/types/skills';
 
 // ---------------------------------------------------------------------------
 // ResumeViewModel — unified shape consumed by both the web view and PDF doc

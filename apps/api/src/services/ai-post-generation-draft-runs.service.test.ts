@@ -1,4 +1,4 @@
-import { OutboxEventType } from '@portfolio/shared';
+import { OutboxEventType } from '@portfolio/shared/constants/enums';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {

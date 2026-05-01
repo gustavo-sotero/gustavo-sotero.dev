@@ -1,4 +1,4 @@
-import type { Tag } from '@portfolio/shared';
+import type { Tag } from '@portfolio/shared/types/tags';
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

@@ -1,4 +1,7 @@
-import { legacyScheduledPostPublishJobId, scheduledPostPublishJobId } from '@portfolio/shared';
+import {
+  legacyScheduledPostPublishJobId,
+  scheduledPostPublishJobId,
+} from '@portfolio/shared/lib/jobIds';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { loggerInfoMock, postPublishQueueAddMock, postPublishQueueGetJobMock } = vi.hoisted(() => ({

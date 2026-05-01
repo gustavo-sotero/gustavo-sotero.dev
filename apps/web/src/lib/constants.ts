@@ -1,4 +1,4 @@
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import type { LucideIcon } from 'lucide-react';
 import { BookOpen, FileText, Home, Layers, Mail } from 'lucide-react';
 

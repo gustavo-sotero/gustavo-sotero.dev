@@ -1,6 +1,6 @@
 'use client';
 
-import type { CreateTagInput, Tag, UpdateTagInput } from '@portfolio/shared';
+import type { CreateTagInput, Tag, UpdateTagInput } from '@portfolio/shared/types/tags';
 import { useQuery } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api';
 import { tagMutationTags } from '@/lib/data/public/cache-tags';

@@ -1,6 +1,6 @@
 'use client';
 
-import type { PresignRequest, PresignResponse, Upload } from '@portfolio/shared';
+import type { PresignRequest, PresignResponse, Upload } from '@portfolio/shared/types/uploads';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';

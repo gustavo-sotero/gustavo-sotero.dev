@@ -6,7 +6,7 @@
  *  2. confirmUpload() — validate object in bucket → update to 'uploaded' → write outbox event
  */
 
-import { OutboxEventType } from '@portfolio/shared';
+import { OutboxEventType } from '@portfolio/shared/constants/enums';
 import { outbox, uploads } from '@portfolio/shared/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../config/db';

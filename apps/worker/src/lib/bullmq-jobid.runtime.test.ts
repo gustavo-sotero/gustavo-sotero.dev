@@ -18,7 +18,7 @@
  * Redis available, including the docker-compose.test.yml test stack.
  */
 
-import { imageOptimizeJobId, scheduledPostPublishJobId } from '@portfolio/shared';
+import { imageOptimizeJobId, scheduledPostPublishJobId } from '@portfolio/shared/lib/jobIds';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
 import { Queue, QueueEvents, Worker } from 'bullmq';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';

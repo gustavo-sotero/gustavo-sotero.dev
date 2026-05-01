@@ -1,4 +1,4 @@
-import type { Upload } from '@portfolio/shared';
+import type { Upload } from '@portfolio/shared/types/uploads';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getUploadErrorMessage, resolveUploadEffectiveUrl } from './upload-helpers';

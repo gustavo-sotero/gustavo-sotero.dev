@@ -11,7 +11,7 @@
  * - Non-queued status (completed run): not reprocessed
  */
 
-import { AiGenerationError } from '@portfolio/shared';
+import { AiGenerationError } from '@portfolio/shared/lib/ai-error';
 import { type Job, UnrecoverableError } from 'bullmq';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -10,7 +10,7 @@
  * leaks are possible.
  */
 
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { cached } from '../lib/cache';
 import { flattenPivotSkillArray, flattenPivotTagArray } from '../lib/pivotHelpers';
 import { getPageviewCount } from '../repositories/analytics.repo';

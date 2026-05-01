@@ -1,24 +1,23 @@
 import 'server-only';
+import { ERROR_CODES, type ErrorCode } from '@portfolio/shared/constants/errorCodes';
 import type { ApiError, ApiResponse, PaginatedResponse } from '@portfolio/shared/types/api';
 import { resolveServerApiBaseUrl } from '@/lib/api-base-url.server';
 
-/** Thrown when the API responds with HTTP 404. */
-export class ApiNotFoundError extends Error {
-  constructor(path: string) {
-    super(`Not found: ${path}`);
-    this.name = 'ApiNotFoundError';
-  }
+type ServerApiErrorCode = ErrorCode | 'TIMEOUT';
+
+function isErrorCode(value: unknown): value is ErrorCode {
+  return typeof value === 'string' && Object.values(ERROR_CODES).includes(value as ErrorCode);
 }
 
 /** Thrown when the API responds with a non-2xx, non-404 status. Preserves code and status. */
 export class ApiResponseError extends Error {
   readonly status: number;
-  readonly code: string;
+  readonly code: ServerApiErrorCode;
   readonly details?: ApiError['error']['details'];
 
   constructor(
     status: number,
-    code: string,
+    code: ServerApiErrorCode,
     message: string,
     details?: ApiError['error']['details']
   ) {
@@ -30,11 +29,27 @@ export class ApiResponseError extends Error {
   }
 }
 
+/** Thrown when the API responds with HTTP 404. */
+export class ApiNotFoundError extends ApiResponseError {
+  readonly path: string;
+
+  constructor(path: string) {
+    super(404, ERROR_CODES.NOT_FOUND, `Not found: ${path}`);
+    this.name = 'ApiNotFoundError';
+    this.path = path;
+  }
+}
+
 /** Thrown when the upstream API does not respond within the deadline. */
-export class ApiTimeoutError extends Error {
+export class ApiTimeoutError extends ApiResponseError {
+  readonly path: string;
+  readonly timeoutMs: number;
+
   constructor(path: string, timeoutMs: number) {
-    super(`API request timed out after ${timeoutMs}ms: ${path}`);
+    super(504, 'TIMEOUT', `API request timed out after ${timeoutMs}ms: ${path}`);
     this.name = 'ApiTimeoutError';
+    this.path = path;
+    this.timeoutMs = timeoutMs;
   }
 }
 
@@ -71,14 +86,14 @@ async function parseResponse<T>(res: Response, path: string): Promise<T> {
   if (res.status === 404) throw new ApiNotFoundError(path);
   if (!res.ok) {
     let message = `API error ${res.status}: ${res.statusText}`;
-    let code = 'INTERNAL_ERROR';
+    let code: ErrorCode = ERROR_CODES.INTERNAL_ERROR;
     let details: ApiError['error']['details'];
     try {
       const body = (await res.json()) as {
         error?: { message?: string; code?: string; details?: ApiError['error']['details'] };
       };
       if (body?.error?.message) message = body.error.message;
-      if (body?.error?.code) code = body.error.code;
+      if (isErrorCode(body?.error?.code)) code = body.error.code;
       if (Array.isArray(body?.error?.details)) {
         details = body.error.details.filter(
           (detail): detail is NonNullable<ApiError['error']['details']>[number] =>

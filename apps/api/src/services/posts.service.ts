@@ -6,7 +6,7 @@
  * repository layer.
  */
 
-import { OutboxEventType } from '@portfolio/shared';
+import { OutboxEventType } from '@portfolio/shared/constants/enums';
 import { outbox, posts } from '@portfolio/shared/db/schema';
 import type { CreatePostInput, UpdatePostInput } from '@portfolio/shared/schemas/posts';
 import { and, eq } from 'drizzle-orm';

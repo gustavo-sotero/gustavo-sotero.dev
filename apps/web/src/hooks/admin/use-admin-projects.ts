@@ -1,6 +1,8 @@
 'use client';
 
-import type { CreateProjectDto, PaginatedResponse, PostStatus, Project } from '@portfolio/shared';
+import type { PostStatus } from '@portfolio/shared/constants/enums';
+import type { PaginatedResponse } from '@portfolio/shared/types/api';
+import type { CreateProjectDto, Project } from '@portfolio/shared/types/projects';
 import { type UseQueryOptions, useQuery } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiGetPaginated, apiPatch, apiPost } from '@/lib/api';
 import {
