@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectErrorEnvelope } from '../../test/expectErrorEnvelope';
 
 type OAuthStartResponse = {
   success: boolean;
@@ -229,13 +230,7 @@ describe('auth routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Missing code or state parameter',
-      },
-    });
+    expectErrorEnvelope(body, 'VALIDATION_ERROR', 'Missing code or state parameter');
   });
 
   it('GET /github/callback returns 403 when OAuth state is invalid/expired', async () => {
@@ -248,13 +243,7 @@ describe('auth routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Invalid or expired state',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'Invalid or expired state');
   });
 
   it('GET /github/callback falls back to Lua when GETDEL is unavailable', async () => {
@@ -268,13 +257,7 @@ describe('auth routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Invalid or expired state',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'Invalid or expired state');
     expect(redisMock.eval).toHaveBeenCalledTimes(1);
   });
 
@@ -288,13 +271,7 @@ describe('auth routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Invalid or expired state',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'Invalid or expired state');
   });
 
   it('GET /github/callback returns 403 when Redis consume fails and no local fallback exists', async () => {
@@ -307,13 +284,7 @@ describe('auth routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Invalid or expired state',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'Invalid or expired state');
   });
 
   it('GET /github/callback returns 403 when GitHub user is not the configured admin', async () => {
@@ -338,13 +309,7 @@ describe('auth routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'User not authorized',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'User not authorized');
     expect(redisMock.getdel).toHaveBeenCalledWith('oauth:state:state-123');
   });
 
@@ -364,13 +329,7 @@ describe('auth routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(503);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Failed to exchange GitHub OAuth code',
-      },
-    });
+    expectErrorEnvelope(body, 'SERVICE_UNAVAILABLE', 'Failed to exchange GitHub OAuth code');
   });
 
   it('GET /github/callback returns 503 when profile fetch is aborted', async () => {
@@ -395,13 +354,7 @@ describe('auth routes', () => {
     const body = await response.json();
 
     expect(response.status).toBe(503);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Failed to fetch GitHub profile',
-      },
-    });
+    expectErrorEnvelope(body, 'SERVICE_UNAVAILABLE', 'Failed to fetch GitHub profile');
   });
 
   it('GET /github/callback issues admin and csrf cookies and redirects on success', async () => {
@@ -465,13 +418,7 @@ describe('auth routes', () => {
 
     expect(first.status).toBe(302);
     expect(second.status).toBe(403);
-    expect(secondBody).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Invalid or expired state',
-      },
-    });
+    expectErrorEnvelope(secondBody, 'FORBIDDEN', 'Invalid or expired state');
     expect(redisMock.getdel).toHaveBeenCalledTimes(2);
   });
 

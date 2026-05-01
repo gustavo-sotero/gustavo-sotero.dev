@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectErrorEnvelope } from '../../test/expectErrorEnvelope';
 
 const {
   createRateLimitMock,
@@ -108,13 +109,7 @@ describe('public contact route', () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Security verification failed',
-      },
-    });
+    expectErrorEnvelope(body, 'VALIDATION_ERROR', 'Security verification failed');
     expect(createContactMock).not.toHaveBeenCalled();
   });
 

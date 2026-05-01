@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
+import { expectErrorEnvelope } from '../test/expectErrorEnvelope';
 import { csrfProtection } from './csrf';
 
 describe('csrfProtection middleware', () => {
@@ -18,13 +19,7 @@ describe('csrfProtection middleware', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Invalid CSRF token',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'Invalid CSRF token');
   });
 
   it('allows request when cookie and header tokens match', async () => {
@@ -62,13 +57,7 @@ describe('csrfProtection middleware', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Invalid CSRF token',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'Invalid CSRF token');
   });
 
   it('rejects when csrf header and cookie differ with equal length', async () => {
@@ -87,12 +76,6 @@ describe('csrfProtection middleware', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Invalid CSRF token',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'Invalid CSRF token');
   });
 });

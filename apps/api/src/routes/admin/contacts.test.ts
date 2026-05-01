@@ -8,6 +8,7 @@
 
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectErrorEnvelope } from '../../test/expectErrorEnvelope';
 
 const { findManyContactsMock, findContactByIdMock, markContactAsReadMock } = vi.hoisted(() => ({
   findManyContactsMock: vi.fn(),
@@ -99,13 +100,11 @@ describe('admin contacts routes', () => {
       };
 
       expect(response.status).toBe(400);
-      expect(body).toEqual({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid value for "read" — expected "true" or "false"',
-        },
-      });
+      expectErrorEnvelope(
+        body,
+        'VALIDATION_ERROR',
+        'Invalid value for "read" — expected "true" or "false"'
+      );
     });
   });
 
@@ -130,10 +129,7 @@ describe('admin contacts routes', () => {
       };
 
       expect(response.status).toBe(404);
-      expect(body).toEqual({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Contact not found' },
-      });
+      expectErrorEnvelope(body, 'NOT_FOUND', 'Contact not found');
     });
 
     it('returns current state without updating when already read (idempotent)', async () => {

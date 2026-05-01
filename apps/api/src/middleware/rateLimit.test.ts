@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectErrorEnvelope } from '../test/expectErrorEnvelope';
 
 const redisMock = {
   multi: vi.fn(),
@@ -94,13 +95,7 @@ describe('createRateLimit', () => {
     const body = await response.json();
     expect(response.status).toBe(429);
     expect(response.headers.get('Retry-After')).toBe('60');
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'RATE_LIMITED',
-        message: 'Too many requests. Please try again later.',
-      },
-    });
+    expectErrorEnvelope(body, 'RATE_LIMITED', 'Too many requests. Please try again later.');
   });
 });
 

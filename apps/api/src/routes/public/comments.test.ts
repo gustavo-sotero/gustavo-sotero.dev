@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DomainValidationError, NotFoundError, RateLimitedError } from '../../lib/errors';
+import { expectErrorEnvelope } from '../../test/expectErrorEnvelope';
 
 const { createRateLimitMock, getClientIpMock, validateTurnstileMock, submitCommentMock } =
   vi.hoisted(() => ({
@@ -79,10 +80,7 @@ describe('public comments route', () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body).toEqual({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: 'Security verification failed' },
-    });
+    expectErrorEnvelope(body, 'VALIDATION_ERROR', 'Security verification failed');
     expect(submitCommentMock).not.toHaveBeenCalled();
   });
 
@@ -126,10 +124,7 @@ describe('public comments route', () => {
     const body = await response.json();
 
     expect(response.status).toBe(429);
-    expect(body).toEqual({
-      success: false,
-      error: { code: 'RATE_LIMITED', message: 'Wait before commenting again' },
-    });
+    expectErrorEnvelope(body, 'RATE_LIMITED', 'Wait before commenting again');
   });
 
   it('returns 404 when service throws NotFoundError (post not found)', async () => {
@@ -147,10 +142,7 @@ describe('public comments route', () => {
     const body = await response.json();
 
     expect(response.status).toBe(404);
-    expect(body).toEqual({
-      success: false,
-      error: { code: 'NOT_FOUND', message: 'Post not found' },
-    });
+    expectErrorEnvelope(body, 'NOT_FOUND', 'Post not found');
   });
 
   it('returns 404 when service throws NotFoundError (parent comment not found)', async () => {
@@ -171,10 +163,7 @@ describe('public comments route', () => {
     const body = await response.json();
 
     expect(response.status).toBe(404);
-    expect(body).toEqual({
-      success: false,
-      error: { code: 'NOT_FOUND', message: 'Parent comment not found' },
-    });
+    expectErrorEnvelope(body, 'NOT_FOUND', 'Parent comment not found');
   });
 
   it('returns 400 when service throws DomainValidationError (cross-post parent)', async () => {
@@ -197,13 +186,7 @@ describe('public comments route', () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Parent comment belongs to a different post',
-      },
-    });
+    expectErrorEnvelope(body, 'VALIDATION_ERROR', 'Parent comment belongs to a different post');
   });
 
   it('returns 400 when service throws DomainValidationError (deleted parent)', async () => {
@@ -226,10 +209,7 @@ describe('public comments route', () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body).toEqual({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: 'Cannot reply to a deleted comment' },
-    });
+    expectErrorEnvelope(body, 'VALIDATION_ERROR', 'Cannot reply to a deleted comment');
   });
 
   it('propagates unrecognized errors (does not catch non-domain errors)', async () => {

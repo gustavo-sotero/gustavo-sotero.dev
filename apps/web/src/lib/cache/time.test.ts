@@ -8,12 +8,12 @@ vi.mock('next/cache', () => ({
 // Mock server-only so it does not throw in the test environment.
 vi.mock('server-only', () => ({}));
 
-// Mock @portfolio/shared to control getExperienceLabel output.
+// Mock the exact shared subpath imported by the cache helper.
 const { getExperienceLabelMock } = vi.hoisted(() => ({
   getExperienceLabelMock: vi.fn(),
 }));
 
-vi.mock('@portfolio/shared', () => ({
+vi.mock('@portfolio/shared/constants/developerProfile', () => ({
   DEVELOPER_PUBLIC_PROFILE: {
     careerStartDate: '2021-07-01',
   },

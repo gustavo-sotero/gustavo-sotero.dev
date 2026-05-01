@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
+import { expectErrorEnvelope } from '../test/expectErrorEnvelope';
 import type { AppEnv } from '../types/index';
 
 const { verifyMock } = vi.hoisted(() => ({
@@ -29,13 +30,7 @@ describe('authAdmin middleware', () => {
     const body = await response.json();
 
     expect(response.status).toBe(401);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Authentication required',
-      },
-    });
+    expectErrorEnvelope(body, 'UNAUTHORIZED', 'Authentication required');
   });
 
   it('returns 401 when token verification fails', async () => {
@@ -53,13 +48,7 @@ describe('authAdmin middleware', () => {
     const body = await response.json();
 
     expect(response.status).toBe(401);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Invalid or expired session',
-      },
-    });
+    expectErrorEnvelope(body, 'UNAUTHORIZED', 'Invalid or expired session');
   });
 
   it('returns 403 when token subject is not the configured admin', async () => {
@@ -82,13 +71,7 @@ describe('authAdmin middleware', () => {
     const body = await response.json();
 
     expect(response.status).toBe(403);
-    expect(body).toEqual({
-      success: false,
-      error: {
-        code: 'FORBIDDEN',
-        message: 'User not authorized',
-      },
-    });
+    expectErrorEnvelope(body, 'FORBIDDEN', 'User not authorized');
   });
 
   it('allows request and sets admin context when token is valid', async () => {

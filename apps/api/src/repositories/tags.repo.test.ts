@@ -86,15 +86,29 @@ import {
 function setupPublicQuery(total: number, rows: unknown[]) {
   // 1 EXISTS subquery chain: postTags → innerJoin(posts) → where()
   whereMock.mockReturnValueOnce({ _subquery: true }); // subquery .where() → passed to exists()
-  // Count query: from(tags).where()
-  whereMock.mockResolvedValueOnce([{ total }]);
   // Main query: from(tags).where().orderBy()
   orderByMock.mockResolvedValueOnce(rows);
   whereMock.mockReturnValueOnce({ orderBy: orderByMock });
+  // Count query: from(tags).where()
+  whereMock.mockResolvedValueOnce([{ total }]);
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  andMock.mockClear();
+  ascMock.mockClear();
+  countMock.mockClear();
+  eqMock.mockClear();
+  existsMock.mockClear();
+  inArrayMock.mockClear();
+  isNullMock.mockClear();
+  lteMock.mockClear();
+  sqlMock.mockClear();
+  selectMock.mockReset();
+  fromMock.mockReset();
+  innerJoinMock.mockReset();
+  whereMock.mockReset();
+  orderByMock.mockReset();
+  buildPaginationMetaMock.mockReset();
 
   buildPaginationMetaMock.mockImplementation((total: number, page: number, perPage: number) => ({
     page,

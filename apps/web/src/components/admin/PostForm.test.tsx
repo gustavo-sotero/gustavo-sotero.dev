@@ -30,13 +30,9 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@portfolio/shared', async () => {
-  const actual = await vi.importActual<typeof import('@portfolio/shared')>('@portfolio/shared');
-  return {
-    ...actual,
-    generateSlug: () => 'post-de-teste',
-  };
-});
+vi.mock('@portfolio/shared/lib/slug', () => ({
+  generateSlug: () => 'post-de-teste',
+}));
 
 vi.mock('@/hooks/admin/use-admin-tags', () => ({
   useAdminTags: () => ({

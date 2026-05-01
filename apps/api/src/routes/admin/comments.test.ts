@@ -9,6 +9,7 @@
 
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectErrorEnvelope } from '../../test/expectErrorEnvelope';
 import type { AppEnv } from '../../types/index';
 
 const {
@@ -179,10 +180,7 @@ describe('admin comments routes', () => {
       };
 
       expect(response.status).toBe(404);
-      expect(body).toEqual({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Comment not found' },
-      });
+      expectErrorEnvelope(body, 'NOT_FOUND', 'Comment not found');
     });
 
     it('returns 409 when comment is already approved', async () => {
