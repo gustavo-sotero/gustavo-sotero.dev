@@ -1,6 +1,6 @@
 'use client';
 
-import type { Post } from '@portfolio/shared';
+import type { Post } from '@portfolio/shared/types/posts';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { PostCard } from '@/components/blog/PostCard';

@@ -1,6 +1,6 @@
 'use client';
 
-import type { Project } from '@portfolio/shared';
+import type { Project } from '@portfolio/shared/types/projects';
 import { ArrowRight, FolderOpen } from 'lucide-react';
 import Link from 'next/link';
 import { ProjectCard } from '@/components/projects/ProjectCard';

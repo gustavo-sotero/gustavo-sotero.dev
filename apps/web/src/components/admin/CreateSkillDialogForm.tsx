@@ -1,7 +1,9 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { generateSlug, type Skill, type SkillCategory } from '@portfolio/shared';
+import type { SkillCategory } from '@portfolio/shared/constants/enums';
+import { generateSlug } from '@portfolio/shared/lib/slug';
+import type { Skill } from '@portfolio/shared/types/skills';
 import { Check, Info, Loader2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';

@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminComment } from '@portfolio/shared';
+import type { AdminComment } from '@portfolio/shared/types/comments';
 import { Reply } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';

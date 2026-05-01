@@ -1,12 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { generateSlug } from '@portfolio/shared/lib/slug';
 import {
   type CreateEducationInput,
   createEducationSchema,
-  type Education,
-  generateSlug,
-} from '@portfolio/shared';
+} from '@portfolio/shared/schemas/education';
+import type { Education } from '@portfolio/shared/types/education';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

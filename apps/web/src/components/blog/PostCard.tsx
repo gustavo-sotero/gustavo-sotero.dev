@@ -1,4 +1,4 @@
-import type { Post } from '@portfolio/shared';
+import type { Post } from '@portfolio/shared/types/posts';
 import { CalendarDays } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';

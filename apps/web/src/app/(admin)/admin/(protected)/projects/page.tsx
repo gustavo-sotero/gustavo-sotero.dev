@@ -1,6 +1,6 @@
 'use client';
 
-import type { Project } from '@portfolio/shared';
+import type { Project } from '@portfolio/shared/types/projects';
 import { FolderGit2, Pencil, Plus, Star, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';

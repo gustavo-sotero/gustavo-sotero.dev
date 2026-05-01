@@ -14,8 +14,21 @@ apps/
   worker/   # Jobs em background com BullMQ (Bun)
   web/      # Next.js 16 App Router (React 19, Tailwind 4)
 packages/
-  shared/   # Tipos TypeScript, schemas Zod e constantes compartilhadas
+  shared/   # Contratos, schemas e utilitários cross-runtime compartilhados
 ```
+
+---
+
+## Ownership Rápido
+
+- `packages/shared` é o pacote de contratos e utilitários compartilhados entre API, web e worker. Para código novo, prefira subpaths explícitos como `@portfolio/shared/types/*`, `@portfolio/shared/schemas/*`, `@portfolio/shared/constants/*` e `@portfolio/shared/lib/*`. O barrel raiz `@portfolio/shared` fica apenas como compatibilidade transitória.
+- O catálogo de filas vive em `packages/shared/src/constants/queues.ts`. API e worker importam os mesmos nomes de fila e a mesma relação `outbox event -> queue`, mas cada app mantém apenas sua responsabilidade operacional local.
+- Ownership do banco:
+  - schema Drizzle: `packages/shared/src/db/schema`
+  - config do Drizzle: `apps/api/drizzle.config.ts`
+  - migrações geradas: `drizzle/`
+- Gere migrações sempre a partir da raiz com `bun run db:generate`. Isso mantém o schema shared, o config do app API e o diretório `drizzle/` alinhados.
+- Notas operacionais específicas ficam em `docs/auth-admin.md`, `docs/caching.md`, `docs/outbox-queues-worker.md` e `docs/ai-generation.md`.
 
 ---
 
@@ -217,6 +230,12 @@ Os scripts de banco de dados têm contratos de variáveis de ambiente intenciona
 Os scripts de BD locais (`bun run db:*`) passam `--env-file .env` explicitamente para carregar o `.env` do repositório. Em CI, os scripts de BD são invocados diretamente com `bun run --no-env-file ...` e apenas a variável necessária é injetada via `env:` no step do workflow — sem depender da leitura automática de `.env`.
 
 Isso garante que migrações e audits de schema possam rodar em pipelines de CI que provisionam apenas PostgreSQL, sem precisar fornecer segredos irrelevantes como Redis, OAuth, S3 ou Telegram.
+
+### Guardrails de entrega
+
+- O workflow principal de CI valida `lint`, `type-check`, `test`, `api-schema-smoke` e `build` do app web.
+- Pull requests também passam por workflows dedicados de `dependency review`, `secret scan` e `CodeQL` versionados no repositório.
+- O build web usa `.env` stubado em CI só para satisfazer o contrato de env do Next.js; nenhum segredo real é necessário para a validação estrutural do build.
 
 ---
 

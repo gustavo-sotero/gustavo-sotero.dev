@@ -1,6 +1,6 @@
 'use client';
 
-import type { Experience } from '@portfolio/shared';
+import type { Experience } from '@portfolio/shared/types/experience';
 import { Briefcase, Building2, CalendarRange, ChevronDown, MapPin } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';

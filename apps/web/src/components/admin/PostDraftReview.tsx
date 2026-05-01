@@ -1,11 +1,9 @@
 'use client';
 
-import {
-  canonicalizeTagName,
-  type GenerateDraftResponse,
-  generateSlug,
-  type Tag,
-} from '@portfolio/shared';
+import { canonicalizeTagName } from '@portfolio/shared/lib/aiTagNormalizer';
+import { generateSlug } from '@portfolio/shared/lib/slug';
+import type { GenerateDraftResponse } from '@portfolio/shared/types/ai-post-generation';
+import type { Tag } from '@portfolio/shared/types/tags';
 import { ArrowLeft, Check, Clipboard, ClipboardCheck, RefreshCcw, Wand2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';

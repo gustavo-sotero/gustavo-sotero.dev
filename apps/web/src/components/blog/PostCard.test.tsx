@@ -7,7 +7,7 @@
  *  - Cards with 0 tags render without the tags section
  *  - Title and date are rendered
  */
-import type { Post } from '@portfolio/shared';
+import type { Post } from '@portfolio/shared/types/posts';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

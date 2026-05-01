@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { Skill } from '@portfolio/shared';
+import type { Skill } from '@portfolio/shared/types/skills';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';

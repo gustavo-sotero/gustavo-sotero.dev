@@ -5,7 +5,7 @@ import type {
   ProviderRoutingConfig,
   ProviderRoutingMode,
   ProviderRoutingSort,
-} from '@portfolio/shared';
+} from '@portfolio/shared/schemas/ai-post-generation-config';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,

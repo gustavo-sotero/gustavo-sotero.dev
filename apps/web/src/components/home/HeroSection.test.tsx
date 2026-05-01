@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import type { Skill } from '@portfolio/shared';
+import type { Skill } from '@portfolio/shared/types/skills';
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@portfolio/shared', () => ({
+vi.mock('@portfolio/shared/constants/developerProfile', () => ({
   DEVELOPER_PUBLIC_PROFILE: {
     name: 'Gustavo Sotero',
     role: 'Desenvolvedor Fullstack',

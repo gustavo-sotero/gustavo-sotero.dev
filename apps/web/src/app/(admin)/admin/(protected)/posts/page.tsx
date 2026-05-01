@@ -1,6 +1,7 @@
 ﻿'use client';
 
-import type { Post, PostStatus } from '@portfolio/shared';
+import type { PostStatus } from '@portfolio/shared/constants/enums';
+import type { Post } from '@portfolio/shared/types/posts';
 import { FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';

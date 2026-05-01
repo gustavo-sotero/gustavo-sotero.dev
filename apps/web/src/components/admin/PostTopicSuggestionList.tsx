@@ -1,7 +1,7 @@
 'use client';
 
-import type { TopicSuggestion } from '@portfolio/shared';
-import { AI_POST_CATEGORY_META } from '@portfolio/shared';
+import { AI_POST_CATEGORY_META } from '@portfolio/shared/constants/ai-posts';
+import type { TopicSuggestion } from '@portfolio/shared/types/ai-post-generation';
 import { ArrowLeft, RefreshCcw, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';

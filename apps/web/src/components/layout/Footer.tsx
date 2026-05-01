@@ -1,5 +1,5 @@
 import { SiGithub, SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons';
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { FileCode, Mail, Rss } from 'lucide-react';
 import Link from 'next/link';
 import { AnimatedShinyText } from '@/components/ui/animated-shiny-text';

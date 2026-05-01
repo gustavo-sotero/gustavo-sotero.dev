@@ -1,17 +1,18 @@
 'use client';
 
-import type {
-  AiPostRequestedCategory,
-  createPostSchema,
-  Tag,
-  TopicSuggestion,
-} from '@portfolio/shared';
 import {
   AI_POST_CATEGORY_META,
   AI_POST_DEFAULT_SUGGESTIONS,
   AI_POST_MAX_BRIEFING_CHARS,
   AI_POST_REQUESTED_CATEGORIES,
-} from '@portfolio/shared';
+} from '@portfolio/shared/constants/ai-posts';
+import type { createPostSchema } from '@portfolio/shared/schemas/posts';
+import type {
+  AiPostRequestedCategory,
+  GenerateDraftResponse,
+  TopicSuggestion,
+} from '@portfolio/shared/types/ai-post-generation';
+import type { Tag } from '@portfolio/shared/types/tags';
 import {
   AlertCircle,
   AlertTriangle,
@@ -75,7 +76,7 @@ type AssistantState =
       selected: TopicSuggestion;
       category: AiPostRequestedCategory;
       briefing: string;
-      draft: import('@portfolio/shared').GenerateDraftResponse;
+      draft: GenerateDraftResponse;
       /** Preserved so "back to topics" can restore without a new API call. */
       topics: TopicSuggestion[];
     }

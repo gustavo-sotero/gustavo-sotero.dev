@@ -1,6 +1,6 @@
 'use client';
 
-import type { Experience } from '@portfolio/shared';
+import type { Experience } from '@portfolio/shared/types/experience';
 import { Briefcase, Pencil, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';

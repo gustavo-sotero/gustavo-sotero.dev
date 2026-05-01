@@ -1,4 +1,4 @@
-import type { AdminComment } from '@portfolio/shared';
+import type { AdminComment } from '@portfolio/shared/types/comments';
 import { useState } from 'react';
 
 export type CommentDialogState =

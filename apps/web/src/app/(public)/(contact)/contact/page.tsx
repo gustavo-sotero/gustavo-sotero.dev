@@ -1,5 +1,5 @@
 import { SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons';
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { FileText, Mail, MapPin, Phone } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';

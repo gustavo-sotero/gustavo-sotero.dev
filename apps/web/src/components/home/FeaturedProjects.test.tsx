@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { Project } from '@portfolio/shared';
+import type { Project } from '@portfolio/shared/types/projects';
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';

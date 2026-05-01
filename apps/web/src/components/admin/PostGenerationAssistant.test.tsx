@@ -3,7 +3,7 @@ import type {
   DraftRunStatusResponse,
   TopicRunStatusResponse,
   TopicSuggestion,
-} from '@portfolio/shared';
+} from '@portfolio/shared/types/ai-post-generation';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

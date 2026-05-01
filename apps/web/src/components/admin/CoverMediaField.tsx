@@ -1,6 +1,6 @@
 'use client';
 
-import type { Upload } from '@portfolio/shared';
+import type { Upload } from '@portfolio/shared/types/uploads';
 import { CheckCircle, ImageIcon, Link2, Loader2, Pencil, Trash2, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useRef, useState } from 'react';

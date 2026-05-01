@@ -1,6 +1,6 @@
 'use client';
 
-import type { CommentStatus } from '@portfolio/shared';
+import type { CommentStatus } from '@portfolio/shared/constants/enums';
 import { Eye, EyeOff, MessageSquare } from 'lucide-react';
 
 const STATUS_TABS: { value: CommentStatus; label: string; color: string }[] = [

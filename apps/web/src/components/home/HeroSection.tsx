@@ -1,8 +1,9 @@
 'use client';
 
 import { SiTelegram, SiWhatsapp } from '@icons-pack/react-simple-icons';
-import type { Skill, SkillCategory } from '@portfolio/shared';
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
+import type { SkillCategory } from '@portfolio/shared/constants/enums';
+import type { Skill } from '@portfolio/shared/types/skills';
 import { Mail, Star } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 import dynamic from 'next/dynamic';

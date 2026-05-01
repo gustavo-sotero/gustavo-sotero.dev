@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import type { CommentStatus } from '@portfolio/shared';
+import type { CommentStatus } from '@portfolio/shared/constants/enums';
 import { ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';

@@ -1,6 +1,6 @@
 'use client';
 
-import type { Education } from '@portfolio/shared';
+import type { Education } from '@portfolio/shared/types/education';
 import { GraduationCap, Pencil, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';

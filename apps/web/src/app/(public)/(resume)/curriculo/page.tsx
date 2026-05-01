@@ -1,4 +1,4 @@
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 import { connection } from 'next/server';

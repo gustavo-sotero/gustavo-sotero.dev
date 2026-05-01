@@ -1,6 +1,6 @@
 'use client';
 
-import type { AdminComment } from '@portfolio/shared';
+import type { AdminComment } from '@portfolio/shared/types/comments';
 import { Calendar, Check, Link2, Pencil, Reply, Shield, Trash2, User, X } from 'lucide-react';
 import { TrustedHtml } from '@/components/shared/TrustedHtml';
 import { Button } from '@/components/ui/button';

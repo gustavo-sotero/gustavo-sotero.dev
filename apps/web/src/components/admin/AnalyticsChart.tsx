@@ -1,6 +1,6 @@
 'use client';
 
-import type { TopPost } from '@portfolio/shared';
+import type { TopPost } from '@portfolio/shared/types/analytics';
 import {
   Area,
   AreaChart,

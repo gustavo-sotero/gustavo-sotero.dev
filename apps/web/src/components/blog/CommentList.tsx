@@ -1,4 +1,4 @@
-import type { PublicCommentNode } from '@portfolio/shared';
+import type { PublicCommentNode } from '@portfolio/shared/types/comments';
 import { CornerDownRight, MessageCircle, Shield } from 'lucide-react';
 import { TrustedHtml } from '@/components/shared/TrustedHtml';
 import { formatDateBR } from '@/lib/utils';

@@ -1,13 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  type CreatePostInput,
-  createPostSchema,
-  generateSlug,
-  type Post,
-  type Tag,
-} from '@portfolio/shared';
+import { generateSlug } from '@portfolio/shared/lib/slug';
+import { type CreatePostInput, createPostSchema } from '@portfolio/shared/schemas/posts';
+import type { Post } from '@portfolio/shared/types/posts';
+import type { Tag } from '@portfolio/shared/types/tags';
 import { CalendarClock, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

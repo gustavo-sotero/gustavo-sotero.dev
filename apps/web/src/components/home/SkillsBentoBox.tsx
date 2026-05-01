@@ -1,4 +1,4 @@
-import type { Skill } from '@portfolio/shared';
+import type { Skill } from '@portfolio/shared/types/skills';
 import { Star } from 'lucide-react';
 import { TechIcon } from '@/components/shared/TechIcon';
 import { BlurFade } from '@/components/ui/blur-fade';

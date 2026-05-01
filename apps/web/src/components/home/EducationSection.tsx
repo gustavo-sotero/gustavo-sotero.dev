@@ -1,6 +1,6 @@
 'use client';
 
-import type { Education } from '@portfolio/shared';
+import type { Education } from '@portfolio/shared/types/education';
 import { CalendarRange, ExternalLink, GraduationCap, MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { BlurFade } from '@/components/ui/blur-fade';

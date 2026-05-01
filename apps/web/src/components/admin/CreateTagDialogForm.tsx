@@ -1,7 +1,9 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { generateSlug, type Tag, type TagCategory } from '@portfolio/shared';
+import type { TagCategory } from '@portfolio/shared/constants/enums';
+import { generateSlug } from '@portfolio/shared/lib/slug';
+import type { Tag } from '@portfolio/shared/types/tags';
 import { Check, Info, Loader2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';

@@ -9,7 +9,8 @@
  *  - Projects with 0 skills render without the skills section
  *  - Title and featured badge rendered correctly
  */
-import type { Project, Skill } from '@portfolio/shared';
+import type { Project } from '@portfolio/shared/types/projects';
+import type { Skill } from '@portfolio/shared/types/skills';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

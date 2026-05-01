@@ -1,13 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { generateSlug } from '@portfolio/shared/lib/slug';
 import {
   type CreateExperienceInput,
   createExperienceSchema,
-  type Experience,
-  generateSlug,
-  type Skill,
-} from '@portfolio/shared';
+} from '@portfolio/shared/schemas/experience';
+import type { Experience } from '@portfolio/shared/types/experience';
+import type { Skill } from '@portfolio/shared/types/skills';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

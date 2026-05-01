@@ -1,6 +1,6 @@
 'use client';
 
-import type { PublicCommentNode } from '@portfolio/shared';
+import type { PublicCommentNode } from '@portfolio/shared/types/comments';
 import { MessageCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

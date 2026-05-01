@@ -1,6 +1,6 @@
 'use client';
 
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { useMemo } from 'react';
 import { AnimatedSpan, Terminal, TypingAnimation } from '@/components/ui/terminal';
 import { env } from '@/lib/env';

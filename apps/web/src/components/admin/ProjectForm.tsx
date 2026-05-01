@@ -1,13 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  type CreateProjectInput,
-  createProjectSchema,
-  generateSlug,
-  type Project,
-  type Skill,
-} from '@portfolio/shared';
+import { generateSlug } from '@portfolio/shared/lib/slug';
+import { type CreateProjectInput, createProjectSchema } from '@portfolio/shared/schemas/projects';
+import type { Project } from '@portfolio/shared/types/projects';
+import type { Skill } from '@portfolio/shared/types/skills';
 import type { z } from 'zod';
 
 type ProjectFormValues = z.input<typeof createProjectSchema>;

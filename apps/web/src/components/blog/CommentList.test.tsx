@@ -9,7 +9,7 @@
  *  - Nested replies rendered recursively
  *  - Deep nesting (≥4 levels) is capped visually, but all nodes still render
  */
-import type { PublicCommentNode } from '@portfolio/shared';
+import type { PublicCommentNode } from '@portfolio/shared/types/comments';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

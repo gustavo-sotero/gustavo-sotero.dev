@@ -1,6 +1,6 @@
 'use client';
 
-import type { Project } from '@portfolio/shared';
+import type { Project } from '@portfolio/shared/types/projects';
 import { ExternalLink, Globe, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
