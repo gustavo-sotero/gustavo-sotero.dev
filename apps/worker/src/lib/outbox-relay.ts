@@ -17,18 +17,21 @@
  *                                 as processed failed (job will still run due to dedup)
  */
 
+import { OutboxEventType } from '@portfolio/shared/constants/enums';
+import { getOutboxQueueTarget } from '@portfolio/shared/constants/queues';
+import { outbox, uploads } from '@portfolio/shared/db/schema';
 import {
-  aiPostDraftGenerateRequestedOutboxPayloadSchema,
   aiPostDraftRunJobId,
   aiPostTopicRunJobId,
-  aiPostTopicRunRequestedOutboxPayloadSchema,
   imageOptimizeJobId,
-  imageOptimizeOutboxPayloadSchema,
-  OutboxEventType,
   scheduledPostPublishJobId,
+} from '@portfolio/shared/lib/jobIds';
+import {
+  aiPostDraftGenerateRequestedOutboxPayloadSchema,
+  aiPostTopicRunRequestedOutboxPayloadSchema,
+  imageOptimizeOutboxPayloadSchema,
   scheduledPostPublishOutboxPayloadSchema,
-} from '@portfolio/shared';
-import { outbox, uploads } from '@portfolio/shared/db/schema';
+} from '@portfolio/shared/schemas/outbox';
 import type { Job, Queue } from 'bullmq';
 import { and, asc, count, eq, lte, min } from 'drizzle-orm';
 import { db } from '../config/db';
@@ -64,6 +67,7 @@ async function upsertScheduledPostPublishJob(
   opts: { postId: number; scheduledAt: string; eventId: string }
 ): Promise<void> {
   const { postId, scheduledAt, eventId } = opts;
+  const target = getOutboxQueueTarget(OutboxEventType.SCHEDULED_POST_PUBLISH);
   const jobId = scheduledPostPublishJobId(postId);
   const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
   const jobOptions = {
@@ -78,7 +82,7 @@ async function upsertScheduledPostPublishJob(
   const existing = await postPublishQueue.getJob(jobId);
 
   if (!existing) {
-    await postPublishQueue.add('publish', { postId }, jobOptions);
+    await postPublishQueue.add(target.jobName, { postId }, jobOptions);
     logger.info('Outbox relay: scheduled-post-publish job created', {
       eventId,
       postId,
@@ -138,7 +142,7 @@ async function upsertScheduledPostPublishJob(
     });
   }
 
-  await postPublishQueue.add('publish', { postId }, jobOptions);
+  await postPublishQueue.add(target.jobName, { postId }, jobOptions);
   logger.info('Outbox relay: scheduled-post-publish job replaced', {
     eventId,
     postId,
@@ -246,6 +250,7 @@ export async function processOutboxEvents(
 
     try {
       if (event.eventType === OutboxEventType.IMAGE_OPTIMIZE) {
+        const target = getOutboxQueueTarget(OutboxEventType.IMAGE_OPTIMIZE);
         const payloadResult = imageOptimizeOutboxPayloadSchema.safeParse(event.payload);
 
         if (!payloadResult.success) {
@@ -261,7 +266,7 @@ export async function processOutboxEvents(
         // The helper uses `outbox-{uuid}` (hyphen separator) which is required because
         // BullMQ v5+ rejects any custom jobId containing `:`.
         await imageQueue.add(
-          OutboxEventType.IMAGE_OPTIMIZE,
+          target.jobName,
           { uploadId },
           {
             jobId: imageOptimizeJobId(event.id),
@@ -287,6 +292,7 @@ export async function processOutboxEvents(
           eventId: event.id,
         });
       } else if (event.eventType === OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED) {
+        const target = getOutboxQueueTarget(OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED);
         const payloadResult = aiPostDraftGenerateRequestedOutboxPayloadSchema.safeParse(
           event.payload
         );
@@ -303,7 +309,7 @@ export async function processOutboxEvents(
         const { runId } = payloadResult.data;
 
         await aiPostDraftGenerationQueue.add(
-          OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
+          target.jobName,
           { runId },
           {
             jobId: aiPostDraftRunJobId(runId),
@@ -326,7 +332,7 @@ export async function processOutboxEvents(
         const { runId } = payloadResult.data;
 
         await aiPostTopicGenerationQueue.add(
-          OutboxEventType.AI_POST_TOPIC_RUN_REQUESTED,
+          getOutboxQueueTarget(OutboxEventType.AI_POST_TOPIC_RUN_REQUESTED).jobName,
           { runId },
           {
             jobId: aiPostTopicRunJobId(runId),

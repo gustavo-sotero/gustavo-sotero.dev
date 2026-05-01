@@ -1,4 +1,4 @@
-import { QUEUE_NAMES } from '@portfolio/shared';
+import { QUEUE_NAMES } from '@portfolio/shared/constants/queues';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
 import { Queue } from 'bullmq';
 import { env } from './config/env';

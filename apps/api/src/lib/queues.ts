@@ -9,11 +9,11 @@
  * monorepo. BullMQ creates its own internal connection.
  */
 
+import { QUEUE_CATALOG, QUEUE_NAMES } from '@portfolio/shared/constants/queues';
 import {
   legacyScheduledPostPublishJobId,
-  QUEUE_NAMES,
   scheduledPostPublishJobId,
-} from '@portfolio/shared';
+} from '@portfolio/shared/lib/jobIds';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
 import { Queue } from 'bullmq';
 import { env } from '../config/env';
@@ -110,7 +110,7 @@ export interface TelegramNotificationData {
  */
 export async function enqueueTelegramNotification(data: TelegramNotificationData): Promise<void> {
   try {
-    await telegramQueue.add('notify', data);
+    await telegramQueue.add(QUEUE_CATALOG.TELEGRAM_NOTIFICATIONS.jobName, data);
   } catch (err) {
     logger.error('Failed to enqueue Telegram notification', { error: (err as Error).message });
   }
@@ -128,7 +128,7 @@ export interface AnalyticsEventData {
 
 /** Enqueue an analytics event (fire-and-forget, non-blocking). */
 export function enqueueAnalyticsEvent(data: AnalyticsEventData): void {
-  analyticsQueue.add('track', data).catch((err) => {
+  analyticsQueue.add(QUEUE_CATALOG.ANALYTICS_EVENTS.jobName, data).catch((err) => {
     logger.error('Failed to enqueue analytics event', { error: (err as Error).message });
   });
 }
@@ -136,7 +136,7 @@ export function enqueueAnalyticsEvent(data: AnalyticsEventData): void {
 /** Enqueue an image optimization job after upload confirmation. */
 export async function enqueueImageOptimize(uploadId: string): Promise<void> {
   await imageQueue.add(
-    'optimize',
+    QUEUE_CATALOG.IMAGE_OPTIMIZE.jobName,
     { uploadId },
     {
       attempts: 3,
@@ -186,7 +186,7 @@ export async function enqueueScheduledPostPublish(
     });
   }
 
-  await postPublishQueue.add('publish', { postId }, { jobId, delay });
+  await postPublishQueue.add(QUEUE_CATALOG.POST_PUBLISH.jobName, { postId }, { jobId, delay });
   logger.info('Enqueued post-publish job', { jobId, postId, delay });
 }
 

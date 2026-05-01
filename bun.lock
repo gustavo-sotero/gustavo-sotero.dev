@@ -141,6 +141,7 @@
       "name": "@portfolio/shared",
       "version": "0.0.1",
       "dependencies": {
+        "ai": "^6.0.168",
         "drizzle-orm": "^0.45.1",
         "zod": "^4.3.6",
       },

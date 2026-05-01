@@ -2,6 +2,7 @@ import { getLogger, setupLogger } from './config/logger';
 
 await setupLogger();
 
+import { QUEUE_CATALOG, QUEUE_NAMES } from '@portfolio/shared/constants/queues';
 import { parseRedisUrl } from '@portfolio/shared/lib/redis';
 import { Worker } from 'bullmq';
 import { client as pgClient } from './config/db';
@@ -41,7 +42,7 @@ const workerConnection = parseRedisUrl(env.REDIS_URL);
 
 // ── Telegram Worker ───────────────────────────────────────────────────────────
 const telegramWorker = new Worker<TelegramJobPayload>(
-  'telegram-notifications',
+  QUEUE_NAMES.TELEGRAM_NOTIFICATIONS,
   async (job) => {
     await processTelegram(job);
   },
@@ -61,7 +62,7 @@ telegramWorker.on('failed', async (job, err) => {
       error: err.message,
     });
     await telegramDlqQueue
-      .add('failed-telegram', {
+      .add(QUEUE_CATALOG.TELEGRAM_NOTIFICATIONS_DLQ.jobName, {
         originalJob: job.data,
         error: err.message,
         failedAt: new Date().toISOString(),
@@ -85,7 +86,7 @@ telegramWorker.on('error', (err) => {
 
 // ── Analytics Worker ──────────────────────────────────────────────────────────
 const analyticsWorker = new Worker<AnalyticsEventPayload>(
-  'analytics-events',
+  QUEUE_NAMES.ANALYTICS_EVENTS,
   async (job) => {
     await processAnalytics(job);
   },
@@ -106,7 +107,7 @@ analyticsWorker.on('error', (err) => {
 
 // ── Image Optimize Worker ─────────────────────────────────────────────────────
 const imageWorker = new Worker<ImageOptimizePayload>(
-  'image-optimize',
+  QUEUE_NAMES.IMAGE_OPTIMIZE,
   async (job) => {
     await processImageOptimize(job);
   },
@@ -126,7 +127,7 @@ imageWorker.on('failed', async (job, err) => {
       error: err.message,
     });
     await imageDlqQueue
-      .add('failed-optimize', {
+      .add(QUEUE_CATALOG.IMAGE_OPTIMIZE_DLQ.jobName, {
         originalJob: job.data,
         error: err.message,
         failedAt: new Date().toISOString(),
@@ -153,7 +154,7 @@ imageWorker.on('error', (err) => {
 
 // ── Post Publish Worker ───────────────────────────────────────────────────────
 const postPublishWorker = new Worker<PostPublishJobData>(
-  'post-publish',
+  QUEUE_NAMES.POST_PUBLISH,
   async (job, token) => {
     await processPostPublish(job, token);
   },
@@ -183,7 +184,7 @@ postPublishWorker.on('error', (err) => {
 
 // ── Retention Worker ──────────────────────────────────────────────────────────
 const retentionWorker = new Worker(
-  'data-retention',
+  QUEUE_NAMES.DATA_RETENTION,
   async () => {
     await processRetention();
   },
@@ -208,7 +209,7 @@ retentionWorker.on('error', (err) => {
 
 // ── Register repeatable retention job (daily at 03:00 UTC) ───────────────────
 await retentionQueue
-  .add('daily-retention', {}, { repeat: { pattern: '0 3 * * *' } })
+  .add(QUEUE_CATALOG.DATA_RETENTION.jobName, {}, { repeat: { pattern: '0 3 * * *' } })
   .catch((err) => {
     logger.error('Failed to register retention repeatable job', {
       error: (err as Error).message,
@@ -217,7 +218,7 @@ await retentionQueue
 
 // ── AI Post Draft Generation Worker ──────────────────────────────────────────
 const aiPostDraftWorker = new Worker<AiPostDraftJobData>(
-  'ai-post-draft-generation',
+  QUEUE_NAMES.AI_POST_DRAFT_GENERATION,
   async (job) => {
     await processAiPostDraftGeneration(job);
   },
@@ -247,7 +248,7 @@ aiPostDraftWorker.on('error', (err) => {
 
 // ── AI Post Topic Generation Worker ──────────────────────────────────────────
 const aiPostTopicWorker = new Worker<AiPostTopicJobData>(
-  'ai-post-topic-generation',
+  QUEUE_NAMES.AI_POST_TOPIC_GENERATION,
   async (job) => {
     await processAiPostTopicGeneration(job);
   },
