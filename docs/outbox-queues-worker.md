@@ -20,7 +20,7 @@ DLQ queues (`telegram-notifications-dlq`, `image-optimize-dlq`) hold jobs that e
 Image optimization, scheduled post publishing, and AI generation runs use a transactional outbox to guarantee at-least-once delivery. The flow:
 
 1. The API writes the business record and an `outbox` row in the same DB transaction.
-2. The outbox relay (`apps/worker/src/lib/outbox-relay.ts`) polls `outbox` for pending rows every `OUTBOX_POLL_INTERVAL_MS` (default 5000 ms) and publishes the corresponding BullMQ job.
+2. The outbox relay (`apps/worker/src/lib/outbox-relay.ts`) polls `outbox` for pending rows every `OUTBOX_POLL_INTERVAL_MS` (default 5 000 ms, configurable via env) and publishes up to `OUTBOX_BATCH_SIZE` (default 20, configurable via env) BullMQ jobs per cycle.
 3. Each published job has a deterministic `jobId` (from `packages/shared/src/lib/jobIds.ts`) — BullMQ deduplicates replays automatically.
 4. On success the relay marks the row as `processed`. On failure it increments `attempts` and logs the failure class.
 

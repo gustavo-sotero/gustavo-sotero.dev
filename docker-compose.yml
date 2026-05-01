@@ -30,6 +30,12 @@ services:
       BODY_SIZE_LIMIT: ${BODY_SIZE_LIMIT}
       AI_POSTS_ENABLED: ${AI_POSTS_ENABLED:-false}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/ready || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - dokploy-network
 
@@ -39,7 +45,8 @@ services:
       dockerfile: docker/worker.Dockerfile
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
@@ -56,6 +63,12 @@ services:
       AI_POSTS_ENABLED: ${AI_POSTS_ENABLED:-false}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       AI_POSTS_TIMEOUT_MS: ${AI_POSTS_TIMEOUT_MS:-30000}
+    healthcheck:
+      test: ['CMD-SHELL', 'pgrep -f "apps/worker/src/index.ts" > /dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - dokploy-network
 
@@ -77,7 +90,14 @@ services:
       REVALIDATE_SECRET: ${REVALIDATE_SECRET}
       API_INTERNAL_URL: http://api:3000
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/ || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     networks:
       - dokploy-network
 

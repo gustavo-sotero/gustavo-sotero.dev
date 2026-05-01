@@ -50,6 +50,13 @@ export const comments = pgTable(
     index('comments_parent_comment_id_created_at_idx').on(table.parentCommentId, table.createdAt),
     index('comments_status_created_at_idx').on(table.status, table.createdAt),
     index('comments_deleted_at_idx').on(table.deletedAt),
+    // Covers the hot path: approved non-deleted comments for a post ordered by creation time
+    index('comments_post_status_deleted_created_idx').on(
+      table.postId,
+      table.status,
+      table.deletedAt,
+      table.createdAt
+    ),
   ]
 );
 

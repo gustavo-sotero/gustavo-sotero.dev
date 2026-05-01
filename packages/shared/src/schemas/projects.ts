@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { coverUrlSchema } from '../lib/media-url';
 
 const uniqueSkillIds = z
   .array(z.number().int().positive())
@@ -31,7 +32,7 @@ const projectBaseShape = z
       .optional(),
     description: z.string().max(500).optional(),
     content: z.string().optional(),
-    coverUrl: z.union([z.literal(''), z.string().url()]).optional(),
+    coverUrl: coverUrlSchema.optional(),
     status: z.enum(['draft', 'published']).default('draft'),
     repositoryUrl: z.union([z.literal(''), z.string().url()]).optional(),
     liveUrl: z.union([z.literal(''), z.string().url()]).optional(),

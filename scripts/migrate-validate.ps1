@@ -1,5 +1,11 @@
+# NOTE: This script was a one-time migration helper (already applied).
+# Kept for reference in case a similar bulk-replacement is needed in future.
+# The old parseBodyResult/validateBody pattern was replaced by parseAndValidateBody.
+
 $enc = [System.Text.UTF8Encoding]::new($false)
-$root = "c:\Users\gusta\Desktop\gustavo-sotero.dev"
+# Resolve the workspace root relative to this script's location instead of
+# relying on a hardcoded absolute path that only works on the original dev machine.
+$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $routeFiles = @(
   "apps/api/src/routes/admin/posts.ts",

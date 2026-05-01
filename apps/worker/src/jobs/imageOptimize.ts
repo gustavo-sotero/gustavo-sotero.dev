@@ -2,11 +2,12 @@
  * BullMQ job handler: imageOptimize
  *
  * Processes an uploaded image using `sharp`:
- *  1. Download original from S3
- *  2. Detect animated GIF (preserve format)
- *  3. Generate thumbnail (400w WebP) and medium (800w WebP)
- *  4. Upload variants to S3
- *  5. Update `uploads` record → status='processed' + variant URLs + dimensions
+ *  1. Validate S3 object metadata (size, MIME) before loading bytes
+ *  2. Download original from S3
+ *  3. Detect animated GIF (preserve format)
+ *  4. Generate thumbnail (400w WebP) and medium (800w WebP)
+ *  5. Upload variants to S3
+ *  6. Update `uploads` record → status='processed' + variant URLs + dimensions
  *
  * On error: update status='failed' and rethrow for BullMQ retry/DLQ.
  */
@@ -20,6 +21,12 @@ import { getLogger } from '../config/logger';
 import { getPublicUrl, s3 } from '../config/s3';
 
 const logger = getLogger('jobs', 'imageOptimize');
+
+/** Maximum image size the worker will load into memory (5 MiB). */
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/** Accepted image MIME types for processing. */
+const SUPPORTED_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 export interface ImageOptimizePayload {
   uploadId: string;
@@ -48,16 +55,45 @@ export async function processImageOptimize(job: Job<ImageOptimizePayload>): Prom
     }
 
     const key = record.storageKey;
+
+    // 2. Defensive validation: fetch S3 metadata before loading full bytes.
+    //    Guards against legacy records, DB manipulation, outbox replay, and
+    //    storage mutation between confirm and worker processing.
+    const stat = await s3.file(key).stat();
+
+    if (!stat) {
+      throw new Error(`Upload object not found in storage: ${key}`);
+    }
+
+    if (stat.size > MAX_IMAGE_BYTES) {
+      throw new Error(
+        `Upload object exceeds maximum allowed size: ${stat.size} bytes (max ${MAX_IMAGE_BYTES})`
+      );
+    }
+
+    const actualMime = stat.type?.split(';')[0]?.trim() ?? '';
+    if (actualMime && !SUPPORTED_MIMES.has(actualMime)) {
+      throw new Error(`Upload object has unsupported MIME type: ${actualMime}`);
+    }
+
+    if (record.mime && actualMime && actualMime !== record.mime) {
+      logger.warn('MIME mismatch between DB record and S3 object — using S3 MIME', {
+        uploadId,
+        recordMime: record.mime,
+        actualMime,
+      });
+    }
+
     const originalBytes = await s3.file(key).bytes();
 
-    // 2. Load into buffer for sharp processing
+    // 3. Load into buffer for sharp processing
     const buffer = Buffer.from(originalBytes);
 
-    // 3. Read metadata
+    // 4. Read metadata
     const metadata = await sharp(buffer).metadata();
     const { width, height, pages } = metadata;
 
-    // 4. Detect animated GIF — skip WebP conversion, preserve original format
+    // 5. Detect animated GIF — skip WebP conversion, preserve original format
     const isAnimatedGif = record.mime === 'image/gif' && (pages ?? 0) > 1;
 
     const now = new Date();
@@ -102,7 +138,7 @@ export async function processImageOptimize(job: Job<ImageOptimizePayload>): Prom
         mediumKey,
       });
     } else {
-      // 5. Generate WebP variants
+      // 6. Generate WebP variants
       const thumbKey = `${yyyy}/${mm}/${baseName}_thumb.webp`;
       const mediumKey = `${yyyy}/${mm}/${baseName}_medium.webp`;
 
@@ -128,7 +164,7 @@ export async function processImageOptimize(job: Job<ImageOptimizePayload>): Prom
       logger.debug('WebP variants generated', { uploadId, thumbKey, mediumKey });
     }
 
-    // 6. Update DB record
+    // 7. Update DB record
     await db
       .update(uploads)
       .set({

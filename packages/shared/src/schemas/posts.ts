@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { coverUrlSchema } from '../lib/media-url';
 
 /**
  * Validates a scheduledAt value: must be a valid ISO 8601 string in the future (UTC).
@@ -31,7 +32,7 @@ const postSchemaBase = z.object({
     .optional(),
   content: z.string().min(1),
   excerpt: z.string().max(500).optional(),
-  coverUrl: z.union([z.literal(''), z.string().url()]).optional(),
+  coverUrl: coverUrlSchema.optional(),
   status: z.enum(['draft', 'published', 'scheduled']).default('draft'),
   order: z.number().int().default(0),
   tagIds: uniqueTagIds.optional(),

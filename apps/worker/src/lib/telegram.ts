@@ -2,7 +2,7 @@
  * Telegram Bot API helper for the Worker process.
  *
  * Sends a message to a configured Telegram chat via the Bot API.
- * Throws on non-OK responses so BullMQ can retry the job.
+ * Throws on non-OK responses or timeout so BullMQ can retry the job.
  */
 
 import { env } from '../config/env';
@@ -15,7 +15,8 @@ type ParseMode = 'MarkdownV2' | 'Markdown' | 'HTML';
 /**
  * Send a text message to the configured Telegram chat.
  *
- * @throws Error if the Telegram API returns a non-OK response — triggers BullMQ retry.
+ * @throws Error if the Telegram API returns a non-OK response or the request
+ *   times out — both conditions trigger BullMQ retry behavior.
  */
 export async function sendTelegramMessage(
   text: string,
@@ -31,6 +32,7 @@ export async function sendTelegramMessage(
       text,
       parse_mode: parseMode,
     }),
+    signal: AbortSignal.timeout(env.TELEGRAM_TIMEOUT_MS),
   });
 
   if (!response.ok) {

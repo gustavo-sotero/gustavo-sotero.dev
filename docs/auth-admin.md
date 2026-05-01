@@ -40,6 +40,17 @@ https://your-domain.com/api/auth/github/callback
 
 After the proxy strips the `/api` prefix, the API processes the request at `/auth/github/callback`.
 
+## OAuth State Storage and Redis Fallback
+
+During the OAuth flow the API stores a CSRF state token in Redis under a short TTL. If Redis is unavailable, the API can fall back to a process-local in-memory map controlled by:
+
+```
+OAUTH_STATE_LOCAL_FALLBACK=true   # default — enables in-process fallback
+OAUTH_STATE_LOCAL_FALLBACK=false  # fail-closed: returns 503 on Redis failure
+```
+
+The default (`true`) is safe for single-instance deployments. Set it to `false` in multi-replica or zero-downtime-restart environments where in-process state is not shared between instances.
+
 ## Security Notes
 
 - Admin mutations (`PUT /admin/posts/generate/config` and similar) are within scope for CORS and CSRF protection.

@@ -71,6 +71,13 @@ export const runtimeOnlyFields = {
     .enum(['true', 'false'])
     .default('true')
     .transform((value) => value === 'true'),
+  // When false, auth flow fails closed if Redis is unavailable rather than
+  // falling back to a single-instance in-memory OAuth state store.
+  // Set to 'false' in production multi-replica deployments.
+  OAUTH_STATE_LOCAL_FALLBACK: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 
   // Admin profile
   ADMIN_DISPLAY_NAME: z.string().min(1).max(100).default('Admin'),

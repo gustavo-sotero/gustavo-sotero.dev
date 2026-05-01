@@ -58,7 +58,7 @@ export interface PostListFilters {
 export async function listPosts(
   filters: PostListFilters,
   adminMode = false,
-  options: TotalCountQueryOptions = {}
+  options: TotalCountQueryOptions & { summaryOnly?: boolean } = {}
 ) {
   if (adminMode) {
     const result = await findManyPosts(filters, true, options);
@@ -66,7 +66,7 @@ export async function listPosts(
   }
 
   const sort = filters.sort ?? 'recent';
-  const key = `posts:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}:sort=${sort}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
+  const key = `posts:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}:sort=${sort}:includeTotal=${options.includeTotal === false ? '0' : '1'}:summaryOnly=${options.summaryOnly === true ? '1' : '0'}`;
   return cached(key, LIST_TTL, async () => {
     const result = await findManyPosts({ ...filters, sort }, false, options);
     return { ...result, data: result.data.map(flattenPivotTags) };

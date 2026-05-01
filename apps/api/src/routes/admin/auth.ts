@@ -66,6 +66,7 @@ function consumeLocalOauthState(state: string): string | null {
  *
  * Primary path uses GETDEL (Redis >= 6.2). If unavailable, falls back to a
  * Lua script that performs GET+DEL atomically on the server.
+ * Falls back to local memory only when OAUTH_STATE_LOCAL_FALLBACK is enabled.
  */
 async function consumeOauthState(state: string): Promise<string | null> {
   const key = `oauth:state:${state}`;
@@ -85,11 +86,24 @@ async function consumeOauthState(state: string): Promise<string | null> {
         if (typeof consumed === 'string') return consumed;
         return consumeLocalOauthState(state);
       } catch (luaErr) {
+        if (!env.OAUTH_STATE_LOCAL_FALLBACK) {
+          logger.error('OAuth state Lua fallback failed and local fallback is disabled', {
+            error: luaErr instanceof Error ? luaErr.message : String(luaErr),
+          });
+          return null;
+        }
         logger.warn('OAuth state Lua fallback failed, trying local fallback', {
           error: luaErr instanceof Error ? luaErr.message : String(luaErr),
         });
         return consumeLocalOauthState(state);
       }
+    }
+
+    if (!env.OAUTH_STATE_LOCAL_FALLBACK) {
+      logger.error('OAuth state Redis consume failed and local fallback is disabled', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
     }
 
     logger.warn('OAuth state Redis consume failed, trying local fallback', {
@@ -121,6 +135,12 @@ authRouter.post('/github/start', authRateLimit, async (c) => {
   try {
     await redis.set(`oauth:state:${state}`, '1', 'EX', 600);
   } catch (err) {
+    if (!env.OAUTH_STATE_LOCAL_FALLBACK) {
+      logger.error('Redis unavailable for OAuth state and local fallback is disabled', {
+        error: (err as Error).message,
+      });
+      return errorResponse(c, 503, 'SERVICE_UNAVAILABLE', 'Authentication service unavailable');
+    }
     setLocalOauthState(state, 600);
     logger.warn('Redis unavailable for OAuth state, using local fallback (single-instance)', {
       error: (err as Error).message,

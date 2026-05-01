@@ -229,6 +229,23 @@ describe('posts/projects services', () => {
     });
   });
 
+  it('listPosts repassa summaryOnly=true para o repositório', async () => {
+    findManyPostsMock.mockResolvedValueOnce({
+      data: [],
+      meta: { page: 1, perPage: 3, total: 0, totalPages: 0 },
+    });
+
+    await listPosts({ page: 1, perPage: 3, sort: 'recent' }, false, {
+      includeTotal: false,
+      summaryOnly: true,
+    });
+
+    expect(findManyPostsMock).toHaveBeenCalledWith({ page: 1, perPage: 3, sort: 'recent' }, false, {
+      includeTotal: false,
+      summaryOnly: true,
+    });
+  });
+
   it('createProjectService renderiza markdown em write-time', async () => {
     dbLimitMock.mockResolvedValueOnce([]);
     createProjectMock.mockResolvedValueOnce({ id: 1, slug: 'projeto-a' });
@@ -391,6 +408,24 @@ describe('posts/projects services', () => {
       { page: 1, perPage: 3, featuredFirst: true },
       false,
       { includeTotal: false }
+    );
+  });
+
+  it('listProjects repassa summaryOnly=true para o repositório', async () => {
+    findManyProjectsMock.mockResolvedValueOnce({
+      data: [],
+      meta: { page: 1, perPage: 3, total: 0, totalPages: 0 },
+    });
+
+    await listProjects({ page: 1, perPage: 3, featuredFirst: false }, false, {
+      includeTotal: false,
+      summaryOnly: true,
+    });
+
+    expect(findManyProjectsMock).toHaveBeenCalledWith(
+      { page: 1, perPage: 3, featuredFirst: false },
+      false,
+      { includeTotal: false, summaryOnly: true }
     );
   });
 

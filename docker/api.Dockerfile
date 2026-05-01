@@ -19,6 +19,10 @@ RUN bun install --frozen-lockfile
 FROM oven/bun:slim AS runtime
 WORKDIR /app
 
+# Create a non-root runtime user
+RUN addgroup --system --gid 1001 appgroup \
+  && adduser --system --uid 1001 --ingroup appgroup appuser
+
 # Preserve the Bun workspace manifest/lockfile context used to materialize
 # dependencies inside node_modules/.bun during the install stage.
 COPY package.json bun.lock ./
@@ -39,6 +43,11 @@ COPY tsconfig.base.json ./
 COPY drizzle ./drizzle
 COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
+
+# Ensure the log directory is writable by the runtime user
+RUN mkdir -p /app/apps/api/logs && chown -R appuser:appgroup /app/apps/api/logs
+
+USER appuser
 
 ENV HOSTNAME=0.0.0.0
 EXPOSE 3000

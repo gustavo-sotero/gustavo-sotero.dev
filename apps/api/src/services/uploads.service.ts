@@ -30,6 +30,76 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/gif': 'gif',
 };
 
+/**
+ * Maximum tolerance ratio between declared and actual object size.
+ * Actual size must be within this factor of the declared size.
+ */
+const SIZE_TOLERANCE_RATIO = 0.05; // 5%
+
+/**
+ * Read the minimum number of bytes needed for image magic-byte validation.
+ * WebP requires 12 bytes (4 RIFF + 4 size + 4 WEBP).
+ */
+const MAGIC_BYTES_PREFIX_SIZE = 12;
+
+/**
+ * Validate image magic bytes against the declared MIME type.
+ * Returns an error string on mismatch, null on success.
+ */
+function validateImageMagicBytes(bytes: Uint8Array, mime: string): string | null {
+  if (bytes.length < 4) return 'Image file is too small to validate';
+
+  switch (mime) {
+    case 'image/jpeg':
+      if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return null;
+      return 'File does not match JPEG signature';
+
+    case 'image/png':
+      if (
+        bytes[0] === 0x89 &&
+        bytes[1] === 0x50 &&
+        bytes[2] === 0x4e &&
+        bytes[3] === 0x47 &&
+        bytes[4] === 0x0d &&
+        bytes[5] === 0x0a &&
+        bytes[6] === 0x1a &&
+        bytes[7] === 0x0a
+      )
+        return null;
+      return 'File does not match PNG signature';
+
+    case 'image/gif':
+      if (
+        bytes[0] === 0x47 &&
+        bytes[1] === 0x49 &&
+        bytes[2] === 0x46 &&
+        bytes[3] === 0x38 &&
+        (bytes[4] === 0x37 || bytes[4] === 0x39) &&
+        bytes[5] === 0x61
+      )
+        return null;
+      return 'File does not match GIF signature';
+
+    case 'image/webp':
+      // RIFF....WEBP
+      if (
+        bytes[0] === 0x52 &&
+        bytes[1] === 0x49 &&
+        bytes[2] === 0x46 &&
+        bytes[3] === 0x46 &&
+        bytes[8] === 0x57 &&
+        bytes[9] === 0x45 &&
+        bytes[10] === 0x42 &&
+        bytes[11] === 0x50
+      )
+        return null;
+      return 'File does not match WebP signature';
+
+    default:
+      return null; // unknown MIME — skip magic check
+  }
+}
+
 export interface PresignResult {
   presignedUrl: string;
   key: string;
@@ -116,7 +186,9 @@ export async function getUploadById(uploadId: string): Promise<UploadRecord> {
 /**
  * Confirm a completed upload.
  *
- * Validates the object exists in S3, then atomically:
+ * Validates the object exists in S3, checks actual size and content-type
+ * metadata against the declared values, validates image magic bytes, then
+ * atomically:
  *  1. Updates status `pending → uploaded` with a WHERE guard to prevent
  *     concurrent requests from double-processing the same upload (TOCTOU fix).
  *  2. Inserts an outbox event `image-optimize` so the worker relay reliably
@@ -125,6 +197,7 @@ export async function getUploadById(uploadId: string): Promise<UploadRecord> {
  * @throws 'NOT_FOUND'           if upload ID does not exist
  * @throws 'CONFLICT'            if status is not 'pending' (concurrent request won)
  * @throws 'NOT_FOUND_IN_BUCKET' if object is missing from S3
+ * @throws 'DomainValidationError' if actual object metadata or image bytes mismatch
  */
 export async function confirmUpload(uploadId: string): Promise<ConfirmedUpload> {
   const record = await findUploadById(uploadId);
@@ -136,10 +209,58 @@ export async function confirmUpload(uploadId: string): Promise<ConfirmedUpload> 
     throw new ConflictError(`Upload is already in status '${record.status}'`);
   }
 
-  // Verify object exists in S3 before opening the transaction.
-  const exists = await s3.file(record.storageKey).exists();
-  if (!exists) {
+  // Verify object exists and fetch metadata in a single S3 stat call.
+  const stat = await s3.file(record.storageKey).stat();
+  if (!stat) {
     throw new NotFoundError('File not found in storage — upload the file before confirming.');
+  }
+
+  // Validate actual stored size against declared size (allow up to SIZE_TOLERANCE_RATIO drift
+  // to accommodate multi-part upload padding differences).
+  const declaredSize = record.size;
+  const actualSize = stat.size;
+  const sizeDelta = Math.abs(actualSize - declaredSize) / Math.max(declaredSize, 1);
+  if (sizeDelta > SIZE_TOLERANCE_RATIO) {
+    logger.warn('Upload confirmation rejected: size mismatch', {
+      uploadId,
+      declaredSize,
+      actualSize,
+      sizeDelta: sizeDelta.toFixed(3),
+    });
+    throw new DomainValidationError(
+      `Uploaded file size (${actualSize} bytes) does not match declared size (${declaredSize} bytes)`,
+      [{ field: 'size', message: 'Actual file size does not match declared size' }]
+    );
+  }
+
+  // Validate actual content-type against declared MIME when the S3 provider returns it.
+  const actualMime = stat.type?.split(';')[0]?.trim() ?? '';
+  if (actualMime && actualMime !== record.mime) {
+    logger.warn('Upload confirmation rejected: MIME mismatch', {
+      uploadId,
+      declaredMime: record.mime,
+      actualMime,
+    });
+    throw new DomainValidationError(
+      `Uploaded file type (${actualMime}) does not match declared MIME type (${record.mime})`,
+      [{ field: 'mime', message: 'Actual file type does not match declared MIME type' }]
+    );
+  }
+
+  // Read the minimum prefix for magic-byte image signature validation.
+  // Uses a range request to avoid loading the full object into memory here.
+  const prefixBlob = await s3.file(record.storageKey).slice(0, MAGIC_BYTES_PREFIX_SIZE);
+  const prefixBuffer = await prefixBlob.arrayBuffer();
+  const prefixBytes = new Uint8Array(prefixBuffer);
+
+  const magicError = validateImageMagicBytes(prefixBytes, record.mime);
+  if (magicError) {
+    logger.warn('Upload confirmation rejected: magic byte mismatch', {
+      uploadId,
+      mime: record.mime,
+      reason: magicError,
+    });
+    throw new DomainValidationError(magicError, [{ field: 'file', message: magicError }]);
   }
 
   // Atomic transaction:

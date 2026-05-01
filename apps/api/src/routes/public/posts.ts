@@ -30,10 +30,12 @@ publicPostsRouter.get('/', async (c) => {
   });
   if (!qv.ok) return qv.response;
 
-  // Force public mode: only published, no status filter
+  // Force public mode: only published, no status filter.
+  // Skip COUNT(*) and heavy content fields — not needed for list cards.
   const result = await listPosts(
     { page: qv.data.page, perPage: qv.data.perPage, tag: qv.data.tag, sort: qv.data.sort },
-    false
+    false,
+    { includeTotal: false, summaryOnly: true }
   );
   return paginatedResponse(c, result.data, result.meta);
 });

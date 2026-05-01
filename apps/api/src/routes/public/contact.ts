@@ -1,12 +1,11 @@
 import { createContactSchema } from '@portfolio/shared/schemas/contacts';
 import { Hono } from 'hono';
-import { enqueueTelegramNotification } from '../../lib/queues';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
 import { validateTurnstile } from '../../lib/turnstile';
 import { validateBody } from '../../lib/validate';
 import { createRateLimit, getClientIp } from '../../middleware/rateLimit';
-import { createContact } from '../../repositories/contacts.repo';
+import { submitContact } from '../../services/contact.service';
 import type { AppEnv } from '../../types/index';
 
 const contactRouter = new Hono<AppEnv>();
@@ -56,19 +55,10 @@ contactRouter.post('/', contactRateLimit, async (c) => {
     return errorResponse(c, 400, 'VALIDATION_ERROR', 'Security verification failed');
   }
 
-  await createContact({
+  await submitContact({
     name: payload.name,
     email: payload.email,
     message: payload.message,
-  });
-
-  // Fire-and-forget: notify admin via Telegram — do not await so enqueue latency
-  // never blocks the 201 response. Failures are handled inside the job queue.
-  void enqueueTelegramNotification({
-    type: 'contact',
-    name: payload.name,
-    email: payload.email,
-    messagePreview: payload.message.slice(0, 200),
   });
 
   return successResponse(c, { message: 'Message sent successfully' }, 201);

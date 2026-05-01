@@ -655,8 +655,10 @@ export function PostGenerationAssistant({
                         onTagsApplied?.(value as number[]);
                         setValue('tagIds', value as number[]);
                       } else if (field !== 'tagIds') {
-                        // biome-ignore lint/suspicious/noExplicitAny: dynamic field apply
-                        setValue(field as any, value as string);
+                        setValue(
+                          field as 'title' | 'slug' | 'excerpt' | 'content',
+                          value as string
+                        );
                       }
                     }}
                     onRegenerate={handleRegenerateDraft}

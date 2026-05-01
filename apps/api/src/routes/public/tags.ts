@@ -32,7 +32,7 @@ publicTagsRouter.get('/', async (c) => {
   });
   if (!qv.ok) return qv.response;
 
-  const result = await listTags(qv.data, true);
+  const result = await listTags(qv.data, true, { includeTotal: false });
   return successResponse(c, result.data);
 });
 

@@ -260,8 +260,10 @@ async function fetchDeveloperProfile(): Promise<DeveloperProfileDTO> {
 
   const [postsResult, projectsResult, skillsResult, experienceResult, educationResult, pageviews] =
     await Promise.all([
-      findManyPosts({ page: 1, perPage: RECENT_POSTS_LIMIT }, false),
-      findManyProjects({ page: 1, perPage: RECENT_PROJECTS_LIMIT, featuredFirst: true }, false),
+      findManyPosts({ page: 1, perPage: RECENT_POSTS_LIMIT }, false, { summaryOnly: true }),
+      findManyProjects({ page: 1, perPage: RECENT_PROJECTS_LIMIT, featuredFirst: true }, false, {
+        summaryOnly: true,
+      }),
       findManySkills({}),
       findManyExperience({ page: 1, perPage: 100 }, false),
       findManyEducation({ page: 1, perPage: 100 }, false),

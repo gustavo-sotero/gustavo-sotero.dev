@@ -61,14 +61,14 @@ export interface ProjectListFilters {
 export async function listProjects(
   filters: ProjectListFilters,
   adminMode = false,
-  options: TotalCountQueryOptions = {}
+  options: TotalCountQueryOptions & { summaryOnly?: boolean } = {}
 ) {
   if (adminMode) {
     const result = await findManyProjects(filters, true, options);
     return { ...result, data: result.data.map(flattenPivotSkills) };
   }
 
-  const key = `projects:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:skill=${filters.skill ?? ''}:featured=${String(filters.featured ?? false)}:featuredFirst=${String(filters.featuredFirst ?? false)}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
+  const key = `projects:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:skill=${filters.skill ?? ''}:featured=${String(filters.featured ?? false)}:featuredFirst=${String(filters.featuredFirst ?? false)}:includeTotal=${options.includeTotal === false ? '0' : '1'}:summaryOnly=${options.summaryOnly === true ? '1' : '0'}`;
   return cached(key, LIST_TTL, async () => {
     const result = await findManyProjects(filters, false, options);
     return { ...result, data: result.data.map(flattenPivotSkills) };

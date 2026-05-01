@@ -70,7 +70,8 @@ describe('public content routes', () => {
     expect(body.meta.total).toBe(1);
     expect(listPostsMock).toHaveBeenCalledWith(
       { page: 1, perPage: 20, sort: 'recent', tag: undefined },
-      false
+      false,
+      { includeTotal: false, summaryOnly: true }
     );
   });
 
@@ -87,7 +88,8 @@ describe('public content routes', () => {
     expect(response.status).toBe(200);
     expect(listPostsMock).toHaveBeenCalledWith(
       { page: 1, perPage: 20, sort: 'manual', tag: undefined },
-      false
+      false,
+      { includeTotal: false, summaryOnly: true }
     );
   });
 
@@ -141,7 +143,10 @@ describe('public content routes', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(1);
-    expect(listProjectsMock).toHaveBeenCalledWith({ featured: true, page: 1, perPage: 20 }, false);
+    expect(listProjectsMock).toHaveBeenCalledWith({ featured: true, page: 1, perPage: 20 }, false, {
+      includeTotal: false,
+      summaryOnly: true,
+    });
   });
 
   it('GET /projects?featuredFirst=true passes flag to service', async () => {
@@ -167,7 +172,8 @@ describe('public content routes', () => {
     expect(body.data).toHaveLength(2);
     expect(listProjectsMock).toHaveBeenCalledWith(
       { featuredFirst: true, page: 1, perPage: 3 },
-      false
+      false,
+      { includeTotal: false, summaryOnly: true }
     );
   });
 
@@ -187,7 +193,8 @@ describe('public content routes', () => {
     expect(body.success).toBe(true);
     expect(listProjectsMock).toHaveBeenCalledWith(
       { featured: true, featuredFirst: true, page: 1, perPage: 3 },
-      false
+      false,
+      { includeTotal: false, summaryOnly: true }
     );
   });
 
@@ -241,7 +248,11 @@ describe('public content routes', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(1);
-    expect(listTagsMock).toHaveBeenCalledWith({ category: 'language,framework' }, true);
+    expect(listTagsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'language,framework' }),
+      true,
+      { includeTotal: false }
+    );
   });
 
   it('GET /tags accepts cloud category filter', async () => {
@@ -261,7 +272,11 @@ describe('public content routes', () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(listTagsMock).toHaveBeenCalledWith({ category: 'cloud' }, true);
+    expect(listTagsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'cloud' }),
+      true,
+      { includeTotal: false }
+    );
   });
 
   it('GET /tags accepts infra category filter', async () => {
@@ -281,7 +296,11 @@ describe('public content routes', () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(listTagsMock).toHaveBeenCalledWith({ category: 'infra' }, true);
+    expect(listTagsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'infra' }),
+      true,
+      { includeTotal: false }
+    );
   });
 
   it('GET /tags accepts combined cloud,infra category filter', async () => {
@@ -298,7 +317,11 @@ describe('public content routes', () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(listTagsMock).toHaveBeenCalledWith({ category: 'cloud,infra' }, true);
+    expect(listTagsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'cloud,infra' }),
+      true,
+      { includeTotal: false }
+    );
   });
 
   it('GET /tags?source=project returns 400 (tags are now posts-only)', async () => {
@@ -325,7 +348,9 @@ describe('public content routes', () => {
 
     const response = await app.request('/tags?source=post');
     expect(response.status).toBe(200);
-    expect(listTagsMock).toHaveBeenCalledWith({ source: 'post' }, true);
+    expect(listTagsMock).toHaveBeenCalledWith(expect.objectContaining({ source: 'post' }), true, {
+      includeTotal: false,
+    });
   });
 
   it('GET /tags?source=experience returns 400 (tags are now posts-only)', async () => {
@@ -367,7 +392,11 @@ describe('public content routes', () => {
 
     const response = await app.request('/tags?source=post&category=language');
     expect(response.status).toBe(200);
-    expect(listTagsMock).toHaveBeenCalledWith({ source: 'post', category: 'language' }, true);
+    expect(listTagsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'post', category: 'language' }),
+      true,
+      { includeTotal: false }
+    );
   });
 
   it('GET /tags without source preserves legacy union behaviour', async () => {
@@ -381,7 +410,7 @@ describe('public content routes', () => {
 
     const response = await app.request('/tags');
     expect(response.status).toBe(200);
-    expect(listTagsMock).toHaveBeenCalledWith({}, true);
+    expect(listTagsMock).toHaveBeenCalledWith(expect.any(Object), true, { includeTotal: false });
   });
 
   it('GET /projects/:slug includes impactFacts in the response body', async () => {

@@ -306,7 +306,7 @@ logger.info('All workers ready', {
 //   eliminates noisy duplicate log entries, without relying solely on
 //   downstream idempotency for correctness.
 
-const OUTBOX_POLL_INTERVAL_MS = 5_000;
+const OUTBOX_POLL_INTERVAL_MS = env.OUTBOX_POLL_INTERVAL_MS;
 const QUEUE_OBSERVABILITY_INTERVAL_MS = 60_000;
 const outboxRelayPollGuard = createOutboxRelayPollGuard(logger, OUTBOX_POLL_INTERVAL_MS);
 const observedQueues = [
@@ -328,7 +328,8 @@ async function runOutboxRelay(): Promise<void> {
       imageQueue,
       postPublishQueue,
       aiPostDraftGenerationQueue,
-      aiPostTopicGenerationQueue
+      aiPostTopicGenerationQueue,
+      { batchSize: env.OUTBOX_BATCH_SIZE }
     );
   } finally {
     outboxRelayPollGuard.finishCycle();

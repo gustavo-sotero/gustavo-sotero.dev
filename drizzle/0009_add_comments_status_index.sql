@@ -1,0 +1,1 @@
+CREATE INDEX "comments_post_status_deleted_created_idx" ON "comments" USING btree ("post_id","status","deleted_at","created_at");

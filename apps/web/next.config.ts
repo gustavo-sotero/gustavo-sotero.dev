@@ -32,10 +32,10 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       s3RemotePattern,
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-      },
+      // Allow localhost only in development (never in production builds)
+      ...(process.env.NODE_ENV !== 'production'
+        ? [{ protocol: 'http' as const, hostname: 'localhost' }]
+        : []),
     ],
   },
 };

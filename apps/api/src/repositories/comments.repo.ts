@@ -80,9 +80,13 @@ export function buildCommentTree(
 
 /**
  * Returns a nested tree of approved, non-deleted comments for a post.
- * Used in the public post detail payload.
+ * Used in the public post detail payload. Capped at `limit` root+reply rows
+ * (default 200) to prevent unbounded memory growth on heavily-commented posts.
  */
-export async function findApprovedCommentsByPostId(postId: number): Promise<PublicCommentNode[]> {
+export async function findApprovedCommentsByPostId(
+  postId: number,
+  limit = 200
+): Promise<PublicCommentNode[]> {
   const rows = await db
     .select({
       id: comments.id,
@@ -99,7 +103,8 @@ export async function findApprovedCommentsByPostId(postId: number): Promise<Publ
     .where(
       and(eq(comments.postId, postId), eq(comments.status, 'approved'), isNull(comments.deletedAt))
     )
-    .orderBy(asc(comments.createdAt));
+    .orderBy(asc(comments.createdAt))
+    .limit(limit);
 
   return buildCommentTree(rows);
 }

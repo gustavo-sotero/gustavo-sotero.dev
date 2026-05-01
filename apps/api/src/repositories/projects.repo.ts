@@ -60,7 +60,7 @@ function resolveProjectListState(filters: ProjectFilters, adminMode: boolean) {
   };
 }
 
-async function queryProjectRows(filters: ProjectFilters, adminMode: boolean) {
+async function queryProjectRows(filters: ProjectFilters, adminMode: boolean, summaryOnly = false) {
   const { page, perPage, offset, limit, where } = resolveProjectListState(filters, adminMode);
   const rows = await db.query.projects.findMany({
     where,
@@ -69,6 +69,7 @@ async function queryProjectRows(filters: ProjectFilters, adminMode: boolean) {
       : sql`${projects.createdAt} DESC`,
     limit,
     offset,
+    ...(summaryOnly ? { columns: { content: false, renderedContent: false } } : {}),
     with: {
       skills: {
         with: { skill: true },
@@ -86,9 +87,13 @@ async function queryProjectRows(filters: ProjectFilters, adminMode: boolean) {
 export async function findManyProjects(
   filters: ProjectFilters,
   adminMode = false,
-  options: TotalCountQueryOptions = {}
+  options: TotalCountQueryOptions & { summaryOnly?: boolean } = {}
 ) {
-  const { rows, page, perPage, where } = await queryProjectRows(filters, adminMode);
+  const { rows, page, perPage, where } = await queryProjectRows(
+    filters,
+    adminMode,
+    options.summaryOnly
+  );
 
   if (options.includeTotal === false) {
     return {

@@ -62,7 +62,7 @@ function resolvePostListState(filters: PostFilters, adminMode: boolean) {
   };
 }
 
-async function queryPostRows(filters: PostFilters, adminMode: boolean) {
+async function queryPostRows(filters: PostFilters, adminMode: boolean, summaryOnly = false) {
   const { page, perPage, offset, limit, where } = resolvePostListState(filters, adminMode);
   const rows = await db.query.posts.findMany({
     where,
@@ -72,6 +72,7 @@ async function queryPostRows(filters: PostFilters, adminMode: boolean) {
         : sql`${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`,
     limit,
     offset,
+    ...(summaryOnly ? { columns: { content: false, renderedContent: false } } : {}),
     with: {
       tags: {
         with: { tag: true },
@@ -104,9 +105,13 @@ export async function findPublicPostById(
 export async function findManyPosts(
   filters: PostFilters,
   adminMode = false,
-  options: TotalCountQueryOptions = {}
+  options: TotalCountQueryOptions & { summaryOnly?: boolean } = {}
 ) {
-  const { rows, page, perPage, where } = await queryPostRows(filters, adminMode);
+  const { rows, page, perPage, where } = await queryPostRows(
+    filters,
+    adminMode,
+    options.summaryOnly
+  );
 
   if (options.includeTotal === false) {
     return {

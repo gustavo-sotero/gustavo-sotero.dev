@@ -70,7 +70,8 @@ describe('GET /skills (public)', () => {
 
     expect(listSkillsMock).toHaveBeenCalledWith(
       expect.objectContaining({ category: 'language' }),
-      true
+      true,
+      { includeTotal: false }
     );
   });
 
@@ -84,7 +85,8 @@ describe('GET /skills (public)', () => {
 
     expect(listSkillsMock).toHaveBeenCalledWith(
       expect.objectContaining({ highlighted: true }),
-      true
+      true,
+      { includeTotal: false }
     );
   });
 
@@ -95,7 +97,8 @@ describe('GET /skills (public)', () => {
 
     expect(listSkillsMock).toHaveBeenCalledWith(
       expect.objectContaining({ page: 2, perPage: 10 }),
-      true
+      true,
+      { includeTotal: false }
     );
   });
 

@@ -31,7 +31,8 @@ publicSkillsRouter.get('/', async (c) => {
       page: qv.data.page,
       perPage: qv.data.perPage,
     },
-    true // use public cache
+    true, // use public cache
+    { includeTotal: false }
   );
   return paginatedResponse(c, result.data, result.meta);
 });

@@ -28,10 +28,12 @@ RUN bun install --frozen-lockfile
 FROM oven/bun:slim AS runtime
 WORKDIR /app
 
-# Install libvips runtime dependency for sharp
+# Install libvips runtime dependency for sharp and create non-root runtime user
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends libvips && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends libvips && rm -rf /var/lib/apt/lists/* \
+  && addgroup --system --gid 1001 appgroup \
+  && adduser --system --uid 1001 --ingroup appgroup appuser
 
 # Preserve the Bun workspace manifest/lockfile context used to materialize
 # dependencies inside node_modules/.bun during the install stage.
@@ -51,9 +53,11 @@ COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_module
 # Copy source files
 COPY tsconfig.base.json ./
 COPY packages/shared ./packages/shared
-# Worker also needs access to api db schema
-COPY apps/api/src/db ./apps/api/src/db
-COPY apps/api/package.json ./apps/api/
 COPY apps/worker ./apps/worker
+
+# Ensure the log directory is writable by the runtime user
+RUN mkdir -p /app/apps/worker/logs && chown -R appuser:appgroup /app/apps/worker/logs
+
+USER appuser
 
 CMD ["bun", "run", "apps/worker/src/index.ts"]

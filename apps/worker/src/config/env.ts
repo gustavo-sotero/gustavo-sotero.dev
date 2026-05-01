@@ -26,6 +26,11 @@ export const workerEnvSchema = z
       .transform((value) => value === 'true'),
     OPENROUTER_API_KEY: optionalNonEmptyString,
     AI_POSTS_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+    // Outbox relay tuning
+    OUTBOX_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(20),
+    OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(500).max(60_000).default(5_000),
+    // Telegram notification timeout
+    TELEGRAM_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
   })
   .superRefine((data, ctx) => {
     if (data.AI_POSTS_ENABLED && !data.OPENROUTER_API_KEY) {

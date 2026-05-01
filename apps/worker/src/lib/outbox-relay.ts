@@ -186,8 +186,10 @@ export async function processOutboxEvents(
   imageQueue: Queue,
   postPublishQueue: Queue,
   aiPostDraftGenerationQueue: Queue,
-  aiPostTopicGenerationQueue: Queue
+  aiPostTopicGenerationQueue: Queue,
+  options?: { batchSize?: number }
 ): Promise<void> {
+  const batchSize = options?.batchSize ?? 20;
   const cycleStartAt = Date.now();
   let events: (typeof outbox.$inferSelect)[];
 
@@ -214,7 +216,7 @@ export async function processOutboxEvents(
       .from(outbox)
       .where(and(eq(outbox.status, 'pending'), lte(outbox.attempts, OUTBOX_MAX_ATTEMPTS - 1)))
       .orderBy(asc(outbox.createdAt))
-      .limit(20);
+      .limit(batchSize);
   } catch (err) {
     if (isMissingOutboxSchemaError(err)) {
       if (!outboxSchemaMissing) {

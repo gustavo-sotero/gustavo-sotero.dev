@@ -42,13 +42,19 @@ ENV NODE_ENV=production
 ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
 
+# Create a non-root runtime user
+RUN addgroup --system --gid 1001 appgroup \
+  && adduser --system --uid 1001 --ingroup appgroup appuser
+
 # Copy Next.js standalone output
-COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=appuser:appgroup /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=appuser:appgroup /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=appuser:appgroup /app/apps/web/public ./apps/web/public
 
 # Next standalone output nests the executable server under apps/web.
 WORKDIR /app/apps/web
+
+USER appuser
 
 EXPOSE 3001
 

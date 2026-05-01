@@ -30,7 +30,8 @@ publicProjectsRouter.get('/', async (c) => {
   });
   if (!qv.ok) return qv.response;
 
-  const result = await listProjects(qv.data, false);
+  // Skip COUNT(*) and heavy content fields — not needed for list cards.
+  const result = await listProjects(qv.data, false, { includeTotal: false, summaryOnly: true });
   return paginatedResponse(c, result.data, result.meta);
 });
 
