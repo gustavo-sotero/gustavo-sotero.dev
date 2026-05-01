@@ -12,7 +12,7 @@
  */
 
 import { AiGenerationError } from '@portfolio/shared';
-import type { Job } from 'bullmq';
+import { type Job, UnrecoverableError } from 'bullmq';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
@@ -236,7 +236,7 @@ describe('processAiPostDraftGeneration', () => {
     );
 
     await expect(processAiPostDraftGeneration(buildJob())).rejects.toBeInstanceOf(
-      AiGenerationError
+      UnrecoverableError
     );
 
     // Error persistence: status = timed_out
@@ -285,7 +285,7 @@ describe('processAiPostDraftGeneration', () => {
     );
 
     await expect(processAiPostDraftGeneration(buildJob(RUN_ID, 1, 2))).rejects.toBeInstanceOf(
-      AiGenerationError
+      UnrecoverableError
     );
 
     const errorSetArg = updateSetMock.mock.calls.find((call: unknown[]) => {
@@ -317,7 +317,7 @@ describe('processAiPostDraftGeneration', () => {
     });
 
     await expect(processAiPostDraftGeneration(buildJob())).rejects.toBeInstanceOf(
-      AiGenerationError
+      UnrecoverableError
     );
 
     const errorSetArg = updateSetMock.mock.calls.find((call: unknown[]) => {
@@ -348,7 +348,7 @@ describe('processAiPostDraftGeneration', () => {
     });
 
     await expect(processAiPostDraftGeneration(buildJob())).rejects.toBeInstanceOf(
-      AiGenerationError
+      UnrecoverableError
     );
 
     const errorSetArg = updateSetMock.mock.calls.find((call: unknown[]) => {
@@ -445,7 +445,7 @@ describe('processAiPostDraftGeneration', () => {
     });
 
     await expect(processAiPostDraftGeneration(buildJob())).rejects.toBeInstanceOf(
-      AiGenerationError
+      UnrecoverableError
     );
 
     const errorSetArg = updateSetMock.mock.calls.find((call: unknown[]) => {

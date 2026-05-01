@@ -1,5 +1,5 @@
 import 'server-only';
-import type { ApiResponse, PaginatedResponse } from '@portfolio/shared';
+import type { ApiError, ApiResponse, PaginatedResponse } from '@portfolio/shared';
 import { resolveServerApiBaseUrl } from '@/lib/api-base-url.server';
 
 /** Thrown when the API responds with HTTP 404. */
@@ -14,12 +14,19 @@ export class ApiNotFoundError extends Error {
 export class ApiResponseError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly details?: ApiError['error']['details'];
 
-  constructor(status: number, code: string, message: string) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details?: ApiError['error']['details']
+  ) {
     super(message);
     this.name = 'ApiResponseError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -65,14 +72,26 @@ async function parseResponse<T>(res: Response, path: string): Promise<T> {
   if (!res.ok) {
     let message = `API error ${res.status}: ${res.statusText}`;
     let code = 'INTERNAL_ERROR';
+    let details: ApiError['error']['details'];
     try {
-      const body = (await res.json()) as { error?: { message?: string; code?: string } };
+      const body = (await res.json()) as {
+        error?: { message?: string; code?: string; details?: ApiError['error']['details'] };
+      };
       if (body?.error?.message) message = body.error.message;
       if (body?.error?.code) code = body.error.code;
+      if (Array.isArray(body?.error?.details)) {
+        details = body.error.details.filter(
+          (detail): detail is NonNullable<ApiError['error']['details']>[number] =>
+            typeof detail === 'object' &&
+            detail !== null &&
+            typeof detail.message === 'string' &&
+            (detail.field === undefined || typeof detail.field === 'string')
+        );
+      }
     } catch {
       /* ignore parse error */
     }
-    throw new ApiResponseError(res.status, code, message);
+    throw new ApiResponseError(res.status, code, message, details);
   }
   return res.json() as Promise<T>;
 }

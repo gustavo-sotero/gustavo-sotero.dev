@@ -484,7 +484,13 @@ describe('tags service', () => {
       findTagByNameMock.mockResolvedValueOnce(null); // conflict check inside createTagService
       tagSlugExistsMock.mockResolvedValue(false);
       createTagMock.mockRejectedValueOnce(
-        new Error('duplicate key value violates unique constraint "tags_slug_unique"')
+        Object.assign(
+          new Error('duplicate key value violates unique constraint "tags_slug_unique"'),
+          {
+            code: '23505',
+            constraint_name: 'tags_slug_unique',
+          }
+        )
       );
       findTagByNameMock.mockResolvedValueOnce(null); // recovery by name misses
       findTagBySlugMock.mockResolvedValueOnce(redisRow); // recovery by slug wins

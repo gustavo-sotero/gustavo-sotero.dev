@@ -52,13 +52,17 @@ describe('validateAdminSession', () => {
     const result = await validateAdminSession();
 
     expect(result).toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith('https://example.com/api/auth/session', {
-      method: 'GET',
-      headers: {
-        Cookie: 'admin_token=valid-token',
-      },
-      cache: 'no-store',
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://example.com/api/auth/session',
+      expect.objectContaining({
+        method: 'GET',
+        headers: {
+          Cookie: 'admin_token=valid-token',
+        },
+        cache: 'no-store',
+        signal: expect.any(AbortSignal),
+      })
+    );
   });
 
   it('returns false when /auth/session responds with non-2xx', async () => {
@@ -100,11 +104,15 @@ describe('validateAdminSession', () => {
     expect(result).toBe(true);
     // resolveServerApiBaseUrl returns the path-based URL as-is (trailing slash stripped);
     // the fetch target must include /api before /auth/session.
-    expect(fetchMock).toHaveBeenCalledWith('https://example.com/api/auth/session', {
-      method: 'GET',
-      headers: { Cookie: 'admin_token=path-based-token' },
-      cache: 'no-store',
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://example.com/api/auth/session',
+      expect.objectContaining({
+        method: 'GET',
+        headers: { Cookie: 'admin_token=path-based-token' },
+        cache: 'no-store',
+        signal: expect.any(AbortSignal),
+      })
+    );
   });
 
   it('prefers API_INTERNAL_URL over path-based NEXT_PUBLIC_API_URL', async () => {
@@ -119,10 +127,14 @@ describe('validateAdminSession', () => {
 
     expect(result).toBe(true);
     // The internal URL wins — no /api prefix in the SSR request path.
-    expect(fetchMock).toHaveBeenCalledWith('http://api:3000/auth/session', {
-      method: 'GET',
-      headers: { Cookie: 'admin_token=internal-token' },
-      cache: 'no-store',
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://api:3000/auth/session',
+      expect.objectContaining({
+        method: 'GET',
+        headers: { Cookie: 'admin_token=internal-token' },
+        cache: 'no-store',
+        signal: expect.any(AbortSignal),
+      })
+    );
   });
 });

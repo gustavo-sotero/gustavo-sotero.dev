@@ -10,17 +10,11 @@ import type { Job } from 'bullmq';
 /**
  * Classifies an unknown job error into a broad category.
  *
- * - `'config'`   — likely a misconfigured API key or model ID; retrying will not help.
- * - `'internal'` — unexpected runtime error; may or may not be transient.
- *
  * `AiGenerationError` instances with a `kind` field are handled at the call site
- * before this function is invoked, so this only handles non-domain errors.
+ * before this function is invoked. Any remaining raw error is therefore treated
+ * as an unexpected internal failure instead of being classified by message text.
  */
-export function classifyJobError(error: unknown): 'config' | 'internal' {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/OPENROUTER_API_KEY|model ID|modelId/i.test(message)) {
-    return 'config';
-  }
+export function classifyJobError(_error: unknown): 'internal' {
   return 'internal';
 }
 

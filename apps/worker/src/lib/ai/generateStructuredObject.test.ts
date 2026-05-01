@@ -52,7 +52,7 @@ vi.mock('ai', () => ({
   NoObjectGeneratedError: NoObjectGeneratedErrorMock,
 }));
 
-import { generateStructuredObject } from './generateStructuredObject';
+import { AiGenerationError, generateStructuredObject } from './generateStructuredObject';
 
 describe('worker generateStructuredObject', () => {
   beforeEach(() => {
@@ -104,5 +104,21 @@ describe('worker generateStructuredObject', () => {
     expect(options.validate({ format: 'markdown', suggestions: ['um'] })).toMatchObject({
       success: false,
     });
+  });
+
+  it('preserves typed configuration errors thrown before provider execution', async () => {
+    fakeModelFactory.mockImplementationOnce(() => {
+      throw new AiGenerationError('not-configured', 'OPENROUTER_API_KEY is required');
+    });
+
+    await expect(
+      generateStructuredObject({
+        model: 'openai/gpt-4o',
+        system: 'Você é um assistente útil.',
+        prompt: 'Gere um objeto.',
+        schema: z.object({ format: z.string() }),
+        operation: 'worker-test',
+      })
+    ).rejects.toMatchObject({ kind: 'not-configured' });
   });
 });

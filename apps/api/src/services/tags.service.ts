@@ -16,6 +16,7 @@ import type { Tag } from '@portfolio/shared/types/tags';
 import { cached, invalidateGroup, invalidatePattern } from '../lib/cache';
 import { ConflictError } from '../lib/errors';
 import { toTagDto } from '../lib/pivotHelpers';
+import { isUniqueViolationError } from '../lib/postgresErrors';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import {
   createTag,
@@ -208,11 +209,8 @@ export async function resolveAiSuggestedTags(suggestedNames: string[]): Promise<
       }
     } catch (err) {
       // Race condition: another concurrent request created this tag first.
-      // Recover from typed ConflictError or raw DB unique violations.
-      const isConflict =
-        err instanceof ConflictError ||
-        (err instanceof Error &&
-          (err.message.includes('unique') || err.message.includes('duplicate key')));
+      // Recover from typed ConflictError or a native postgres unique violation.
+      const isConflict = err instanceof ConflictError || isUniqueViolationError(err);
 
       if (isConflict) {
         const recovered = (await findTagByName(canonicalName)) ?? (await findTagBySlug(slug));

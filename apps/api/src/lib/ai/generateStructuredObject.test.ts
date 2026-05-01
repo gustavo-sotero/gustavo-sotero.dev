@@ -301,6 +301,16 @@ describe('generateStructuredObject', () => {
   });
 
   describe('provider error path', () => {
+    it('preserves typed configuration errors thrown before provider execution', async () => {
+      fakeModelFactory.mockImplementationOnce(() => {
+        throw new AiGenerationError('not-configured', 'OPENROUTER_API_KEY is required');
+      });
+
+      await expect(generateStructuredObject(BASE_OPTS)).rejects.toMatchObject({
+        kind: 'not-configured',
+      });
+    });
+
     it('throws AiGenerationError with kind=provider on unexpected provider error', async () => {
       generateObjectMock.mockRejectedValueOnce(new Error('Unexpected provider failure'));
 

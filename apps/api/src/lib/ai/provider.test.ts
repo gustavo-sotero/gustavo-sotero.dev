@@ -1,3 +1,4 @@
+import { AiGenerationError } from '@portfolio/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────────────────
@@ -44,6 +45,7 @@ describe('getOpenRouterProvider', () => {
     // so the key-check guard runs and throws.
     envMock.OPENROUTER_API_KEY = undefined;
 
+    expect(() => getOpenRouterProvider()).toThrow(AiGenerationError);
     expect(() => getOpenRouterProvider()).toThrow('OPENROUTER_API_KEY is required');
   });
 

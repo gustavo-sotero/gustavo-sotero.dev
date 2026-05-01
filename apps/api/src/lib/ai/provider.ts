@@ -1,4 +1,5 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { AiGenerationError } from '@portfolio/shared';
 import { env } from '../../config/env';
 
 /**
@@ -13,7 +14,10 @@ let _openrouter: ReturnType<typeof createOpenRouter> | null = null;
 export function getOpenRouterProvider(): ReturnType<typeof createOpenRouter> {
   if (!_openrouter) {
     if (!env.OPENROUTER_API_KEY) {
-      throw new Error('OPENROUTER_API_KEY is required when AI_POSTS_ENABLED=true');
+      throw new AiGenerationError(
+        'not-configured',
+        'OPENROUTER_API_KEY is required when AI_POSTS_ENABLED=true'
+      );
     }
     _openrouter = createOpenRouter({ apiKey: env.OPENROUTER_API_KEY });
   }

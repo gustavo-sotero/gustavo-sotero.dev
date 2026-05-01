@@ -1,4 +1,5 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { AiGenerationError } from '@portfolio/shared';
 import { env } from '../../config/env';
 
 let _openrouter: ReturnType<typeof createOpenRouter> | null = null;
@@ -10,8 +11,9 @@ let _openrouter: ReturnType<typeof createOpenRouter> | null = null;
 export function getOpenRouterProvider(): ReturnType<typeof createOpenRouter> {
   if (!_openrouter) {
     if (!env.OPENROUTER_API_KEY) {
-      throw new Error(
-        'OPENROUTER_API_KEY is required in the worker environment for AI draft generation jobs'
+      throw new AiGenerationError(
+        'not-configured',
+        'OPENROUTER_API_KEY is required in the worker environment for AI generation jobs'
       );
     }
     _openrouter = createOpenRouter({ apiKey: env.OPENROUTER_API_KEY });

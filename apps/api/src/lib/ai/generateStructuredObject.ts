@@ -68,7 +68,6 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
     timeoutMs = env.AI_POSTS_TIMEOUT_MS,
     maxRetries = 0,
   } = options;
-  const openrouter = getOpenRouterProvider();
   const start = Date.now();
   const inputSizeApprox = system.length + prompt.length;
   const structuredOutputSchema = buildStructuredOutputSchema(zodSchema);
@@ -81,6 +80,7 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
   };
 
   try {
+    const openrouter = getOpenRouterProvider();
     const result = await generateObject({
       model: openrouter(modelId, { provider: providerOptions }),
       schema: structuredOutputSchema,
@@ -165,6 +165,23 @@ export async function generateStructuredObject<TSchema extends ZodSchema>(
         isRefusal ? 'refusal' : 'validation',
         isRefusal ? 'AI provider refused the request' : 'AI provider returned no valid object'
       );
+    }
+
+    if (err instanceof AiGenerationError) {
+      logger.warn('AI generation blocked by typed configuration error', {
+        operation,
+        model: modelId,
+        durationMs,
+        success: false,
+        timeout: false,
+        refusal: false,
+        validationFailure: false,
+        inputSizeApprox,
+        errorKind: err.kind,
+        error: err.message,
+        ...metadata,
+      });
+      throw err;
     }
 
     logger.error('AI generation failed', {
