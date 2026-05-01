@@ -17,14 +17,8 @@ import {
   type AiPostDraftRunStage,
   buildDraftSystemPrompt,
   buildDraftUserPrompt,
-  buildFallbackImagePrompt,
-  canonicalizeSuggestedTagNames,
-  containsDisallowedInlineHtml,
   generateDraftOutputSchema,
-  generateDraftResponseSchema,
-  generateSlug,
-  normalizeContent,
-  normalizeLinkedInPost,
+  normalizeDraftResponse,
   type PersistedTagForNormalization,
   type ProviderRoutingConfig,
   providerRoutingConfigSchema,
@@ -183,57 +177,15 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
     // ── Stage: normalizing-output ────────────────────────────────────────────
     await setStage(runId, 'normalizing-output', 'validating');
 
-    const raw = result.object;
-    const title = raw.title.trim();
-    const slug = generateSlug(raw.slug.trim() || title);
-    const excerpt = raw.excerpt.trim();
-    const content = normalizeContent(raw.content);
-
-    if (containsDisallowedInlineHtml(content)) {
-      throw new AiGenerationError(
-        'validation',
-        'Generated draft contained inline HTML instead of clean Markdown'
-      );
-    }
-
-    const imagePrompt = raw.imagePrompt.trim() || buildFallbackImagePrompt(title);
-    const notes = raw.notes?.trim() ?? null;
     const persistedTags = await loadPersistedTagsForNormalization();
 
     // ── Stage: canonicalizing-tags ───────────────────────────────────────────
     await setStage(runId, 'canonicalizing-tags', 'validating');
 
-    const suggestedTagNames = canonicalizeSuggestedTagNames(
-      raw.suggestedTagNames,
-      persistedTags
-    ).slice(0, 8);
-
-    const linkedinPost = normalizeLinkedInPost(
-      raw.linkedinPost?.trim() ?? '',
-      slug,
-      suggestedTagNames
-    );
-
     // ── Stage: validating-output ─────────────────────────────────────────────
     await setStage(runId, 'validating-output', 'validating');
 
-    const parsed = generateDraftResponseSchema.safeParse({
-      title,
-      slug,
-      excerpt,
-      content,
-      suggestedTagNames,
-      imagePrompt,
-      linkedinPost,
-      notes,
-    });
-
-    if (!parsed.success) {
-      throw new AiGenerationError(
-        'validation',
-        'Generated draft is too short or missing required fields'
-      );
-    }
+    const parsed = normalizeDraftResponse(result.object, persistedTags);
 
     // ── Stage: persisting-result ─────────────────────────────────────────────
     await setStage(runId, 'persisting-result', 'validating');
@@ -244,7 +196,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       .set({
         status: 'completed',
         stage: 'completed',
-        resultPayload: parsed.data as unknown as Record<string, unknown>,
+        resultPayload: parsed as unknown as Record<string, unknown>,
         providerGenerationId,
         finishedAt,
         updatedAt: finishedAt,

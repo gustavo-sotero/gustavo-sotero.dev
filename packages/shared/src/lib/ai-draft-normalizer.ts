@@ -3,8 +3,20 @@
  * job when processing AI-generated draft content.
  */
 
+import { AI_POST_MAX_DRAFT_TAG_NAMES } from '../constants/ai-posts';
 import { DEVELOPER_PUBLIC_PROFILE } from '../constants/developerProfile';
+import {
+  type GenerateDraftRequest,
+  type GenerateDraftResponse,
+  generateDraftResponseSchema,
+} from '../schemas/ai-post-generation';
 import { AiGenerationError } from './ai-error';
+import { normalizeTopicSuggestion } from './ai-topic-normalizer';
+import {
+  canonicalizeSuggestedTagNames,
+  type PersistedTagForNormalization,
+} from './aiTagNormalizer';
+import { generateSlug } from './slug';
 
 const DISALLOWED_INLINE_HTML_RE = /<\/?[a-z][\w:-]*(?:\s[^<>]*)?>|<!--|<!doctype\b/i;
 const ABSOLUTE_URL_RE = /https?:\/\/[^\s)]+/giu;
@@ -181,4 +193,65 @@ export function normalizeLinkedInPost(
   const cleanBody = normalizeLinkedInBody(text);
 
   return [cleanBody, canonicalUrl, finalHashtags.join(' ')].filter(Boolean).join('\n\n').trim();
+}
+
+export function normalizeDraftRequest(
+  request: GenerateDraftRequest,
+  persistedTags: PersistedTagForNormalization[] = []
+): GenerateDraftRequest {
+  return {
+    ...request,
+    briefing: request.briefing?.trim() || null,
+    selectedSuggestion: normalizeTopicSuggestion(request.selectedSuggestion, persistedTags),
+    rejectedAngles: request.rejectedAngles.map((angle) => angle.trim()).filter(Boolean),
+  };
+}
+
+export function normalizeDraftResponse(
+  raw: GenerateDraftResponse,
+  persistedTags: PersistedTagForNormalization[] = []
+): GenerateDraftResponse {
+  const title = raw.title.trim();
+  const slug = generateSlug(raw.slug.trim() || title);
+  const excerpt = raw.excerpt.trim();
+  const content = normalizeContent(raw.content);
+
+  if (containsDisallowedInlineHtml(content)) {
+    throw new AiGenerationError(
+      'validation',
+      'Generated draft contained inline HTML instead of clean Markdown'
+    );
+  }
+
+  const suggestedTagNames = canonicalizeSuggestedTagNames(
+    raw.suggestedTagNames,
+    persistedTags
+  ).slice(0, AI_POST_MAX_DRAFT_TAG_NAMES);
+  const imagePrompt = raw.imagePrompt.trim() || buildFallbackImagePrompt(title);
+  const notes = raw.notes?.trim() ?? null;
+  const linkedinPost = normalizeLinkedInPost(
+    raw.linkedinPost?.trim() ?? '',
+    slug,
+    suggestedTagNames
+  );
+
+  const parsed = generateDraftResponseSchema.safeParse({
+    title,
+    slug,
+    excerpt,
+    content,
+    suggestedTagNames,
+    imagePrompt,
+    linkedinPost,
+    notes,
+  });
+
+  if (!parsed.success) {
+    throw new AiGenerationError(
+      'validation',
+      'Generated draft is too short or missing required fields'
+    );
+  }
+
+  return parsed.data;
 }

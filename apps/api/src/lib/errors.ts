@@ -24,6 +24,19 @@ export interface ValidationErrorDetail {
   message: string;
 }
 
+export type AiConfigErrorCode =
+  | 'DISABLED'
+  | 'NOT_CONFIGURED'
+  | 'INVALID_CONFIG'
+  | 'NO_API_KEY'
+  | 'CATALOG_UNAVAILABLE'
+  | 'INVALID_MODELS';
+
+export interface AiConfigErrorOptions {
+  cause?: unknown;
+  issues?: string[];
+}
+
 /**
  * Thrown when a create/update operation would violate a uniqueness constraint
  * (slug or name already taken, duplicate state transition, etc.).
@@ -92,5 +105,26 @@ export class RateLimitedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'RateLimitedError';
+  }
+}
+
+/**
+ * Typed configuration error for the AI post-generation feature.
+ *
+ * This keeps configuration failures explicit across services and route handlers
+ * without falling back to generic Error instances with ad-hoc properties.
+ */
+export class AiConfigError extends Error {
+  readonly kind = 'configuration' as const;
+  readonly code: AiConfigErrorCode;
+  readonly issues?: string[];
+  override readonly cause?: unknown;
+
+  constructor(code: AiConfigErrorCode, message: string, options?: AiConfigErrorOptions) {
+    super(message);
+    this.name = 'AiConfigError';
+    this.code = code;
+    this.issues = options?.issues;
+    this.cause = options?.cause;
   }
 }

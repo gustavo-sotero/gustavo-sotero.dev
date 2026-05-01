@@ -7,6 +7,7 @@ import type {
 import { providerRoutingConfigSchema } from '@portfolio/shared';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
+import { AiConfigError } from '../lib/errors';
 import {
   findAiPostGenerationSettings,
   upsertAiPostGenerationSettings,
@@ -157,15 +158,11 @@ export async function saveAiPostGenerationConfig(
   updatedBy: string
 ): Promise<AiPostGenerationConfigState> {
   if (!env.AI_POSTS_ENABLED) {
-    const err = new Error('AI post generation is disabled');
-    Object.assign(err, { code: 'DISABLED' });
-    throw err;
+    throw new AiConfigError('DISABLED', 'AI post generation is disabled');
   }
 
   if (!env.OPENROUTER_API_KEY) {
-    const err = new Error('OPENROUTER_API_KEY is not configured');
-    Object.assign(err, { code: 'NO_API_KEY' });
-    throw err;
+    throw new AiConfigError('NO_API_KEY', 'OPENROUTER_API_KEY is not configured');
   }
 
   // Save-time validation: both models must exist in catalog with structured_outputs
@@ -178,11 +175,11 @@ export async function saveAiPostGenerationConfig(
       validateModelId(input.draftModelId),
     ]);
   } catch (err) {
-    const error = new Error(
-      'Não foi possível validar os modelos: catálogo do OpenRouter indisponível'
+    throw new AiConfigError(
+      'CATALOG_UNAVAILABLE',
+      'Não foi possível validar os modelos: catálogo do OpenRouter indisponível',
+      { cause: err }
     );
-    Object.assign(error, { code: 'CATALOG_UNAVAILABLE', cause: err });
-    throw error;
   }
 
   const issues: string[] = [];
@@ -196,9 +193,7 @@ export async function saveAiPostGenerationConfig(
     );
 
   if (issues.length > 0) {
-    const err = new Error(issues.join(' '));
-    Object.assign(err, { code: 'INVALID_MODELS', issues });
-    throw err;
+    throw new AiConfigError('INVALID_MODELS', issues.join(' '), { issues });
   }
 
   await upsertAiPostGenerationSettings({
@@ -224,22 +219,20 @@ export async function saveAiPostGenerationConfig(
  * Resolve the active AI post generation configuration for use by the
  * generation service before making an AI call.
  *
- * Throws with `code` set to signal the caller what went wrong:
- *  - `DISABLED`        — feature is off
- *  - `NOT_CONFIGURED`  — no model pair saved yet
- *  - `INVALID_CONFIG`  — saved models fail catalog validation
+ * Throws `AiConfigError` when the feature is unavailable or invalid:
+ *  - `DISABLED`       — feature is off
+ *  - `NOT_CONFIGURED` — no model pair saved yet
+ *  - `INVALID_CONFIG` — saved models fail catalog validation
  */
 export async function resolveActiveAiPostGenerationConfig(): Promise<AiPostGenerationConfig> {
   if (!env.AI_POSTS_ENABLED) {
-    throw Object.assign(new Error('AI post generation is disabled'), { code: 'DISABLED' });
+    throw new AiConfigError('DISABLED', 'AI post generation is disabled');
   }
 
   const row = await findAiPostGenerationSettings();
 
   if (!row?.topicsModelId || !row.draftModelId) {
-    throw Object.assign(new Error('AI post generation is not configured'), {
-      code: 'NOT_CONFIGURED',
-    });
+    throw new AiConfigError('NOT_CONFIGURED', 'AI post generation is not configured');
   }
 
   // Best-effort: validate against cached catalog if available.
@@ -253,14 +246,14 @@ export async function resolveActiveAiPostGenerationConfig(): Promise<AiPostGener
     ]);
 
     if (!topicsValid || !draftValid) {
-      throw Object.assign(new Error('AI post generation config contains invalid model IDs'), {
-        code: 'INVALID_CONFIG',
-      });
+      throw new AiConfigError(
+        'INVALID_CONFIG',
+        'AI post generation config contains invalid model IDs'
+      );
     }
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    // Re-throw typed config errors; swallow catalog fetch failures gracefully
-    if (code === 'DISABLED' || code === 'NOT_CONFIGURED' || code === 'INVALID_CONFIG') {
+    // Re-throw typed config errors; swallow catalog fetch failures gracefully.
+    if (err instanceof AiConfigError) {
       throw err;
     }
     // Catalog unavailable — proceed with saved config
@@ -288,35 +281,32 @@ export async function resolveActiveAiPostGenerationConfig(): Promise<AiPostGener
  * Decoupled from draft model validity so topic generation does not fail
  * because of an unrelated draft model configuration issue.
  *
- * Throws with `code` set to signal the caller what went wrong:
- *  - `DISABLED`        — feature is off
- *  - `NOT_CONFIGURED`  — no topics model saved yet
- *  - `INVALID_CONFIG`  — saved topics model fails catalog validation
+ * Throws `AiConfigError` when the feature is unavailable or invalid:
+ *  - `DISABLED`       — feature is off
+ *  - `NOT_CONFIGURED` — no topics model saved yet
+ *  - `INVALID_CONFIG` — saved topics model fails catalog validation
  */
 export async function resolveActiveAiTopicGenerationConfig(): Promise<
   Pick<AiPostGenerationConfig, 'topicsModelId' | 'topicsRouting'>
 > {
   if (!env.AI_POSTS_ENABLED) {
-    throw Object.assign(new Error('AI post generation is disabled'), { code: 'DISABLED' });
+    throw new AiConfigError('DISABLED', 'AI post generation is disabled');
   }
 
   const row = await findAiPostGenerationSettings();
 
   if (!row?.topicsModelId) {
-    throw Object.assign(new Error('Topics model is not configured'), { code: 'NOT_CONFIGURED' });
+    throw new AiConfigError('NOT_CONFIGURED', 'Topics model is not configured');
   }
 
   // Best-effort catalog validation — proceed if catalog is unavailable.
   try {
     const topicsValid = await validateModelId(row.topicsModelId);
     if (!topicsValid) {
-      throw Object.assign(new Error('Topics model ID is invalid or unavailable'), {
-        code: 'INVALID_CONFIG',
-      });
+      throw new AiConfigError('INVALID_CONFIG', 'Topics model ID is invalid or unavailable');
     }
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code === 'DISABLED' || code === 'NOT_CONFIGURED' || code === 'INVALID_CONFIG') {
+    if (err instanceof AiConfigError) {
       throw err;
     }
     logger.warn(
@@ -337,35 +327,32 @@ export async function resolveActiveAiTopicGenerationConfig(): Promise<
  * Decoupled from topics model validity so draft generation does not fail
  * because of an unrelated topics model configuration issue.
  *
- * Throws with `code` set to signal the caller what went wrong:
- *  - `DISABLED`        — feature is off
- *  - `NOT_CONFIGURED`  — no draft model saved yet
- *  - `INVALID_CONFIG`  — saved draft model fails catalog validation
+ * Throws `AiConfigError` when the feature is unavailable or invalid:
+ *  - `DISABLED`       — feature is off
+ *  - `NOT_CONFIGURED` — no draft model saved yet
+ *  - `INVALID_CONFIG` — saved draft model fails catalog validation
  */
 export async function resolveActiveAiDraftGenerationConfig(): Promise<
   Pick<AiPostGenerationConfig, 'draftModelId' | 'draftRouting'>
 > {
   if (!env.AI_POSTS_ENABLED) {
-    throw Object.assign(new Error('AI post generation is disabled'), { code: 'DISABLED' });
+    throw new AiConfigError('DISABLED', 'AI post generation is disabled');
   }
 
   const row = await findAiPostGenerationSettings();
 
   if (!row?.draftModelId) {
-    throw Object.assign(new Error('Draft model is not configured'), { code: 'NOT_CONFIGURED' });
+    throw new AiConfigError('NOT_CONFIGURED', 'Draft model is not configured');
   }
 
   // Best-effort catalog validation — proceed if catalog is unavailable.
   try {
     const draftValid = await validateModelId(row.draftModelId);
     if (!draftValid) {
-      throw Object.assign(new Error('Draft model ID is invalid or unavailable'), {
-        code: 'INVALID_CONFIG',
-      });
+      throw new AiConfigError('INVALID_CONFIG', 'Draft model ID is invalid or unavailable');
     }
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code === 'DISABLED' || code === 'NOT_CONFIGURED' || code === 'INVALID_CONFIG') {
+    if (err instanceof AiConfigError) {
       throw err;
     }
     logger.warn(

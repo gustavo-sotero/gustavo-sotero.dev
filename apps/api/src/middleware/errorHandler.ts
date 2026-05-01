@@ -3,6 +3,7 @@ import { HTTPException } from 'hono/http-exception';
 import { ZodError } from 'zod';
 import { getLogger } from '../config/logger';
 import {
+  AiConfigError,
   ConflictError,
   DomainValidationError,
   HighlightLimitError,
@@ -117,6 +118,50 @@ export function globalErrorHandler(err: Error, c: Context<AppEnv>): Response {
   }
   if (err instanceof NotFoundError) {
     return errorResponse(c, 404, 'NOT_FOUND', err.message);
+  }
+  if (err instanceof AiConfigError) {
+    if (err.code === 'INVALID_MODELS') {
+      return errorResponse(
+        c,
+        400,
+        'VALIDATION_ERROR',
+        err.message,
+        err.issues?.map((message) => ({ message }))
+      );
+    }
+
+    if (err.code === 'DISABLED') {
+      return errorResponse(c, 503, 'SERVICE_UNAVAILABLE', 'AI post generation is disabled');
+    }
+
+    if (err.code === 'NOT_CONFIGURED') {
+      return errorResponse(c, 503, 'SERVICE_UNAVAILABLE', 'AI post generation is not configured');
+    }
+
+    if (err.code === 'INVALID_CONFIG') {
+      return errorResponse(
+        c,
+        503,
+        'SERVICE_UNAVAILABLE',
+        'AI post generation configuration is invalid'
+      );
+    }
+
+    if (err.code === 'NO_API_KEY') {
+      return errorResponse(
+        c,
+        503,
+        'SERVICE_UNAVAILABLE',
+        'AI provider credentials are not configured'
+      );
+    }
+
+    return errorResponse(
+      c,
+      503,
+      'SERVICE_UNAVAILABLE',
+      'AI model catalog is temporarily unavailable'
+    );
   }
 
   // ── Hono HTTP exceptions ────────────────────────────────────────────────────

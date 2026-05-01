@@ -27,6 +27,7 @@ vi.mock('../config/logger', () => ({
   getLogger: () => loggerMock,
 }));
 
+import { AiConfigError } from '../lib/errors';
 import { globalErrorHandler, normalizeCause } from './errorHandler';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -175,6 +176,48 @@ describe('globalErrorHandler — HTTPException', () => {
 
     expect(res.status).toBe(418);
     expect(body.error.code).toBe('INTERNAL_ERROR');
+  });
+});
+
+// ── globalErrorHandler — domain typed errors ─────────────────────────────────
+
+describe('globalErrorHandler — domain typed errors', () => {
+  it('maps AiConfigError availability failures to 503 SERVICE_UNAVAILABLE', async () => {
+    loggerMock.error.mockClear();
+
+    const app = buildApp((_c) => {
+      throw new AiConfigError('NOT_CONFIGURED', 'not configured');
+    });
+
+    const res = await app.request('/test');
+    const body = (await res.json()) as ApiErrorBody;
+
+    expect(res.status).toBe(503);
+    expect(body.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(body.error.message).toBe('AI post generation is not configured');
+    expect(loggerMock.error).not.toHaveBeenCalled();
+  });
+
+  it('maps AiConfigError INVALID_MODELS to 400 VALIDATION_ERROR with issues', async () => {
+    loggerMock.error.mockClear();
+
+    const app = buildApp((_c) => {
+      throw new AiConfigError('INVALID_MODELS', 'Invalid models', {
+        issues: ['Topics model is unavailable', 'Draft model is unavailable'],
+      });
+    });
+
+    const res = await app.request('/test');
+    const body = (await res.json()) as ApiErrorBody;
+
+    expect(res.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.message).toBe('Invalid models');
+    expect(body.error.details).toEqual([
+      { message: 'Topics model is unavailable' },
+      { message: 'Draft model is unavailable' },
+    ]);
+    expect(loggerMock.error).not.toHaveBeenCalled();
   });
 });
 

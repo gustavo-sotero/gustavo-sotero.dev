@@ -1,31 +1,21 @@
 import type {
   GenerateDraftRequest,
+  GenerateDraftResponse,
   GenerateTopicsRequest,
-  PersistedTagForNormalization,
 } from '@portfolio/shared';
 import {
-  AI_POST_MAX_DRAFT_TAG_NAMES,
   buildDraftSystemPrompt,
   buildDraftUserPrompt,
-  buildFallbackImagePrompt,
   buildTopicsSystemPrompt,
   buildTopicsUserPrompt,
-  canonicalizeSuggestedTagNames,
-  containsDisallowedInlineHtml,
   generateDraftOutputSchema,
-  generateDraftResponseSchema,
   generateTopicsOutputSchema,
-  normalizeContent,
-  normalizeLinkedInPost,
-  normalizeTopicSuggestion,
+  normalizeDraftRequest,
+  normalizeDraftResponse,
   normalizeTopicsRequest,
   normalizeTopicsResponse,
 } from '@portfolio/shared';
-import { generateSlug } from '@portfolio/shared/lib/slug';
-import type {
-  GenerateDraftResponse,
-  GenerateTopicsResponse,
-} from '@portfolio/shared/types/ai-post-generation';
+import type { GenerateTopicsResponse } from '@portfolio/shared/types/ai-post-generation';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { AiGenerationError, generateStructuredObject } from '../lib/ai/generateStructuredObject';
@@ -37,68 +27,6 @@ import {
 
 const logger = getLogger('services', 'post-generation');
 const SYNC_AI_GENERATION_MAX_RETRIES = 0;
-
-// ── Output normalization ──────────────────────────────────────────────────────
-
-function normalizeDraftResponse(
-  raw: GenerateDraftResponse,
-  persistedTags: PersistedTagForNormalization[] = []
-): GenerateDraftResponse {
-  const title = raw.title.trim();
-  const slug = generateSlug(raw.slug.trim() || title);
-  const excerpt = raw.excerpt.trim();
-  const content = normalizeContent(raw.content);
-
-  if (containsDisallowedInlineHtml(content)) {
-    throw new AiGenerationError(
-      'validation',
-      'Generated draft contained inline HTML instead of clean Markdown'
-    );
-  }
-
-  const imagePrompt = raw.imagePrompt.trim() || buildFallbackImagePrompt(title);
-  const suggestedTagNames = canonicalizeSuggestedTagNames(
-    raw.suggestedTagNames,
-    persistedTags
-  ).slice(0, AI_POST_MAX_DRAFT_TAG_NAMES);
-  const notes = raw.notes?.trim() ?? null;
-  const linkedinPost = normalizeLinkedInPost(
-    raw.linkedinPost?.trim() ?? '',
-    slug,
-    suggestedTagNames
-  );
-
-  const parsed = generateDraftResponseSchema.safeParse({
-    title,
-    slug,
-    excerpt,
-    content,
-    suggestedTagNames,
-    imagePrompt,
-    linkedinPost,
-    notes,
-  });
-  if (!parsed.success) {
-    throw new AiGenerationError(
-      'validation',
-      'Generated draft is too short or missing required fields'
-    );
-  }
-
-  return parsed.data;
-}
-
-function normalizeDraftRequest(
-  req: GenerateDraftRequest,
-  persistedTags: PersistedTagForNormalization[] = []
-): GenerateDraftRequest {
-  return {
-    ...req,
-    briefing: req.briefing?.trim() || null,
-    selectedSuggestion: normalizeTopicSuggestion(req.selectedSuggestion, persistedTags),
-    rejectedAngles: req.rejectedAngles.map((angle) => angle.trim()).filter(Boolean),
-  };
-}
 
 function logValidationFailure(
   operation: 'topics' | 'draft',
@@ -175,7 +103,7 @@ export async function generateTopicSuggestions(
  * persisted — the result requires explicit user approval in the admin UI.
  *
  * Throws `AiGenerationError` on provider failure, timeout, or refusal.
- * Throws a generic Error if the feature is disabled.
+ * Throws a typed configuration error if the feature is unavailable.
  */
 export async function generatePostDraft(req: GenerateDraftRequest): Promise<GenerateDraftResponse> {
   const [activeConfig, persistedTags] = await Promise.all([

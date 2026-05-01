@@ -105,6 +105,7 @@ vi.mock('../../middleware/rateLimit', () => ({
 }));
 
 import { AiGenerationError } from '../../lib/ai/generateStructuredObject';
+import { AiConfigError } from '../../lib/errors';
 import { authAdmin } from '../../middleware/auth';
 import { csrfProtection } from '../../middleware/csrf';
 import type { AppEnv } from '../../types/index';
@@ -252,7 +253,7 @@ describe('admin post-generation routes', () => {
 
     it('returns 403 when feature is disabled', async () => {
       saveAiPostGenerationConfigMock.mockRejectedValueOnce(
-        Object.assign(new Error('disabled'), { code: 'DISABLED' })
+        new AiConfigError('DISABLED', 'disabled')
       );
 
       const app = buildApp();
@@ -267,8 +268,7 @@ describe('admin post-generation routes', () => {
 
     it('returns 400 when models are invalid', async () => {
       saveAiPostGenerationConfigMock.mockRejectedValueOnce(
-        Object.assign(new Error('Invalid models'), {
-          code: 'INVALID_MODELS',
+        new AiConfigError('INVALID_MODELS', 'Invalid models', {
           issues: ['Model openai/gpt-bad is not available'],
         })
       );
@@ -288,7 +288,7 @@ describe('admin post-generation routes', () => {
 
     it('returns 503 when catalog is unavailable', async () => {
       saveAiPostGenerationConfigMock.mockRejectedValueOnce(
-        Object.assign(new Error('catalog unavailable'), { code: 'CATALOG_UNAVAILABLE' })
+        new AiConfigError('CATALOG_UNAVAILABLE', 'catalog unavailable')
       );
 
       const app = buildApp();
@@ -418,9 +418,7 @@ describe('admin post-generation routes', () => {
     });
 
     it('returns 503 when feature is disabled', async () => {
-      generateTopicSuggestionsMock.mockRejectedValueOnce(
-        Object.assign(new Error('disabled'), { code: 'DISABLED' })
-      );
+      generateTopicSuggestionsMock.mockRejectedValueOnce(new AiConfigError('DISABLED', 'disabled'));
 
       const app = buildApp();
       const res = await app.request('/admin/posts/generate/topics', {
@@ -475,7 +473,7 @@ describe('admin post-generation routes', () => {
 
     it('returns 503 when config is not configured', async () => {
       generateTopicSuggestionsMock.mockRejectedValueOnce(
-        Object.assign(new Error('not configured'), { code: 'NOT_CONFIGURED' })
+        new AiConfigError('NOT_CONFIGURED', 'not configured')
       );
 
       const app = buildApp();
@@ -493,7 +491,7 @@ describe('admin post-generation routes', () => {
 
     it('returns 503 when config is invalid', async () => {
       generateTopicSuggestionsMock.mockRejectedValueOnce(
-        Object.assign(new Error('invalid config'), { code: 'INVALID_CONFIG' })
+        new AiConfigError('INVALID_CONFIG', 'invalid config')
       );
 
       const app = buildApp();
@@ -616,9 +614,7 @@ describe('admin post-generation routes', () => {
     });
 
     it('returns 503 when service throws DISABLED error', async () => {
-      createDraftRunMock.mockRejectedValueOnce(
-        Object.assign(new Error('disabled'), { code: 'DISABLED' })
-      );
+      createDraftRunMock.mockRejectedValueOnce(new AiConfigError('DISABLED', 'disabled'));
 
       const app = buildApp();
       const res = await app.request('/admin/posts/generate/draft-runs', {

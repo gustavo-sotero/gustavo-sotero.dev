@@ -26,6 +26,7 @@ import {
 } from '@portfolio/shared';
 import { Hono } from 'hono';
 import { AiGenerationError } from '../../lib/ai/generateStructuredObject';
+import { AiConfigError } from '../../lib/errors';
 import { errorResponse, successResponse } from '../../lib/response';
 import { parseAndValidateBody, validateQuery } from '../../lib/validate';
 import { createRateLimit } from '../../middleware/rateLimit';
@@ -194,56 +195,58 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
       'O provedor de IA está indisponível no momento.'
     );
   }
-  const anyErr = err as Error & { code?: string };
-  if (anyErr?.code === 'DISABLED')
-    return errorResponse(
-      c,
-      503,
-      'SERVICE_UNAVAILABLE',
-      'A geração de posts com IA não está habilitada nesta instância.'
-    );
-  if (anyErr?.code === 'NOT_CONFIGURED')
-    return errorResponse(
-      c,
-      503,
-      'SERVICE_UNAVAILABLE',
-      'A geração de posts com IA não está configurada. Configure os modelos na página de configurações.'
-    );
-  if (anyErr?.code === 'INVALID_CONFIG')
-    return errorResponse(
-      c,
-      503,
-      'SERVICE_UNAVAILABLE',
-      'A configuração de modelos de IA é inválida. Atualize os modelos na página de configurações.'
-    );
+  if (err instanceof AiConfigError) {
+    if (err.code === 'DISABLED')
+      return errorResponse(
+        c,
+        503,
+        'SERVICE_UNAVAILABLE',
+        'A geração de posts com IA não está habilitada nesta instância.'
+      );
+    if (err.code === 'NOT_CONFIGURED')
+      return errorResponse(
+        c,
+        503,
+        'SERVICE_UNAVAILABLE',
+        'A geração de posts com IA não está configurada. Configure os modelos na página de configurações.'
+      );
+    if (err.code === 'INVALID_CONFIG')
+      return errorResponse(
+        c,
+        503,
+        'SERVICE_UNAVAILABLE',
+        'A configuração de modelos de IA é inválida. Atualize os modelos na página de configurações.'
+      );
+  }
   throw err;
 }
 
 function handleConfigSaveError(c: Parameters<typeof errorResponse>[0], err: unknown): Response {
-  const anyErr = err as Error & { code?: string; issues?: string[] };
-  if (anyErr?.code === 'DISABLED')
-    return errorResponse(c, 403, 'FORBIDDEN', 'A geração de posts com IA está desabilitada.');
-  if (anyErr?.code === 'NO_API_KEY')
-    return errorResponse(
-      c,
-      503,
-      'SERVICE_UNAVAILABLE',
-      'OPENROUTER_API_KEY não está configurada no servidor.'
-    );
-  if (anyErr?.code === 'CATALOG_UNAVAILABLE')
-    return errorResponse(
-      c,
-      503,
-      'SERVICE_UNAVAILABLE',
-      'Catálogo de modelos temporariamente indisponível. Tente novamente em instantes.'
-    );
-  if (anyErr?.code === 'INVALID_MODELS')
-    return errorResponse(
-      c,
-      400,
-      'VALIDATION_ERROR',
-      anyErr.message,
-      anyErr.issues?.map((msg) => ({ message: msg }))
-    );
+  if (err instanceof AiConfigError) {
+    if (err.code === 'DISABLED')
+      return errorResponse(c, 403, 'FORBIDDEN', 'A geração de posts com IA está desabilitada.');
+    if (err.code === 'NO_API_KEY')
+      return errorResponse(
+        c,
+        503,
+        'SERVICE_UNAVAILABLE',
+        'OPENROUTER_API_KEY não está configurada no servidor.'
+      );
+    if (err.code === 'CATALOG_UNAVAILABLE')
+      return errorResponse(
+        c,
+        503,
+        'SERVICE_UNAVAILABLE',
+        'Catálogo de modelos temporariamente indisponível. Tente novamente em instantes.'
+      );
+    if (err.code === 'INVALID_MODELS')
+      return errorResponse(
+        c,
+        400,
+        'VALIDATION_ERROR',
+        err.message,
+        err.issues?.map((message) => ({ message }))
+      );
+  }
   throw err;
 }

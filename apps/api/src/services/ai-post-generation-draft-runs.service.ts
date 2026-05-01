@@ -16,8 +16,8 @@ import type {
 } from '@portfolio/shared';
 import {
   AI_POST_DRAFT_RUN_INITIAL_POLL_MS,
-  canonicalizeSuggestedTagNames,
   generateDraftResponseSchema,
+  normalizeDraftRequest,
   OutboxEventType,
   type PersistedTagForNormalization,
 } from '@portfolio/shared';
@@ -31,32 +31,6 @@ import { resolveActiveAiDraftGenerationConfig } from './ai-post-generation-setti
 
 async function loadPersistedTagsForNormalization(): Promise<PersistedTagForNormalization[]> {
   return db.select({ name: tags.name, slug: tags.slug }).from(tags).orderBy(asc(tags.name));
-}
-
-/**
- * Normalise the draft request before persisting so the worker operates on
- * clean data regardless of which caller produced the payload.
- */
-function normalizeRequestPayload(
-  request: CreateDraftRunRequest,
-  persistedTags: PersistedTagForNormalization[]
-): CreateDraftRunRequest {
-  const s = request.selectedSuggestion;
-  const normalizedTagNames = canonicalizeSuggestedTagNames(s.suggestedTagNames, persistedTags);
-  return {
-    ...request,
-    briefing: request.briefing?.trim() || null,
-    rejectedAngles: request.rejectedAngles.map((a) => a.trim()).filter(Boolean),
-    selectedSuggestion: {
-      ...s,
-      proposedTitle: s.proposedTitle.trim(),
-      angle: s.angle.trim(),
-      summary: s.summary.trim(),
-      targetReader: s.targetReader.trim(),
-      rationale: s.rationale.trim(),
-      suggestedTagNames: normalizedTagNames,
-    },
-  };
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
@@ -78,7 +52,7 @@ export async function createDraftRun(
     loadPersistedTagsForNormalization(),
   ]);
 
-  const normalizedRequest = normalizeRequestPayload(request, persistedTags);
+  const normalizedRequest = normalizeDraftRequest(request, persistedTags);
   const requestedCategory = normalizedRequest.category;
   const concreteCategory = normalizedRequest.selectedSuggestion.category;
 
