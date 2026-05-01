@@ -7,6 +7,7 @@ const {
   updateWhereMock,
   dbSelectMock,
   dbUpdateMock,
+  statMock,
   bytesMock,
   writeMock,
   metadataMock,
@@ -20,6 +21,7 @@ const {
   updateWhereMock: vi.fn(),
   dbSelectMock: vi.fn(),
   dbUpdateMock: vi.fn(),
+  statMock: vi.fn(),
   bytesMock: vi.fn(),
   writeMock: vi.fn(),
   metadataMock: vi.fn(),
@@ -55,6 +57,7 @@ vi.mock('../config/db', () => ({
 vi.mock('../config/s3', () => ({
   s3: {
     file: vi.fn(() => ({
+      stat: statMock,
       bytes: bytesMock,
       write: writeMock,
     })),
@@ -126,6 +129,7 @@ describe('imageOptimize job', () => {
     resizeMock.mockImplementation(() => ({ webp: webpMock, gif: gifMock }));
     webpMock.mockImplementation(() => ({ toBuffer: toBufferMock }));
     gifMock.mockImplementation(() => ({ toBuffer: toBufferMock }));
+    statMock.mockResolvedValue({ size: 1024, type: 'image/png' });
     updateWhereMock.mockResolvedValue(undefined);
   });
 
@@ -208,6 +212,7 @@ describe('imageOptimize job', () => {
         mime: 'image/gif',
       },
     ]);
+    statMock.mockResolvedValue({ size: 1024, type: 'image/gif' });
     bytesMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
     metadataMock.mockResolvedValue({ width: 900, height: 500, pages: 4 });
     toBufferMock.mockResolvedValue(Buffer.from('gif-variant'));

@@ -339,12 +339,11 @@
 |---|---|
 | Severity | LOW |
 | Wave | 5 |
-| Status | deferred |
+| Status | done |
 | Affected files | `package.json` |
 | Description | Root package is named `portifolio`; workspace packages use `@portfolio/*`. |
 | Acceptance criteria | Root package name corrected to `portfolio` if lockfile/deployment is unaffected. |
 | Verification | `bun install --frozen-lockfile` succeeds after rename. |
-| Notes | Deferred â€” assess lockfile/deployment impact before changing. |
 
 ---
 
@@ -386,10 +385,8 @@
 - **PERF-LISTS-001** — `summaryOnly` option added to `findManyPosts` / `findManyProjects`; developer-profile uses it
 - **PERF-COMMENTS-001** — `findApprovedCommentsByPostId` capped at 200; composite DB index added + migration generated (`drizzle/0009_add_comments_status_index.sql`)
 - **MAINT-ROUTES-001** — `feed.service.ts` and `sitemap.service.ts` extracted; route files delegate entirely
+- **MAINT-WORKER-001** — `createWorker` registry helper centralizes BullMQ worker setup, DLQ policy, and structured logging
 - **MAINT-TYPES-001** — `as any` in `PostGenerationAssistant.tsx` replaced with typed field cast
 - **HYGIENE-SCRIPT-001** — `scripts/migrate-validate.ps1` path hardcoding replaced with `$PSScriptRoot`-relative path; historical note added
-
-### Deferred 🔁
-- **HYGIENE-NAME-001** — Root `portifolio` package name — lockfile/deployment impact needs assessment
-- **MAINT-WORKER-001** — Typed worker registry — significant internal refactor; deferred until next milestone
+- **HYGIENE-NAME-001** — Root package name normalized to `portfolio`
 

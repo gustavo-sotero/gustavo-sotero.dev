@@ -83,7 +83,9 @@ describe('GET /curriculo.pdf', () => {
     expect(response.headers.get('Content-Disposition')).toContain(
       'attachment; filename="curriculo-gustavo-sotero.pdf"'
     );
-    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(response.headers.get('Cache-Control')).toBe(
+      'public, s-maxage=600, stale-while-revalidate=300'
+    );
 
     expect(getResumeDataMock).toHaveBeenCalledTimes(1);
     expect(buildResumeViewModelMock).toHaveBeenCalledWith({
@@ -108,6 +110,7 @@ describe('GET /curriculo.pdf', () => {
 
     expect(response.status).toBe(500);
     expect(await response.text()).toBe('Nao foi possivel gerar o PDF do curriculo.');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(logServerErrorMock).toHaveBeenCalledWith(
       '/curriculo.pdf',
       'Failed to generate resume PDF',

@@ -4,7 +4,9 @@ import { ConflictError, DomainValidationError, NotFoundError } from '../lib/erro
 
 const {
   presignMock,
-  existsMock,
+  statMock,
+  sliceMock,
+  arrayBufferMock,
   createUploadMock,
   findUploadByIdMock,
   updateUploadMock,
@@ -13,7 +15,9 @@ const {
   txUpdateReturningMock,
 }: {
   presignMock: ReturnType<typeof vi.fn>;
-  existsMock: ReturnType<typeof vi.fn>;
+  statMock: ReturnType<typeof vi.fn>;
+  sliceMock: ReturnType<typeof vi.fn>;
+  arrayBufferMock: ReturnType<typeof vi.fn>;
   createUploadMock: ReturnType<typeof vi.fn>;
   findUploadByIdMock: ReturnType<typeof vi.fn>;
   updateUploadMock: ReturnType<typeof vi.fn>;
@@ -22,7 +26,9 @@ const {
   txUpdateReturningMock: ReturnType<typeof vi.fn>;
 } = vi.hoisted(() => ({
   presignMock: vi.fn(),
-  existsMock: vi.fn(),
+  statMock: vi.fn(),
+  sliceMock: vi.fn(),
+  arrayBufferMock: vi.fn(),
   createUploadMock: vi.fn(),
   findUploadByIdMock: vi.fn(),
   updateUploadMock: vi.fn(),
@@ -35,7 +41,8 @@ vi.mock('../config/s3', () => ({
   s3: {
     file: vi.fn(() => ({
       presign: presignMock,
-      exists: existsMock,
+      stat: statMock,
+      slice: sliceMock,
     })),
   },
   getPublicUrl: (key: string) => `https://cdn.example.com/${key}`,
@@ -75,10 +82,29 @@ vi.mock('../lib/queues', () => ({
 
 import { confirmUpload, generatePresignedUrl, getUploadById } from './uploads.service';
 
+function makeArrayBuffer(bytes: number[]): ArrayBuffer {
+  return Uint8Array.from(bytes).buffer;
+}
+
 describe('uploads service', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    presignMock.mockReset();
+    statMock.mockReset();
+    sliceMock.mockReset();
+    arrayBufferMock.mockReset();
+    createUploadMock.mockReset();
+    findUploadByIdMock.mockReset();
+    updateUploadMock.mockReset();
+    enqueueImageOptimizeMock.mockReset();
+    txInsertValuesMock.mockReset();
+    txUpdateReturningMock.mockReset();
+
     presignMock.mockReturnValue('https://presigned.example.com/put');
+    statMock.mockResolvedValue({ size: 1024, type: 'image/jpeg' });
+    arrayBufferMock.mockResolvedValue(
+      makeArrayBuffer([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])
+    );
+    sliceMock.mockReturnValue({ arrayBuffer: arrayBufferMock });
     createUploadMock.mockResolvedValue({ id: 'upload-1' });
     updateUploadMock.mockResolvedValue({
       id: 'upload-1',
@@ -189,11 +215,60 @@ describe('uploads service', () => {
       id: 'upload-1',
       storageKey: 'uploads/2026/02/file.jpg',
       originalUrl: 'https://cdn.example.com/uploads/2026/02/file.jpg',
+      mime: 'image/jpeg',
+      size: 1024,
       status: 'pending',
     });
-    existsMock.mockResolvedValue(false);
+    statMock.mockResolvedValueOnce(null);
 
     await expect(confirmUpload('upload-1')).rejects.toThrow(NotFoundError);
+  });
+
+  it('confirmUpload rejects stored size mismatches', async () => {
+    findUploadByIdMock.mockResolvedValue({
+      id: 'upload-1',
+      storageKey: 'uploads/2026/02/file.jpg',
+      originalUrl: 'https://cdn.example.com/uploads/2026/02/file.jpg',
+      mime: 'image/jpeg',
+      size: 1024,
+      status: 'pending',
+    });
+    statMock.mockResolvedValueOnce({ size: 4096, type: 'image/jpeg' });
+
+    await expect(confirmUpload('upload-1')).rejects.toThrow(DomainValidationError);
+    expect(txInsertValuesMock).not.toHaveBeenCalled();
+  });
+
+  it('confirmUpload rejects MIME mismatches', async () => {
+    findUploadByIdMock.mockResolvedValue({
+      id: 'upload-1',
+      storageKey: 'uploads/2026/02/file.jpg',
+      originalUrl: 'https://cdn.example.com/uploads/2026/02/file.jpg',
+      mime: 'image/jpeg',
+      size: 1024,
+      status: 'pending',
+    });
+    statMock.mockResolvedValueOnce({ size: 1024, type: 'image/png' });
+
+    await expect(confirmUpload('upload-1')).rejects.toThrow(DomainValidationError);
+    expect(txInsertValuesMock).not.toHaveBeenCalled();
+  });
+
+  it('confirmUpload rejects magic-byte mismatches', async () => {
+    findUploadByIdMock.mockResolvedValue({
+      id: 'upload-1',
+      storageKey: 'uploads/2026/02/file.jpg',
+      originalUrl: 'https://cdn.example.com/uploads/2026/02/file.jpg',
+      mime: 'image/jpeg',
+      size: 1024,
+      status: 'pending',
+    });
+    arrayBufferMock.mockResolvedValueOnce(
+      makeArrayBuffer([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
+    );
+
+    await expect(confirmUpload('upload-1')).rejects.toThrow(DomainValidationError);
+    expect(txInsertValuesMock).not.toHaveBeenCalled();
   });
 
   it('confirmUpload updates status and writes an outbox event on success', async () => {
@@ -201,9 +276,10 @@ describe('uploads service', () => {
       id: 'upload-1',
       storageKey: 'uploads/2026/02/file.jpg',
       originalUrl: 'https://cdn.example.com/uploads/2026/02/file.jpg',
+      mime: 'image/jpeg',
+      size: 1024,
       status: 'pending',
     });
-    existsMock.mockResolvedValue(true);
 
     const result = await confirmUpload('upload-1');
 
@@ -225,9 +301,10 @@ describe('uploads service', () => {
       id: 'upload-1',
       storageKey: 'uploads/2026/02/file.jpg',
       originalUrl: 'https://cdn.example.com/uploads/2026/02/file.jpg',
+      mime: 'image/jpeg',
+      size: 1024,
       status: 'pending',
     });
-    existsMock.mockResolvedValue(true);
     // tx.update returns no row — the WHERE guard prevents double-processing
     txUpdateReturningMock.mockResolvedValueOnce([]);
 
@@ -241,9 +318,10 @@ describe('uploads service', () => {
       id: 'upload-1',
       storageKey: 'uploads/2026/02/my-canonical-key.jpg',
       originalUrl: 'https://cdn.example.com/uploads/2026/02/my-canonical-key.jpg',
+      mime: 'image/jpeg',
+      size: 1024,
       status: 'pending',
     });
-    existsMock.mockResolvedValue(true);
 
     await confirmUpload('upload-1');
 

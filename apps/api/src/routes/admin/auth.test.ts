@@ -9,7 +9,17 @@ type OAuthStartResponse = {
   };
 };
 
-const { redisMock, signMock, verifyMock } = vi.hoisted(() => ({
+const { envMock, redisMock, signMock, verifyMock } = vi.hoisted(() => ({
+  envMock: {
+    GITHUB_CLIENT_ID: 'github-client-id',
+    GITHUB_CLIENT_SECRET: 'github-client-secret',
+    GITHUB_CALLBACK_URL: 'https://example.com/api/auth/github/callback',
+    ADMIN_GITHUB_ID: '12345',
+    JWT_SECRET: '12345678901234567890123456789012',
+    ALLOWED_ORIGIN: 'https://example.com',
+    NODE_ENV: 'test',
+    OAUTH_STATE_LOCAL_FALLBACK: true,
+  },
   redisMock: {
     set: vi.fn(),
     get: vi.fn(),
@@ -23,17 +33,7 @@ const { redisMock, signMock, verifyMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../config/env', () => ({
-  env: {
-    GITHUB_CLIENT_ID: 'github-client-id',
-    GITHUB_CLIENT_SECRET: 'github-client-secret',
-    // Path-based production format: https://example.com/api/auth/github/callback
-    // The proxy strips /api, so the backend internally receives /auth/github/callback.
-    GITHUB_CALLBACK_URL: 'https://example.com/api/auth/github/callback',
-    ADMIN_GITHUB_ID: '12345',
-    JWT_SECRET: '12345678901234567890123456789012',
-    ALLOWED_ORIGIN: 'https://example.com',
-    NODE_ENV: 'test',
-  },
+  env: envMock,
 }));
 
 vi.mock('../../config/logger', () => ({
@@ -117,7 +117,15 @@ import { authRouter } from './auth';
 
 describe('auth routes', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    redisMock.set.mockReset();
+    redisMock.get.mockReset();
+    redisMock.getdel.mockReset();
+    redisMock.eval.mockReset();
+    redisMock.del.mockReset();
+    redisMock.multi.mockReset();
+    signMock.mockReset();
+    verifyMock.mockReset();
+    envMock.OAUTH_STATE_LOCAL_FALLBACK = true;
 
     redisMock.multi.mockImplementation(() => {
       const chain = {
@@ -180,6 +188,22 @@ describe('auth routes', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(typeof body.data.authUrl).toBe('string');
+  });
+
+  it('POST /github/start returns 503 when Redis is unavailable and local fallback is disabled', async () => {
+    envMock.OAUTH_STATE_LOCAL_FALLBACK = false;
+    redisMock.set.mockRejectedValueOnce(new Error('redis down'));
+
+    const app = new Hono();
+    app.route('/auth', authRouter);
+
+    const response = await app.request('/auth/github/start', {
+      method: 'POST',
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expectErrorEnvelope(body, 'SERVICE_UNAVAILABLE', 'Authentication service unavailable');
   });
 
   it('GET /github/callback consumes local fallback state when Redis is unavailable', async () => {
@@ -275,6 +299,7 @@ describe('auth routes', () => {
   });
 
   it('GET /github/callback returns 403 when Redis consume fails and no local fallback exists', async () => {
+    envMock.OAUTH_STATE_LOCAL_FALLBACK = false;
     redisMock.getdel.mockRejectedValueOnce(new Error('redis down'));
 
     const app = new Hono();

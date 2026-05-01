@@ -11,135 +11,95 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { dbDeleteMock, dbUpdateMock, deleteWhereMock, updateWhereMock, updateSetMock } = vi.hoisted(
-  () => ({
-    dbDeleteMock: vi.fn(),
-    dbUpdateMock: vi.fn(),
-    deleteWhereMock: vi.fn(),
-    updateWhereMock: vi.fn(),
-    updateSetMock: vi.fn(),
-  })
-);
-
-const { ltMock, neMock, andMock, contactsTable, commentsTable, analyticsEventsTable } = vi.hoisted(
-  () => ({
-    ltMock: vi.fn(() => ({ _op: 'lt' })),
-    neMock: vi.fn(() => ({ _op: 'ne' })),
-    andMock: vi.fn(() => ({ _op: 'and' })),
-    contactsTable: { id: 'contacts.id', createdAt: 'contacts.createdAt' },
-    commentsTable: {
-      id: 'comments.id',
-      createdAt: 'comments.createdAt',
-      authorEmail: 'comments.authorEmail',
-    },
-    analyticsEventsTable: { id: 'analytics.id', createdAt: 'analytics.createdAt' },
-  })
-);
+const { dbExecuteMock, loggerInfoMock, loggerErrorMock, sqlMock } = vi.hoisted(() => ({
+  dbExecuteMock: vi.fn(),
+  loggerInfoMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
+  sqlMock: vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => ({
+    strings,
+    values,
+  })),
+}));
 
 vi.mock('../config/db', () => ({
   db: {
-    delete: dbDeleteMock,
-    update: dbUpdateMock,
+    execute: dbExecuteMock,
   },
 }));
 
 vi.mock('../config/logger', () => ({
   getLogger: () => ({
-    info: vi.fn(),
+    info: loggerInfoMock,
     warn: vi.fn(),
-    error: vi.fn(),
+    error: loggerErrorMock,
     debug: vi.fn(),
   }),
 }));
 
 vi.mock('drizzle-orm', () => ({
-  lt: ltMock,
-  ne: neMock,
-  and: andMock,
+  sql: sqlMock,
 }));
 
-vi.mock('@portfolio/shared/db/schema', () => ({
-  contacts: contactsTable,
-  comments: commentsTable,
-  analyticsEvents: analyticsEventsTable,
-}));
+import { processRetention, RetentionCleanupError } from './retention';
 
-import { processRetention } from './retention';
+async function expectRetentionFailure(): Promise<RetentionCleanupError> {
+  try {
+    await processRetention();
+  } catch (error) {
+    expect(error).toBeInstanceOf(RetentionCleanupError);
+    return error as RetentionCleanupError;
+  }
+
+  throw new Error('Expected processRetention to throw');
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
-
-  const deleteReturningMock = vi.fn();
-  deleteWhereMock.mockReturnValue({ returning: deleteReturningMock });
-  dbDeleteMock.mockReturnValue({ where: deleteWhereMock });
-
-  const updateReturningMock = vi.fn();
-  updateWhereMock.mockReturnValue({ returning: updateReturningMock });
-  updateSetMock.mockReturnValue({ where: updateWhereMock });
-  dbUpdateMock.mockReturnValue({ set: updateSetMock });
 });
 
 describe('processRetention', () => {
   it('executes all three retention queries', async () => {
-    const deleteReturningMock = vi.fn();
-    deleteWhereMock
-      .mockReturnValueOnce({ returning: deleteReturningMock })
-      .mockReturnValueOnce({ returning: deleteReturningMock });
-    deleteReturningMock
-      .mockResolvedValueOnce([{ id: 1 }, { id: 2 }])
-      .mockResolvedValueOnce([{ id: 5 }, { id: 6 }, { id: 7 }]);
-
-    const updateReturningMock = vi.fn().mockResolvedValueOnce([{ id: '10' }]);
-    updateWhereMock.mockReturnValueOnce({ returning: updateReturningMock });
+    dbExecuteMock
+      .mockResolvedValueOnce([{ count: 2 }])
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 3 }]);
 
     await processRetention();
 
-    expect(dbDeleteMock).toHaveBeenCalledTimes(2);
-    expect(dbUpdateMock).toHaveBeenCalledTimes(1);
+    expect(dbExecuteMock).toHaveBeenCalledTimes(3);
   });
 
   it('handles zero affected rows without error', async () => {
-    const deleteReturningMock = vi.fn().mockResolvedValue([]);
-    deleteWhereMock.mockReturnValue({ returning: deleteReturningMock });
-
-    const updateReturningMock = vi.fn().mockResolvedValue([]);
-    updateWhereMock.mockReturnValue({ returning: updateReturningMock });
+    dbExecuteMock
+      .mockResolvedValueOnce([{ count: 0 }])
+      .mockResolvedValueOnce([{ count: 0 }])
+      .mockResolvedValueOnce([{ count: 0 }]);
 
     await processRetention();
 
-    expect(dbDeleteMock).toHaveBeenCalledTimes(2);
-    expect(dbUpdateMock).toHaveBeenCalledTimes(1);
+    expect(dbExecuteMock).toHaveBeenCalledTimes(3);
   });
 
   it('continues remaining operations when one query fails', async () => {
-    const deleteReturningMock = vi.fn();
-    deleteWhereMock
-      .mockReturnValueOnce({ returning: deleteReturningMock })
-      .mockReturnValueOnce({ returning: deleteReturningMock });
-    deleteReturningMock.mockRejectedValueOnce(new Error('DB timeout on contacts'));
-    deleteReturningMock.mockResolvedValueOnce([]);
+    dbExecuteMock
+      .mockRejectedValueOnce(new Error('DB timeout on contacts'))
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 0 }]);
 
-    const updateReturningMock = vi.fn().mockResolvedValueOnce([{ id: '1' }]);
-    updateWhereMock.mockReturnValueOnce({ returning: updateReturningMock });
-
-    // Should NOT throw — retention is best-effort per operation
-    await expect(processRetention()).resolves.toBeUndefined();
-
-    // All 3 operations were attempted
-    expect(dbDeleteMock).toHaveBeenCalledTimes(2);
-    expect(dbUpdateMock).toHaveBeenCalledTimes(1);
+    const error = await expectRetentionFailure();
+    expect(error.stepErrors).toEqual(['contacts: DB timeout on contacts']);
+    expect(dbExecuteMock).toHaveBeenCalledTimes(3);
   });
 
   it('continues when all three operations fail independently', async () => {
-    const deleteReturningMock = vi.fn().mockRejectedValue(new Error('DB unavailable'));
-    deleteWhereMock.mockReturnValue({ returning: deleteReturningMock });
+    dbExecuteMock.mockRejectedValue(new Error('DB unavailable'));
 
-    const updateReturningMock = vi.fn().mockRejectedValue(new Error('DB unavailable'));
-    updateWhereMock.mockReturnValue({ returning: updateReturningMock });
-
-    await expect(processRetention()).resolves.toBeUndefined();
-
-    expect(dbDeleteMock).toHaveBeenCalledTimes(2);
-    expect(dbUpdateMock).toHaveBeenCalledTimes(1);
+    const error = await expectRetentionFailure();
+    expect(error.stepErrors).toEqual([
+      'contacts: DB unavailable',
+      'comments: DB unavailable',
+      'analytics_events: DB unavailable',
+    ]);
+    expect(dbExecuteMock).toHaveBeenCalledTimes(3);
   });
 });

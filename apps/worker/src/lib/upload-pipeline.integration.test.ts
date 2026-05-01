@@ -28,6 +28,7 @@ const {
   dbUpdateSetMock,
   dbUpdateSetWhereMock,
   imageQueueAddMock,
+  s3StatMock,
   s3BytesMock,
   s3WriteMock,
   sharpMetadataMock,
@@ -37,6 +38,7 @@ const {
   dbUpdateSetMock: vi.fn(),
   dbUpdateSetWhereMock: vi.fn(),
   imageQueueAddMock: vi.fn(),
+  s3StatMock: vi.fn(),
   s3BytesMock: vi.fn(),
   s3WriteMock: vi.fn(),
   sharpMetadataMock: vi.fn(),
@@ -84,6 +86,7 @@ vi.mock('drizzle-orm', () => ({
 vi.mock('../config/s3', () => ({
   s3: {
     file: vi.fn(() => ({
+      stat: s3StatMock,
       bytes: s3BytesMock,
       write: s3WriteMock,
     })),
@@ -192,6 +195,9 @@ describe('upload pipeline: relay → imageOptimize state transition', () => {
 
     // queue.add resolves by default
     imageQueueAddMock.mockResolvedValue(undefined);
+
+    // S3 metadata matches the stored upload contract
+    s3StatMock.mockResolvedValue({ size: 1024, type: 'image/jpeg' });
 
     // S3 returns a minimal valid JPEG buffer
     s3BytesMock.mockResolvedValue(Buffer.from([0xff, 0xd8, 0xff, 0xe0]));

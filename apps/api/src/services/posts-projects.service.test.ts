@@ -8,6 +8,7 @@ const {
   updatePostMock,
   findManyPostsMock,
   findPostBySlugMock,
+  countApprovedCommentsByPostIdMock,
   findApprovedCommentsByPostIdMock,
   createProjectMock,
   updateProjectMock,
@@ -24,6 +25,7 @@ const {
   updatePostMock: vi.fn(),
   findManyPostsMock: vi.fn(),
   findPostBySlugMock: vi.fn(),
+  countApprovedCommentsByPostIdMock: vi.fn(),
   findApprovedCommentsByPostIdMock: vi.fn(),
   createProjectMock: vi.fn(),
   updateProjectMock: vi.fn(),
@@ -66,6 +68,7 @@ vi.mock('../lib/markdown', () => ({
 }));
 
 vi.mock('../repositories/comments.repo', () => ({
+  countApprovedCommentsByPostId: countApprovedCommentsByPostIdMock,
   findApprovedCommentsByPostId: findApprovedCommentsByPostIdMock,
 }));
 
@@ -633,7 +636,7 @@ describe('posts/projects services', () => {
     expect(cancelScheduledPostPublishMock).not.toHaveBeenCalled();
   });
 
-  it('getPostBySlug (public) retorna árvore de comentários aprovados', async () => {
+  it('getPostBySlug (public) retorna preview limitado de comentários aprovados com contagem total', async () => {
     const commentsTree = [
       {
         id: 'root-1',
@@ -668,14 +671,17 @@ describe('posts/projects services', () => {
       tags: [{ postId: 1, tagId: 2, tag: { id: 2, name: 'TypeScript', slug: 'typescript' } }],
     });
     findApprovedCommentsByPostIdMock.mockResolvedValueOnce(commentsTree);
+    countApprovedCommentsByPostIdMock.mockResolvedValueOnce(42);
 
     const result = await getPostBySlug('post-a', false);
 
     expect(findPostBySlugMock).toHaveBeenCalledWith('post-a', false);
-    expect(findApprovedCommentsByPostIdMock).toHaveBeenCalledWith(1);
+    expect(findApprovedCommentsByPostIdMock).toHaveBeenCalledWith(1, 30);
+    expect(countApprovedCommentsByPostIdMock).toHaveBeenCalledWith(1);
     expect(result).toEqual(
       expect.objectContaining({
         comments: commentsTree,
+        commentCount: 42,
       })
     );
   });
