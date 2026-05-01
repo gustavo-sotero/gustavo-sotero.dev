@@ -1,17 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { cookiesMock, fetchMock } = vi.hoisted(() => ({
-  cookiesMock: vi.fn(),
-  fetchMock: vi.fn(),
-}));
+const cookiesMock = vi.fn();
+const fetchMock = vi.fn();
 
+vi.mock('server-only', () => ({}));
 vi.mock('next/headers', () => ({
-  cookies: cookiesMock,
+  cookies: (...args: Parameters<typeof cookiesMock>) => cookiesMock(...args),
 }));
 
 vi.stubGlobal('fetch', fetchMock);
 
 const { validateAdminSession } = await import('./auth.server');
+
+function makeResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    statusText: status === 200 ? 'OK' : 'Error',
+    headers: {
+      'content-type': 'application/json',
+    },
+  });
+}
 
 describe('validateAdminSession', () => {
   beforeEach(() => {
@@ -47,7 +56,9 @@ describe('validateAdminSession', () => {
     cookiesMock.mockResolvedValue({
       get: vi.fn().mockReturnValue({ value: 'valid-token' }),
     });
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue(
+      makeResponse(200, { success: true, data: { adminId: 'valid-admin' } })
+    );
 
     const result = await validateAdminSession();
 
@@ -70,7 +81,16 @@ describe('validateAdminSession', () => {
     cookiesMock.mockResolvedValue({
       get: vi.fn().mockReturnValue({ value: 'expired-token' }),
     });
-    fetchMock.mockResolvedValue({ ok: false });
+    fetchMock.mockResolvedValue(
+      makeResponse(401, {
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          type: 'unauthorized',
+          message: 'Invalid token',
+        },
+      })
+    );
 
     const result = await validateAdminSession();
 
@@ -89,6 +109,18 @@ describe('validateAdminSession', () => {
     expect(result).toBe(false);
   });
 
+  it('returns false when /auth/session times out', async () => {
+    process.env.API_INTERNAL_URL = 'http://api:3000';
+    cookiesMock.mockResolvedValue({
+      get: vi.fn().mockReturnValue({ value: 'slow-token' }),
+    });
+    fetchMock.mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+
+    const result = await validateAdminSession();
+
+    expect(result).toBe(false);
+  });
+
   // ── Path-based topology ────────────────────────────────────────────────────
 
   it('calls /auth/session at the path-based public URL when API_INTERNAL_URL is absent', async () => {
@@ -97,7 +129,9 @@ describe('validateAdminSession', () => {
     cookiesMock.mockResolvedValue({
       get: vi.fn().mockReturnValue({ value: 'path-based-token' }),
     });
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue(
+      makeResponse(200, { success: true, data: { adminId: 'path-admin' } })
+    );
 
     const result = await validateAdminSession();
 
@@ -121,7 +155,9 @@ describe('validateAdminSession', () => {
     cookiesMock.mockResolvedValue({
       get: vi.fn().mockReturnValue({ value: 'internal-token' }),
     });
-    fetchMock.mockResolvedValue({ ok: true });
+    fetchMock.mockResolvedValue(
+      makeResponse(200, { success: true, data: { adminId: 'internal-admin' } })
+    );
 
     const result = await validateAdminSession();
 

@@ -109,6 +109,18 @@ function makeQueues() {
   return { imageQueue, postPublishQueue, aiPostDraftGenerationQueue, aiPostTopicGenerationQueue };
 }
 
+function makeEventsQueryResult(events: ReturnType<typeof makeEvent>[]) {
+  return {
+    from: vi.fn(() => ({
+      where: vi.fn(() => ({
+        orderBy: vi.fn(() => ({
+          limit: vi.fn().mockResolvedValue(events),
+        })),
+      })),
+    })),
+  };
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 import {
@@ -119,7 +131,18 @@ import {
 
 describe('processOutboxEvents', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.useRealTimers();
+    dbSelectMock.mockReset();
+    dbUpdateSetMock.mockReset();
+    dbUpdateSetWhereMock.mockReset();
+    imageQueueAddMock.mockReset();
+    postPublishQueueAddMock.mockReset();
+    postPublishQueueGetJobMock.mockReset();
+    aiPostDraftQueueAddMock.mockReset();
+    aiPostTopicQueueAddMock.mockReset();
+    loggerInfoMock.mockReset();
+    loggerWarnMock.mockReset();
+    loggerErrorMock.mockReset();
     resetOutboxRelayStateForTests();
 
     // Default: select returns empty list
@@ -405,6 +428,48 @@ describe('processOutboxEvents', () => {
     expect(imageQueueAddMock).not.toHaveBeenCalled();
     expect(postPublishQueueAddMock).not.toHaveBeenCalled();
     expect(dbUpdateSetMock).not.toHaveBeenCalled();
+  });
+
+  it('logs cycle summary with batch, per-event success, and per-failure breakdowns', async () => {
+    const processedEvent = makeEvent({
+      id: 'event-processed',
+      eventType: OutboxEventType.IMAGE_OPTIMIZE,
+      payload: { uploadId: '00000000-0000-0000-0000-000000000099' },
+    });
+    const failedEvent = makeEvent({
+      id: 'event-failed',
+      eventType: OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
+      payload: { wrongField: 'invalid' },
+    });
+
+    dbSelectMock.mockReturnValueOnce(makeEventsQueryResult([processedEvent, failedEvent]));
+    imageQueueAddMock.mockResolvedValue(undefined);
+
+    const { imageQueue, postPublishQueue, aiPostDraftGenerationQueue, aiPostTopicGenerationQueue } =
+      makeQueues();
+    await processOutboxEvents(
+      imageQueue,
+      postPublishQueue,
+      aiPostDraftGenerationQueue,
+      aiPostTopicGenerationQueue
+    );
+
+    expect(loggerInfoMock).toHaveBeenCalledWith(
+      'Outbox relay: cycle complete',
+      expect.objectContaining({
+        backlogSize: 0,
+        batchSize: 2,
+        cycleDurationMs: expect.any(Number),
+        processedCount: 1,
+        failedCount: 1,
+        processedByEventType: {
+          [OutboxEventType.IMAGE_OPTIMIZE]: 1,
+        },
+        failedByClass: {
+          INVALID_PAYLOAD: 1,
+        },
+      })
+    );
   });
 
   it('classifies image-optimize with missing uploadId as INVALID_PAYLOAD', async () => {

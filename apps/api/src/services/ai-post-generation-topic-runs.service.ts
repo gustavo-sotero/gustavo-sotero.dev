@@ -23,6 +23,10 @@ import { generateTopicsResponseSchema } from '@portfolio/shared/schemas/ai-post-
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { env } from '../config/env';
+import {
+  buildQueuedAiRunResponse,
+  createQueuedAiRunWithOutbox,
+} from './ai-post-generation-runs.shared';
 import { resolveActiveAiTopicGenerationConfig } from './ai-post-generation-settings.service';
 
 // ── Create ────────────────────────────────────────────────────────────────────
@@ -47,40 +51,32 @@ export async function createTopicRun(
   });
 
   const run = await db.transaction(async (tx) => {
-    const insertedRun = await tx
-      .insert(aiPostTopicRuns)
-      .values({
-        status: 'queued',
-        stage: 'queued',
-        requestedCategory: normalizedRequest.category,
-        requestPayload: normalizedRequest as unknown as Record<string, unknown>,
-        modelId: activeConfig.topicsModelId,
-        createdBy,
-        attemptCount: 0,
-      })
-      .returning()
-      .then((rows) => rows[0]);
-
-    if (!insertedRun) {
-      throw new Error('Não foi possível criar o run de geração de temas.');
-    }
-
-    await tx.insert(outbox).values({
-      eventType: OutboxEventType.AI_POST_TOPIC_RUN_REQUESTED,
-      payload: { runId: insertedRun.id },
-      status: 'pending',
+    return createQueuedAiRunWithOutbox({
+      createRun: () =>
+        tx
+          .insert(aiPostTopicRuns)
+          .values({
+            status: 'queued',
+            stage: 'queued',
+            requestedCategory: normalizedRequest.category,
+            requestPayload: normalizedRequest as unknown as Record<string, unknown>,
+            modelId: activeConfig.topicsModelId,
+            createdBy,
+            attemptCount: 0,
+          })
+          .returning()
+          .then((rows) => rows[0]),
+      insertOutbox: (runId) =>
+        tx.insert(outbox).values({
+          eventType: OutboxEventType.AI_POST_TOPIC_RUN_REQUESTED,
+          payload: { runId },
+          status: 'pending',
+        }),
+      errorMessage: 'Não foi possível criar o run de geração de temas.',
     });
-
-    return insertedRun;
   });
 
-  return {
-    runId: run.id,
-    status: 'queued',
-    stage: 'queued',
-    pollAfterMs: AI_POST_TOPIC_RUN_INITIAL_POLL_MS,
-    createdAt: run.createdAt.toISOString(),
-  };
+  return buildQueuedAiRunResponse(run, AI_POST_TOPIC_RUN_INITIAL_POLL_MS);
 }
 
 // ── Read ──────────────────────────────────────────────────────────────────────

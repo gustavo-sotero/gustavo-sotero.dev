@@ -40,6 +40,10 @@ import { getLogger } from '../config/logger';
 const logger = getLogger('lib', 'outbox-relay');
 let outboxSchemaMissing = false;
 
+type RelayProcessedByEventType = Partial<
+  Record<(typeof OutboxEventType)[keyof typeof OutboxEventType], number>
+>;
+
 /** Structured failure category for relay log correlation. */
 type RelayFailureClass =
   | 'UNSUPPORTED_EVENT_TYPE'
@@ -48,6 +52,10 @@ type RelayFailureClass =
   | 'OUTBOX_STATUS_UPDATE_FAILURE';
 
 export const OUTBOX_MAX_ATTEMPTS = 5;
+
+function incrementCounter<T extends string>(counter: Partial<Record<T, number>>, key: T): void {
+  counter[key] = (counter[key] ?? 0) + 1;
+}
 
 /**
  * Upserts a scheduled-post-publish job in BullMQ with full state-aware reschedule semantics.
@@ -232,6 +240,8 @@ export async function processOutboxEvents(
 
   let processedCount = 0;
   let failedCount = 0;
+  const processedByEventType: RelayProcessedByEventType = {};
+  const failedByClass: Partial<Record<RelayFailureClass, number>> = {};
 
   for (const event of events) {
     // Extract uploadId eagerly from the raw payload for reconciliation purposes.
@@ -362,6 +372,10 @@ export async function processOutboxEvents(
         eventType: event.eventType,
       });
       processedCount++;
+      incrementCounter(
+        processedByEventType,
+        event.eventType as (typeof OutboxEventType)[keyof typeof OutboxEventType]
+      );
     } catch (err) {
       const newAttempts = event.attempts + 1;
       const isFinal = newAttempts >= OUTBOX_MAX_ATTEMPTS;
@@ -439,6 +453,7 @@ export async function processOutboxEvents(
         error: err instanceof Error ? err.message : String(err),
       });
       failedCount++;
+      incrementCounter(failedByClass, failureClass);
     }
   }
 
@@ -447,9 +462,12 @@ export async function processOutboxEvents(
     logger.info('Outbox relay: cycle complete', {
       backlogSize,
       ...(oldestPendingAgeMs !== undefined ? { oldestPendingAgeMs } : {}),
+      batchSize: events.length,
       cycleDurationMs: Date.now() - cycleStartAt,
       processedCount,
       failedCount,
+      ...(Object.keys(processedByEventType).length > 0 ? { processedByEventType } : {}),
+      ...(Object.keys(failedByClass).length > 0 ? { failedByClass } : {}),
     });
   }
 }

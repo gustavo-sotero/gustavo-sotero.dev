@@ -22,6 +22,7 @@ import { processRetention } from './jobs/retention';
 import { processTelegram, type TelegramJobPayload } from './jobs/telegram';
 import { closeCacheRedis } from './lib/cache';
 import { processOutboxEvents } from './lib/outbox-relay';
+import { createOutboxRelayPollGuard } from './lib/outbox-relay-poll-guard';
 import {
   aiPostDraftGenerationQueue,
   aiPostTopicGenerationQueue,
@@ -305,11 +306,10 @@ logger.info('All workers ready', {
 //   downstream idempotency for correctness.
 
 const OUTBOX_POLL_INTERVAL_MS = 5_000;
-let relayInFlight = false;
+const outboxRelayPollGuard = createOutboxRelayPollGuard(logger, OUTBOX_POLL_INTERVAL_MS);
 
 async function runOutboxRelay(): Promise<void> {
-  if (relayInFlight) return;
-  relayInFlight = true;
+  if (!outboxRelayPollGuard.tryStartCycle()) return;
   try {
     await processOutboxEvents(
       imageQueue,
@@ -318,7 +318,7 @@ async function runOutboxRelay(): Promise<void> {
       aiPostTopicGenerationQueue
     );
   } finally {
-    relayInFlight = false;
+    outboxRelayPollGuard.finishCycle();
   }
 }
 

@@ -23,6 +23,10 @@ import type {
 import { generateDraftResponseSchema } from '@portfolio/shared/schemas/ai-post-generation';
 import { asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';
+import {
+  buildQueuedAiRunResponse,
+  createQueuedAiRunWithOutbox,
+} from './ai-post-generation-runs.shared';
 import { resolveActiveAiDraftGenerationConfig } from './ai-post-generation-settings.service';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -55,41 +59,33 @@ export async function createDraftRun(
   const concreteCategory = normalizedRequest.selectedSuggestion.category;
 
   const run = await db.transaction(async (tx) => {
-    const insertedRun = await tx
-      .insert(aiPostDraftRuns)
-      .values({
-        status: 'queued',
-        stage: 'queued',
-        requestedCategory,
-        concreteCategory,
-        requestPayload: normalizedRequest as unknown as Record<string, unknown>,
-        modelId: activeConfig.draftModelId,
-        createdBy,
-        attemptCount: 0,
-      })
-      .returning()
-      .then((rows) => rows[0]);
-
-    if (!insertedRun) {
-      throw new Error('Não foi possível criar o run de geração de draft.');
-    }
-
-    await tx.insert(outbox).values({
-      eventType: OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
-      payload: { runId: insertedRun.id },
-      status: 'pending',
+    return createQueuedAiRunWithOutbox({
+      createRun: () =>
+        tx
+          .insert(aiPostDraftRuns)
+          .values({
+            status: 'queued',
+            stage: 'queued',
+            requestedCategory,
+            concreteCategory,
+            requestPayload: normalizedRequest as unknown as Record<string, unknown>,
+            modelId: activeConfig.draftModelId,
+            createdBy,
+            attemptCount: 0,
+          })
+          .returning()
+          .then((rows) => rows[0]),
+      insertOutbox: (runId) =>
+        tx.insert(outbox).values({
+          eventType: OutboxEventType.AI_POST_DRAFT_GENERATE_REQUESTED,
+          payload: { runId },
+          status: 'pending',
+        }),
+      errorMessage: 'Não foi possível criar o run de geração de draft.',
     });
-
-    return insertedRun;
   });
 
-  return {
-    runId: run.id,
-    status: 'queued',
-    stage: 'queued',
-    pollAfterMs: AI_POST_DRAFT_RUN_INITIAL_POLL_MS,
-    createdAt: run.createdAt.toISOString(),
-  };
+  return buildQueuedAiRunResponse(run, AI_POST_DRAFT_RUN_INITIAL_POLL_MS);
 }
 
 // ── Read ──────────────────────────────────────────────────────────────────────
