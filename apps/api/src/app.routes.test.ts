@@ -1,3 +1,4 @@
+import { MUTATING_HTTP_METHODS } from '@portfolio/shared/constants/httpMethods';
 import { Hono } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -241,7 +242,7 @@ describe('admin post-generation routes', () => {
 });
 
 describe('CORS configuration', () => {
-  it('allows PUT in Access-Control-Allow-Methods on preflight', async () => {
+  it('allows every mutating method in Access-Control-Allow-Methods on preflight', async () => {
     const response = await app.request('/admin/posts/generate/config', {
       method: 'OPTIONS',
       headers: {
@@ -251,22 +252,10 @@ describe('CORS configuration', () => {
       },
     });
     const allow = response.headers.get('Access-Control-Allow-Methods') ?? '';
-    expect(allow).toContain('PUT');
-  });
 
-  it('allows POST in Access-Control-Allow-Methods on preflight', async () => {
-    const response = await app.request('/admin/posts', {
-      method: 'OPTIONS',
-      headers: {
-        Origin: 'https://web.example.com',
-        'Access-Control-Request-Method': 'POST',
-        'Access-Control-Request-Headers': 'Content-Type, X-CSRF-Token',
-      },
-    });
-    const allow = response.headers.get('Access-Control-Allow-Methods') ?? '';
-    expect(allow).toContain('POST');
-    expect(allow).toContain('PATCH');
-    expect(allow).toContain('DELETE');
+    for (const method of MUTATING_HTTP_METHODS) {
+      expect(allow).toContain(method);
+    }
   });
 });
 

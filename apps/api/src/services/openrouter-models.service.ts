@@ -1,4 +1,7 @@
-import type { AiPostGenerationModelSummary, AiPostGenerationModelsQuery } from '@portfolio/shared';
+import type {
+  AiPostGenerationModelSummary,
+  AiPostGenerationModelsQuery,
+} from '@portfolio/shared/schemas/ai-post-generation-config';
 import type { PaginationMeta } from '@portfolio/shared/types/api';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';

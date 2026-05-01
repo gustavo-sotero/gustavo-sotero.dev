@@ -1,10 +1,6 @@
-import {
-  type ApiError,
-  type ApiResponse,
-  ERROR_CODES,
-  type ErrorCode,
-  type PaginatedResponse,
-} from '@portfolio/shared';
+import { ERROR_CODES, type ErrorCode } from '@portfolio/shared/constants/errorCodes';
+import { isMutatingHttpMethod } from '@portfolio/shared/constants/httpMethods';
+import type { ApiError, ApiResponse, PaginatedResponse } from '@portfolio/shared/types/api';
 import { env } from './env';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -82,7 +78,7 @@ async function performRequest(path: string, options: RequestInit = {}): Promise<
     ...(options.headers as Record<string, string>),
   };
 
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+  if (isMutatingHttpMethod(method)) {
     const csrf = getCsrfToken();
     if (csrf) headers['X-CSRF-Token'] = csrf;
   }

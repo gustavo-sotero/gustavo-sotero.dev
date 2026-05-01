@@ -23,6 +23,11 @@ vi.mock('@portfolio/shared', () => ({
   },
 }));
 
+vi.mock('@portfolio/shared/constants/httpMethods', () => ({
+  MUTATING_HTTP_METHODS: ['POST', 'PUT', 'PATCH', 'DELETE'],
+  isMutatingHttpMethod: (method: string) => ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method),
+}));
+
 import { apiFetch, apiFetchPaginated, apiFetchVoid } from './api';
 
 function makeResponse(
@@ -103,6 +108,25 @@ describe('apiFetch', () => {
     });
 
     expect(capturedHeaders['X-CSRF-Token']).toBe('test-csrf-token-xyz');
+  });
+
+  it('injects X-CSRF-Token header for PUT requests when csrf_token cookie is set', async () => {
+    // biome-ignore lint/suspicious/noDocumentCookie: jsdom test environment — Cookie Store API not available
+    document.cookie = 'csrf_token=test-csrf-token-put';
+
+    const capturedHeaders: Record<string, string> = {};
+    vi.spyOn(globalThis, 'fetch').mockImplementationOnce(async (_url, init) => {
+      const headers = init?.headers as Record<string, string>;
+      Object.assign(capturedHeaders, headers);
+      return makeResponse(200, { success: true, data: {} });
+    });
+
+    await apiFetch('/admin/posts/generate/config', {
+      method: 'PUT',
+      body: JSON.stringify({ topicsModelId: 'model-a', draftModelId: 'model-b' }),
+    });
+
+    expect(capturedHeaders['X-CSRF-Token']).toBe('test-csrf-token-put');
   });
 
   it('does not inject X-CSRF-Token header for GET requests', async () => {

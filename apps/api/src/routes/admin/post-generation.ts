@@ -17,13 +17,15 @@
  */
 
 import {
-  aiPostGenerationModelsQuerySchema,
   createDraftRunRequestSchema,
   createTopicRunRequestSchema,
   generateDraftRequestSchema,
   generateTopicsRequestSchema,
+} from '@portfolio/shared/schemas/ai-post-generation';
+import {
+  aiPostGenerationModelsQuerySchema,
   updateAiPostGenerationConfigSchema,
-} from '@portfolio/shared';
+} from '@portfolio/shared/schemas/ai-post-generation-config';
 import { Hono } from 'hono';
 import { AiGenerationError } from '../../lib/ai/generateStructuredObject';
 import { AiConfigError } from '../../lib/errors';

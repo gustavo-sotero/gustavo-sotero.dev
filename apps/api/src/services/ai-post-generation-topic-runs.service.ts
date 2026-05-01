@@ -9,19 +9,17 @@
  *  2. getStatus() — reads the current run state for polling
  */
 
+import { AI_POST_TOPIC_RUN_INITIAL_POLL_MS } from '@portfolio/shared/constants/ai-posts';
+import { OutboxEventType } from '@portfolio/shared/constants/enums';
+import type { AiPostTopicRun } from '@portfolio/shared/db/schema';
+import { aiPostTopicRuns, outbox } from '@portfolio/shared/db/schema';
+import { normalizeTopicsRequest } from '@portfolio/shared/lib/ai-topic-normalizer';
 import type {
   CreateTopicRunRequest,
   CreateTopicRunResponse,
   TopicRunStatusResponse,
-} from '@portfolio/shared';
-import {
-  AI_POST_TOPIC_RUN_INITIAL_POLL_MS,
-  generateTopicsResponseSchema,
-  normalizeTopicsRequest,
-  OutboxEventType,
-} from '@portfolio/shared';
-import type { AiPostTopicRun } from '@portfolio/shared/db/schema';
-import { aiPostTopicRuns, outbox } from '@portfolio/shared/db/schema';
+} from '@portfolio/shared/schemas/ai-post-generation';
+import { generateTopicsResponseSchema } from '@portfolio/shared/schemas/ai-post-generation';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { env } from '../config/env';

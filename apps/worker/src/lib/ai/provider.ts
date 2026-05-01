@@ -1,5 +1,5 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { AiGenerationError } from '@portfolio/shared';
+import { AiGenerationError } from '@portfolio/shared/lib/ai-error';
 import { env } from '../../config/env';
 
 let _openrouter: ReturnType<typeof createOpenRouter> | null = null;

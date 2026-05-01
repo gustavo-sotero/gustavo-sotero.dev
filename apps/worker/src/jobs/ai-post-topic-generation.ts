@@ -12,20 +12,24 @@
  *  6. Persist result (running → completed) or error (→ failed/timed_out)
  */
 
+import type { AiPostTopicRunStage } from '@portfolio/shared/constants/ai-posts';
+import { aiPostTopicRuns, tags } from '@portfolio/shared/db/schema';
+import { AiGenerationError } from '@portfolio/shared/lib/ai-error';
 import {
-  AiGenerationError,
-  type AiPostTopicRunStage,
   buildTopicsSystemPrompt,
   buildTopicsUserPrompt,
-  type GenerateTopicsRequest,
-  type GenerateTopicsResponse,
-  generateTopicsOutputSchema,
-  normalizeTopicsResponse,
-  type PersistedTagForNormalization,
+} from '@portfolio/shared/lib/ai-post-prompts';
+import { normalizeTopicsResponse } from '@portfolio/shared/lib/ai-topic-normalizer';
+import type { PersistedTagForNormalization } from '@portfolio/shared/lib/aiTagNormalizer';
+import type {
+  GenerateTopicsRequest,
+  GenerateTopicsResponse,
+} from '@portfolio/shared/schemas/ai-post-generation';
+import { generateTopicsOutputSchema } from '@portfolio/shared/schemas/ai-post-generation';
+import {
   type ProviderRoutingConfig,
   providerRoutingConfigSchema,
-} from '@portfolio/shared';
-import { aiPostTopicRuns, tags } from '@portfolio/shared/db/schema';
+} from '@portfolio/shared/schemas/ai-post-generation-config';
 import { type Job, UnrecoverableError } from 'bullmq';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';

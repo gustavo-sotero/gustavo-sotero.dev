@@ -1,4 +1,5 @@
 import { honoLogger } from '@logtape/hono';
+import { CORS_ALLOW_METHODS, isMutatingHttpMethod } from '@portfolio/shared/constants/httpMethods';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
@@ -70,13 +71,13 @@ app.use('*', requestId);
 // 3. CORS
 // allowMethods must cover every HTTP method used by admin mutating routes so
 // that preflight OPTIONS requests succeed and CSRF-protected mutations work.
-// PUT is required for PUT /admin/posts/generate/config.
+// This list is shared with browser-side CSRF injection and admin CSRF guards.
 app.use(
   '*',
   cors({
     origin: env.ALLOWED_ORIGIN,
     credentials: true,
-    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowMethods: [...CORS_ALLOW_METHODS],
     allowHeaders: ['Content-Type', 'X-CSRF-Token'],
     exposeHeaders: ['X-Request-Id'],
     maxAge: 600,
@@ -149,14 +150,9 @@ app.onError(globalErrorHandler);
 app.use('/admin/*', authAdmin);
 
 // All /admin/* mutating requests require a matching CSRF token.
-// PUT is included because PUT /admin/posts/generate/config is a mutating route.
+// The mutating method contract is shared with CORS and the browser client.
 app.use('/admin/*', async (c, next) => {
-  if (
-    c.req.method === 'POST' ||
-    c.req.method === 'PUT' ||
-    c.req.method === 'PATCH' ||
-    c.req.method === 'DELETE'
-  ) {
+  if (isMutatingHttpMethod(c.req.method)) {
     return csrfProtection(c, next);
   }
   await next();

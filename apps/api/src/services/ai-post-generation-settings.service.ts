@@ -3,8 +3,8 @@ import type {
   AiPostGenerationConfigState,
   ProviderRoutingConfig,
   UpdateAiPostGenerationConfig,
-} from '@portfolio/shared';
-import { providerRoutingConfigSchema } from '@portfolio/shared';
+} from '@portfolio/shared/schemas/ai-post-generation-config';
+import { providerRoutingConfigSchema } from '@portfolio/shared/schemas/ai-post-generation-config';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { AiConfigError } from '../lib/errors';

@@ -1,5 +1,5 @@
 import 'server-only';
-import type { ApiError, ApiResponse, PaginatedResponse } from '@portfolio/shared';
+import type { ApiError, ApiResponse, PaginatedResponse } from '@portfolio/shared/types/api';
 import { resolveServerApiBaseUrl } from '@/lib/api-base-url.server';
 
 /** Thrown when the API responds with HTTP 404. */

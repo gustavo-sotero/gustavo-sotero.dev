@@ -1,5 +1,5 @@
-import type { ProviderRoutingConfig } from '@portfolio/shared';
 import { aiPostGenerationSettings } from '@portfolio/shared/db/schema';
+import type { ProviderRoutingConfig } from '@portfolio/shared/schemas/ai-post-generation-config';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 

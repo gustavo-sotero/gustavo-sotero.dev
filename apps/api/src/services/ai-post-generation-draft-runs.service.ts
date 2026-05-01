@@ -9,20 +9,18 @@
  *  2. getStatus() — reads the current run state for polling
  */
 
+import { AI_POST_DRAFT_RUN_INITIAL_POLL_MS } from '@portfolio/shared/constants/ai-posts';
+import { OutboxEventType } from '@portfolio/shared/constants/enums';
+import type { AiPostDraftRun } from '@portfolio/shared/db/schema';
+import { aiPostDraftRuns, outbox, tags } from '@portfolio/shared/db/schema';
+import { normalizeDraftRequest } from '@portfolio/shared/lib/ai-draft-normalizer';
+import type { PersistedTagForNormalization } from '@portfolio/shared/lib/aiTagNormalizer';
 import type {
   CreateDraftRunRequest,
   CreateDraftRunResponse,
   DraftRunStatusResponse,
-} from '@portfolio/shared';
-import {
-  AI_POST_DRAFT_RUN_INITIAL_POLL_MS,
-  generateDraftResponseSchema,
-  normalizeDraftRequest,
-  OutboxEventType,
-  type PersistedTagForNormalization,
-} from '@portfolio/shared';
-import type { AiPostDraftRun } from '@portfolio/shared/db/schema';
-import { aiPostDraftRuns, outbox, tags } from '@portfolio/shared/db/schema';
+} from '@portfolio/shared/schemas/ai-post-generation';
+import { generateDraftResponseSchema } from '@portfolio/shared/schemas/ai-post-generation';
 import { asc, eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { resolveActiveAiDraftGenerationConfig } from './ai-post-generation-settings.service';

@@ -1,21 +1,27 @@
-import type {
-  GenerateDraftRequest,
-  GenerateDraftResponse,
-  GenerateTopicsRequest,
-} from '@portfolio/shared';
+import {
+  normalizeDraftRequest,
+  normalizeDraftResponse,
+} from '@portfolio/shared/lib/ai-draft-normalizer';
 import {
   buildDraftSystemPrompt,
   buildDraftUserPrompt,
   buildTopicsSystemPrompt,
   buildTopicsUserPrompt,
-  generateDraftOutputSchema,
-  generateTopicsOutputSchema,
-  normalizeDraftRequest,
-  normalizeDraftResponse,
+} from '@portfolio/shared/lib/ai-post-prompts';
+import {
   normalizeTopicsRequest,
   normalizeTopicsResponse,
-} from '@portfolio/shared';
-import type { GenerateTopicsResponse } from '@portfolio/shared/types/ai-post-generation';
+} from '@portfolio/shared/lib/ai-topic-normalizer';
+import type {
+  GenerateDraftRequest,
+  GenerateDraftResponse,
+  GenerateTopicsRequest,
+  GenerateTopicsResponse,
+} from '@portfolio/shared/schemas/ai-post-generation';
+import {
+  generateDraftOutputSchema,
+  generateTopicsOutputSchema,
+} from '@portfolio/shared/schemas/ai-post-generation';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { AiGenerationError, generateStructuredObject } from '../lib/ai/generateStructuredObject';
