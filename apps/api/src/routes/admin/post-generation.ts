@@ -97,7 +97,7 @@ adminPostGenerationRouter.get('/models', async (c) => {
     return errorResponse(
       c,
       503,
-      'SERVICE_UNAVAILABLE',
+      'PROVIDER_TRANSIENT',
       'Catálogo de modelos temporariamente indisponível.'
     );
   }
@@ -173,27 +173,27 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'TIMEOUT',
         'O provedor de IA demorou demais para responder. Tente novamente em alguns segundos.'
       );
     if (err.kind === 'refusal')
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'PROVIDER_TERMINAL',
         'A IA recusou a solicitação. Ajuste o briefing e tente novamente.'
       );
     if (err.kind === 'validation')
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'PROVIDER_TERMINAL',
         'A IA gerou uma resposta incompleta. Tente novamente.'
       );
     return errorResponse(
       c,
       503,
-      'SERVICE_UNAVAILABLE',
+      'PROVIDER_TRANSIENT',
       'O provedor de IA está indisponível no momento.'
     );
   }
@@ -202,21 +202,21 @@ function handleGenerationError(c: Parameters<typeof errorResponse>[0], err: unkn
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'CONFIGURATION_ERROR',
         'A geração de posts com IA não está habilitada nesta instância.'
       );
     if (err.code === 'NOT_CONFIGURED')
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'CONFIGURATION_ERROR',
         'A geração de posts com IA não está configurada. Configure os modelos na página de configurações.'
       );
     if (err.code === 'INVALID_CONFIG')
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'CONFIGURATION_ERROR',
         'A configuração de modelos de IA é inválida. Atualize os modelos na página de configurações.'
       );
   }
@@ -231,14 +231,14 @@ function handleConfigSaveError(c: Parameters<typeof errorResponse>[0], err: unkn
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'CONFIGURATION_ERROR',
         'OPENROUTER_API_KEY não está configurada no servidor.'
       );
     if (err.code === 'CATALOG_UNAVAILABLE')
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'PROVIDER_TRANSIENT',
         'Catálogo de modelos temporariamente indisponível. Tente novamente em instantes.'
       );
     if (err.code === 'INVALID_MODELS')

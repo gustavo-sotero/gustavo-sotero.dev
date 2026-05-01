@@ -1,7 +1,11 @@
 import { projectSkills, projects, skills } from '@portfolio/shared/db/schema';
 import { and, count, eq, exists, isNull, type SQL, sql } from 'drizzle-orm';
 import { db } from '../config/db';
-import { buildPaginationMeta, parsePagination } from '../lib/pagination';
+import {
+  buildPaginationMeta,
+  parsePagination,
+  type TotalCountQueryOptions,
+} from '../lib/pagination';
 import type { DbOrTx } from './tags.repo';
 
 export interface ProjectFilters {
@@ -13,11 +17,7 @@ export interface ProjectFilters {
   perPage?: string | number;
 }
 
-/**
- * List projects for public consumption (published + not deleted)
- * or admin (all statuses, filter optional).
- */
-export async function findManyProjects(filters: ProjectFilters, adminMode = false) {
+function resolveProjectListState(filters: ProjectFilters, adminMode: boolean) {
   const { page, perPage, offset, limit } = parsePagination({
     page: filters.page,
     perPage: filters.perPage,
@@ -39,7 +39,6 @@ export async function findManyProjects(filters: ProjectFilters, adminMode = fals
     conditions.push(eq(projects.featured, filters.featured));
   }
 
-  // Skill filter via EXISTS subquery (single query, avoids in-memory ID list)
   if (filters.skill) {
     conditions.push(
       exists(
@@ -52,25 +51,53 @@ export async function findManyProjects(filters: ProjectFilters, adminMode = fals
     );
   }
 
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return {
+    page,
+    perPage,
+    offset,
+    limit,
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  };
+}
 
-  const [countResult, rows] = await Promise.all([
-    db.select({ total: count() }).from(projects).where(where),
-    db.query.projects.findMany({
-      where,
-      orderBy: filters.featuredFirst
-        ? sql`${projects.featured} DESC, ${projects.order} ASC, ${projects.createdAt} DESC`
-        : sql`${projects.createdAt} DESC`,
-      limit,
-      offset,
-      with: {
-        skills: {
-          with: { skill: true },
-        },
+async function queryProjectRows(filters: ProjectFilters, adminMode: boolean) {
+  const { page, perPage, offset, limit, where } = resolveProjectListState(filters, adminMode);
+  const rows = await db.query.projects.findMany({
+    where,
+    orderBy: filters.featuredFirst
+      ? sql`${projects.featured} DESC, ${projects.order} ASC, ${projects.createdAt} DESC`
+      : sql`${projects.createdAt} DESC`,
+    limit,
+    offset,
+    with: {
+      skills: {
+        with: { skill: true },
       },
-    }),
-  ]);
+    },
+  });
 
+  return { rows, page, perPage, where };
+}
+
+/**
+ * List projects for public consumption (published + not deleted)
+ * or admin (all statuses, filter optional).
+ */
+export async function findManyProjects(
+  filters: ProjectFilters,
+  adminMode = false,
+  options: TotalCountQueryOptions = {}
+) {
+  const { rows, page, perPage, where } = await queryProjectRows(filters, adminMode);
+
+  if (options.includeTotal === false) {
+    return {
+      data: rows,
+      meta: buildPaginationMeta(rows.length, page, perPage),
+    };
+  }
+
+  const countResult = await db.select({ total: count() }).from(projects).where(where);
   const total = countResult[0]?.total ?? 0;
   return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
 }

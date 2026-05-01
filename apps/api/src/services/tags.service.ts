@@ -15,6 +15,7 @@ import type { CreateTagSchemaInput, UpdateTagSchemaInput } from '@portfolio/shar
 import type { Tag } from '@portfolio/shared/types/tags';
 import { cached, invalidateGroup, invalidatePattern } from '../lib/cache';
 import { ConflictError } from '../lib/errors';
+import type { TotalCountQueryOptions } from '../lib/pagination';
 import { toTagDto } from '../lib/pivotHelpers';
 import { isUniqueViolationError } from '../lib/postgresErrors';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
@@ -54,15 +55,19 @@ export interface TagListFilters {
 /**
  * List all tags (admin) or only tags used by published content (public).
  */
-export async function listTags(filters: TagListFilters = {}, publicOnly = false) {
+export async function listTags(
+  filters: TagListFilters = {},
+  publicOnly = false,
+  options: TotalCountQueryOptions = {}
+) {
   if (publicOnly) {
-    const key = `tags:public:category=${filters.category ?? ''}:source=${filters.source ?? ''}`;
+    const key = `tags:public:category=${filters.category ?? ''}:source=${filters.source ?? ''}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
     return cached(key, LIST_TTL, async () => {
-      const result = await findManyTags(filters, true);
+      const result = await findManyTags(filters, true, options);
       return { ...result, data: result.data.map(mapTagRow) };
     });
   }
-  const result = await findManyTags(filters, false);
+  const result = await findManyTags(filters, false, options);
   return { ...result, data: result.data.map(mapTagRow) };
 }
 

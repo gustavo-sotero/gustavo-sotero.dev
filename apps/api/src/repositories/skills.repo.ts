@@ -1,7 +1,11 @@
 import { experienceSkills, projectSkills, skills } from '@portfolio/shared/db/schema';
 import { and, asc, count, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { db } from '../config/db';
-import { buildPaginationMeta, parsePagination } from '../lib/pagination';
+import {
+  buildPaginationMeta,
+  parsePagination,
+  type TotalCountQueryOptions,
+} from '../lib/pagination';
 import type { DbOrTx } from './tags.repo';
 
 export interface SkillFilters {
@@ -11,7 +15,7 @@ export interface SkillFilters {
   perPage?: string | number;
 }
 
-export async function findManySkills(filters: SkillFilters = {}) {
+function resolveSkillListState(filters: SkillFilters = {}) {
   const shouldPaginate = filters.page !== undefined || filters.perPage !== undefined;
   const pagination = shouldPaginate
     ? parsePagination({ page: filters.page, perPage: filters.perPage })
@@ -45,21 +49,45 @@ export async function findManySkills(filters: SkillFilters = {}) {
     conditions.push(eq(skills.isHighlighted, filters.highlighted ? 1 : 0));
   }
 
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return {
+    page,
+    perPage,
+    offset,
+    limit,
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  };
+}
 
-  const [countResult, rows] = await Promise.all([
-    db.select({ total: count() }).from(skills).where(where),
+async function querySkillRows(filters: SkillFilters = {}) {
+  const { page, perPage, offset, limit, where } = resolveSkillListState(filters);
+  const rows =
     limit === undefined
-      ? db.select().from(skills).where(where).orderBy(asc(skills.category), asc(skills.name))
-      : db
+      ? await db.select().from(skills).where(where).orderBy(asc(skills.category), asc(skills.name))
+      : await db
           .select()
           .from(skills)
           .where(where)
           .orderBy(asc(skills.category), asc(skills.name))
           .limit(limit)
-          .offset(offset),
-  ]);
+          .offset(offset);
 
+  return { rows, page, perPage, where };
+}
+
+export async function findManySkills(
+  filters: SkillFilters = {},
+  options: TotalCountQueryOptions = {}
+) {
+  const { rows, page, perPage, where } = await querySkillRows(filters);
+
+  if (options.includeTotal === false) {
+    return {
+      data: rows,
+      meta: buildPaginationMeta(rows.length, page, perPage),
+    };
+  }
+
+  const countResult = await db.select({ total: count() }).from(skills).where(where);
   const total = countResult[0]?.total ?? 0;
   return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
 }

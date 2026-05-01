@@ -6,6 +6,7 @@ const {
   renderMarkdownMock,
   createPostMock,
   updatePostMock,
+  findManyPostsMock,
   findPostBySlugMock,
   findApprovedCommentsByPostIdMock,
   createProjectMock,
@@ -21,6 +22,7 @@ const {
   renderMarkdownMock: vi.fn(),
   createPostMock: vi.fn(),
   updatePostMock: vi.fn(),
+  findManyPostsMock: vi.fn(),
   findPostBySlugMock: vi.fn(),
   findApprovedCommentsByPostIdMock: vi.fn(),
   createProjectMock: vi.fn(),
@@ -71,7 +73,7 @@ vi.mock('../repositories/posts.repo', () => ({
   createPost: createPostMock,
   updatePost: updatePostMock,
   softDeletePost: vi.fn(),
-  findManyPosts: vi.fn(),
+  findManyPosts: findManyPostsMock,
   findPostBySlug: findPostBySlugMock,
 }));
 
@@ -102,6 +104,7 @@ import { cached } from '../lib/cache';
 import {
   createPostService,
   getPostBySlug,
+  listPosts,
   softDeletePostService,
   updatePostService,
 } from './posts.service';
@@ -211,6 +214,19 @@ describe('posts/projects services', () => {
 
     await expect(updatePostService(1, { slug: 'slug-existente' })).rejects.toThrow(ConflictError);
     expect(updatePostMock).not.toHaveBeenCalled();
+  });
+
+  it('listPosts repassa includeTotal=false para o repositório', async () => {
+    findManyPostsMock.mockResolvedValueOnce({
+      data: [],
+      meta: { page: 1, perPage: 3, total: 0, totalPages: 0 },
+    });
+
+    await listPosts({ page: 1, perPage: 3, sort: 'manual' }, false, { includeTotal: false });
+
+    expect(findManyPostsMock).toHaveBeenCalledWith({ page: 1, perPage: 3, sort: 'manual' }, false, {
+      includeTotal: false,
+    });
   });
 
   it('createProjectService renderiza markdown em write-time', async () => {
@@ -359,6 +375,23 @@ describe('posts/projects services', () => {
     expect(firstKey).not.toBe(secondKey);
     expect(firstKey).not.toContain('featuredFirst=true');
     expect(secondKey).toContain('featuredFirst=true');
+  });
+
+  it('listProjects repassa includeTotal=false para o repositório', async () => {
+    findManyProjectsMock.mockResolvedValueOnce({
+      data: [],
+      meta: { page: 1, perPage: 3, total: 0, totalPages: 0 },
+    });
+
+    await listProjects({ page: 1, perPage: 3, featuredFirst: true }, false, {
+      includeTotal: false,
+    });
+
+    expect(findManyProjectsMock).toHaveBeenCalledWith(
+      { page: 1, perPage: 3, featuredFirst: true },
+      false,
+      { includeTotal: false }
+    );
   });
 
   it('getProjectBySlug (admin) normaliza skills relacionadas para o DTO público', async () => {

@@ -13,6 +13,7 @@ import type {
 import type { Skill } from '@portfolio/shared/types/skills';
 import { cached, invalidateGroup } from '../lib/cache';
 import { ConflictError, HighlightLimitError } from '../lib/errors';
+import type { TotalCountQueryOptions } from '../lib/pagination';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { SkillFilters } from '../repositories/skills.repo';
 import {
@@ -63,15 +64,19 @@ export interface SkillListFilters {
   perPage?: string | number;
 }
 
-export async function listSkills(filters: SkillListFilters = {}, useCache = false) {
+export async function listSkills(
+  filters: SkillListFilters = {},
+  useCache = false,
+  options: TotalCountQueryOptions = {}
+) {
   if (useCache) {
-    const key = `skills:public:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 100}:category=${filters.category ?? ''}:highlighted=${String(filters.highlighted ?? '')}`;
+    const key = `skills:public:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 100}:category=${filters.category ?? ''}:highlighted=${String(filters.highlighted ?? '')}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
     return cached(key, LIST_TTL, async () => {
-      const result = await findManySkills(filters as SkillFilters);
+      const result = await findManySkills(filters as SkillFilters, options);
       return { ...result, data: result.data.map(toSkillDto) };
     });
   }
-  const result = await findManySkills(filters as SkillFilters);
+  const result = await findManySkills(filters as SkillFilters, options);
   return { ...result, data: result.data.map(toSkillDto) };
 }
 

@@ -1,4 +1,4 @@
-import type { ErrorCode } from '@portfolio/shared/constants/errorCodes';
+import { type ErrorCode, getErrorTypeForCode } from '@portfolio/shared/constants/errorCodes';
 import type { PaginationMeta } from '@portfolio/shared/types/api';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
@@ -32,6 +32,7 @@ export function errorResponse(
       success: false,
       error: {
         code,
+        type: getErrorTypeForCode(code),
         message,
         ...(details ? { details } : {}),
       },

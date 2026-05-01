@@ -150,6 +150,22 @@ describe('skills service', () => {
       expect(firstKey).toContain('page=1');
       expect(secondKey).toContain('page=2');
     });
+
+    it('isolates includeTotal=false in cache and repository calls', async () => {
+      const mockResult = {
+        data: [baseRow],
+        meta: { page: 1, perPage: 100, total: 1, totalPages: 1 },
+      };
+      findManySkillsMock.mockResolvedValueOnce(mockResult);
+
+      await listSkills({ page: 1, perPage: 100 }, true, { includeTotal: false });
+
+      expect(findManySkillsMock).toHaveBeenCalledWith(
+        { page: 1, perPage: 100 },
+        { includeTotal: false }
+      );
+      expect(cachedMock.mock.calls[0]?.[0]).toContain('includeTotal=0');
+    });
   });
 
   // â”€â”€ createSkillService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

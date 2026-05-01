@@ -1,7 +1,11 @@
 import { education } from '@portfolio/shared/db/schema';
 import { and, count, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import { db } from '../config/db';
-import { buildPaginationMeta, parsePagination } from '../lib/pagination';
+import {
+  buildPaginationMeta,
+  parsePagination,
+  type TotalCountQueryOptions,
+} from '../lib/pagination';
 
 export interface EducationFilters {
   status?: 'draft' | 'published';
@@ -23,12 +27,7 @@ const ORDER_BY = [
   desc(education.createdAt),
 ] as const;
 
-/**
- * List education entries.
- * Public mode enforces `published` + non-deleted.
- * Admin mode includes all; optionally filters by status.
- */
-export async function findManyEducation(filters: EducationFilters, adminMode = false) {
+function resolveEducationListState(filters: EducationFilters, adminMode: boolean) {
   const { page, perPage, offset, limit } = parsePagination({
     page: filters.page,
     perPage: filters.perPage,
@@ -42,19 +41,48 @@ export async function findManyEducation(filters: EducationFilters, adminMode = f
     conditions.push(eq(education.status, filters.status));
   }
 
-  const where = and(...conditions);
+  return {
+    page,
+    perPage,
+    offset,
+    limit,
+    where: and(...conditions),
+  };
+}
 
-  const [countResult, rows] = await Promise.all([
-    db.select({ total: count() }).from(education).where(where),
-    db
-      .select()
-      .from(education)
-      .where(where)
-      .orderBy(...ORDER_BY)
-      .limit(limit)
-      .offset(offset),
-  ]);
+async function queryEducationRows(filters: EducationFilters, adminMode: boolean) {
+  const { page, perPage, offset, limit, where } = resolveEducationListState(filters, adminMode);
+  const rows = await db
+    .select()
+    .from(education)
+    .where(where)
+    .orderBy(...ORDER_BY)
+    .limit(limit)
+    .offset(offset);
 
+  return { rows, page, perPage, where };
+}
+
+/**
+ * List education entries.
+ * Public mode enforces `published` + non-deleted.
+ * Admin mode includes all; optionally filters by status.
+ */
+export async function findManyEducation(
+  filters: EducationFilters,
+  adminMode = false,
+  options: TotalCountQueryOptions = {}
+) {
+  const { rows, page, perPage, where } = await queryEducationRows(filters, adminMode);
+
+  if (options.includeTotal === false) {
+    return {
+      data: rows,
+      meta: buildPaginationMeta(rows.length, page, perPage),
+    };
+  }
+
+  const countResult = await db.select({ total: count() }).from(education).where(where);
   const total = countResult[0]?.total ?? 0;
   return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
 }

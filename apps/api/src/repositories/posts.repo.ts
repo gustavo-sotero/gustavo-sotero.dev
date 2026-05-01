@@ -1,7 +1,11 @@
 import { posts, postTags, tags } from '@portfolio/shared/db/schema';
 import { and, count, eq, exists, isNull, lte, type SQL, sql } from 'drizzle-orm';
 import { db } from '../config/db';
-import { buildPaginationMeta, parsePagination } from '../lib/pagination';
+import {
+  buildPaginationMeta,
+  parsePagination,
+  type TotalCountQueryOptions,
+} from '../lib/pagination';
 import type { DbOrTx } from './tags.repo';
 
 export function publicPostVisibilityClauses(postTable: typeof posts = posts): SQL[] {
@@ -18,6 +22,64 @@ export interface PostFilters {
   sort?: 'manual' | 'recent';
   page?: string | number;
   perPage?: string | number;
+}
+
+function resolvePostListState(filters: PostFilters, adminMode: boolean) {
+  const { page, perPage, offset, limit } = parsePagination({
+    page: filters.page,
+    perPage: filters.perPage,
+  });
+
+  const conditions: SQL[] = [];
+
+  if (!adminMode) {
+    conditions.push(...publicPostVisibilityClauses());
+  } else {
+    conditions.push(isNull(posts.deletedAt));
+    if (filters.status) {
+      conditions.push(eq(posts.status, filters.status));
+    }
+  }
+
+  if (filters.tag) {
+    conditions.push(
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(postTags)
+          .innerJoin(tags, eq(postTags.tagId, tags.id))
+          .where(and(eq(postTags.postId, posts.id), eq(tags.slug, filters.tag)))
+      )
+    );
+  }
+
+  return {
+    page,
+    perPage,
+    offset,
+    limit,
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  };
+}
+
+async function queryPostRows(filters: PostFilters, adminMode: boolean) {
+  const { page, perPage, offset, limit, where } = resolvePostListState(filters, adminMode);
+  const rows = await db.query.posts.findMany({
+    where,
+    orderBy:
+      filters.sort === 'manual'
+        ? sql`${posts.order} ASC, ${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`
+        : sql`${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`,
+    limit,
+    offset,
+    with: {
+      tags: {
+        with: { tag: true },
+      },
+    },
+  });
+
+  return { rows, page, perPage, where };
 }
 
 /**
@@ -39,56 +101,21 @@ export async function findPublicPostById(
  * List posts for public consumption (published + not deleted)
  * or admin (all statuses, filter optional).
  */
-export async function findManyPosts(filters: PostFilters, adminMode = false) {
-  const { page, perPage, offset, limit } = parsePagination({
-    page: filters.page,
-    perPage: filters.perPage,
-  });
+export async function findManyPosts(
+  filters: PostFilters,
+  adminMode = false,
+  options: TotalCountQueryOptions = {}
+) {
+  const { rows, page, perPage, where } = await queryPostRows(filters, adminMode);
 
-  const conditions: SQL[] = [];
-
-  if (!adminMode) {
-    conditions.push(...publicPostVisibilityClauses());
-  } else {
-    conditions.push(isNull(posts.deletedAt));
-    if (filters.status) {
-      conditions.push(eq(posts.status, filters.status));
-    }
+  if (options.includeTotal === false) {
+    return {
+      data: rows,
+      meta: buildPaginationMeta(rows.length, page, perPage),
+    };
   }
 
-  // Tag filter via EXISTS subquery (single query, avoids in-memory ID list)
-  if (filters.tag) {
-    conditions.push(
-      exists(
-        db
-          .select({ one: sql`1` })
-          .from(postTags)
-          .innerJoin(tags, eq(postTags.tagId, tags.id))
-          .where(and(eq(postTags.postId, posts.id), eq(tags.slug, filters.tag)))
-      )
-    );
-  }
-
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-  const [countResult, rows] = await Promise.all([
-    db.select({ total: count() }).from(posts).where(where),
-    db.query.posts.findMany({
-      where,
-      orderBy:
-        filters.sort === 'manual'
-          ? sql`${posts.order} ASC, ${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`
-          : sql`${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`,
-      limit,
-      offset,
-      with: {
-        tags: {
-          with: { tag: true },
-        },
-      },
-    }),
-  ]);
-
+  const countResult = await db.select({ total: count() }).from(posts).where(where);
   const total = countResult[0]?.total ?? 0;
   return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
 }

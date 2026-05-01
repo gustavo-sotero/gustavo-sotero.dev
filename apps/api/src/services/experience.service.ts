@@ -15,6 +15,7 @@ import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
 import { DomainValidationError } from '../lib/errors';
 import { normalizeExperienceImpactFacts } from '../lib/impactFacts';
+import type { TotalCountQueryOptions } from '../lib/pagination';
 import { flattenPivotSkills, resolveSlugTaken } from '../lib/pivotHelpers';
 import { assertSkillsExist, normalizeSkillIds } from '../lib/skillValidation';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
@@ -68,15 +69,19 @@ export type { ExperienceFilters };
  * List experience entries (admin: all statuses; public: published + non-deleted).
  * Public results are cached.
  */
-export async function listExperience(filters: ExperienceFilters, adminMode = false) {
+export async function listExperience(
+  filters: ExperienceFilters,
+  adminMode = false,
+  options: TotalCountQueryOptions = {}
+) {
   if (adminMode) {
-    const result = await findManyExperience(filters, true);
+    const result = await findManyExperience(filters, true, options);
     return { ...result, data: result.data.map(flattenPivotSkills) };
   }
 
-  const key = `experience:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}`;
+  const key = `experience:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
   return cached(key, LIST_TTL, async () => {
-    const result = await findManyExperience(filters, false);
+    const result = await findManyExperience(filters, false, options);
     return { ...result, data: result.data.map(flattenPivotSkills) };
   });
 }

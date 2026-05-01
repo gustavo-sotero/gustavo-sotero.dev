@@ -1,4 +1,4 @@
-import type { ErrorCode } from '../constants/errorCodes';
+import type { ErrorCode, ErrorType } from '../constants/errorCodes';
 
 // Pagination metadata
 export interface PaginationMeta {
@@ -30,6 +30,7 @@ export interface ApiErrorDetail {
 // Standard error response body
 export interface ApiErrorBody {
   code: ErrorCode;
+  type: ErrorType;
   message: string;
   details?: ApiErrorDetail[];
 }

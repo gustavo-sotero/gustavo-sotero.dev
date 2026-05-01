@@ -15,7 +15,6 @@
 import type { AiPostDraftRunStage } from '@portfolio/shared/constants/ai-posts';
 import { aiPostDraftRuns, tags } from '@portfolio/shared/db/schema';
 import { normalizeDraftResponse } from '@portfolio/shared/lib/ai-draft-normalizer';
-import { AiGenerationError } from '@portfolio/shared/lib/ai-error';
 import {
   buildDraftSystemPrompt,
   buildDraftUserPrompt,
@@ -32,6 +31,7 @@ import { db } from '../config/db';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
 import { generateStructuredObject } from '../lib/ai/generateStructuredObject';
+import { resolveAiJobFailure } from '../lib/ai-job-utils';
 
 const logger = getLogger('worker', 'jobs', 'ai-post-draft-generation');
 const ASYNC_AI_GENERATION_MAX_RETRIES = 0;
@@ -59,8 +59,6 @@ async function setStage(
 async function loadPersistedTagsForNormalization(): Promise<PersistedTagForNormalization[]> {
   return db.select({ name: tags.name, slug: tags.slug }).from(tags).orderBy(asc(tags.name));
 }
-
-import { classifyJobError, shouldRetryProviderFailure } from '../lib/ai-job-utils';
 
 export interface AiPostDraftJobData {
   runId: string;
@@ -218,13 +216,10 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
     });
   } catch (err) {
     const finishedAt = new Date();
-    const aiErr = err instanceof AiGenerationError ? err : null;
+    const failure = resolveAiJobFailure(job, err);
+    const { errorCode, errorKind, errorMessage, shouldRetry, stage, status } = failure;
 
-    const errorKind = aiErr?.kind ?? classifyJobError(err);
-    const errorCode = aiErr ? null : ((err as Error & { code?: string })?.code ?? null);
-    const errorMessage = err instanceof Error ? err.message : String(err);
-
-    if (shouldRetryProviderFailure(job, errorKind)) {
+    if (shouldRetry) {
       await db
         .update(aiPostDraftRuns)
         .set({
@@ -257,9 +252,6 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
 
       throw err;
     }
-
-    const status = errorKind === 'timeout' ? ('timed_out' as const) : ('failed' as const);
-    const stage = errorKind === 'timeout' ? ('timed-out' as const) : ('failed' as const);
 
     await db
       .update(aiPostDraftRuns)

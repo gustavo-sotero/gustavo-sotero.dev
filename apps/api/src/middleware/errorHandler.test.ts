@@ -8,7 +8,12 @@ import type { AppEnv } from '../types/index';
 /** Shape of every API error response used in this file. */
 interface ApiErrorBody {
   success: false;
-  error: { code: string; message: string; details?: Array<{ field: string; message: string }> };
+  error: {
+    code: string;
+    type: string;
+    message: string;
+    details?: Array<{ field: string; message: string }>;
+  };
 }
 
 // ── Logger mock ───────────────────────────────────────────────────────────────
@@ -102,6 +107,7 @@ describe('globalErrorHandler — ZodError', () => {
     expect(res.status).toBe(400);
     expect(body.success).toBe(false);
     expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.type).toBe('validation');
     expect(Array.isArray(body.error.details)).toBe(true);
   });
 
@@ -127,17 +133,17 @@ describe('globalErrorHandler — ZodError', () => {
 // ── globalErrorHandler — HTTPException ───────────────────────────────────────
 
 describe('globalErrorHandler — HTTPException', () => {
-  const cases: Array<[number, string]> = [
-    [400, 'VALIDATION_ERROR'],
-    [401, 'UNAUTHORIZED'],
-    [403, 'FORBIDDEN'],
-    [404, 'NOT_FOUND'],
-    [409, 'CONFLICT'],
-    [429, 'RATE_LIMITED'],
-    [503, 'SERVICE_UNAVAILABLE'],
+  const cases: Array<[number, string, string]> = [
+    [400, 'VALIDATION_ERROR', 'validation'],
+    [401, 'UNAUTHORIZED', 'unauthorized'],
+    [403, 'FORBIDDEN', 'forbidden'],
+    [404, 'NOT_FOUND', 'not_found'],
+    [409, 'CONFLICT', 'conflict'],
+    [429, 'RATE_LIMITED', 'rate_limited'],
+    [503, 'SERVICE_UNAVAILABLE', 'internal'],
   ];
 
-  it.each(cases)('maps HTTP %i to code %s', async (status, code) => {
+  it.each(cases)('maps HTTP %i to code %s', async (status, code, type) => {
     const app = buildApp((_c) => {
       throw new HTTPException(status as never, { message: `error ${status}` });
     });
@@ -147,6 +153,7 @@ describe('globalErrorHandler — HTTPException', () => {
 
     expect(res.status).toBe(status);
     expect(body.error.code).toBe(code);
+    expect(body.error.type).toBe(type);
   });
 
   it('logs an info entry with requestId, path, method and status', async () => {
@@ -176,13 +183,14 @@ describe('globalErrorHandler — HTTPException', () => {
 
     expect(res.status).toBe(418);
     expect(body.error.code).toBe('INTERNAL_ERROR');
+    expect(body.error.type).toBe('internal');
   });
 });
 
 // ── globalErrorHandler — domain typed errors ─────────────────────────────────
 
 describe('globalErrorHandler — domain typed errors', () => {
-  it('maps AiConfigError availability failures to 503 SERVICE_UNAVAILABLE', async () => {
+  it('maps AiConfigError availability failures to 503 CONFIGURATION_ERROR', async () => {
     loggerMock.error.mockClear();
 
     const app = buildApp((_c) => {
@@ -193,7 +201,8 @@ describe('globalErrorHandler — domain typed errors', () => {
     const body = (await res.json()) as ApiErrorBody;
 
     expect(res.status).toBe(503);
-    expect(body.error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(body.error.code).toBe('CONFIGURATION_ERROR');
+    expect(body.error.type).toBe('configuration');
     expect(body.error.message).toBe('AI post generation is not configured');
     expect(loggerMock.error).not.toHaveBeenCalled();
   });
@@ -212,6 +221,7 @@ describe('globalErrorHandler — domain typed errors', () => {
 
     expect(res.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(body.error.type).toBe('validation');
     expect(body.error.message).toBe('Invalid models');
     expect(body.error.details).toEqual([
       { message: 'Topics model is unavailable' },

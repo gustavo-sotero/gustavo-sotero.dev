@@ -33,12 +33,12 @@ const publicHomeRouter = new Hono<AppEnv>();
 publicHomeRouter.get('/', async (c) => {
   const [postsResult, projectsResult, skillsResult, tagsResult, experienceResult, educationResult] =
     await Promise.all([
-      listPosts({ page: 1, perPage: 3, sort: 'manual' }, false),
-      listProjects({ page: 1, perPage: 3, featuredFirst: true }, false),
-      listSkills({ page: 1, perPage: 100 }, true),
-      listTags({ source: 'post' }, true),
-      listExperience({ status: 'published', page: 1, perPage: 10 }, false),
-      listEducation({ status: 'published', page: 1, perPage: 10 }, false),
+      listPosts({ page: 1, perPage: 3, sort: 'manual' }, false, { includeTotal: false }),
+      listProjects({ page: 1, perPage: 3, featuredFirst: true }, false, { includeTotal: false }),
+      listSkills({ page: 1, perPage: 100 }, true, { includeTotal: false }),
+      listTags({ source: 'post' }, true, { includeTotal: false }),
+      listExperience({ status: 'published', page: 1, perPage: 10 }, false, { includeTotal: false }),
+      listEducation({ status: 'published', page: 1, perPage: 10 }, false, { includeTotal: false }),
     ]);
 
   return successResponse(c, {

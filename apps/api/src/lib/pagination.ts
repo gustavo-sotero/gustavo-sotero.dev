@@ -11,6 +11,10 @@ interface ParsedPagination {
   limit: number;
 }
 
+export interface TotalCountQueryOptions {
+  includeTotal?: boolean;
+}
+
 /**
  * Parse pagination query params from raw query object.
  * Applies defaults and enforces max perPage.

@@ -1,7 +1,11 @@
 import { experience } from '@portfolio/shared/db/schema';
 import { and, count, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import { db } from '../config/db';
-import { buildPaginationMeta, parsePagination } from '../lib/pagination';
+import {
+  buildPaginationMeta,
+  parsePagination,
+  type TotalCountQueryOptions,
+} from '../lib/pagination';
 import type { DbOrTx } from './tags.repo';
 
 export interface ExperienceFilters {
@@ -24,12 +28,7 @@ const ORDER_BY = [
   desc(experience.createdAt),
 ] as const;
 
-/**
- * List experience entries (with their associated skills).
- * Public mode enforces `published` + non-deleted.
- * Admin mode includes all; optionally filters by status.
- */
-export async function findManyExperience(filters: ExperienceFilters, adminMode = false) {
+function resolveExperienceListState(filters: ExperienceFilters, adminMode: boolean) {
   const { page, perPage, offset, limit } = parsePagination({
     page: filters.page,
     perPage: filters.perPage,
@@ -43,23 +42,52 @@ export async function findManyExperience(filters: ExperienceFilters, adminMode =
     conditions.push(eq(experience.status, filters.status));
   }
 
-  const where = and(...conditions);
+  return {
+    page,
+    perPage,
+    offset,
+    limit,
+    where: and(...conditions),
+  };
+}
 
-  const [countResult, rows] = await Promise.all([
-    db.select({ total: count() }).from(experience).where(where),
-    db.query.experience.findMany({
-      where,
-      orderBy: [...ORDER_BY],
-      limit,
-      offset,
-      with: {
-        skills: {
-          with: { skill: true },
-        },
+async function queryExperienceRows(filters: ExperienceFilters, adminMode: boolean) {
+  const { page, perPage, offset, limit, where } = resolveExperienceListState(filters, adminMode);
+  const rows = await db.query.experience.findMany({
+    where,
+    orderBy: [...ORDER_BY],
+    limit,
+    offset,
+    with: {
+      skills: {
+        with: { skill: true },
       },
-    }),
-  ]);
+    },
+  });
 
+  return { rows, page, perPage, where };
+}
+
+/**
+ * List experience entries (with their associated skills).
+ * Public mode enforces `published` + non-deleted.
+ * Admin mode includes all; optionally filters by status.
+ */
+export async function findManyExperience(
+  filters: ExperienceFilters,
+  adminMode = false,
+  options: TotalCountQueryOptions = {}
+) {
+  const { rows, page, perPage, where } = await queryExperienceRows(filters, adminMode);
+
+  if (options.includeTotal === false) {
+    return {
+      data: rows,
+      meta: buildPaginationMeta(rows.length, page, perPage),
+    };
+  }
+
+  const countResult = await db.select({ total: count() }).from(experience).where(where);
   const total = countResult[0]?.total ?? 0;
   return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
 }

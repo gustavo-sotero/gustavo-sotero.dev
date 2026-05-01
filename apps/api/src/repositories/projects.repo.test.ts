@@ -224,4 +224,13 @@ describe('projects repository — findProjectBySlug', () => {
 
     expect(result).toEqual(mockProject);
   });
+
+  it('skips total count when includeTotal=false', async () => {
+    findManyMock.mockResolvedValueOnce([{ id: 1 }, { id: 2 }, { id: 3 }]);
+
+    await findManyProjects({ page: 1, perPage: 20 }, false, { includeTotal: false });
+
+    expect(countMock).not.toHaveBeenCalled();
+    expect(buildPaginationMetaMock).toHaveBeenCalledWith(3, 1, 20);
+  });
 });

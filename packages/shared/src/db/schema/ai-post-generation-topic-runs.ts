@@ -64,7 +64,7 @@ export const aiPostTopicRuns = pgTable(
     // ── Result / error ─────────────────────────────────────────────────────────
     /** Normalized GenerateTopicsResponse — null until completed. */
     resultPayload: jsonb('result_payload'),
-    /** Error kind (timeout | refusal | validation | provider | config | internal). */
+    /** Error kind (timeout | refusal | validation | provider | disabled | not-configured | invalid-config | catalog-unavailable | config | internal). */
     errorKind: varchar('error_kind', { length: 64 }),
     /** Machine-readable error code from AiGenerationError or internal logic. */
     errorCode: varchar('error_code', { length: 128 }),

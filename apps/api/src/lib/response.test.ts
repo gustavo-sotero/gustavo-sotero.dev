@@ -56,6 +56,7 @@ describe('response helpers', () => {
       success: false,
       error: {
         code: 'VALIDATION_ERROR',
+        type: 'validation',
         message: 'Validation failed',
         details: [{ field: 'name', message: 'Required field' }],
       },

@@ -5,7 +5,11 @@ import { and, asc, count, eq, exists, inArray, type SQL, sql } from 'drizzle-orm
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import { db } from '../config/db';
-import { buildPaginationMeta, parsePagination } from '../lib/pagination';
+import {
+  buildPaginationMeta,
+  parsePagination,
+  type TotalCountQueryOptions,
+} from '../lib/pagination';
 import { publicPostVisibilityClauses } from './posts.repo';
 
 /**
@@ -31,8 +35,7 @@ export interface TagFilters {
   source?: 'post';
 }
 
-/** Find all tags (admin: all; public: only those in use by published content). */
-export async function findManyTags(filters: TagFilters = {}, publicOnly = false) {
+function resolveTagListState(filters: TagFilters = {}) {
   const shouldPaginate = filters.page !== undefined || filters.perPage !== undefined;
   const pagination = shouldPaginate
     ? parsePagination({
@@ -46,8 +49,6 @@ export async function findManyTags(filters: TagFilters = {}, publicOnly = false)
   const limit = pagination?.limit;
 
   const conditions: SQL[] = [];
-
-  // Category filter: accept comma-separated or array
   const rawCategory = filters.category;
   if (rawCategory) {
     const cats = Array.isArray(rawCategory)
@@ -66,12 +67,20 @@ export async function findManyTags(filters: TagFilters = {}, publicOnly = false)
     }
   }
 
-  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return {
+    page,
+    perPage,
+    offset,
+    limit,
+    conditions,
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+  };
+}
+
+async function queryTagRows(filters: TagFilters = {}, publicOnly = false) {
+  const { page, perPage, offset, limit, conditions, where } = resolveTagListState(filters);
 
   if (publicOnly) {
-    // Only tags used by at least one published post.
-    // Uses an EXISTS subquery to avoid materializing an intermediate ID array in memory —
-    // the filter is pushed entirely to the database engine as a correlated subquery.
     const postExists = exists(
       db
         .select({ one: sql<number>`1` })
@@ -82,37 +91,54 @@ export async function findManyTags(filters: TagFilters = {}, publicOnly = false)
 
     const publicConditions: SQL[] = [...conditions, postExists as SQL];
     const publicWhere = publicConditions.length > 0 ? and(...publicConditions) : undefined;
-
-    const [countResult, rows] = await Promise.all([
-      db.select({ total: count() }).from(tags).where(publicWhere),
+    const rows =
       limit === undefined
-        ? db.select().from(tags).where(publicWhere).orderBy(asc(tags.category), asc(tags.name))
-        : db
+        ? await db
+            .select()
+            .from(tags)
+            .where(publicWhere)
+            .orderBy(asc(tags.category), asc(tags.name))
+        : await db
             .select()
             .from(tags)
             .where(publicWhere)
             .orderBy(asc(tags.category), asc(tags.name))
             .limit(limit)
-            .offset(offset),
-    ]);
+            .offset(offset);
 
-    const total = countResult[0]?.total ?? 0;
-    return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
+    return { rows, page, perPage, where: publicWhere };
   }
 
-  const [countResult, rows] = await Promise.all([
-    db.select({ total: count() }).from(tags).where(where),
+  const rows =
     limit === undefined
-      ? db.select().from(tags).where(where).orderBy(asc(tags.category), asc(tags.name))
-      : db
+      ? await db.select().from(tags).where(where).orderBy(asc(tags.category), asc(tags.name))
+      : await db
           .select()
           .from(tags)
           .where(where)
           .orderBy(asc(tags.category), asc(tags.name))
           .limit(limit)
-          .offset(offset),
-  ]);
+          .offset(offset);
 
+  return { rows, page, perPage, where };
+}
+
+/** Find all tags (admin: all; public: only those in use by published content). */
+export async function findManyTags(
+  filters: TagFilters = {},
+  publicOnly = false,
+  options: TotalCountQueryOptions = {}
+) {
+  const { rows, page, perPage, where } = await queryTagRows(filters, publicOnly);
+
+  if (options.includeTotal === false) {
+    return {
+      data: rows,
+      meta: buildPaginationMeta(rows.length, page, perPage),
+    };
+  }
+
+  const countResult = await db.select({ total: count() }).from(tags).where(where);
   const total = countResult[0]?.total ?? 0;
   return { data: rows, meta: buildPaginationMeta(total, page, perPage) };
 }

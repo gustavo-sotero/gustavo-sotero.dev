@@ -1,14 +1,16 @@
-import { ERROR_CODES, type ErrorCode } from '@portfolio/shared/constants/errorCodes';
+import {
+  ERROR_CODES,
+  type ErrorType,
+  getErrorTypeForCode,
+  isErrorCode,
+  isErrorType,
+} from '@portfolio/shared/constants/errorCodes';
 import { isMutatingHttpMethod } from '@portfolio/shared/constants/httpMethods';
 import type { ApiError, ApiResponse, PaginatedResponse } from '@portfolio/shared/types/api';
 import { env } from './env';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
-}
-
-function isErrorCode(value: unknown): value is ErrorCode {
-  return typeof value === 'string' && value in ERROR_CODES;
 }
 
 function normalizeApiError(payload: unknown, statusText: string): ApiError {
@@ -31,7 +33,8 @@ function normalizeApiError(payload: unknown, statusText: string): ApiError {
     return {
       success: false,
       error: {
-        code: isErrorCode(payload.error.code) ? payload.error.code : 'INTERNAL_ERROR',
+        code: isErrorCode(payload.error.code) ? payload.error.code : ERROR_CODES.INTERNAL_ERROR,
+        type: resolveErrorType(payload.error.code, payload.error.type),
         message: payload.error.message,
         details,
       },
@@ -41,10 +44,20 @@ function normalizeApiError(payload: unknown, statusText: string): ApiError {
   return {
     success: false,
     error: {
-      code: 'INTERNAL_ERROR',
+      code: ERROR_CODES.INTERNAL_ERROR,
+      type: getErrorTypeForCode(ERROR_CODES.INTERNAL_ERROR),
       message: statusText || 'Unexpected API error',
     },
   };
+}
+
+function resolveErrorType(codeValue: unknown, typeValue: unknown): ErrorType {
+  if (isErrorType(typeValue)) {
+    return typeValue;
+  }
+
+  const code = isErrorCode(codeValue) ? codeValue : ERROR_CODES.INTERNAL_ERROR;
+  return getErrorTypeForCode(code);
 }
 
 function getCsrfToken(): string | undefined {

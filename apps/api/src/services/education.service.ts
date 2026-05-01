@@ -14,6 +14,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
 import { DomainValidationError } from '../lib/errors';
+import type { TotalCountQueryOptions } from '../lib/pagination';
 import { resolveSlugTaken } from '../lib/pivotHelpers';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { EducationFilters } from '../repositories/education.repo';
@@ -60,13 +61,17 @@ export type { EducationFilters };
  * List education entries (admin: all statuses; public: published + non-deleted).
  * Public results are cached.
  */
-export async function listEducation(filters: EducationFilters, adminMode = false) {
+export async function listEducation(
+  filters: EducationFilters,
+  adminMode = false,
+  options: TotalCountQueryOptions = {}
+) {
   if (adminMode) {
-    return findManyEducation(filters, true);
+    return findManyEducation(filters, true, options);
   }
 
-  const key = `education:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}`;
-  return cached(key, LIST_TTL, () => findManyEducation(filters, false));
+  const key = `education:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
+  return cached(key, LIST_TTL, () => findManyEducation(filters, false, options));
 }
 
 /**

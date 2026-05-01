@@ -131,18 +131,18 @@ export function globalErrorHandler(err: Error, c: Context<AppEnv>): Response {
     }
 
     if (err.code === 'DISABLED') {
-      return errorResponse(c, 503, 'SERVICE_UNAVAILABLE', 'AI post generation is disabled');
+      return errorResponse(c, 503, 'CONFIGURATION_ERROR', 'AI post generation is disabled');
     }
 
     if (err.code === 'NOT_CONFIGURED') {
-      return errorResponse(c, 503, 'SERVICE_UNAVAILABLE', 'AI post generation is not configured');
+      return errorResponse(c, 503, 'CONFIGURATION_ERROR', 'AI post generation is not configured');
     }
 
     if (err.code === 'INVALID_CONFIG') {
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'CONFIGURATION_ERROR',
         'AI post generation configuration is invalid'
       );
     }
@@ -151,7 +151,7 @@ export function globalErrorHandler(err: Error, c: Context<AppEnv>): Response {
       return errorResponse(
         c,
         503,
-        'SERVICE_UNAVAILABLE',
+        'CONFIGURATION_ERROR',
         'AI provider credentials are not configured'
       );
     }
@@ -159,7 +159,7 @@ export function globalErrorHandler(err: Error, c: Context<AppEnv>): Response {
     return errorResponse(
       c,
       503,
-      'SERVICE_UNAVAILABLE',
+      'CONFIGURATION_ERROR',
       'AI model catalog is temporarily unavailable'
     );
   }

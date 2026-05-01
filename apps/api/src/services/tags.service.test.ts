@@ -105,13 +105,14 @@ describe('tags service', () => {
     const result = await listTags({ category: 'language,framework', source: 'post' }, true);
 
     expect(cachedMock).toHaveBeenCalledWith(
-      'tags:public:category=language,framework:source=post',
+      'tags:public:category=language,framework:source=post:includeTotal=1',
       300,
       expect.any(Function)
     );
     expect(findManyTagsMock).toHaveBeenCalledWith(
       { category: 'language,framework', source: 'post' },
-      true
+      true,
+      {}
     );
     expect(result.meta).toEqual(repoResult.meta);
     expect(result.data[0]).toMatchObject({
@@ -144,11 +145,30 @@ describe('tags service', () => {
     await listTags({ category: 'language' }, true);
 
     expect(cachedMock).toHaveBeenCalledWith(
-      'tags:public:category=language:source=',
+      'tags:public:category=language:source=:includeTotal=1',
       300,
       expect.any(Function)
     );
-    expect(findManyTagsMock).toHaveBeenCalledWith({ category: 'language' }, true);
+    expect(findManyTagsMock).toHaveBeenCalledWith({ category: 'language' }, true, {});
+  });
+
+  it('passes includeTotal=false through the public tag listing path', async () => {
+    const repoResult = {
+      data: [],
+      meta: { page: 1, perPage: 100, total: 0, totalPages: 0 },
+    };
+    findManyTagsMock.mockResolvedValue(repoResult);
+
+    await listTags({ source: 'post' }, true, { includeTotal: false });
+
+    expect(cachedMock).toHaveBeenCalledWith(
+      'tags:public:category=:source=post:includeTotal=0',
+      300,
+      expect.any(Function)
+    );
+    expect(findManyTagsMock).toHaveBeenCalledWith({ source: 'post' }, true, {
+      includeTotal: false,
+    });
   });
 
   it('throws conflict when creating tag with duplicated name', async () => {

@@ -14,6 +14,7 @@ import { cached, invalidateGroup } from '../lib/cache';
 import { ConflictError } from '../lib/errors';
 import { normalizeProjectImpactFacts } from '../lib/impactFacts';
 import { renderMarkdown } from '../lib/markdown';
+import type { TotalCountQueryOptions } from '../lib/pagination';
 import { flattenPivotSkills, resolveSlugTaken } from '../lib/pivotHelpers';
 import { assertSkillsExist, normalizeSkillIds } from '../lib/skillValidation';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
@@ -57,15 +58,19 @@ export interface ProjectListFilters {
  * List projects (admin: all statuses; public: only published+non-deleted).
  * Results are cached for public reads.
  */
-export async function listProjects(filters: ProjectListFilters, adminMode = false) {
+export async function listProjects(
+  filters: ProjectListFilters,
+  adminMode = false,
+  options: TotalCountQueryOptions = {}
+) {
   if (adminMode) {
-    const result = await findManyProjects(filters, true);
+    const result = await findManyProjects(filters, true, options);
     return { ...result, data: result.data.map(flattenPivotSkills) };
   }
 
-  const key = `projects:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:skill=${filters.skill ?? ''}:featured=${String(filters.featured ?? false)}:featuredFirst=${String(filters.featuredFirst ?? false)}`;
+  const key = `projects:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:skill=${filters.skill ?? ''}:featured=${String(filters.featured ?? false)}:featuredFirst=${String(filters.featuredFirst ?? false)}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
   return cached(key, LIST_TTL, async () => {
-    const result = await findManyProjects(filters, false);
+    const result = await findManyProjects(filters, false, options);
     return { ...result, data: result.data.map(flattenPivotSkills) };
   });
 }

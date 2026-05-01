@@ -178,7 +178,7 @@ describe('experience service', () => {
       const result = await listExperience({ page: 1, perPage: 20 }, false);
 
       expect(result).toEqual(mockResult);
-      expect(findManyExperienceMock).toHaveBeenCalledWith({ page: 1, perPage: 20 }, false);
+      expect(findManyExperienceMock).toHaveBeenCalledWith({ page: 1, perPage: 20 }, false, {});
     });
 
     it('normalizes related skills to the public Skill DTO shape', async () => {
@@ -231,7 +231,24 @@ describe('experience service', () => {
 
       await listExperience({ page: 1, perPage: 20 }, true);
 
-      expect(findManyExperienceMock).toHaveBeenCalledWith({ page: 1, perPage: 20 }, true);
+      expect(findManyExperienceMock).toHaveBeenCalledWith({ page: 1, perPage: 20 }, true, {});
+    });
+
+    it('propaga includeTotal=false para leituras agregadas', async () => {
+      findManyExperienceMock.mockResolvedValueOnce({
+        data: [],
+        meta: { page: 1, perPage: 10, total: 0, totalPages: 0 },
+      });
+
+      await listExperience({ page: 1, perPage: 10, status: 'published' }, false, {
+        includeTotal: false,
+      });
+
+      expect(findManyExperienceMock).toHaveBeenCalledWith(
+        { page: 1, perPage: 10, status: 'published' },
+        false,
+        { includeTotal: false }
+      );
     });
   });
 
@@ -458,7 +475,7 @@ describe('education service', () => {
       const result = await listEducation({ page: 1, perPage: 20 }, false);
 
       expect(result).toEqual(mockResult);
-      expect(findManyEducationMock).toHaveBeenCalledWith({ page: 1, perPage: 20 }, false);
+      expect(findManyEducationMock).toHaveBeenCalledWith({ page: 1, perPage: 20 }, false, {});
     });
 
     it('bypasses cache in admin mode', async () => {
@@ -466,7 +483,24 @@ describe('education service', () => {
 
       await listEducation({ page: 1 }, true);
 
-      expect(findManyEducationMock).toHaveBeenCalledWith({ page: 1 }, true);
+      expect(findManyEducationMock).toHaveBeenCalledWith({ page: 1 }, true, {});
+    });
+
+    it('propaga includeTotal=false para leituras agregadas', async () => {
+      findManyEducationMock.mockResolvedValueOnce({
+        data: [],
+        meta: { page: 1, perPage: 10, total: 0, totalPages: 0 },
+      });
+
+      await listEducation({ page: 1, perPage: 10, status: 'published' }, false, {
+        includeTotal: false,
+      });
+
+      expect(findManyEducationMock).toHaveBeenCalledWith(
+        { page: 1, perPage: 10, status: 'published' },
+        false,
+        { includeTotal: false }
+      );
     });
   });
 

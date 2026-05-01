@@ -14,6 +14,7 @@ import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
 import { ConflictError } from '../lib/errors';
 import { renderMarkdown } from '../lib/markdown';
+import type { TotalCountQueryOptions } from '../lib/pagination';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { cancelScheduledPostPublish } from '../lib/queues';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
@@ -54,16 +55,20 @@ export interface PostListFilters {
  * List posts (admin: all statuses; public: only published+non-deleted).
  * Results are cached for public reads.
  */
-export async function listPosts(filters: PostListFilters, adminMode = false) {
+export async function listPosts(
+  filters: PostListFilters,
+  adminMode = false,
+  options: TotalCountQueryOptions = {}
+) {
   if (adminMode) {
-    const result = await findManyPosts(filters, true);
+    const result = await findManyPosts(filters, true, options);
     return { ...result, data: result.data.map(flattenPivotTags) };
   }
 
   const sort = filters.sort ?? 'recent';
-  const key = `posts:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}:sort=${sort}`;
+  const key = `posts:list:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 20}:tag=${filters.tag ?? ''}:sort=${sort}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
   return cached(key, LIST_TTL, async () => {
-    const result = await findManyPosts({ ...filters, sort }, false);
+    const result = await findManyPosts({ ...filters, sort }, false, options);
     return { ...result, data: result.data.map(flattenPivotTags) };
   });
 }

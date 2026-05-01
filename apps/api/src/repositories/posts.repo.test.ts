@@ -149,4 +149,13 @@ describe('posts repository sort ordering', () => {
     const allInterpolatedValues = sqlMock.mock.calls.flatMap((call) => call.slice(1));
     expect(allInterpolatedValues).not.toContain(postsTable.order);
   });
+
+  it('pula a query de total quando includeTotal=false', async () => {
+    findManyMock.mockResolvedValueOnce([{ id: 1 }, { id: 2 }]);
+
+    await findManyPosts({ page: 1, perPage: 20 }, false, { includeTotal: false });
+
+    expect(countMock).not.toHaveBeenCalled();
+    expect(buildPaginationMetaMock).toHaveBeenCalledWith(2, 1, 20);
+  });
 });

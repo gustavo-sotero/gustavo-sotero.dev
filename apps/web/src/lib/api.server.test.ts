@@ -58,6 +58,7 @@ describe('api.server', () => {
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
+          type: 'validation',
           message: 'Validation failed',
           details: [{ field: 'title', message: 'Title is required' }],
         },
@@ -70,6 +71,7 @@ describe('api.server', () => {
     await expect(promise).rejects.toMatchObject({
       status: 400,
       code: 'VALIDATION_ERROR',
+      type: 'validation',
       message: 'Validation failed',
       details: [{ field: 'title', message: 'Title is required' }],
     });
@@ -83,6 +85,7 @@ describe('api.server', () => {
     await expect(promise).rejects.toMatchObject({
       status: 404,
       code: 'NOT_FOUND',
+      type: 'not_found',
       path: '/posts/missing',
     });
   });
@@ -95,6 +98,7 @@ describe('api.server', () => {
     await expect(promise).rejects.toMatchObject({
       status: 504,
       code: 'TIMEOUT',
+      type: 'timeout',
       path: 'https://example.com/api/slow',
       timeoutMs: 10,
     });
