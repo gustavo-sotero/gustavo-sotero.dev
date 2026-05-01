@@ -3,9 +3,11 @@ interface CreatedAiRunRow {
   createdAt: Date;
 }
 
+type Awaitable<T> = T | PromiseLike<T>;
+
 interface CreateQueuedAiRunWithOutboxOptions {
-  createRun: () => Promise<CreatedAiRunRow | undefined>;
-  insertOutbox: (runId: string) => Promise<void>;
+  createRun: () => Awaitable<CreatedAiRunRow | undefined>;
+  insertOutbox: (runId: string) => Awaitable<unknown>;
   errorMessage: string;
 }
 

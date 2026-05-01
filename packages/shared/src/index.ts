@@ -1,21 +1,13 @@
-// Types
+// Root barrel remains intentionally contract-centric.
+// Behavior-heavy helpers must be imported from explicit subpaths under ./lib/*.
 
+// Constants
 export * from './constants/ai-posts';
 export * from './constants/developerProfile';
-// Constants
 export * from './constants/enums';
 export * from './constants/errorCodes';
 export * from './constants/queues';
-// Lib
-export * from './lib/ai-draft-normalizer';
-export * from './lib/ai-error';
-export * from './lib/ai-post-prompts';
-export * from './lib/ai-structured-outputs';
-export * from './lib/ai-topic-normalizer';
-export * from './lib/aiTagNormalizer';
-export * from './lib/iconResolver';
-export * from './lib/jobIds';
-export * from './lib/slug';
+
 // Schemas
 export * from './schemas/ai-post-generation';
 export * from './schemas/ai-post-generation-config';
@@ -29,6 +21,8 @@ export * from './schemas/projects';
 export * from './schemas/skills';
 export * from './schemas/tags';
 export * from './schemas/uploads';
+
+// Types
 export * from './types/ai-post-generation';
 export * from './types/analytics';
 export * from './types/api';

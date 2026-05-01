@@ -12,7 +12,6 @@
  *  6. Persist result (running → completed) or error (→ failed/timed_out)
  */
 
-import type { AiPostDraftRunStage } from '@portfolio/shared/constants/ai-posts';
 import { aiPostDraftRuns } from '@portfolio/shared/db/schema';
 import { normalizeDraftResponse } from '@portfolio/shared/lib/ai-draft-normalizer';
 import {

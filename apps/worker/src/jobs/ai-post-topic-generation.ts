@@ -12,7 +12,6 @@
  *  6. Persist result (running → completed) or error (→ failed/timed_out)
  */
 
-import type { AiPostTopicRunStage } from '@portfolio/shared/constants/ai-posts';
 import { aiPostTopicRuns } from '@portfolio/shared/db/schema';
 import {
   buildTopicsSystemPrompt,

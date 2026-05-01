@@ -1,4 +1,4 @@
-import { tags } from '@portfolio/shared/db/schema';
+import { type aiPostDraftRuns, type aiPostTopicRuns, tags } from '@portfolio/shared/db/schema';
 import type { PersistedTagForNormalization } from '@portfolio/shared/lib/aiTagNormalizer';
 import {
   type ProviderRoutingConfig,
@@ -9,14 +9,8 @@ import { db } from '../config/db';
 
 export type ActiveRunStatus = 'running' | 'validating';
 
-type UpdatableRunTable = {
-  id: unknown;
-  $inferInsert: Record<string, unknown>;
-};
-
-type ClaimableRunTable = UpdatableRunTable & {
-  status: unknown;
-};
+type UpdatableRunTable = typeof aiPostDraftRuns | typeof aiPostTopicRuns;
+type ClaimableRunTable = UpdatableRunTable;
 
 export async function claimQueuedAiRun<TClaimedRow>(
   runTable: ClaimableRunTable,
@@ -24,8 +18,8 @@ export async function claimQueuedAiRun<TClaimedRow>(
   attemptCount: number
 ): Promise<TClaimedRow | undefined> {
   const now = new Date();
-  const [claimed] = await db
-    .update(runTable as never)
+  const claimedRows = await db
+    .update(runTable)
     .set({
       status: 'running',
       stage: 'resolving-config',
@@ -36,11 +30,11 @@ export async function claimQueuedAiRun<TClaimedRow>(
       errorKind: null,
       errorCode: null,
       errorMessage: null,
-    } as never)
+    } as Partial<typeof runTable.$inferInsert>)
     .where(and(eq(runTable.id, runId), eq(runTable.status, 'queued')))
     .returning();
 
-  return claimed as TClaimedRow | undefined;
+  return claimedRows[0] as TClaimedRow | undefined;
 }
 
 export async function markAiRunMissingModelId(
@@ -48,7 +42,7 @@ export async function markAiRunMissingModelId(
   runId: string
 ): Promise<void> {
   await db
-    .update(runTable as never)
+    .update(runTable)
     .set({
       status: 'failed',
       stage: 'failed',
@@ -57,7 +51,7 @@ export async function markAiRunMissingModelId(
       errorKind: 'config',
       errorCode: 'NO_MODEL_ID',
       errorMessage: 'Run created without a resolved model ID.',
-    } as never)
+    } as Partial<typeof runTable.$inferInsert>)
     .where(eq(runTable.id, runId));
 }
 
@@ -78,8 +72,8 @@ export async function setAiRunStage(
   }
 
   await db
-    .update(runTable as never)
-    .set(update as never)
+    .update(runTable)
+    .set(update as Partial<typeof runTable.$inferInsert>)
     .where(eq(runTable.id, runId));
 }
 
