@@ -15,6 +15,7 @@ import {
   SkillsSkeleton,
 } from '@/components/home/skeletons';
 import { SITE_METADATA } from '@/lib/constants';
+import { getHomeAggregate } from '@/lib/data/public/home';
 
 export const metadata: Metadata = {
   title: SITE_METADATA.title,
@@ -26,6 +27,8 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
+  const aggregatePromise = getHomeAggregate();
+
   return (
     <>
       {/* Hero is pre-rendered synchronously — data fetching functions use
@@ -33,37 +36,37 @@ export default function HomePage() {
           No Suspense boundary here intentionally: the hero must appear without
           any loading flash or streaming pop-in (only the terminal's own
           typing animation is allowed). */}
-      <HeroSectionWrapper />
+      <HeroSectionWrapper aggregatePromise={aggregatePromise} />
 
       {/* Main content sections — each has its own Suspense boundary */}
       <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 space-y-24 pb-24">
         <section id="projetos" aria-label="Projetos">
           <Suspense fallback={<FeaturedProjectsSkeleton />}>
-            <FeaturedProjectsSection />
+            <FeaturedProjectsSection aggregatePromise={aggregatePromise} />
           </Suspense>
         </section>
 
         <section id="posts" aria-label="Posts em destaque">
           <Suspense fallback={<RecentPostsSkeleton />}>
-            <RecentPostsSection />
+            <RecentPostsSection aggregatePromise={aggregatePromise} />
           </Suspense>
         </section>
 
         <section id="skills" aria-label="Habilidades técnicas">
           <Suspense fallback={<SkillsSkeleton />}>
-            <SkillsSection />
+            <SkillsSection aggregatePromise={aggregatePromise} />
           </Suspense>
         </section>
 
         <section id="experiencia" aria-label="Experiência profissional">
           <Suspense fallback={<ExperienceSkeleton />}>
-            <ExperienceSectionWrapper />
+            <ExperienceSectionWrapper aggregatePromise={aggregatePromise} />
           </Suspense>
         </section>
 
         <section id="formacao" aria-label="Educação e cursos">
           <Suspense fallback={<EducationSkeleton />}>
-            <EducationSectionWrapper />
+            <EducationSectionWrapper aggregatePromise={aggregatePromise} />
           </Suspense>
         </section>
 

@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HomeAggregate } from '@/lib/data/public/home';
+
+vi.mock('server-only', () => ({}));
 
 const { getHomeAggregateMock } = vi.hoisted(() => ({
   getHomeAggregateMock: vi.fn(),
@@ -53,6 +56,20 @@ async function renderServerComponent(elementPromise: Promise<React.ReactNode>) {
 describe('home section wrappers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('reuses a supplied aggregate promise instead of fetching the home aggregate again', async () => {
+    const aggregatePromise: Promise<HomeAggregate> = Promise.resolve(baseAggregate);
+
+    await Promise.all([
+      FeaturedProjectsSection({ aggregatePromise }),
+      RecentPostsSection({ aggregatePromise }),
+      SkillsSection({ aggregatePromise }),
+      ExperienceSectionWrapper({ aggregatePromise }),
+      EducationSectionWrapper({ aggregatePromise }),
+    ]);
+
+    expect(getHomeAggregateMock).not.toHaveBeenCalled();
   });
 
   it('renders degraded UI for featured projects failures', async () => {

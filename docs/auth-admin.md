@@ -6,10 +6,12 @@ Authentication is GitHub OAuth-based. On successful callback the API issues two 
 
 | Cookie | Purpose |
 |--------|---------|
-| `session` (HttpOnly, Secure) | Signed JWT — carries the user identity. |
+| `admin_token` (HttpOnly, Secure) | Signed JWT — carries the admin identity. |
 | `csrf_token` (SameSite=Strict, Secure) | CSRF token — must be re-sent as `X-CSRF-Token` header on all admin mutations. |
 
 The JWT is verified by `authAdmin` middleware in `apps/api/src/middleware/auth.ts`.
+
+The admin shell also probes `GET /auth/session` server-side to validate the current `admin_token` before rendering protected chrome.
 
 ## CSRF Protection
 

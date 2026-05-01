@@ -1,26 +1,14 @@
+import { normalizeDraftRequest } from '@portfolio/shared/lib/ai-draft-normalizer';
 import {
-  normalizeDraftRequest,
-  normalizeDraftResponse,
-} from '@portfolio/shared/lib/ai-draft-normalizer';
-import {
-  buildDraftSystemPrompt,
-  buildDraftUserPrompt,
-  buildTopicsSystemPrompt,
-  buildTopicsUserPrompt,
-} from '@portfolio/shared/lib/ai-post-prompts';
-import {
-  normalizeTopicsRequest,
-  normalizeTopicsResponse,
-} from '@portfolio/shared/lib/ai-topic-normalizer';
+  executeDraftGeneration,
+  executeTopicsGeneration,
+} from '@portfolio/shared/lib/ai-post-generation-execution';
+import { normalizeTopicsRequest } from '@portfolio/shared/lib/ai-topic-normalizer';
 import type {
   GenerateDraftRequest,
   GenerateDraftResponse,
   GenerateTopicsRequest,
   GenerateTopicsResponse,
-} from '@portfolio/shared/schemas/ai-post-generation';
-import {
-  generateDraftOutputSchema,
-  generateTopicsOutputSchema,
 } from '@portfolio/shared/schemas/ai-post-generation';
 import { env } from '../config/env';
 import { getLogger } from '../config/logger';
@@ -77,23 +65,19 @@ export async function generateTopicSuggestions(
   const model = activeConfig.topicsModelId;
 
   try {
-    const result = await generateStructuredObject({
+    const { response } = await executeTopicsGeneration({
       model,
-      system: buildTopicsSystemPrompt(normalizedReq.category),
-      prompt: buildTopicsUserPrompt(normalizedReq),
-      schema: generateTopicsOutputSchema,
+      request: normalizedReq,
       operation: 'topics',
       metadata: { category: normalizedReq.category },
       providerRouting: activeConfig.topicsRouting ?? undefined,
       timeoutMs: env.AI_POSTS_TIMEOUT_MS,
       maxRetries: SYNC_AI_GENERATION_MAX_RETRIES,
+      loadPersistedTags: async () => persistedTags,
+      generateStructuredObject,
     });
 
-    return normalizeTopicsResponse(
-      result.object as GenerateTopicsResponse,
-      normalizedReq.limit,
-      persistedTags
-    );
+    return response;
   } catch (err) {
     if (err instanceof AiGenerationError && err.kind === 'validation') {
       logValidationFailure('topics', normalizedReq.category, model, err.message);
@@ -120,19 +104,19 @@ export async function generatePostDraft(req: GenerateDraftRequest): Promise<Gene
   const model = activeConfig.draftModelId;
 
   try {
-    const result = await generateStructuredObject({
+    const { response } = await executeDraftGeneration({
       model,
-      system: buildDraftSystemPrompt(normalizedReq.category),
-      prompt: buildDraftUserPrompt(normalizedReq),
-      schema: generateDraftOutputSchema,
+      request: normalizedReq,
       operation: 'draft',
       metadata: { category: normalizedReq.category },
       providerRouting: activeConfig.draftRouting ?? undefined,
       timeoutMs: env.AI_POSTS_TIMEOUT_MS,
       maxRetries: SYNC_AI_GENERATION_MAX_RETRIES,
+      loadPersistedTags: async () => persistedTags,
+      generateStructuredObject,
     });
 
-    return normalizeDraftResponse(result.object as GenerateDraftResponse, persistedTags);
+    return response;
   } catch (err) {
     if (err instanceof AiGenerationError && err.kind === 'validation') {
       logValidationFailure('draft', normalizedReq.category, model, err.message);

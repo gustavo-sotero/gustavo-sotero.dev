@@ -23,6 +23,7 @@ import { processTelegram, type TelegramJobPayload } from './jobs/telegram';
 import { closeCacheRedis } from './lib/cache';
 import { processOutboxEvents } from './lib/outbox-relay';
 import { createOutboxRelayPollGuard } from './lib/outbox-relay-poll-guard';
+import { logQueueSnapshots } from './lib/queue-observability';
 import {
   aiPostDraftGenerationQueue,
   aiPostTopicGenerationQueue,
@@ -306,7 +307,19 @@ logger.info('All workers ready', {
 //   downstream idempotency for correctness.
 
 const OUTBOX_POLL_INTERVAL_MS = 5_000;
+const QUEUE_OBSERVABILITY_INTERVAL_MS = 60_000;
 const outboxRelayPollGuard = createOutboxRelayPollGuard(logger, OUTBOX_POLL_INTERVAL_MS);
+const observedQueues = [
+  { key: QUEUE_NAMES.TELEGRAM_NOTIFICATIONS, queue: telegramQueue },
+  { key: QUEUE_NAMES.TELEGRAM_NOTIFICATIONS_DLQ, queue: telegramDlqQueue },
+  { key: QUEUE_NAMES.ANALYTICS_EVENTS, queue: analyticsQueue },
+  { key: QUEUE_NAMES.IMAGE_OPTIMIZE, queue: imageQueue },
+  { key: QUEUE_NAMES.IMAGE_OPTIMIZE_DLQ, queue: imageDlqQueue },
+  { key: QUEUE_NAMES.DATA_RETENTION, queue: retentionQueue },
+  { key: QUEUE_NAMES.POST_PUBLISH, queue: postPublishQueue },
+  { key: QUEUE_NAMES.AI_POST_DRAFT_GENERATION, queue: aiPostDraftGenerationQueue },
+  { key: QUEUE_NAMES.AI_POST_TOPIC_GENERATION, queue: aiPostTopicGenerationQueue },
+];
 
 async function runOutboxRelay(): Promise<void> {
   if (!outboxRelayPollGuard.tryStartCycle()) return;
@@ -322,6 +335,10 @@ async function runOutboxRelay(): Promise<void> {
   }
 }
 
+async function runQueueObservabilitySnapshot(): Promise<void> {
+  await logQueueSnapshots(observedQueues, logger);
+}
+
 // Initial run on startup then poll on interval
 runOutboxRelay().catch((err) => {
   logger.error('Outbox relay initial run failed', {
@@ -335,6 +352,13 @@ const outboxInterval = setInterval(() => {
     });
   });
 }, OUTBOX_POLL_INTERVAL_MS);
+const queueObservabilityInterval = setInterval(() => {
+  runQueueObservabilitySnapshot().catch((err) => {
+    logger.error('BullMQ queue snapshot failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+}, QUEUE_OBSERVABILITY_INTERVAL_MS);
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
 async function shutdown(signal: string): Promise<void> {
@@ -342,6 +366,7 @@ async function shutdown(signal: string): Promise<void> {
 
   // Stop outbox relay before closing connections
   clearInterval(outboxInterval);
+  clearInterval(queueObservabilityInterval);
 
   // Close workers first (stop consuming new jobs)
   await Promise.allSettled([

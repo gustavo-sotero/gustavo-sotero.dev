@@ -28,6 +28,27 @@ jobs:
       # Use biome ci (no auto-fix) so formatting/lint issues block the pipeline
       - run: bunx biome ci .
 
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Cache bun modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - run: bun ci
+
+      - name: Audit dependency tree
+        run: bun audit --audit-level=high
+
   type-check:
     name: Type Check
     runs-on: ubuntu-latest

@@ -2,12 +2,18 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('server-only', () => ({}));
+
 const { getHomeAggregateMock } = vi.hoisted(() => ({
   getHomeAggregateMock: vi.fn(),
 }));
 
 const { heroSectionMock } = vi.hoisted(() => ({
   heroSectionMock: vi.fn(),
+}));
+
+const { getCachedExperienceLabelMock } = vi.hoisted(() => ({
+  getCachedExperienceLabelMock: vi.fn().mockResolvedValue('4+ anos'),
 }));
 
 const baseAggregate = {
@@ -27,7 +33,7 @@ vi.mock('@/lib/data/public/home', () => ({
 // feature not available in the Vitest jsdom environment. Mock the whole module
 // so tests run without requiring the cacheComponents build config.
 vi.mock('@/lib/cache/time', () => ({
-  getCachedExperienceLabel: vi.fn().mockResolvedValue('4+ anos'),
+  getCachedExperienceLabel: getCachedExperienceLabelMock,
   getCachedCurrentYear: vi.fn().mockResolvedValue(2026),
 }));
 
@@ -50,6 +56,14 @@ describe('HeroSectionWrapper', () => {
     vi.clearAllMocks();
   });
 
+  it('reuses a supplied aggregate promise instead of refetching the home aggregate', async () => {
+    const aggregatePromise = Promise.resolve(baseAggregate);
+
+    await renderServerComponent(HeroSectionWrapper({ aggregatePromise }));
+
+    expect(getHomeAggregateMock).not.toHaveBeenCalled();
+  });
+
   it('shows a visible degraded-state notice when skills dependency is degraded', async () => {
     getHomeAggregateMock.mockResolvedValue({ ...baseAggregate, skills: { state: 'degraded' } });
 
@@ -69,14 +83,13 @@ describe('HeroSectionWrapper', () => {
   });
 
   it('supplies experience label from the cache-safe server helper', async () => {
-    const { getCachedExperienceLabel } = await import('@/lib/cache/time');
-    (getCachedExperienceLabel as ReturnType<typeof vi.fn>).mockResolvedValue('5+ anos');
+    getCachedExperienceLabelMock.mockResolvedValue('5+ anos');
     getHomeAggregateMock.mockResolvedValue(baseAggregate);
 
     await renderServerComponent(HeroSectionWrapper());
 
     // The wrapper must call the cache helper to obtain the experience label.
-    expect(getCachedExperienceLabel).toHaveBeenCalled();
+    expect(getCachedExperienceLabelMock).toHaveBeenCalled();
     expect(heroSectionMock).toHaveBeenCalledWith(
       expect.objectContaining({ experienceLabel: '5+ anos' })
     );

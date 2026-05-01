@@ -13,12 +13,8 @@
  */
 
 import { aiPostDraftRuns } from '@portfolio/shared/db/schema';
-import { normalizeDraftResponse } from '@portfolio/shared/lib/ai-draft-normalizer';
-import {
-  buildDraftSystemPrompt,
-  buildDraftUserPrompt,
-} from '@portfolio/shared/lib/ai-post-prompts';
-import { generateDraftOutputSchema } from '@portfolio/shared/schemas/ai-post-generation';
+import { executeDraftGeneration } from '@portfolio/shared/lib/ai-post-generation-execution';
+import type { GenerateDraftRequest } from '@portfolio/shared/schemas/ai-post-generation';
 import { type Job, UnrecoverableError } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
@@ -52,21 +48,7 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
   // Load the run record and claim it atomically (queued → running).
   const claimed = await claimQueuedAiRun<{
     modelId: string | null;
-    requestPayload: {
-      category: string;
-      briefing: string | null;
-      selectedSuggestion: {
-        proposedTitle: string;
-        angle: string;
-        summary: string;
-        targetReader: string;
-        suggestedTagNames: string[];
-        category: string;
-        suggestionId: string;
-        rationale: string;
-      };
-      rejectedAngles: string[];
-    };
+    requestPayload: GenerateDraftRequest;
   }>(aiPostDraftRuns, runId, attemptCount);
 
   if (!claimed) {
@@ -90,42 +72,28 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
   const draftRouting = await loadAiProviderRoutingConfig('draft');
 
   try {
-    // ── Stage: building-prompt ───────────────────────────────────────────────
-    await setAiRunStage(aiPostDraftRuns, runId, 'building-prompt');
-
-    const systemPrompt = buildDraftSystemPrompt(requestPayload.category);
-    const userPrompt = buildDraftUserPrompt(
-      requestPayload as Parameters<typeof buildDraftUserPrompt>[0]
-    );
-
-    // ── Stage: requesting-provider ───────────────────────────────────────────
-    await setAiRunStage(aiPostDraftRuns, runId, 'requesting-provider');
-
-    const result = await generateStructuredObject({
+    const { response: parsed, result } = await executeDraftGeneration({
       model: modelId,
-      system: systemPrompt,
-      prompt: userPrompt,
-      schema: generateDraftOutputSchema,
+      request: requestPayload,
       operation: 'draft-async',
       metadata: { category: requestPayload.category, runId },
       providerRouting: draftRouting,
       timeoutMs: env.AI_POSTS_TIMEOUT_MS,
       maxRetries: ASYNC_AI_GENERATION_MAX_RETRIES,
+      generateStructuredObject,
+      loadPersistedTags: loadPersistedTagsForNormalization,
+      lifecycle: {
+        onBuildingPrompt: () => setAiRunStage(aiPostDraftRuns, runId, 'building-prompt'),
+        onRequestingProvider: () => setAiRunStage(aiPostDraftRuns, runId, 'requesting-provider'),
+        onNormalizingOutput: () =>
+          setAiRunStage(aiPostDraftRuns, runId, 'normalizing-output', 'validating'),
+        onCanonicalizingTags: () =>
+          setAiRunStage(aiPostDraftRuns, runId, 'canonicalizing-tags', 'validating'),
+        onValidatingOutput: () =>
+          setAiRunStage(aiPostDraftRuns, runId, 'validating-output', 'validating'),
+      },
     });
     providerGenerationId = result.providerGenerationId;
-
-    // ── Stage: normalizing-output ────────────────────────────────────────────
-    await setAiRunStage(aiPostDraftRuns, runId, 'normalizing-output', 'validating');
-
-    const persistedTags = await loadPersistedTagsForNormalization();
-
-    // ── Stage: canonicalizing-tags ───────────────────────────────────────────
-    await setAiRunStage(aiPostDraftRuns, runId, 'canonicalizing-tags', 'validating');
-
-    // ── Stage: validating-output ─────────────────────────────────────────────
-    await setAiRunStage(aiPostDraftRuns, runId, 'validating-output', 'validating');
-
-    const parsed = normalizeDraftResponse(result.object, persistedTags);
 
     // ── Stage: persisting-result ─────────────────────────────────────────────
     await setAiRunStage(aiPostDraftRuns, runId, 'persisting-result', 'validating');
@@ -155,6 +123,9 @@ export async function processAiPostDraftGeneration(job: Job<AiPostDraftJobData>)
       outputTokens: result.outputTokens,
     });
   } catch (err) {
+    providerGenerationId =
+      (err as Error & { providerGenerationId?: string | null }).providerGenerationId ??
+      providerGenerationId;
     const finishedAt = new Date();
     const failure = resolveAiJobFailure(job, err);
     const { errorCode, errorKind, errorMessage, shouldRetry, stage, status } = failure;

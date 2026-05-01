@@ -1,7 +1,7 @@
 import { SectionUnavailable } from '@/components/shared/SectionUnavailable';
 import { getCachedExperienceLabel } from '@/lib/cache/time';
-import { getHomeAggregate } from '@/lib/data/public/home';
 import { HeroSection } from '../HeroSection';
+import { type HomeAggregateSectionProps, resolveHomeAggregate } from './homeAggregate';
 
 /**
  * Server wrapper for HeroSection.
@@ -12,9 +12,9 @@ import { HeroSection } from '../HeroSection';
  * resume data is now fetched client-side inside HeroResumeDownloadButtonInner
  * so this wrapper stays fully static/prerenderable and never calls new Date().
  */
-export async function HeroSectionWrapper() {
+export async function HeroSectionWrapper({ aggregatePromise }: HomeAggregateSectionProps = {}) {
   const [{ skills: skillsResult }, experienceLabel] = await Promise.all([
-    getHomeAggregate(),
+    resolveHomeAggregate(aggregatePromise),
     getCachedExperienceLabel(),
   ]);
   const skills = skillsResult.state !== 'degraded' ? skillsResult.data : [];

@@ -2,6 +2,21 @@ import { render, screen } from '@testing-library/react';
 import { Children, isValidElement, type ReactElement, Suspense } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('server-only', () => ({}));
+
+const { getHomeAggregateMock } = vi.hoisted(() => ({
+  getHomeAggregateMock: vi.fn(() =>
+    Promise.resolve({
+      posts: { state: 'ok' as const, data: [] },
+      projects: { state: 'ok' as const, data: [] },
+      skills: { state: 'ok' as const, data: [] },
+      blogTags: { state: 'ok' as const, data: [] },
+      experience: { state: 'ok' as const, data: [] },
+      education: { state: 'ok' as const, data: [] },
+    })
+  ),
+}));
+
 const {
   ContactSectionMock,
   EducationSectionWrapperMock,
@@ -66,6 +81,10 @@ vi.mock('@/components/home/skeletons', () => ({
   SkillsSkeleton: SkillsSkeletonMock,
 }));
 
+vi.mock('@/lib/data/public/home', () => ({
+  getHomeAggregate: getHomeAggregateMock,
+}));
+
 import HomePage from './page';
 
 describe('HomePage composition', () => {
@@ -79,6 +98,29 @@ describe('HomePage composition', () => {
 
     expect(heroNode?.type).toBe(HeroSectionWrapperMock);
     expect(heroNode?.type).not.toBe(Suspense);
+  });
+
+  it('passes one shared home aggregate promise to every home data wrapper', () => {
+    const tree = HomePage();
+    expect(isValidElement(tree)).toBe(true);
+
+    const root = tree as ReactElement<{ children: ReactElement[] }>;
+    const children = Children.toArray(root.props.children) as ReactElement[];
+    const heroNode = children[0] as ReactElement<{ aggregatePromise?: Promise<unknown> }>;
+    const sectionsContainer = children[1] as ReactElement<{ children: ReactElement[] }>;
+    const sections = Children.toArray(sectionsContainer.props.children) as ReactElement[];
+    const sharedPromise = heroNode.props.aggregatePromise;
+
+    expect(sharedPromise).toBeInstanceOf(Promise);
+
+    for (const section of sections.slice(0, 5)) {
+      const sectionElement = section as ReactElement<{ children: ReactElement }>;
+      const suspenseNode = Children.only(sectionElement.props.children) as ReactElement<{
+        children: ReactElement<{ aggregatePromise?: Promise<unknown> }>;
+      }>;
+
+      expect(suspenseNode.props.children.props.aggregatePromise).toBe(sharedPromise);
+    }
   });
 
   it('labels the posts section as featured content to match manual ordering', () => {

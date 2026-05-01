@@ -13,16 +13,8 @@
  */
 
 import { aiPostTopicRuns } from '@portfolio/shared/db/schema';
-import {
-  buildTopicsSystemPrompt,
-  buildTopicsUserPrompt,
-} from '@portfolio/shared/lib/ai-post-prompts';
-import { normalizeTopicsResponse } from '@portfolio/shared/lib/ai-topic-normalizer';
-import type {
-  GenerateTopicsRequest,
-  GenerateTopicsResponse,
-} from '@portfolio/shared/schemas/ai-post-generation';
-import { generateTopicsOutputSchema } from '@portfolio/shared/schemas/ai-post-generation';
+import { executeTopicsGeneration } from '@portfolio/shared/lib/ai-post-generation-execution';
+import type { GenerateTopicsRequest } from '@portfolio/shared/schemas/ai-post-generation';
 import { type Job, UnrecoverableError } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { db } from '../config/db';
@@ -74,50 +66,33 @@ export async function processAiPostTopicGeneration(job: Job<AiPostTopicJobData>)
 
   const requestPayload = claimed.requestPayload as GenerateTopicsRequest;
   const requestedCategory = requestPayload.category;
-  const limit = requestPayload.limit ?? 4;
   let providerGenerationId: string | null = null;
 
   const topicsRouting = await loadAiProviderRoutingConfig('topics');
 
   try {
-    // ── Stage: building-prompt ───────────────────────────────────────────────
-    await setAiRunStage(aiPostTopicRuns, runId, 'building-prompt');
-
-    const systemPrompt = buildTopicsSystemPrompt(requestPayload.category);
-    const userPrompt = buildTopicsUserPrompt(requestPayload);
-
-    // ── Stage: requesting-provider ───────────────────────────────────────────
-    await setAiRunStage(aiPostTopicRuns, runId, 'requesting-provider');
-
-    const result = await generateStructuredObject({
+    const { response: parsed, result } = await executeTopicsGeneration({
       model: modelId,
-      system: systemPrompt,
-      prompt: userPrompt,
-      schema: generateTopicsOutputSchema,
+      request: requestPayload,
       operation: 'topic-async',
       metadata: { category: requestPayload.category, runId },
       providerRouting: topicsRouting,
       timeoutMs: env.AI_POSTS_TIMEOUT_MS,
       maxRetries: ASYNC_AI_GENERATION_MAX_RETRIES,
+      generateStructuredObject,
+      loadPersistedTags: loadPersistedTagsForNormalization,
+      lifecycle: {
+        onBuildingPrompt: () => setAiRunStage(aiPostTopicRuns, runId, 'building-prompt'),
+        onRequestingProvider: () => setAiRunStage(aiPostTopicRuns, runId, 'requesting-provider'),
+        onNormalizingOutput: () =>
+          setAiRunStage(aiPostTopicRuns, runId, 'normalizing-output', 'validating'),
+        onCanonicalizingTags: () =>
+          setAiRunStage(aiPostTopicRuns, runId, 'canonicalizing-tags', 'validating'),
+        onValidatingOutput: () =>
+          setAiRunStage(aiPostTopicRuns, runId, 'validating-output', 'validating'),
+      },
     });
     providerGenerationId = result.providerGenerationId;
-
-    // ── Stage: normalizing-output ────────────────────────────────────────────
-    await setAiRunStage(aiPostTopicRuns, runId, 'normalizing-output', 'validating');
-
-    const persistedTags = await loadPersistedTagsForNormalization();
-
-    // ── Stage: canonicalizing-tags ───────────────────────────────────────────
-    await setAiRunStage(aiPostTopicRuns, runId, 'canonicalizing-tags', 'validating');
-
-    // ── Stage: validating-output ─────────────────────────────────────────────
-    await setAiRunStage(aiPostTopicRuns, runId, 'validating-output', 'validating');
-
-    const parsed = normalizeTopicsResponse(
-      result.object as GenerateTopicsResponse,
-      limit,
-      persistedTags
-    );
 
     // ── Stage: persisting-result ─────────────────────────────────────────────
     await setAiRunStage(aiPostTopicRuns, runId, 'persisting-result', 'validating');
@@ -147,6 +122,9 @@ export async function processAiPostTopicGeneration(job: Job<AiPostTopicJobData>)
       outputTokens: result.outputTokens,
     });
   } catch (err) {
+    providerGenerationId =
+      (err as Error & { providerGenerationId?: string | null }).providerGenerationId ??
+      providerGenerationId;
     const finishedAt = new Date();
     const failure = resolveAiJobFailure(job, err);
     const { errorCode, errorKind, errorMessage, shouldRetry, stage, status } = failure;
