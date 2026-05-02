@@ -10,7 +10,8 @@
  * All step failures are accumulated and re-thrown as `RetentionCleanupError`
  * so BullMQ can retry the job and the error surfaces in observability tooling.
  *
- * Counts are derived via CTE to avoid materialising large arrays of IDs.
+ * Counts are derived via bounded CTE batches to avoid materialising large
+ * arrays of IDs and to keep long-running cleanup locks short.
  */
 
 import { sql } from 'drizzle-orm';
@@ -21,6 +22,82 @@ const logger = getLogger('jobs', 'retention');
 
 const ANONYMIZED_EMAIL = 'anonymized@removed.local';
 const RETENTION_DAYS = 90;
+const RETENTION_BATCH_SIZE = 500;
+
+async function runBatchedCleanup(executeBatch: () => Promise<number>): Promise<number> {
+  let totalAffected = 0;
+
+  while (true) {
+    const batchCount = await executeBatch();
+    totalAffected += batchCount;
+
+    if (batchCount < RETENTION_BATCH_SIZE) {
+      return totalAffected;
+    }
+  }
+}
+
+async function deleteOldContactsBatch(cutoff: Date): Promise<number> {
+  const [row] = await db.execute<{ count: number }>(sql`
+    WITH batch AS (
+      SELECT id
+      FROM contacts
+      WHERE created_at < ${cutoff}
+      ORDER BY created_at ASC
+      LIMIT ${RETENTION_BATCH_SIZE}
+    ),
+    deleted AS (
+      DELETE FROM contacts
+      WHERE id IN (SELECT id FROM batch)
+      RETURNING 1
+    )
+    SELECT COUNT(*)::int AS count FROM deleted
+  `);
+
+  return row?.count ?? 0;
+}
+
+async function anonymizeOldCommentsBatch(cutoff: Date): Promise<number> {
+  const [row] = await db.execute<{ count: number }>(sql`
+    WITH batch AS (
+      SELECT id
+      FROM comments
+      WHERE created_at < ${cutoff}
+        AND author_email != ${ANONYMIZED_EMAIL}
+      ORDER BY created_at ASC
+      LIMIT ${RETENTION_BATCH_SIZE}
+    ),
+    updated AS (
+      UPDATE comments
+      SET author_email = ${ANONYMIZED_EMAIL}
+      WHERE id IN (SELECT id FROM batch)
+      RETURNING 1
+    )
+    SELECT COUNT(*)::int AS count FROM updated
+  `);
+
+  return row?.count ?? 0;
+}
+
+async function deleteOldAnalyticsEventsBatch(cutoff: Date): Promise<number> {
+  const [row] = await db.execute<{ count: number }>(sql`
+    WITH batch AS (
+      SELECT id
+      FROM analytics_events
+      WHERE created_at < ${cutoff}
+      ORDER BY created_at ASC
+      LIMIT ${RETENTION_BATCH_SIZE}
+    ),
+    deleted AS (
+      DELETE FROM analytics_events
+      WHERE id IN (SELECT id FROM batch)
+      RETURNING 1
+    )
+    SELECT COUNT(*)::int AS count FROM deleted
+  `);
+
+  return row?.count ?? 0;
+}
 
 /** Thrown when one or more retention steps fail. Contains all step error messages. */
 export class RetentionCleanupError extends Error {
@@ -50,11 +127,7 @@ export async function processRetention(): Promise<void> {
 
   // 1. Delete contacts older than 90 days
   try {
-    const [row] = await db.execute<{ count: number }>(
-      sql`WITH d AS (DELETE FROM contacts WHERE created_at < ${cutoff} RETURNING 1)
-          SELECT COUNT(*)::int AS count FROM d`
-    );
-    contactsDeleted = row?.count ?? 0;
+    contactsDeleted = await runBatchedCleanup(() => deleteOldContactsBatch(cutoff));
   } catch (err) {
     const msg = (err as Error).message;
     logger.error('Retention: failed to delete old contacts', { error: msg });
@@ -63,17 +136,7 @@ export async function processRetention(): Promise<void> {
 
   // 2. Anonymize author_email on old comments
   try {
-    const [row] = await db.execute<{ count: number }>(
-      sql`WITH d AS (
-            UPDATE comments
-            SET author_email = ${ANONYMIZED_EMAIL}
-            WHERE created_at < ${cutoff}
-              AND author_email != ${ANONYMIZED_EMAIL}
-            RETURNING 1
-          )
-          SELECT COUNT(*)::int AS count FROM d`
-    );
-    commentsAnonymized = row?.count ?? 0;
+    commentsAnonymized = await runBatchedCleanup(() => anonymizeOldCommentsBatch(cutoff));
   } catch (err) {
     const msg = (err as Error).message;
     logger.error('Retention: failed to anonymize comment emails', { error: msg });
@@ -82,11 +145,7 @@ export async function processRetention(): Promise<void> {
 
   // 3. Delete analytics events older than 90 days
   try {
-    const [row] = await db.execute<{ count: number }>(
-      sql`WITH d AS (DELETE FROM analytics_events WHERE created_at < ${cutoff} RETURNING 1)
-          SELECT COUNT(*)::int AS count FROM d`
-    );
-    eventsDeleted = row?.count ?? 0;
+    eventsDeleted = await runBatchedCleanup(() => deleteOldAnalyticsEventsBatch(cutoff));
   } catch (err) {
     const msg = (err as Error).message;
     logger.error('Retention: failed to delete old analytics events', { error: msg });

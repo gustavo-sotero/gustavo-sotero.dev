@@ -47,7 +47,7 @@ These signals are sufficient to detect backlog growth, processing lag, and satur
 The retention worker intentionally keeps its cleanup steps independent, but it no longer reports partial failure as success.
 
 - Contacts cleanup, comment anonymization, and analytics cleanup all run in the same job invocation.
-- Each step records counts, not materialized row IDs, to keep memory use bounded.
+- Each step records counts, not materialized row IDs, and processes cleanup in bounded batches to keep memory use and lock duration bounded.
 - Any failed step is accumulated into a summarized `RetentionCleanupError` after all steps finish.
 - BullMQ therefore marks the job as failed, which preserves retries, alerts, and dashboards for policy-relevant cleanup failures.
 

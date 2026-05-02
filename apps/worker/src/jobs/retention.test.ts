@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 describe('processRetention', () => {
-  it('executes all three retention queries', async () => {
+  it('executes each retention step once when work fits in a single batch', async () => {
     dbExecuteMock
       .mockResolvedValueOnce([{ count: 2 }])
       .mockResolvedValueOnce([{ count: 1 }])
@@ -67,6 +67,27 @@ describe('processRetention', () => {
     await processRetention();
 
     expect(dbExecuteMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('repeats a cleanup step until it sees a partial batch', async () => {
+    dbExecuteMock
+      .mockResolvedValueOnce([{ count: 500 }])
+      .mockResolvedValueOnce([{ count: 2 }])
+      .mockResolvedValueOnce([{ count: 500 }])
+      .mockResolvedValueOnce([{ count: 1 }])
+      .mockResolvedValueOnce([{ count: 0 }]);
+
+    await processRetention();
+
+    expect(dbExecuteMock).toHaveBeenCalledTimes(5);
+    expect(loggerInfoMock).toHaveBeenLastCalledWith(
+      'Retention job completed',
+      expect.objectContaining({
+        contactsDeleted: 502,
+        commentsAnonymized: 501,
+        eventsDeleted: 0,
+      })
+    );
   });
 
   it('handles zero affected rows without error', async () => {
