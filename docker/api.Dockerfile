@@ -20,8 +20,8 @@ FROM oven/bun:slim AS runtime
 WORKDIR /app
 
 # Create a non-root runtime user
-RUN addgroup --system --gid 1001 appgroup \
-  && adduser --system --uid 1001 --ingroup appgroup appuser
+RUN groupadd --system --gid 1001 appgroup \
+  && useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
 # Preserve the Bun workspace manifest/lockfile context used to materialize
 # dependencies inside node_modules/.bun during the install stage.

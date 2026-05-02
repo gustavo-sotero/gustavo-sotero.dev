@@ -32,8 +32,8 @@ WORKDIR /app
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends libvips && rm -rf /var/lib/apt/lists/* \
-  && addgroup --system --gid 1001 appgroup \
-  && adduser --system --uid 1001 --ingroup appgroup appuser
+  && groupadd --system --gid 1001 appgroup \
+  && useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
 # Preserve the Bun workspace manifest/lockfile context used to materialize
 # dependencies inside node_modules/.bun during the install stage.

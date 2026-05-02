@@ -43,8 +43,8 @@ ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
 
 # Create a non-root runtime user
-RUN addgroup --system --gid 1001 appgroup \
-  && adduser --system --uid 1001 --ingroup appgroup appuser
+RUN groupadd --system --gid 1001 appgroup \
+  && useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
 # Copy Next.js standalone output
 COPY --from=builder --chown=appuser:appgroup /app/apps/web/.next/standalone ./
