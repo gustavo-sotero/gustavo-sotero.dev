@@ -7,6 +7,7 @@ export * from './constants/developerProfile';
 export * from './constants/enums';
 export * from './constants/errorCodes';
 export * from './constants/queues';
+export * from './constants/uploads';
 
 // Schemas
 export * from './schemas/ai-post-generation';

@@ -1,4 +1,5 @@
 import { OutboxEventType } from '@portfolio/shared/constants/enums';
+import { MAX_UPLOAD_BYTES } from '@portfolio/shared/constants/uploads';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConflictError, DomainValidationError, NotFoundError } from '../lib/errors';
 
@@ -234,6 +235,21 @@ describe('uploads service', () => {
       status: 'pending',
     });
     statMock.mockResolvedValueOnce({ size: 4096, type: 'image/jpeg' });
+
+    await expect(confirmUpload('upload-1')).rejects.toThrow(DomainValidationError);
+    expect(txInsertValuesMock).not.toHaveBeenCalled();
+  });
+
+  it('confirmUpload rejects objects above the absolute size cap even within tolerance', async () => {
+    findUploadByIdMock.mockResolvedValue({
+      id: 'upload-1',
+      storageKey: 'uploads/2026/02/file.jpg',
+      originalUrl: 'https://cdn.example.com/uploads/2026/02/file.jpg',
+      mime: 'image/jpeg',
+      size: MAX_UPLOAD_BYTES,
+      status: 'pending',
+    });
+    statMock.mockResolvedValueOnce({ size: MAX_UPLOAD_BYTES + 1024, type: 'image/jpeg' });
 
     await expect(confirmUpload('upload-1')).rejects.toThrow(DomainValidationError);
     expect(txInsertValuesMock).not.toHaveBeenCalled();

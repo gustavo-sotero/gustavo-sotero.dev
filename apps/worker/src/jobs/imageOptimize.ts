@@ -12,6 +12,7 @@
  * On error: update status='failed' and rethrow for BullMQ retry/DLQ.
  */
 
+import { MAX_UPLOAD_BYTES } from '@portfolio/shared/constants/uploads';
 import { uploads } from '@portfolio/shared/db/schema';
 import type { Job } from 'bullmq';
 import { eq } from 'drizzle-orm';
@@ -21,9 +22,6 @@ import { getLogger } from '../config/logger';
 import { getPublicUrl, s3 } from '../config/s3';
 
 const logger = getLogger('jobs', 'imageOptimize');
-
-/** Maximum image size the worker will load into memory (5 MiB). */
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /** Accepted image MIME types for processing. */
 const SUPPORTED_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -65,9 +63,9 @@ export async function processImageOptimize(job: Job<ImageOptimizePayload>): Prom
       throw new Error(`Upload object not found in storage: ${key}`);
     }
 
-    if (stat.size > MAX_IMAGE_BYTES) {
+    if (stat.size > MAX_UPLOAD_BYTES) {
       throw new Error(
-        `Upload object exceeds maximum allowed size: ${stat.size} bytes (max ${MAX_IMAGE_BYTES})`
+        `Upload object exceeds maximum allowed size: ${stat.size} bytes (max ${MAX_UPLOAD_BYTES})`
       );
     }
 
@@ -77,11 +75,9 @@ export async function processImageOptimize(job: Job<ImageOptimizePayload>): Prom
     }
 
     if (record.mime && actualMime && actualMime !== record.mime) {
-      logger.warn('MIME mismatch between DB record and S3 object — using S3 MIME', {
-        uploadId,
-        recordMime: record.mime,
-        actualMime,
-      });
+      throw new Error(
+        `Upload object MIME type ${actualMime} does not match upload record MIME type ${record.mime}`
+      );
     }
 
     const originalBytes = await s3.file(key).bytes();

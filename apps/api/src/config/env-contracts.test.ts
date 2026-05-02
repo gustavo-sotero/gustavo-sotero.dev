@@ -22,7 +22,12 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { apiRuntimeFields, databaseFields, loggerFields } from './env.fields';
+import {
+  apiRuntimeFields,
+  applyRedisFallbackDefaults,
+  databaseFields,
+  loggerFields,
+} from './env.fields';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -161,6 +166,35 @@ describe('strict API runtime env parser (schema validation)', () => {
     const result = schema.safeParse(partial);
     expect(result.success).toBe(false);
     expect(result.error?.issues.some((i) => i.path.includes('REDIS_URL'))).toBe(true);
+  });
+
+  it('defaults Redis fallbacks to enabled outside production', () => {
+    const schema = z.object(apiRuntimeFields).transform(applyRedisFallbackDefaults);
+    const result = schema.parse(FULL_RUNTIME_BASE);
+
+    expect(result.RATE_LIMIT_LOCAL_FALLBACK).toBe(true);
+    expect(result.OAUTH_STATE_LOCAL_FALLBACK).toBe(true);
+  });
+
+  it('defaults Redis fallbacks to fail-closed in production', () => {
+    const schema = z.object(apiRuntimeFields).transform(applyRedisFallbackDefaults);
+    const result = schema.parse({ ...FULL_RUNTIME_BASE, NODE_ENV: 'production' });
+
+    expect(result.RATE_LIMIT_LOCAL_FALLBACK).toBe(false);
+    expect(result.OAUTH_STATE_LOCAL_FALLBACK).toBe(false);
+  });
+
+  it('respects explicit Redis fallback overrides in production', () => {
+    const schema = z.object(apiRuntimeFields).transform(applyRedisFallbackDefaults);
+    const result = schema.parse({
+      ...FULL_RUNTIME_BASE,
+      NODE_ENV: 'production',
+      RATE_LIMIT_LOCAL_FALLBACK: 'true',
+      OAUTH_STATE_LOCAL_FALLBACK: 'true',
+    });
+
+    expect(result.RATE_LIMIT_LOCAL_FALLBACK).toBe(true);
+    expect(result.OAUTH_STATE_LOCAL_FALLBACK).toBe(true);
   });
 });
 

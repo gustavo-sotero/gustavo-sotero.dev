@@ -45,11 +45,18 @@ After the proxy strips the `/api` prefix, the API processes the request at `/aut
 During the OAuth flow the API stores a CSRF state token in Redis under a short TTL. If Redis is unavailable, the API can fall back to a process-local in-memory map controlled by:
 
 ```
-OAUTH_STATE_LOCAL_FALLBACK=true   # default — enables in-process fallback
+OAUTH_STATE_LOCAL_FALLBACK=true   # explicit override for single-instance deployments
 OAUTH_STATE_LOCAL_FALLBACK=false  # fail-closed: returns 503 on Redis failure
 ```
 
-The default (`true`) is safe for single-instance deployments. Set it to `false` in multi-replica or zero-downtime-restart environments where in-process state is not shared between instances.
+When omitted, the default is environment-sensitive:
+
+- `development` / `test`: `true`
+- `production`: `false`
+
+This keeps local development resilient while making production fail closed unless an operator explicitly opts into the single-instance fallback.
+
+The same default policy applies to `RATE_LIMIT_LOCAL_FALLBACK`. In production, omitting both variables makes Redis-backed rate limits and OAuth state fail closed by default.
 
 ## Security Notes
 

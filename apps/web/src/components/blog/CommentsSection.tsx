@@ -31,12 +31,14 @@ export function CommentsSection({
   commentCount = 0,
 }: CommentsSectionProps) {
   const router = useRouter();
+  const initialLoadedCount = countNodes(initialComments);
   const [replyTarget, setReplyTarget] = useState<{ id: string; name: string } | null>(null);
   const [loadedComments, setLoadedComments] = useState<PublicCommentNode[]>(initialComments);
   const [loadingMore, setLoadingMore] = useState(false);
-  // Track the next page to fetch (page 1 is already in the initial preview, start at 2)
-  const [nextPage, setNextPage] = useState(2);
-  const [hasMore, setHasMore] = useState(countNodes(initialComments) < commentCount);
+  // The initial preview may span more than one page. Start from the first page
+  // whose trailing edge can contain unseen rows.
+  const [nextPage, setNextPage] = useState(Math.floor(initialLoadedCount / COMMENTS_PER_PAGE) + 1);
+  const [hasMore, setHasMore] = useState(initialLoadedCount < commentCount);
 
   const handleReply = (commentId: string, authorName: string) => {
     setReplyTarget({ id: commentId, name: authorName });
@@ -63,10 +65,11 @@ export function CommentsSection({
         `/posts/${postSlug}/comments?page=${nextPage}&perPage=${COMMENTS_PER_PAGE}`
       );
       const page = res as PaginatedResponse<PublicCommentNode>;
-      setLoadedComments((prev) => [...prev, ...page.data]);
-      setNextPage((p) => p + 1);
-      const loadedFlat = countNodes([...loadedComments, ...page.data]);
-      setHasMore(loadedFlat < commentCount);
+      const mergedComments = mergeCommentTrees(loadedComments, page.data);
+
+      setLoadedComments(mergedComments);
+      setNextPage(page.meta.page + 1);
+      setHasMore(page.meta.page < page.meta.totalPages);
     } catch {
       // Non-fatal — user can retry
     } finally {
@@ -130,4 +133,50 @@ function countNodes(nodes: PublicCommentNode[] | undefined | null): number {
     count += countNodes(node.replies);
   }
   return count;
+}
+
+function flattenComments(nodes: PublicCommentNode[] | undefined | null): PublicCommentNode[] {
+  if (!nodes) return [];
+
+  const flat: PublicCommentNode[] = [];
+
+  for (const node of nodes) {
+    flat.push({ ...node, replies: [] });
+    flat.push(...flattenComments(node.replies));
+  }
+
+  return flat;
+}
+
+function mergeCommentTrees(
+  existing: PublicCommentNode[],
+  incoming: PublicCommentNode[]
+): PublicCommentNode[] {
+  const byId = new Map<string, PublicCommentNode>();
+
+  for (const node of [...flattenComments(existing), ...flattenComments(incoming)]) {
+    byId.set(node.id, { ...node, replies: [] });
+  }
+
+  const orderedNodes = [...byId.values()].sort(
+    (left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt)
+  );
+  const roots: PublicCommentNode[] = [];
+
+  for (const node of orderedNodes) {
+    if (!node.parentCommentId) {
+      roots.push(node);
+      continue;
+    }
+
+    const parent = byId.get(node.parentCommentId);
+    if (parent) {
+      parent.replies.push(node);
+      continue;
+    }
+
+    roots.push(node);
+  }
+
+  return roots;
 }

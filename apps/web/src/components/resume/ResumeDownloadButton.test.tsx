@@ -28,10 +28,15 @@ function createDeferredResponse() {
 
 describe('ResumeDownloadButton', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
+  let createObjectUrlMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     clearResumePdfDownloadCache();
     fetchMock = vi.fn();
+    createObjectUrlMock = vi
+      .fn()
+      .mockReturnValueOnce('blob:resume-pdf-1')
+      .mockReturnValueOnce('blob:resume-pdf-2');
 
     Object.defineProperty(globalThis, 'fetch', {
       value: fetchMock,
@@ -40,7 +45,7 @@ describe('ResumeDownloadButton', () => {
     });
 
     Object.defineProperty(URL, 'createObjectURL', {
-      value: vi.fn(() => 'blob:resume-pdf'),
+      value: createObjectUrlMock,
       configurable: true,
       writable: true,
     });
@@ -88,7 +93,7 @@ describe('ResumeDownloadButton', () => {
     vi.restoreAllMocks();
   });
 
-  it('shows the generating state on the first uncached request and returns to idle afterwards', async () => {
+  it('shows the generating state and refetches on later downloads instead of reusing a stale blob URL', async () => {
     const originalCreateElement = document.createElement.bind(document);
     const anchorClickMock = vi.fn();
     const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(((
@@ -105,7 +110,9 @@ describe('ResumeDownloadButton', () => {
     }) as typeof document.createElement);
 
     const response = createDeferredResponse();
-    fetchMock.mockReturnValue(response.promise);
+    fetchMock
+      .mockReturnValueOnce(response.promise)
+      .mockResolvedValueOnce(new Response('resume-pdf-second', { status: 200 }));
 
     render(<ResumeDownloadButton />);
 
@@ -130,7 +137,8 @@ describe('ResumeDownloadButton', () => {
       expect(anchorClickMock).toHaveBeenCalledTimes(2);
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:resume-pdf-1');
 
     createElementSpy.mockRestore();
   });

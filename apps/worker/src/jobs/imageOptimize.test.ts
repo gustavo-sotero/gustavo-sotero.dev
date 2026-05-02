@@ -1,3 +1,4 @@
+import { MAX_UPLOAD_BYTES } from '@portfolio/shared/constants/uploads';
 import type { Job } from 'bullmq';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -248,6 +249,48 @@ describe('imageOptimize job', () => {
       )
     ).rejects.toThrow('missing storageKey');
 
+    expect(updateSetMock).toHaveBeenCalledWith({ status: 'failed' });
+  });
+
+  it('fails before loading bytes when S3 metadata exceeds the size contract', async () => {
+    selectLimitMock.mockResolvedValue([
+      {
+        id: 'upload-too-large',
+        storageKey: 'uploads/2026/02/original.png',
+        originalUrl: 'https://cdn.example.com/uploads/2026/02/original.png',
+        mime: 'image/png',
+      },
+    ]);
+    statMock.mockResolvedValue({ size: MAX_UPLOAD_BYTES + 1, type: 'image/png' });
+
+    await expect(
+      processImageOptimize(
+        buildJob({ uploadId: 'upload-too-large' }, { attemptsMade: 2, attempts: 3 })
+      )
+    ).rejects.toThrow('maximum allowed size');
+
+    expect(bytesMock).not.toHaveBeenCalled();
+    expect(updateSetMock).toHaveBeenCalledWith({ status: 'failed' });
+  });
+
+  it('fails before loading bytes when S3 MIME does not match the upload record', async () => {
+    selectLimitMock.mockResolvedValue([
+      {
+        id: 'upload-mime-mismatch',
+        storageKey: 'uploads/2026/02/original.png',
+        originalUrl: 'https://cdn.example.com/uploads/2026/02/original.png',
+        mime: 'image/png',
+      },
+    ]);
+    statMock.mockResolvedValue({ size: 1024, type: 'image/jpeg' });
+
+    await expect(
+      processImageOptimize(
+        buildJob({ uploadId: 'upload-mime-mismatch' }, { attemptsMade: 2, attempts: 3 })
+      )
+    ).rejects.toThrow('does not match upload record MIME type');
+
+    expect(bytesMock).not.toHaveBeenCalled();
     expect(updateSetMock).toHaveBeenCalledWith({ status: 'failed' });
   });
 

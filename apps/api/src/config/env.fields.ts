@@ -6,6 +6,30 @@ import {
 } from '@portfolio/shared/constants/ai-posts';
 import { z } from 'zod';
 
+type RedisFallbackDefaultsShape = {
+  NODE_ENV: 'development' | 'production' | 'test';
+  RATE_LIMIT_LOCAL_FALLBACK?: boolean;
+  OAUTH_STATE_LOCAL_FALLBACK?: boolean;
+};
+
+const optionalBooleanFlagField = z
+  .enum(['true', 'false'])
+  .optional()
+  .transform((value) => {
+    if (value === undefined) return undefined;
+    return value === 'true';
+  });
+
+export function applyRedisFallbackDefaults<T extends RedisFallbackDefaultsShape>(data: T) {
+  const fallbackEnabledByDefault = data.NODE_ENV !== 'production';
+
+  return {
+    ...data,
+    RATE_LIMIT_LOCAL_FALLBACK: data.RATE_LIMIT_LOCAL_FALLBACK ?? fallbackEnabledByDefault,
+    OAUTH_STATE_LOCAL_FALLBACK: data.OAUTH_STATE_LOCAL_FALLBACK ?? fallbackEnabledByDefault,
+  };
+}
+
 /**
  * Shared Zod field definitions — single source of truth for validators, messages,
  * and defaults shared across multiple env parsers.
@@ -67,17 +91,11 @@ export const runtimeOnlyFields = {
   // Security
   IP_HASH_SALT: z.string().min(16, 'IP_HASH_SALT must be at least 16 characters'),
   BODY_SIZE_LIMIT: z.coerce.number().default(1_048_576),
-  RATE_LIMIT_LOCAL_FALLBACK: z
-    .enum(['true', 'false'])
-    .default('true')
-    .transform((value) => value === 'true'),
+  RATE_LIMIT_LOCAL_FALLBACK: optionalBooleanFlagField,
   // When false, auth flow fails closed if Redis is unavailable rather than
   // falling back to a single-instance in-memory OAuth state store.
-  // Set to 'false' in production multi-replica deployments.
-  OAUTH_STATE_LOCAL_FALLBACK: z
-    .enum(['true', 'false'])
-    .default('true')
-    .transform((value) => value === 'true'),
+  // Defaults to fail-closed in production and resilient fallback in dev/test.
+  OAUTH_STATE_LOCAL_FALLBACK: optionalBooleanFlagField,
 
   // Admin profile
   ADMIN_DISPLAY_NAME: z.string().min(1).max(100).default('Admin'),

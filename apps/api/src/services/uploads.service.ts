@@ -7,6 +7,7 @@
  */
 
 import { OutboxEventType } from '@portfolio/shared/constants/enums';
+import { MAX_UPLOAD_BYTES } from '@portfolio/shared/constants/uploads';
 import { outbox, uploads } from '@portfolio/shared/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../config/db';
@@ -121,7 +122,7 @@ export async function generatePresignedUrl(input: {
     ]);
   }
 
-  if (!Number.isInteger(input.size) || input.size <= 0 || input.size > 5_242_880) {
+  if (!Number.isInteger(input.size) || input.size <= 0 || input.size > MAX_UPLOAD_BYTES) {
     throw new DomainValidationError('File size must be between 1 byte and 5MB', [
       { field: 'size', message: 'File size must be between 1 byte and 5MB' },
     ]);
@@ -219,6 +220,18 @@ export async function confirmUpload(uploadId: string): Promise<ConfirmedUpload> 
   // to accommodate multi-part upload padding differences).
   const declaredSize = record.size;
   const actualSize = stat.size;
+  if (actualSize > MAX_UPLOAD_BYTES) {
+    logger.warn('Upload confirmation rejected: object exceeds maximum size', {
+      uploadId,
+      actualSize,
+      maxAllowedSize: MAX_UPLOAD_BYTES,
+    });
+    throw new DomainValidationError(
+      `Uploaded file exceeds the maximum allowed size of 5MB (${actualSize} bytes received)`,
+      [{ field: 'size', message: 'Actual file size exceeds the 5MB limit' }]
+    );
+  }
+
   const sizeDelta = Math.abs(actualSize - declaredSize) / Math.max(declaredSize, 1);
   if (sizeDelta > SIZE_TOLERANCE_RATIO) {
     logger.warn('Upload confirmation rejected: size mismatch', {

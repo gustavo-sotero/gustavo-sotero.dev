@@ -23,7 +23,12 @@ import { closeCacheRedis } from './lib/cache';
 import { processOutboxEvents } from './lib/outbox-relay';
 import { createOutboxRelayPollGuard } from './lib/outbox-relay-poll-guard';
 import { logQueueSnapshots } from './lib/queue-observability';
-import { createWorker } from './lib/worker-registry';
+import {
+  collectManagedQueues,
+  collectObservedQueues,
+  createWorkers,
+  defineWorkerSpec,
+} from './lib/worker-registry';
 import {
   aiPostDraftGenerationQueue,
   aiPostTopicGenerationQueue,
@@ -44,102 +49,90 @@ const workerConnection = parseRedisUrl(env.REDIS_URL);
 
 // ── Worker definitions ────────────────────────────────────────────────────────
 
-const telegramWorker = createWorker<TelegramJobPayload>(
-  {
+const workerSpecs = [
+  defineWorkerSpec<TelegramJobPayload>({
     queueName: QUEUE_NAMES.TELEGRAM_NOTIFICATIONS,
+    queue: telegramQueue,
     processor: (job) => processTelegram(job),
     concurrency: 2,
     dlq: {
       queue: telegramDlqQueue,
       jobName: QUEUE_CATALOG.TELEGRAM_NOTIFICATIONS_DLQ.jobName,
+      observedKey: QUEUE_NAMES.TELEGRAM_NOTIFICATIONS_DLQ,
       maxAttempts: 5,
     },
     logLabel: 'Telegram notification',
+    observed: true,
     completedLogFields: (job) => ({ type: job.data.type }),
     failedLogFields: (job) => ({ type: job.data.type }),
-  },
-  workerConnection,
-  logger
-);
-
-const analyticsWorker = createWorker<AnalyticsEventPayload>(
-  {
+  }),
+  defineWorkerSpec<AnalyticsEventPayload>({
     queueName: QUEUE_NAMES.ANALYTICS_EVENTS,
+    queue: analyticsQueue,
     processor: (job) => processAnalytics(job),
     concurrency: 10,
     logLabel: 'Analytics event',
-  },
-  workerConnection,
-  logger
-);
-
-const imageWorker = createWorker<ImageOptimizePayload>(
-  {
+    observed: true,
+  }),
+  defineWorkerSpec<ImageOptimizePayload>({
     queueName: QUEUE_NAMES.IMAGE_OPTIMIZE,
+    queue: imageQueue,
     processor: (job) => processImageOptimize(job),
     concurrency: 2,
     dlq: {
       queue: imageDlqQueue,
       jobName: QUEUE_CATALOG.IMAGE_OPTIMIZE_DLQ.jobName,
+      observedKey: QUEUE_NAMES.IMAGE_OPTIMIZE_DLQ,
       maxAttempts: 3,
     },
     logLabel: 'Image optimize',
+    observed: true,
     completedLogFields: (job) => ({ uploadId: job.data.uploadId }),
     failedLogFields: (job) => ({ uploadId: job.data.uploadId }),
-  },
-  workerConnection,
-  logger
-);
-
-const postPublishWorker = createWorker<PostPublishJobData>(
-  {
+  }),
+  defineWorkerSpec<PostPublishJobData>({
     queueName: QUEUE_NAMES.POST_PUBLISH,
+    queue: postPublishQueue,
     processor: (job, token) => processPostPublish(job, token),
     concurrency: 5,
     logLabel: 'Post-publish',
+    observed: true,
     completedLogFields: (job) => ({ postId: job.data.postId }),
     failedLogFields: (job) => ({ postId: job.data.postId }),
-  },
-  workerConnection,
-  logger
-);
-
-const retentionWorker = createWorker(
-  {
+  }),
+  defineWorkerSpec({
     queueName: QUEUE_NAMES.DATA_RETENTION,
+    queue: retentionQueue,
     processor: () => processRetention(),
     concurrency: 1,
     logLabel: 'Retention',
-  },
-  workerConnection,
-  logger
-);
-
-const aiPostDraftWorker = createWorker<AiPostDraftJobData>(
-  {
+    observed: true,
+  }),
+  defineWorkerSpec<AiPostDraftJobData>({
     queueName: QUEUE_NAMES.AI_POST_DRAFT_GENERATION,
+    queue: aiPostDraftGenerationQueue,
     processor: (job) => processAiPostDraftGeneration(job),
     concurrency: 2,
     logLabel: 'AI draft generation',
+    observed: true,
     completedLogFields: (job) => ({ runId: job.data.runId }),
     failedLogFields: (job) => ({ runId: job.data.runId }),
-  },
-  workerConnection,
-  logger
-);
-
-const aiPostTopicWorker = createWorker<AiPostTopicJobData>(
-  {
+  }),
+  defineWorkerSpec<AiPostTopicJobData>({
     queueName: QUEUE_NAMES.AI_POST_TOPIC_GENERATION,
+    queue: aiPostTopicGenerationQueue,
     processor: (job) => processAiPostTopicGeneration(job),
     concurrency: 2,
     logLabel: 'AI topic generation',
+    observed: true,
     completedLogFields: (job) => ({ runId: job.data.runId }),
     failedLogFields: (job) => ({ runId: job.data.runId }),
-  },
-  workerConnection,
-  logger
-);
+  }),
+] as const;
+
+const workers = createWorkers(workerSpecs, workerConnection, logger);
+const managedQueues = collectManagedQueues(workerSpecs);
+const observedQueues = collectObservedQueues(workerSpecs);
 
 // ── Register repeatable retention job (daily at 03:00 UTC) ───────────────────
 await retentionQueue
@@ -151,15 +144,7 @@ await retentionQueue
   });
 
 logger.info('All workers ready', {
-  queues: [
-    'telegram-notifications',
-    'analytics-events',
-    'image-optimize',
-    'data-retention',
-    'post-publish',
-    'ai-post-draft-generation',
-    'ai-post-topic-generation',
-  ],
+  queues: workerSpecs.map((spec) => spec.queueName),
 });
 
 // ── Transactional Outbox Relay ────────────────────────────────────────────────
@@ -181,17 +166,6 @@ logger.info('All workers ready', {
 const OUTBOX_POLL_INTERVAL_MS = env.OUTBOX_POLL_INTERVAL_MS;
 const QUEUE_OBSERVABILITY_INTERVAL_MS = 60_000;
 const outboxRelayPollGuard = createOutboxRelayPollGuard(logger, OUTBOX_POLL_INTERVAL_MS);
-const observedQueues = [
-  { key: QUEUE_NAMES.TELEGRAM_NOTIFICATIONS, queue: telegramQueue },
-  { key: QUEUE_NAMES.TELEGRAM_NOTIFICATIONS_DLQ, queue: telegramDlqQueue },
-  { key: QUEUE_NAMES.ANALYTICS_EVENTS, queue: analyticsQueue },
-  { key: QUEUE_NAMES.IMAGE_OPTIMIZE, queue: imageQueue },
-  { key: QUEUE_NAMES.IMAGE_OPTIMIZE_DLQ, queue: imageDlqQueue },
-  { key: QUEUE_NAMES.DATA_RETENTION, queue: retentionQueue },
-  { key: QUEUE_NAMES.POST_PUBLISH, queue: postPublishQueue },
-  { key: QUEUE_NAMES.AI_POST_DRAFT_GENERATION, queue: aiPostDraftGenerationQueue },
-  { key: QUEUE_NAMES.AI_POST_TOPIC_GENERATION, queue: aiPostTopicGenerationQueue },
-];
 
 async function runOutboxRelay(): Promise<void> {
   if (!outboxRelayPollGuard.tryStartCycle()) return;
@@ -242,29 +216,10 @@ async function shutdown(signal: string): Promise<void> {
   clearInterval(queueObservabilityInterval);
 
   // Close workers first (stop consuming new jobs)
-  await Promise.allSettled([
-    telegramWorker.close(),
-    analyticsWorker.close(),
-    imageWorker.close(),
-    retentionWorker.close(),
-    postPublishWorker.close(),
-    aiPostDraftWorker.close(),
-    aiPostTopicWorker.close(),
-  ]);
+  await Promise.allSettled(workers.map((worker) => worker.close()));
 
   // Close Queue instances (each holds its own ioredis connection)
-  await Promise.allSettled([
-    telegramQueue.close(),
-    telegramDlqQueue.close(),
-    analyticsQueue.close(),
-    imageQueue.close(),
-    imageDlqQueue.close(),
-    retentionQueue.close(),
-    postPublishQueue.close(),
-    aiPostDraftGenerationQueue.close(),
-    aiPostTopicGenerationQueue.close(),
-    closeCacheRedis(),
-  ]);
+  await Promise.allSettled([...managedQueues.map((queue) => queue.close()), closeCacheRedis()]);
 
   await pgClient.end();
 

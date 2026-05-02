@@ -3,40 +3,7 @@
 import { type MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { RESUME_PDF_FILENAME, RESUME_PDF_PATH } from '@/lib/resume/pdf';
 
-let cachedResumePdfUrl: string | null = null;
 let pendingResumePdfUrlPromise: Promise<string> | null = null;
-let pageHideCleanup: (() => void) | null = null;
-
-function revokeCachedResumePdfUrl() {
-  if (!cachedResumePdfUrl) {
-    return;
-  }
-
-  URL.revokeObjectURL(cachedResumePdfUrl);
-  cachedResumePdfUrl = null;
-}
-
-function clearPageHideCleanup() {
-  if (!pageHideCleanup || typeof window === 'undefined') {
-    return;
-  }
-
-  window.removeEventListener('pagehide', pageHideCleanup);
-  pageHideCleanup = null;
-}
-
-function ensurePageHideCleanup() {
-  if (pageHideCleanup || typeof window === 'undefined') {
-    return;
-  }
-
-  pageHideCleanup = () => {
-    revokeCachedResumePdfUrl();
-    clearPageHideCleanup();
-  };
-
-  window.addEventListener('pagehide', pageHideCleanup, { once: true });
-}
 
 function downloadResumePdf(url: string) {
   const anchor = document.createElement('a');
@@ -46,10 +13,6 @@ function downloadResumePdf(url: string) {
 }
 
 async function getResumePdfUrl(): Promise<string> {
-  if (cachedResumePdfUrl) {
-    return cachedResumePdfUrl;
-  }
-
   if (pendingResumePdfUrlPromise) {
     return pendingResumePdfUrlPromise;
   }
@@ -61,12 +24,7 @@ async function getResumePdfUrl(): Promise<string> {
       }
 
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-
-      cachedResumePdfUrl = url;
-      ensurePageHideCleanup();
-
-      return url;
+      return URL.createObjectURL(blob);
     })
     .finally(() => {
       pendingResumePdfUrlPromise = null;
@@ -77,18 +35,24 @@ async function getResumePdfUrl(): Promise<string> {
 
 export function clearResumePdfDownloadCache() {
   pendingResumePdfUrlPromise = null;
-  revokeCachedResumePdfUrl();
-  clearPageHideCleanup();
 }
 
 export function useResumePdfDownload() {
   const [isPreparing, setIsPreparing] = useState(false);
   const [pendingDownloadUrl, setPendingDownloadUrl] = useState<string | null>(null);
   const isMountedRef = useRef(true);
+  const latestDownloadUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+
+      if (!latestDownloadUrlRef.current) {
+        return;
+      }
+
+      URL.revokeObjectURL(latestDownloadUrlRef.current);
+      latestDownloadUrlRef.current = null;
     };
   }, []);
 
@@ -96,6 +60,12 @@ export function useResumePdfDownload() {
     if (!pendingDownloadUrl) {
       return;
     }
+
+    if (latestDownloadUrlRef.current && latestDownloadUrlRef.current !== pendingDownloadUrl) {
+      URL.revokeObjectURL(latestDownloadUrlRef.current);
+    }
+
+    latestDownloadUrlRef.current = pendingDownloadUrl;
 
     downloadResumePdf(pendingDownloadUrl);
     setPendingDownloadUrl(null);
@@ -117,11 +87,6 @@ export function useResumePdfDownload() {
       }
 
       event.preventDefault();
-
-      if (cachedResumePdfUrl) {
-        setPendingDownloadUrl(cachedResumePdfUrl);
-        return;
-      }
 
       setIsPreparing(true);
 

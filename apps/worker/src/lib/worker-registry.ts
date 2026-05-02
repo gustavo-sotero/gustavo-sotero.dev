@@ -15,12 +15,15 @@
 
 import type { Logger } from '@logtape/logtape';
 import { type ConnectionOptions, type Job, type Queue, Worker } from 'bullmq';
+import type { ObservedQueue } from './queue-observability';
 
 interface DlqSpec {
   /** BullMQ Queue instance for the dead-letter queue. */
   queue: Queue;
   /** Job name used when adding to the DLQ. */
   jobName: string;
+  /** Optional observability key when the DLQ should be included in snapshots. */
+  observedKey?: string;
   /**
    * Maximum attempts before moving to DLQ.
    * Defaults to `job.opts.attempts ?? 3`.
@@ -30,14 +33,24 @@ interface DlqSpec {
 
 export interface WorkerSpec<TData = unknown> {
   queueName: string;
+  queue: Queue;
   processor: (job: Job<TData>, token?: string) => Promise<void>;
   concurrency: number;
   dlq?: DlqSpec;
   logLabel: string;
+  observed?: boolean;
   /** Extra fields to log on job completion. */
   completedLogFields?: (job: Job<TData>) => Record<string, unknown>;
   /** Extra fields to log on job failure. */
   failedLogFields?: (job: Job<TData>) => Record<string, unknown>;
+}
+
+type WorkerTuple<TSpecs extends readonly unknown[]> = {
+  [K in keyof TSpecs]: TSpecs[K] extends WorkerSpec<infer TData> ? Worker<TData> : never;
+};
+
+export function defineWorkerSpec<TData>(spec: WorkerSpec<TData>): WorkerSpec<TData> {
+  return spec;
 }
 
 /**
@@ -100,4 +113,48 @@ export function createWorker<TData = unknown>(
   });
 
   return worker;
+}
+
+export function createWorkers<const TSpecs extends readonly unknown[]>(
+  specs: TSpecs,
+  connection: ConnectionOptions,
+  logger: Logger
+): WorkerTuple<TSpecs> {
+  return specs.map((spec) =>
+    createWorker(spec as WorkerSpec<unknown>, connection, logger)
+  ) as WorkerTuple<TSpecs>;
+}
+
+export function collectObservedQueues(specs: readonly unknown[]): ObservedQueue[] {
+  const observedQueues: ObservedQueue[] = [];
+
+  for (const spec of specs) {
+    const workerSpec = spec as WorkerSpec<unknown>;
+
+    if (workerSpec.observed) {
+      observedQueues.push({ key: workerSpec.queueName, queue: workerSpec.queue });
+    }
+
+    if (workerSpec.dlq?.observedKey) {
+      observedQueues.push({ key: workerSpec.dlq.observedKey, queue: workerSpec.dlq.queue });
+    }
+  }
+
+  return observedQueues;
+}
+
+export function collectManagedQueues(specs: readonly unknown[]): Queue[] {
+  const queues = new Map<string, Queue>();
+
+  for (const spec of specs) {
+    const workerSpec = spec as WorkerSpec<unknown>;
+
+    queues.set(workerSpec.queue.name, workerSpec.queue);
+
+    if (workerSpec.dlq) {
+      queues.set(workerSpec.dlq.queue.name, workerSpec.dlq.queue);
+    }
+  }
+
+  return [...queues.values()];
 }
