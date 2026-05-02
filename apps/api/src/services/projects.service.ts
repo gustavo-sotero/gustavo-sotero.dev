@@ -14,7 +14,11 @@ import { cached, invalidateGroup } from '../lib/cache';
 import { ConflictError } from '../lib/errors';
 import { normalizeProjectImpactFacts } from '../lib/impactFacts';
 import { renderMarkdown } from '../lib/markdown';
-import type { TotalCountQueryOptions } from '../lib/pagination';
+import type {
+  PaginatedListResult,
+  TotalCountQueryOptions,
+  WindowedListResult,
+} from '../lib/pagination';
 import { flattenPivotSkills, resolveSlugTaken } from '../lib/pivotHelpers';
 import { assertSkillsExist, normalizeSkillIds } from '../lib/skillValidation';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
@@ -54,6 +58,21 @@ export interface ProjectListFilters {
   perPage?: string | number;
 }
 
+type ListedProject = ReturnType<typeof flattenPivotSkills>;
+type ProjectListOptions = TotalCountQueryOptions & { summaryOnly?: boolean };
+type WindowedProjectListOptions = { includeTotal: false; summaryOnly?: boolean };
+
+export function listProjects(
+  filters: ProjectListFilters,
+  adminMode: boolean,
+  options: WindowedProjectListOptions
+): Promise<WindowedListResult<ListedProject>>;
+export function listProjects(
+  filters: ProjectListFilters,
+  adminMode?: boolean,
+  options?: ProjectListOptions
+): Promise<PaginatedListResult<ListedProject>>;
+
 /**
  * List projects (admin: all statuses; public: only published+non-deleted).
  * Results are cached for public reads.
@@ -61,8 +80,8 @@ export interface ProjectListFilters {
 export async function listProjects(
   filters: ProjectListFilters,
   adminMode = false,
-  options: TotalCountQueryOptions & { summaryOnly?: boolean } = {}
-) {
+  options: ProjectListOptions = {}
+): Promise<PaginatedListResult<ListedProject> | WindowedListResult<ListedProject>> {
   if (adminMode) {
     const result = await findManyProjects(filters, true, options);
     return { ...result, data: result.data.map(flattenPivotSkills) };

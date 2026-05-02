@@ -4,8 +4,10 @@ import { db } from '../config/db';
 import {
   buildPaginationMeta,
   buildWindowedResult,
+  type PaginatedListResult,
   parsePagination,
   type TotalCountQueryOptions,
+  type WindowedListResult,
 } from '../lib/pagination';
 import type { DbOrTx } from './tags.repo';
 
@@ -74,6 +76,17 @@ async function querySkillRows(filters: SkillFilters = {}, probeNextPage = false)
 
   return { rows, page, perPage, where };
 }
+
+type SkillRow = typeof skills.$inferSelect;
+
+export function findManySkills(
+  filters: SkillFilters,
+  options: { includeTotal: false }
+): Promise<WindowedListResult<SkillRow>>;
+export function findManySkills(
+  filters?: SkillFilters,
+  options?: TotalCountQueryOptions
+): Promise<PaginatedListResult<SkillRow>>;
 
 export async function findManySkills(
   filters: SkillFilters = {},

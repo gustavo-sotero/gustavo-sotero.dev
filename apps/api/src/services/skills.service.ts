@@ -13,7 +13,11 @@ import type {
 import type { Skill } from '@portfolio/shared/types/skills';
 import { cached, invalidateGroup } from '../lib/cache';
 import { ConflictError, HighlightLimitError } from '../lib/errors';
-import type { TotalCountQueryOptions } from '../lib/pagination';
+import type {
+  PaginatedListResult,
+  TotalCountQueryOptions,
+  WindowedListResult,
+} from '../lib/pagination';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
 import type { SkillFilters } from '../repositories/skills.repo';
 import {
@@ -64,11 +68,22 @@ export interface SkillListFilters {
   perPage?: string | number;
 }
 
+export function listSkills(
+  filters: SkillListFilters,
+  useCache: boolean,
+  options: { includeTotal: false }
+): Promise<WindowedListResult<Skill>>;
+export function listSkills(
+  filters?: SkillListFilters,
+  useCache?: boolean,
+  options?: TotalCountQueryOptions
+): Promise<PaginatedListResult<Skill>>;
+
 export async function listSkills(
   filters: SkillListFilters = {},
   useCache = false,
   options: TotalCountQueryOptions = {}
-) {
+): Promise<PaginatedListResult<Skill> | WindowedListResult<Skill>> {
   if (useCache) {
     const key = `skills:public:page=${filters.page ?? 1}:perPage=${filters.perPage ?? 100}:category=${filters.category ?? ''}:highlighted=${String(filters.highlighted ?? '')}:includeTotal=${options.includeTotal === false ? '0' : '1'}`;
     return cached(key, LIST_TTL, async () => {

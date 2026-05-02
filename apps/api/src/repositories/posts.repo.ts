@@ -4,8 +4,10 @@ import { db } from '../config/db';
 import {
   buildPaginationMeta,
   buildWindowedResult,
+  type PaginatedListResult,
   parsePagination,
   type TotalCountQueryOptions,
+  type WindowedListResult,
 } from '../lib/pagination';
 import type { DbOrTx } from './tags.repo';
 
@@ -89,6 +91,10 @@ async function queryPostRows(
   return { rows, page, perPage, where };
 }
 
+type PostListRow = Awaited<ReturnType<typeof queryPostRows>>['rows'][number];
+type PostListOptions = TotalCountQueryOptions & { summaryOnly?: boolean };
+type WindowedPostListOptions = { includeTotal: false; summaryOnly?: boolean };
+
 /**
  * Find a published post by ID for public consumption.
  * Returns `{ id, title }` or `null` when not found or not publicly visible.
@@ -110,8 +116,18 @@ export async function findPublicPostById(
  */
 export async function findManyPosts(
   filters: PostFilters,
+  adminMode: boolean,
+  options: WindowedPostListOptions
+): Promise<WindowedListResult<PostListRow>>;
+export async function findManyPosts(
+  filters: PostFilters,
+  adminMode?: boolean,
+  options?: PostListOptions
+): Promise<PaginatedListResult<PostListRow>>;
+export async function findManyPosts(
+  filters: PostFilters,
   adminMode = false,
-  options: TotalCountQueryOptions & { summaryOnly?: boolean } = {}
+  options: PostListOptions = {}
 ) {
   const { rows, page, perPage, where } = await queryPostRows(
     filters,

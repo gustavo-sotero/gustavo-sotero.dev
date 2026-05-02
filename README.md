@@ -211,6 +211,10 @@ bun run dev:web      # Web em http://localhost:3001
 | `bun run check`                | Lint + format com auto-fix                         |
 | `bun run test`                 | Executa todos os testes do workspace               |
 | `bun run test:services`        | Sobe a infraestrutura de teste isolada             |
+| `bun run build`                | Executa os smokes de build de API/worker + build web |
+| `bun run build:api`            | Smoke de build da API (`tsc --noEmit`)             |
+| `bun run build:worker`         | Smoke de build do worker (`tsc --noEmit`)          |
+| `bun run build:web`            | Build de produção do app Next.js                   |
 
 > Use sempre `bun run test`, nunca `bun test` diretamente. O monorepo depende de configurações per-workspace do Vitest (`jsdom`, setup files, aliases de módulo). Executar o test runner nativo do Bun diretamente gera falhas enganosas como `document is not defined`.
 
@@ -233,9 +237,17 @@ Isso garante que migrações e audits de schema possam rodar em pipelines de CI 
 
 ### Guardrails de entrega
 
-- O workflow principal de CI valida `lint`, `type-check`, `test`, `api-schema-smoke` e `build` do app web.
+- O workflow principal de CI valida `lint`, `type-check`, `test`, `api-schema-smoke`, `build:api`, `build:worker`, `build:web`, Docker builds de `api`/`worker`/`web` e `docker compose config`.
 - Pull requests também passam por workflows dedicados de `dependency review`, `secret scan` e `CodeQL` versionados no repositório.
 - O build web usa `.env` stubado em CI só para satisfazer o contrato de env do Next.js; nenhum segredo real é necessário para a validação estrutural do build.
+- As imagens de runtime de API, worker e web executam como usuário não-root (`appuser`).
+
+### Docker e readiness em produção
+
+- `docker-compose.yml` define healthchecks para os três serviços de runtime.
+- A API usa `GET /ready` como probe de readiness; esse endpoint valida PostgreSQL, Redis e paridade de schema.
+- O worker usa um healthcheck de processo (`pgrep`) para evitar probes caros a cada poucos segundos; a validação profunda continua concentrada no startup e na readiness da API.
+- O web usa um probe HTTP local no próprio container.
 
 ---
 
@@ -256,10 +268,12 @@ Chamadas server-side resolvem a URL base com a seguinte precedência:
 1. `API_INTERNAL_URL` (rede interna, preferencial)
 2. `NEXT_PUBLIC_API_URL` (fallback público)
 
+Em produção, URLs públicas expostas ao browser ou ao proxy (`ALLOWED_ORIGIN`, `API_PUBLIC_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_S3_PUBLIC_DOMAIN`) devem usar `https://`. A exceção intencional é `API_INTERNAL_URL=http://api:3000` dentro da rede Docker.
+
 ### Flags opcionais de ambiente local
 
 - `RATE_LIMIT_LOCAL_FALLBACK=true` — mantém o rate limiting disponível quando o Redis está indisponível usando um fallback in-memory por processo. **Seguro apenas em instância única.** Em produção com múltiplas réplicas, use `false` para que a falha do Redis retorne `503`.
-- **Estado OAuth:** quando o Redis está indisponível, tokens de state do OAuth caem para uma store in-memory local. Seguro apenas em instância única; em múltiplas réplicas um callback roteado para outra réplica falhará com erro de state inválido.
+- `OAUTH_STATE_LOCAL_FALLBACK=true` — mantém o state do OAuth em memória local quando o Redis falha. **Seguro apenas em instância única.** Em produção com múltiplas réplicas, use `false` para falhar fechado com `503` em vez de aceitar uma store local não compartilhada.
 
 ### Assistente de geração de posts com IA
 

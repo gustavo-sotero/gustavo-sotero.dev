@@ -1,9 +1,7 @@
-import { createContactSchema } from '@portfolio/shared/schemas/contacts';
 import { Hono } from 'hono';
+import { DomainValidationError } from '../../lib/errors';
 import { parseBodyResult } from '../../lib/requestBody';
 import { errorResponse, successResponse } from '../../lib/response';
-import { validateTurnstile } from '../../lib/turnstile';
-import { validateBody } from '../../lib/validate';
 import { createRateLimit, getClientIp } from '../../middleware/rateLimit';
 import { submitContact } from '../../services/contact.service';
 import type { AppEnv } from '../../types/index';
@@ -28,40 +26,21 @@ contactRouter.post('/', contactRateLimit, async (c) => {
     );
   }
 
-  const body = bodyResult.data;
+  try {
+    const result = await submitContact({
+      body: bodyResult.data,
+      ip: getClientIp(c),
+      requestId: c.get('requestId') as string | undefined,
+    });
 
-  // Honeypot check — bots typically fill hidden fields; silently reject without persisting
-  if (
-    body &&
-    typeof body === 'object' &&
-    'website' in body &&
-    typeof body.website === 'string' &&
-    body.website.trim().length > 0
-  ) {
-    return successResponse(c, { message: 'Message received' }, 201);
+    return successResponse(c, result, 201);
+  } catch (err) {
+    if (err instanceof DomainValidationError) {
+      return errorResponse(c, 400, 'VALIDATION_ERROR', err.message, err.details);
+    }
+
+    throw err;
   }
-
-  const bv = validateBody(c, createContactSchema, bodyResult);
-  if (!bv.ok) return bv.response;
-
-  const payload = bv.data;
-
-  // Validate Turnstile token
-  const ip = getClientIp(c);
-  const turnstileValid = await validateTurnstile(payload.turnstileToken, ip, {
-    requestId: c.get('requestId'),
-  });
-  if (!turnstileValid) {
-    return errorResponse(c, 400, 'VALIDATION_ERROR', 'Security verification failed');
-  }
-
-  await submitContact({
-    name: payload.name,
-    email: payload.email,
-    message: payload.message,
-  });
-
-  return successResponse(c, { message: 'Message sent successfully' }, 201);
 });
 
 export { contactRouter };

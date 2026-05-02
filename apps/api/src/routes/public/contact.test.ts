@@ -1,16 +1,12 @@
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { expectErrorEnvelope } from '../../test/expectErrorEnvelope';
+import { DomainValidationError } from '../../lib/errors';
 
-const { createRateLimitMock, submitContactMock, validateTurnstileMock, getClientIpMock } =
-  vi.hoisted(() => ({
-    createRateLimitMock: vi.fn(
-      () => async (_c: unknown, next: () => Promise<void>) => await next()
-    ),
-    submitContactMock: vi.fn(),
-    validateTurnstileMock: vi.fn().mockResolvedValue(true),
-    getClientIpMock: vi.fn().mockReturnValue('203.0.113.10'),
-  }));
+const { createRateLimitMock, submitContactMock, getClientIpMock } = vi.hoisted(() => ({
+  createRateLimitMock: vi.fn(() => async (_c: unknown, next: () => Promise<void>) => await next()),
+  submitContactMock: vi.fn(),
+  getClientIpMock: vi.fn().mockReturnValue('203.0.113.10'),
+}));
 
 vi.mock('../../middleware/rateLimit', () => ({
   createRateLimit: createRateLimitMock,
@@ -21,26 +17,22 @@ vi.mock('../../services/contact.service', () => ({
   submitContact: submitContactMock,
 }));
 
-vi.mock('../../lib/turnstile', () => ({
-  validateTurnstile: validateTurnstileMock,
-}));
-
 import { contactRouter } from './contact';
 
 describe('public contact route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    submitContactMock.mockResolvedValue(undefined);
+    submitContactMock.mockResolvedValue({ message: 'Message sent successfully' });
   });
 
-  it('returns 400 when body validation fails', async () => {
+  it('returns 400 when request body parsing fails', async () => {
     const app = new Hono();
     app.route('/contact', contactRouter);
 
     const response = await app.request('/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: '{',
     });
 
     const body = (await response.json()) as {
@@ -53,7 +45,44 @@ describe('public contact route', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('returns fake success and skips insert when honeypot is filled', async () => {
+  it('maps service validation errors to 400 responses', async () => {
+    submitContactMock.mockRejectedValueOnce(
+      new DomainValidationError('Invalid request body', [
+        { field: 'name', message: 'Too small: expected string to have >=2 characters' },
+      ])
+    );
+
+    const app = new Hono();
+    app.route('/contact', contactRouter);
+
+    const response = await app.request('/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toMatchObject({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        type: 'validation',
+        message: 'Invalid request body',
+        details: [
+          {
+            field: 'name',
+            message: 'Too small: expected string to have >=2 characters',
+          },
+        ],
+      },
+    });
+  });
+
+  it('returns fake success when the service short-circuits honeypot submissions', async () => {
+    submitContactMock.mockResolvedValueOnce({ message: 'Message received' });
+
     const app = new Hono();
     app.route('/contact', contactRouter);
 
@@ -78,31 +107,6 @@ describe('public contact route', () => {
         message: 'Message received',
       },
     });
-    expect(submitContactMock).not.toHaveBeenCalled();
-  });
-
-  it('returns 400 when turnstile validation fails', async () => {
-    validateTurnstileMock.mockResolvedValueOnce(false);
-
-    const app = new Hono();
-    app.route('/contact', contactRouter);
-
-    const response = await app.request('/contact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Tester',
-        email: 'tester@example.com',
-        message: 'Mensagem suficientemente longa para passar validação.',
-        turnstileToken: 'invalid-token',
-      }),
-    });
-
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expectErrorEnvelope(body, 'VALIDATION_ERROR', 'Security verification failed');
-    expect(submitContactMock).not.toHaveBeenCalled();
   });
 
   it('creates contact on valid payload', async () => {
@@ -129,10 +133,16 @@ describe('public contact route', () => {
         message: 'Message sent successfully',
       },
     });
+
     expect(submitContactMock).toHaveBeenCalledWith({
-      name: 'Tester',
-      email: 'tester@example.com',
-      message: 'Mensagem suficientemente longa para passar validação.',
+      body: {
+        name: 'Tester',
+        email: 'tester@example.com',
+        message: 'Mensagem suficientemente longa para passar validação.',
+        turnstileToken: 'token',
+      },
+      ip: '203.0.113.10',
+      requestId: undefined,
     });
   });
 });

@@ -4,8 +4,10 @@ import { db } from '../config/db';
 import {
   buildPaginationMeta,
   buildWindowedResult,
+  type PaginatedListResult,
   parsePagination,
   type TotalCountQueryOptions,
+  type WindowedListResult,
 } from '../lib/pagination';
 import type { DbOrTx } from './tags.repo';
 
@@ -86,14 +88,28 @@ async function queryProjectRows(
   return { rows, page, perPage, where };
 }
 
+type ProjectListRow = Awaited<ReturnType<typeof queryProjectRows>>['rows'][number];
+type ProjectListOptions = TotalCountQueryOptions & { summaryOnly?: boolean };
+type WindowedProjectListOptions = { includeTotal: false; summaryOnly?: boolean };
+
 /**
  * List projects for public consumption (published + not deleted)
  * or admin (all statuses, filter optional).
  */
 export async function findManyProjects(
   filters: ProjectFilters,
+  adminMode: boolean,
+  options: WindowedProjectListOptions
+): Promise<WindowedListResult<ProjectListRow>>;
+export async function findManyProjects(
+  filters: ProjectFilters,
+  adminMode?: boolean,
+  options?: ProjectListOptions
+): Promise<PaginatedListResult<ProjectListRow>>;
+export async function findManyProjects(
+  filters: ProjectFilters,
   adminMode = false,
-  options: TotalCountQueryOptions & { summaryOnly?: boolean } = {}
+  options: ProjectListOptions = {}
 ) {
   const { rows, page, perPage, where } = await queryProjectRows(
     filters,

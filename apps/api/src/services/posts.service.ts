@@ -14,7 +14,11 @@ import { db } from '../config/db';
 import { cached, invalidateGroup } from '../lib/cache';
 import { ConflictError } from '../lib/errors';
 import { renderMarkdown } from '../lib/markdown';
-import type { TotalCountQueryOptions } from '../lib/pagination';
+import type {
+  PaginatedListResult,
+  TotalCountQueryOptions,
+  WindowedListResult,
+} from '../lib/pagination';
 import { flattenPivotTags, resolveSlugTaken } from '../lib/pivotHelpers';
 import { cancelScheduledPostPublish } from '../lib/queues';
 import { ensureUniqueSlug, generateSlug } from '../lib/slug';
@@ -54,6 +58,21 @@ export interface PostListFilters {
   perPage?: string | number;
 }
 
+type ListedPost = ReturnType<typeof flattenPivotTags>;
+type PostListOptions = TotalCountQueryOptions & { summaryOnly?: boolean };
+type WindowedPostListOptions = { includeTotal: false; summaryOnly?: boolean };
+
+export function listPosts(
+  filters: PostListFilters,
+  adminMode: boolean,
+  options: WindowedPostListOptions
+): Promise<WindowedListResult<ListedPost>>;
+export function listPosts(
+  filters: PostListFilters,
+  adminMode?: boolean,
+  options?: PostListOptions
+): Promise<PaginatedListResult<ListedPost>>;
+
 /**
  * List posts (admin: all statuses; public: only published+non-deleted).
  * Results are cached for public reads.
@@ -61,8 +80,8 @@ export interface PostListFilters {
 export async function listPosts(
   filters: PostListFilters,
   adminMode = false,
-  options: TotalCountQueryOptions & { summaryOnly?: boolean } = {}
-) {
+  options: PostListOptions = {}
+): Promise<PaginatedListResult<ListedPost> | WindowedListResult<ListedPost>> {
   if (adminMode) {
     const result = await findManyPosts(filters, true, options);
     return { ...result, data: result.data.map(flattenPivotTags) };

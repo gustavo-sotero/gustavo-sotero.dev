@@ -15,6 +15,16 @@ export interface TotalCountQueryOptions {
   includeTotal?: boolean;
 }
 
+export interface PaginatedListResult<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
+export interface WindowedListResult<T> {
+  data: T[];
+  meta: WindowedPaginationMeta;
+}
+
 /**
  * Parse pagination query params from raw query object.
  * Applies defaults and enforces max perPage.
@@ -72,7 +82,7 @@ export function buildWindowedResult<T>(
   rows: T[],
   page: number,
   perPage: number
-): { data: T[]; meta: WindowedPaginationMeta } {
+): WindowedListResult<T> {
   const hasNextPage = rows.length > perPage;
 
   return {

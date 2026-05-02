@@ -42,10 +42,35 @@ After each poll cycle the relay emits a structured log entry (`Outbox relay: cyc
 
 These signals are sufficient to detect backlog growth, processing lag, and saturation before tuning `OUTBOX_POLL_INTERVAL_MS` or batch size.
 
+## Retention Job Failure Semantics
+
+The retention worker intentionally keeps its cleanup steps independent, but it no longer reports partial failure as success.
+
+- Contacts cleanup, comment anonymization, and analytics cleanup all run in the same job invocation.
+- Each step records counts, not materialized row IDs, to keep memory use bounded.
+- Any failed step is accumulated into a summarized `RetentionCleanupError` after all steps finish.
+- BullMQ therefore marks the job as failed, which preserves retries, alerts, and dashboards for policy-relevant cleanup failures.
+
 ## Retry and Terminal Policy
 
 - **Transient provider failures** (AI jobs): `shouldRetryProviderFailure` allows BullMQ retry while `job.attemptsMade < job.opts.attempts`. Both draft and topic jobs use this shared helper from `apps/worker/src/lib/ai-job-utils.ts`.
 - **Terminal failures** (non-retryable errors): both draft and topic jobs persist a terminal DB state (`failed` or `timed_out`) then throw `UnrecoverableError` to prevent further BullMQ retries.
+
+## Telegram Delivery Timeout
+
+Telegram notifications are wrapped in a bounded HTTP timeout.
+
+- `TELEGRAM_TIMEOUT_MS` controls the worker-side timeout (default `10000`).
+- Timeout failures propagate to BullMQ so retries and DLQ policy continue to work.
+- A slow Telegram API response no longer occupies worker concurrency indefinitely.
+
+## Worker Healthchecks
+
+Production Compose uses a lightweight worker healthcheck instead of a deep queue operation.
+
+- The worker container is considered healthy when the main worker process is present.
+- API readiness (`GET /ready`) remains the deeper dependency check for PostgreSQL, Redis, and schema parity.
+- This split keeps recurring health probes cheap while still surfacing real dependency failures through startup and API readiness.
 
 ## Schema Ownership
 
