@@ -1,9 +1,9 @@
 import 'server-only';
-import type { PaginationMeta } from '@portfolio/shared/types/api';
+import type { WindowedPaginationMeta } from '@portfolio/shared/types/api';
 import type { Comment } from '@portfolio/shared/types/comments';
 import type { Post } from '@portfolio/shared/types/posts';
 import { cacheLife, cacheTag } from 'next/cache';
-import { ApiNotFoundError, apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
+import { ApiNotFoundError, apiServerGet, apiServerGetWindowed } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';
 import { TAG_POSTS_LIST, tagPostDetail } from './cache-tags';
 
@@ -17,7 +17,7 @@ import { TAG_POSTS_LIST, tagPostDetail } from './cache-tags';
  * - `degraded` — API was unreachable; render a visible unavailable state.
  */
 export type PostsListResult =
-  | { state: 'ok' | 'empty'; data: Post[]; meta: PaginationMeta }
+  | { state: 'ok' | 'empty'; data: Post[]; meta: WindowedPaginationMeta }
   | { state: 'degraded' };
 
 // ─── List ─────────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ export async function getPublicPosts(params: PostsListParams = {}): Promise<Post
   if (params.tag) qs.set('tag', params.tag);
 
   try {
-    const res = await apiServerGetPaginated<Post>(`/posts?${qs}`);
+    const res = await apiServerGetWindowed<Post>(`/posts?${qs}`);
     return {
       state: res.data.length > 0 ? 'ok' : 'empty',
       data: res.data,

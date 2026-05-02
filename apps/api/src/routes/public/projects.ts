@@ -8,7 +8,7 @@
 
 import { projectQuerySchema } from '@portfolio/shared/schemas/projects';
 import { Hono } from 'hono';
-import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import { errorResponse, successResponse, windowedResponse } from '../../lib/response';
 import { validateQuery } from '../../lib/validate';
 import { getProjectBySlug, listProjects } from '../../services/projects.service';
 import type { AppEnv } from '../../types/index';
@@ -17,7 +17,8 @@ const publicProjectsRouter = new Hono<AppEnv>();
 
 /**
  * GET /projects
- * Returns paginated published projects. Supports `?page`, `?perPage`, `?skill`, `?featured`.
+ * Returns published projects with previous/next navigation metadata.
+ * Supports `?page`, `?perPage`, `?skill`, `?featured`.
  * Results are cached (TTL 5 min).
  */
 publicProjectsRouter.get('/', async (c) => {
@@ -32,7 +33,7 @@ publicProjectsRouter.get('/', async (c) => {
 
   // Skip COUNT(*) and heavy content fields — not needed for list cards.
   const result = await listProjects(qv.data, false, { includeTotal: false, summaryOnly: true });
-  return paginatedResponse(c, result.data, result.meta);
+  return windowedResponse(c, result.data, result.meta);
 });
 
 /**

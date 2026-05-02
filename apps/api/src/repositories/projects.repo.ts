@@ -3,6 +3,7 @@ import { and, count, eq, exists, isNull, type SQL, sql } from 'drizzle-orm';
 import { db } from '../config/db';
 import {
   buildPaginationMeta,
+  buildWindowedResult,
   parsePagination,
   type TotalCountQueryOptions,
 } from '../lib/pagination';
@@ -60,14 +61,19 @@ function resolveProjectListState(filters: ProjectFilters, adminMode: boolean) {
   };
 }
 
-async function queryProjectRows(filters: ProjectFilters, adminMode: boolean, summaryOnly = false) {
+async function queryProjectRows(
+  filters: ProjectFilters,
+  adminMode: boolean,
+  summaryOnly = false,
+  probeNextPage = false
+) {
   const { page, perPage, offset, limit, where } = resolveProjectListState(filters, adminMode);
   const rows = await db.query.projects.findMany({
     where,
     orderBy: filters.featuredFirst
       ? sql`${projects.featured} DESC, ${projects.order} ASC, ${projects.createdAt} DESC`
       : sql`${projects.createdAt} DESC`,
-    limit,
+    limit: limit + (probeNextPage ? 1 : 0),
     offset,
     ...(summaryOnly ? { columns: { content: false, renderedContent: false } } : {}),
     with: {
@@ -92,14 +98,12 @@ export async function findManyProjects(
   const { rows, page, perPage, where } = await queryProjectRows(
     filters,
     adminMode,
-    options.summaryOnly
+    options.summaryOnly,
+    options.includeTotal === false
   );
 
   if (options.includeTotal === false) {
-    return {
-      data: rows,
-      meta: buildPaginationMeta(rows.length, page, perPage),
-    };
+    return buildWindowedResult(rows, page, perPage);
   }
 
   const countResult = await db.select({ total: count() }).from(projects).where(where);

@@ -78,7 +78,7 @@ describe('BlogPage', () => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-const defaultMeta = { page: 1, perPage: 9, total: 2, totalPages: 1 };
+const defaultMeta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
 
 describe('BlogContent', () => {
   beforeEach(() => {
@@ -154,7 +154,7 @@ describe('BlogContent', () => {
     mockGetPublicPosts.mockResolvedValue({
       state: 'empty',
       data: [],
-      meta: { page: 1, perPage: 9, total: 0, totalPages: 0 },
+      meta: { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false },
     });
     mockGetBlogTags.mockResolvedValue({ state: 'empty', data: [] });
 
@@ -163,6 +163,24 @@ describe('BlogContent', () => {
 
     expect(screen.getByText(/nenhum artigo encontrado/i)).toBeDefined();
     expect(screen.queryByTestId('post-card')).toBeNull();
+  });
+
+  it('renders previous/next navigation from windowed metadata', async () => {
+    const posts = [{ id: 1, title: 'Post Alpha', slug: 'post-alpha' }];
+    mockGetPublicPosts.mockResolvedValue({
+      state: 'ok',
+      data: posts,
+      meta: { page: 2, perPage: 9, hasNextPage: true, hasPreviousPage: true },
+    });
+    mockGetBlogTags.mockResolvedValue({ state: 'ok', data: [] });
+
+    const element = await BlogContent({ currentPage: 2, sort: 'recentes' });
+    render(element as React.ReactElement);
+
+    expect(screen.getByRole('navigation', { name: /paginação do blog/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /anterior/i })).toHaveAttribute('href', '/blog');
+    expect(screen.getByRole('link', { name: /próxima/i })).toHaveAttribute('href', '/blog?page=3');
+    expect(screen.getByText(/página 2/i)).toBeInTheDocument();
   });
 
   it('does not throw when API is unavailable (simulates build-time API offline)', async () => {

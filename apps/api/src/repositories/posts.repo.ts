@@ -3,6 +3,7 @@ import { and, count, eq, exists, isNull, lte, type SQL, sql } from 'drizzle-orm'
 import { db } from '../config/db';
 import {
   buildPaginationMeta,
+  buildWindowedResult,
   parsePagination,
   type TotalCountQueryOptions,
 } from '../lib/pagination';
@@ -62,7 +63,12 @@ function resolvePostListState(filters: PostFilters, adminMode: boolean) {
   };
 }
 
-async function queryPostRows(filters: PostFilters, adminMode: boolean, summaryOnly = false) {
+async function queryPostRows(
+  filters: PostFilters,
+  adminMode: boolean,
+  summaryOnly = false,
+  probeNextPage = false
+) {
   const { page, perPage, offset, limit, where } = resolvePostListState(filters, adminMode);
   const rows = await db.query.posts.findMany({
     where,
@@ -70,7 +76,7 @@ async function queryPostRows(filters: PostFilters, adminMode: boolean, summaryOn
       filters.sort === 'manual'
         ? sql`${posts.order} ASC, ${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`
         : sql`${posts.publishedAt} DESC NULLS LAST, ${posts.createdAt} DESC`,
-    limit,
+    limit: limit + (probeNextPage ? 1 : 0),
     offset,
     ...(summaryOnly ? { columns: { content: false, renderedContent: false } } : {}),
     with: {
@@ -110,14 +116,12 @@ export async function findManyPosts(
   const { rows, page, perPage, where } = await queryPostRows(
     filters,
     adminMode,
-    options.summaryOnly
+    options.summaryOnly,
+    options.includeTotal === false
   );
 
   if (options.includeTotal === false) {
-    return {
-      data: rows,
-      meta: buildPaginationMeta(rows.length, page, perPage),
-    };
+    return buildWindowedResult(rows, page, perPage);
   }
 
   const countResult = await db.select({ total: count() }).from(posts).where(where);

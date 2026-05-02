@@ -1,4 +1,4 @@
-import type { PaginationMeta } from '@portfolio/shared/types/api';
+import type { PaginationMeta, WindowedPaginationMeta } from '@portfolio/shared/types/api';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 20;
@@ -46,5 +46,37 @@ export function buildPaginationMeta(total: number, page: number, perPage: number
     perPage,
     total,
     totalPages: Math.ceil(total / perPage),
+  };
+}
+
+/**
+ * Build pagination metadata for no-count list endpoints.
+ */
+export function buildWindowedPaginationMeta(
+  page: number,
+  perPage: number,
+  hasNextPage: boolean
+): WindowedPaginationMeta {
+  return {
+    page,
+    perPage,
+    hasNextPage,
+    hasPreviousPage: page > 1,
+  };
+}
+
+/**
+ * Trim a `perPage + 1` probe row and expose truthful next/previous navigation.
+ */
+export function buildWindowedResult<T>(
+  rows: T[],
+  page: number,
+  perPage: number
+): { data: T[]; meta: WindowedPaginationMeta } {
+  const hasNextPage = rows.length > perPage;
+
+  return {
+    data: hasNextPage ? rows.slice(0, perPage) : rows,
+    meta: buildWindowedPaginationMeta(page, perPage, hasNextPage),
   };
 }

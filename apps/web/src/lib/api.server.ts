@@ -7,7 +7,12 @@ import {
   isErrorCode,
   isErrorType,
 } from '@portfolio/shared/constants/errorCodes';
-import type { ApiError, ApiResponse, PaginatedResponse } from '@portfolio/shared/types/api';
+import type {
+  ApiError,
+  ApiResponse,
+  PaginatedResponse,
+  WindowedResponse,
+} from '@portfolio/shared/types/api';
 import { resolveServerApiBaseUrl } from '@/lib/api-base-url.server';
 
 /** Thrown when the API responds with a non-2xx, non-404 status. Preserves code and status. */
@@ -161,4 +166,17 @@ export async function apiServerGetPaginated<T>(
   const url = `${resolveServerApiBaseUrl()}${path}`;
   const res = await fetchWithTimeout(url, { ...fetchInit, method: 'GET' }, timeoutMs);
   return parseResponse<PaginatedResponse<T>>(res, path);
+}
+
+/**
+ * Fetch a list response that exposes previous/next navigation without total counts.
+ */
+export async function apiServerGetWindowed<T>(
+  path: string,
+  init?: RequestInit & { timeoutMs?: number }
+): Promise<WindowedResponse<T>> {
+  const { timeoutMs = DEFAULT_SERVER_TIMEOUT_MS, ...fetchInit } = init ?? {};
+  const url = `${resolveServerApiBaseUrl()}${path}`;
+  const res = await fetchWithTimeout(url, { ...fetchInit, method: 'GET' }, timeoutMs);
+  return parseResponse<WindowedResponse<T>>(res, path);
 }

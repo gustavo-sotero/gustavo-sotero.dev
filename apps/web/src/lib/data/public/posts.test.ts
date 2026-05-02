@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockApiServerGetPaginated = vi.fn();
+const mockApiServerGetWindowed = vi.fn();
 const mockApiServerGet = vi.fn();
 
 class MockApiNotFoundError extends Error {
@@ -16,7 +16,7 @@ vi.mock('next/cache', () => ({
 }));
 
 vi.mock('@/lib/api.server', () => ({
-  apiServerGetPaginated: (...args: unknown[]) => mockApiServerGetPaginated(...args),
+  apiServerGetWindowed: (...args: unknown[]) => mockApiServerGetWindowed(...args),
   apiServerGet: (...args: unknown[]) => mockApiServerGet(...args),
   ApiNotFoundError: MockApiNotFoundError,
 }));
@@ -29,8 +29,8 @@ describe('getPublicPosts', () => {
   });
 
   it('returns ok state when API responds with posts', async () => {
-    const meta = { page: 1, perPage: 9, total: 1, totalPages: 1 };
-    mockApiServerGetPaginated.mockResolvedValueOnce({
+    const meta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
+    mockApiServerGetWindowed.mockResolvedValueOnce({
       success: true,
       data: [{ slug: 'post-1' }],
       meta,
@@ -43,12 +43,12 @@ describe('getPublicPosts', () => {
       { slug: 'post-1' },
     ]);
     expect((result as Extract<typeof result, { data: unknown }>).meta).toEqual(meta);
-    expect(mockApiServerGetPaginated).toHaveBeenCalledWith('/posts?perPage=9&sort=recent');
+    expect(mockApiServerGetWindowed).toHaveBeenCalledWith('/posts?perPage=9&sort=recent');
   });
 
   it('returns empty state when API responds with no posts', async () => {
-    const meta = { page: 1, perPage: 9, total: 0, totalPages: 0 };
-    mockApiServerGetPaginated.mockResolvedValueOnce({
+    const meta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
+    mockApiServerGetWindowed.mockResolvedValueOnce({
       success: true,
       data: [],
       meta,
@@ -61,7 +61,7 @@ describe('getPublicPosts', () => {
   });
 
   it('returns degraded state when API is unavailable — build must not fail', async () => {
-    mockApiServerGetPaginated.mockRejectedValueOnce(new Error('api unavailable'));
+    mockApiServerGetWindowed.mockRejectedValueOnce(new Error('api unavailable'));
 
     const result = await getPublicPosts();
 
@@ -102,8 +102,8 @@ describe('getPublicPostDetail', () => {
   });
 
   it('includes sort=recent in query by default', async () => {
-    const meta = { page: 1, perPage: 9, total: 1, totalPages: 1 };
-    mockApiServerGetPaginated.mockResolvedValueOnce({
+    const meta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
+    mockApiServerGetWindowed.mockResolvedValueOnce({
       success: true,
       data: [{ slug: 'p1' }],
       meta,
@@ -111,12 +111,12 @@ describe('getPublicPostDetail', () => {
 
     await getPublicPosts();
 
-    expect(mockApiServerGetPaginated).toHaveBeenCalledWith(expect.stringContaining('sort=recent'));
+    expect(mockApiServerGetWindowed).toHaveBeenCalledWith(expect.stringContaining('sort=recent'));
   });
 
   it('includes sort=manual in query when sort=manual', async () => {
-    const meta = { page: 1, perPage: 9, total: 1, totalPages: 1 };
-    mockApiServerGetPaginated.mockResolvedValueOnce({
+    const meta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
+    mockApiServerGetWindowed.mockResolvedValueOnce({
       success: true,
       data: [{ slug: 'p1' }],
       meta,
@@ -124,6 +124,6 @@ describe('getPublicPostDetail', () => {
 
     await getPublicPosts({ sort: 'manual' });
 
-    expect(mockApiServerGetPaginated).toHaveBeenCalledWith(expect.stringContaining('sort=manual'));
+    expect(mockApiServerGetWindowed).toHaveBeenCalledWith(expect.stringContaining('sort=manual'));
   });
 });

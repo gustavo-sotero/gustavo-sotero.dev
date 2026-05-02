@@ -11,7 +11,7 @@ vi.mock('../../services/skills.service', () => ({
 
 import { publicSkillsRouter } from './skills';
 
-const mockMeta = { page: 1, perPage: 20, total: 2, totalPages: 1 };
+const mockMeta = { page: 1, perPage: 20, hasNextPage: false, hasPreviousPage: false };
 const mockSkills = [
   {
     id: 1,
@@ -44,7 +44,7 @@ describe('GET /skills (public)', () => {
     app.route('/skills', publicSkillsRouter);
   });
 
-  it('returns 200 with paginated skill list', async () => {
+  it('returns 200 with windowed skill list metadata', async () => {
     listSkillsMock.mockResolvedValueOnce({ data: mockSkills, meta: mockMeta });
 
     const response = await app.request('/skills');
@@ -57,13 +57,13 @@ describe('GET /skills (public)', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(2);
-    expect(body.meta.total).toBe(2);
+    expect(body.meta).toEqual(mockMeta);
   });
 
   it('passes category filter to service', async () => {
     listSkillsMock.mockResolvedValueOnce({
       data: [mockSkills[0]],
-      meta: { ...mockMeta, total: 1, totalPages: 1 },
+      meta: mockMeta,
     });
 
     await app.request('/skills?category=language');
@@ -78,7 +78,7 @@ describe('GET /skills (public)', () => {
   it('passes highlighted filter to service', async () => {
     listSkillsMock.mockResolvedValueOnce({
       data: [mockSkills[0]],
-      meta: { ...mockMeta, total: 1, totalPages: 1 },
+      meta: mockMeta,
     });
 
     await app.request('/skills?highlighted=true');

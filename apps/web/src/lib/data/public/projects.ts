@@ -1,8 +1,8 @@
 import 'server-only';
-import type { PaginationMeta } from '@portfolio/shared/types/api';
+import type { WindowedPaginationMeta } from '@portfolio/shared/types/api';
 import type { Project } from '@portfolio/shared/types/projects';
 import { cacheLife, cacheTag } from 'next/cache';
-import { ApiNotFoundError, apiServerGet, apiServerGetPaginated } from '@/lib/api.server';
+import { ApiNotFoundError, apiServerGet, apiServerGetWindowed } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';
 import { TAG_PROJECTS_LIST, tagProjectDetail } from './cache-tags';
 
@@ -16,7 +16,7 @@ import { TAG_PROJECTS_LIST, tagProjectDetail } from './cache-tags';
  * - `degraded` — API was unreachable; render a visible unavailable state.
  */
 export type ProjectsListResult =
-  | { state: 'ok' | 'empty'; data: Project[]; meta: PaginationMeta }
+  | { state: 'ok' | 'empty'; data: Project[]; meta: WindowedPaginationMeta }
   | { state: 'degraded' };
 
 // ─── List ─────────────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ export async function getPublicProjects(
   if (params.featuredFirst !== undefined) qs.set('featuredFirst', String(params.featuredFirst));
 
   try {
-    const res = await apiServerGetPaginated<Project>(`/projects?${qs}`);
+    const res = await apiServerGetWindowed<Project>(`/projects?${qs}`);
     return {
       state: res.data.length > 0 ? 'ok' : 'empty',
       data: res.data,

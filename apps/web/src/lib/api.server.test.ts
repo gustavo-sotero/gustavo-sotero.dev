@@ -9,8 +9,14 @@ vi.mock('@/lib/api-base-url.server', () => ({
   resolveServerApiBaseUrl: () => 'https://example.com/api',
 }));
 
-const { ApiNotFoundError, ApiResponseError, ApiTimeoutError, apiServerGet, apiServerGetPaginated } =
-  await import('./api.server');
+const {
+  ApiNotFoundError,
+  ApiResponseError,
+  ApiTimeoutError,
+  apiServerGet,
+  apiServerGetPaginated,
+  apiServerGetWindowed,
+} = await import('./api.server');
 
 function makeResponse(
   status: number,
@@ -113,5 +119,16 @@ describe('api.server', () => {
     fetchMock.mockResolvedValueOnce(makeResponse(200, payload));
 
     await expect(apiServerGetPaginated('/posts')).resolves.toEqual(payload);
+  });
+
+  it('returns windowed payloads unchanged on success', async () => {
+    const payload = {
+      success: true,
+      data: [{ id: 1, title: 'Post A' }],
+      meta: { page: 1, perPage: 20, hasNextPage: true, hasPreviousPage: false },
+    };
+    fetchMock.mockResolvedValueOnce(makeResponse(200, payload));
+
+    await expect(apiServerGetWindowed('/posts')).resolves.toEqual(payload);
   });
 });

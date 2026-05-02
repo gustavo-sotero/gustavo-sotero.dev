@@ -564,6 +564,58 @@ describe('openapi routes', () => {
     expect(adminPostUpdateProps).toHaveProperty('order');
   });
 
+  it('GET /doc/spec documents no-count public list metadata for posts, projects, and skills', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      components: {
+        schemas: Record<string, { properties?: Record<string, unknown> }>;
+      };
+      info: { description?: string };
+      paths: Record<
+        string,
+        {
+          get?: {
+            parameters?: Array<{ name?: string }>;
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    schema?: {
+                      properties?: {
+                        meta?: { $ref?: string };
+                      };
+                    };
+                  };
+                };
+              }
+            >;
+          };
+        }
+      >;
+    };
+
+    const metaRef = (path: string) =>
+      body.paths[path]?.get?.responses?.['200']?.content?.['application/json']?.schema?.properties
+        ?.meta?.$ref;
+    const projectParams = body.paths['/projects']?.get?.parameters ?? [];
+
+    expect(body.info.description).toContain('hasNextPage');
+    expect(body.components.schemas.WindowedPaginationMeta?.properties).toHaveProperty(
+      'hasNextPage'
+    );
+    expect(body.components.schemas.WindowedPaginationMeta?.properties).toHaveProperty(
+      'hasPreviousPage'
+    );
+    expect(metaRef('/posts')).toBe('#/components/schemas/WindowedPaginationMeta');
+    expect(metaRef('/projects')).toBe('#/components/schemas/WindowedPaginationMeta');
+    expect(metaRef('/skills')).toBe('#/components/schemas/WindowedPaginationMeta');
+    expect(projectParams.some((param) => param.name === 'featuredFirst')).toBe(true);
+  });
+
   it('GET /doc/spec documents impactFacts on developer profile experience and projects', async () => {
     const app = new Hono();
     app.route('/', openApiRouter);

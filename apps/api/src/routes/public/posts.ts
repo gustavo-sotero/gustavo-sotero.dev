@@ -10,7 +10,12 @@
 import { postQuerySchema } from '@portfolio/shared/schemas/posts';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { errorResponse, paginatedResponse, successResponse } from '../../lib/response';
+import {
+  errorResponse,
+  paginatedResponse,
+  successResponse,
+  windowedResponse,
+} from '../../lib/response';
 import { validateQuery } from '../../lib/validate';
 import { getPostComments } from '../../services/comments.service';
 import { getPostBySlug, listPosts } from '../../services/posts.service';
@@ -20,7 +25,7 @@ const publicPostsRouter = new Hono<AppEnv>();
 
 /**
  * GET /posts
- * Returns paginated published posts. Supports `?page`, `?perPage`, `?tag`.
+ * Returns published posts with previous/next navigation metadata. Supports `?page`, `?perPage`, `?tag`.
  * Results are cached by page/perPage/tag (TTL 5 min).
  */
 publicPostsRouter.get('/', async (c) => {
@@ -40,7 +45,7 @@ publicPostsRouter.get('/', async (c) => {
     false,
     { includeTotal: false, summaryOnly: true }
   );
-  return paginatedResponse(c, result.data, result.meta);
+  return windowedResponse(c, result.data, result.meta);
 });
 
 /**

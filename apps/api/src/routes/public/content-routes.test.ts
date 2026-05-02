@@ -51,7 +51,7 @@ describe('public content routes', () => {
   it('GET /posts returns paginated data', async () => {
     listPostsMock.mockResolvedValueOnce({
       data: [{ id: 1, slug: 'post-1' }],
-      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+      meta: { page: 1, perPage: 20, hasNextPage: false, hasPreviousPage: false },
     });
 
     const app = new Hono();
@@ -61,13 +61,23 @@ describe('public content routes', () => {
     const body = (await response.json()) as {
       success: boolean;
       data: Array<{ id: number; slug: string }>;
-      meta: { total: number };
+      meta: {
+        page: number;
+        perPage: number;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+      };
     };
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data).toHaveLength(1);
-    expect(body.meta.total).toBe(1);
+    expect(body.meta).toEqual({
+      page: 1,
+      perPage: 20,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    });
     expect(listPostsMock).toHaveBeenCalledWith(
       { page: 1, perPage: 20, sort: 'recent', tag: undefined },
       false,
@@ -78,7 +88,7 @@ describe('public content routes', () => {
   it('GET /posts?sort=manual forwards sort=manual to service', async () => {
     listPostsMock.mockResolvedValueOnce({
       data: [{ id: 1, slug: 'post-1' }],
-      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+      meta: { page: 1, perPage: 20, hasNextPage: false, hasPreviousPage: false },
     });
 
     const app = new Hono();
@@ -128,7 +138,7 @@ describe('public content routes', () => {
   it('GET /projects returns paginated data', async () => {
     listProjectsMock.mockResolvedValueOnce({
       data: [{ id: 10, slug: 'project-1' }],
-      meta: { page: 1, perPage: 20, total: 1, totalPages: 1 },
+      meta: { page: 1, perPage: 20, hasNextPage: false, hasPreviousPage: false },
     });
 
     const app = new Hono();
@@ -155,7 +165,7 @@ describe('public content routes', () => {
         { id: 1, slug: 'featured-project', featured: true },
         { id: 2, slug: 'normal-project', featured: false },
       ],
-      meta: { page: 1, perPage: 3, total: 2, totalPages: 1 },
+      meta: { page: 1, perPage: 3, hasNextPage: true, hasPreviousPage: false },
     });
 
     const app = new Hono();
@@ -180,7 +190,7 @@ describe('public content routes', () => {
   it('GET /projects?featuredFirst=true can coexist with featured=true', async () => {
     listProjectsMock.mockResolvedValueOnce({
       data: [{ id: 1, slug: 'featured-project', featured: true }],
-      meta: { page: 1, perPage: 3, total: 1, totalPages: 1 },
+      meta: { page: 1, perPage: 3, hasNextPage: false, hasPreviousPage: false },
     });
 
     const app = new Hono();

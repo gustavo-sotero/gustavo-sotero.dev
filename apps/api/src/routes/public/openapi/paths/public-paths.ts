@@ -556,7 +556,8 @@ export const publicPaths = {
       ],
       responses: {
         '200': {
-          description: 'Paginated list of published posts',
+          description:
+            'Published posts with previous/next navigation metadata and no total count query',
           headers: {
             'Cache-Control': {
               schema: { type: 'string' },
@@ -570,7 +571,7 @@ export const publicPaths = {
                 properties: {
                   success: { type: 'boolean', example: true },
                   data: { type: 'array', items: { $ref: '#/components/schemas/Post' } },
-                  meta: { $ref: '#/components/schemas/PaginationMeta' },
+                  meta: { $ref: '#/components/schemas/WindowedPaginationMeta' },
                 },
               },
             },
@@ -703,10 +704,17 @@ export const publicPaths = {
           schema: { type: 'boolean' },
           description: 'Filter to featured projects only',
         },
+        {
+          name: 'featuredFirst',
+          in: 'query',
+          schema: { type: 'boolean' },
+          description: 'When true, featured projects are ordered before non-featured ones.',
+        },
       ],
       responses: {
         '200': {
-          description: 'Paginated list of published projects',
+          description:
+            'Published projects with previous/next navigation metadata and no total count query',
           content: {
             'application/json': {
               schema: {
@@ -714,7 +722,7 @@ export const publicPaths = {
                 properties: {
                   success: { type: 'boolean' },
                   data: { type: 'array', items: { $ref: '#/components/schemas/Project' } },
-                  meta: { $ref: '#/components/schemas/PaginationMeta' },
+                  meta: { $ref: '#/components/schemas/WindowedPaginationMeta' },
                 },
               },
             },
@@ -786,7 +794,7 @@ export const publicPaths = {
       ],
       responses: {
         '200': {
-          description: 'Paginated list of skills',
+          description: 'Skill list with previous/next navigation metadata and no total count query',
           content: {
             'application/json': {
               schema: {
@@ -794,7 +802,7 @@ export const publicPaths = {
                 properties: {
                   success: { type: 'boolean', example: true },
                   data: { type: 'array', items: { $ref: '#/components/schemas/Skill' } },
-                  meta: { $ref: '#/components/schemas/PaginationMeta' },
+                  meta: { $ref: '#/components/schemas/WindowedPaginationMeta' },
                 },
               },
             },

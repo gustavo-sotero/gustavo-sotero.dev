@@ -8,6 +8,14 @@ export interface PaginationMeta {
   totalPages: number;
 }
 
+// Offset pagination metadata without total counts.
+export interface WindowedPaginationMeta {
+  page: number;
+  perPage: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 // Standard successful API response
 export interface ApiResponse<T> {
   success: true;
@@ -19,6 +27,13 @@ export interface PaginatedResponse<T> {
   success: true;
   data: T[];
   meta: PaginationMeta;
+}
+
+// Standard list response without total counts.
+export interface WindowedResponse<T> {
+  success: true;
+  data: T[];
+  meta: WindowedPaginationMeta;
 }
 
 // Standard error detail (for validation errors)

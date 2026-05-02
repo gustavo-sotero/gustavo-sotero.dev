@@ -151,11 +151,6 @@ export async function BlogContent({ currentPage, tag, sort }: BlogContentProps) 
         <div className="space-y-2">
           <p className="text-xs font-mono text-emerald-500 uppercase tracking-widest">artigos</p>
           <h1 className="text-3xl md:text-4xl font-bold text-zinc-100">Blog</h1>
-          {meta && (
-            <p className="text-zinc-500 text-sm">
-              {meta.total} {meta.total === 1 ? 'artigo publicado' : 'artigos publicados'}
-            </p>
-          )}
         </div>
 
         <SortToggle currentSort={sort} tag={tag} />
@@ -215,12 +210,12 @@ export async function BlogContent({ currentPage, tag, sort }: BlogContentProps) 
       )}
 
       {/* ── Pagination ──────────────────────────────────────── */}
-      {meta && meta.totalPages > 1 && (
+      {meta && (meta.hasPreviousPage || meta.hasNextPage) && (
         <nav
           aria-label="Paginação do blog"
           className="mt-12 flex items-center justify-center gap-2"
         >
-          {currentPage > 1 && (
+          {meta.hasPreviousPage && (
             <Link
               href={`/blog${buildBlogQs({ tag, sort, page: currentPage - 1 })}`}
               className="px-4 py-2 rounded-md text-sm border border-zinc-800 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-100 transition-colors"
@@ -228,23 +223,8 @@ export async function BlogContent({ currentPage, tag, sort }: BlogContentProps) 
               ← Anterior
             </Link>
           )}
-          {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
-            .filter((p) => Math.abs(p - currentPage) <= 2)
-            .map((p) => (
-              <Link
-                key={p}
-                href={`/blog${buildBlogQs({ tag, sort, page: p })}`}
-                aria-current={p === currentPage ? 'page' : undefined}
-                className={`px-4 py-2 rounded-md text-sm transition-colors ${
-                  p === currentPage
-                    ? 'bg-emerald-500 text-zinc-950 font-semibold'
-                    : 'border border-zinc-800 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-100'
-                }`}
-              >
-                {p}
-              </Link>
-            ))}
-          {currentPage < meta.totalPages && (
+          <span className="px-4 py-2 text-sm font-mono text-zinc-500">Página {currentPage}</span>
+          {meta.hasNextPage && (
             <Link
               href={`/blog${buildBlogQs({ tag, sort, page: currentPage + 1 })}`}
               className="px-4 py-2 rounded-md text-sm border border-zinc-800 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-100 transition-colors"

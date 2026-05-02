@@ -1,6 +1,6 @@
 import { skillQuerySchema } from '@portfolio/shared/schemas/skills';
 import { Hono } from 'hono';
-import { paginatedResponse } from '../../lib/response';
+import { windowedResponse } from '../../lib/response';
 import { validateQuery } from '../../lib/validate';
 import { listSkills } from '../../services/skills.service';
 import type { AppEnv } from '../../types/index';
@@ -34,5 +34,5 @@ publicSkillsRouter.get('/', async (c) => {
     true, // use public cache
     { includeTotal: false }
   );
-  return paginatedResponse(c, result.data, result.meta);
+  return windowedResponse(c, result.data, result.meta);
 });

@@ -3,6 +3,7 @@ import { and, asc, count, eq, inArray, ne, type SQL } from 'drizzle-orm';
 import { db } from '../config/db';
 import {
   buildPaginationMeta,
+  buildWindowedResult,
   parsePagination,
   type TotalCountQueryOptions,
 } from '../lib/pagination';
@@ -58,7 +59,7 @@ function resolveSkillListState(filters: SkillFilters = {}) {
   };
 }
 
-async function querySkillRows(filters: SkillFilters = {}) {
+async function querySkillRows(filters: SkillFilters = {}, probeNextPage = false) {
   const { page, perPage, offset, limit, where } = resolveSkillListState(filters);
   const rows =
     limit === undefined
@@ -68,7 +69,7 @@ async function querySkillRows(filters: SkillFilters = {}) {
           .from(skills)
           .where(where)
           .orderBy(asc(skills.category), asc(skills.name))
-          .limit(limit)
+          .limit(limit + (probeNextPage ? 1 : 0))
           .offset(offset);
 
   return { rows, page, perPage, where };
@@ -78,13 +79,13 @@ export async function findManySkills(
   filters: SkillFilters = {},
   options: TotalCountQueryOptions = {}
 ) {
-  const { rows, page, perPage, where } = await querySkillRows(filters);
+  const { rows, page, perPage, where } = await querySkillRows(
+    filters,
+    options.includeTotal === false
+  );
 
   if (options.includeTotal === false) {
-    return {
-      data: rows,
-      meta: buildPaginationMeta(rows.length, page, perPage),
-    };
+    return buildWindowedResult(rows, page, perPage);
   }
 
   const countResult = await db.select({ total: count() }).from(skills).where(where);

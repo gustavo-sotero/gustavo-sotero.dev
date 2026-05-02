@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockApiServerGetPaginated = vi.fn();
+const mockApiServerGetWindowed = vi.fn();
 const mockApiServerGet = vi.fn();
 
 class MockApiNotFoundError extends Error {
@@ -16,7 +16,7 @@ vi.mock('next/cache', () => ({
 }));
 
 vi.mock('@/lib/api.server', () => ({
-  apiServerGetPaginated: (...args: unknown[]) => mockApiServerGetPaginated(...args),
+  apiServerGetWindowed: (...args: unknown[]) => mockApiServerGetWindowed(...args),
   apiServerGet: (...args: unknown[]) => mockApiServerGet(...args),
   ApiNotFoundError: MockApiNotFoundError,
 }));
@@ -29,8 +29,8 @@ describe('getPublicProjects', () => {
   });
 
   it('returns ok state when API responds with projects', async () => {
-    const meta = { page: 1, perPage: 9, total: 1, totalPages: 1 };
-    mockApiServerGetPaginated.mockResolvedValueOnce({
+    const meta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
+    mockApiServerGetWindowed.mockResolvedValueOnce({
       success: true,
       data: [{ slug: 'project-1' }],
       meta,
@@ -43,12 +43,12 @@ describe('getPublicProjects', () => {
       { slug: 'project-1' },
     ]);
     expect((result as Extract<typeof result, { data: unknown }>).meta).toEqual(meta);
-    expect(mockApiServerGetPaginated).toHaveBeenCalledWith('/projects?perPage=9');
+    expect(mockApiServerGetWindowed).toHaveBeenCalledWith('/projects?perPage=9');
   });
 
   it('passes impactFacts through from API to paginated list result', async () => {
-    const meta = { page: 1, perPage: 9, total: 1, totalPages: 1 };
-    mockApiServerGetPaginated.mockResolvedValueOnce({
+    const meta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
+    mockApiServerGetWindowed.mockResolvedValueOnce({
       success: true,
       data: [{ slug: 'projeto-1', impactFacts: ['Reduziu latência em 40%'] }],
       meta,
@@ -64,8 +64,8 @@ describe('getPublicProjects', () => {
   });
 
   it('returns empty state when API responds with no projects', async () => {
-    const meta = { page: 1, perPage: 9, total: 0, totalPages: 0 };
-    mockApiServerGetPaginated.mockResolvedValueOnce({
+    const meta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
+    mockApiServerGetWindowed.mockResolvedValueOnce({
       success: true,
       data: [],
       meta,
@@ -78,7 +78,7 @@ describe('getPublicProjects', () => {
   });
 
   it('returns degraded state when API is unavailable — build must not fail', async () => {
-    mockApiServerGetPaginated.mockRejectedValueOnce(new Error('api unavailable'));
+    mockApiServerGetWindowed.mockRejectedValueOnce(new Error('api unavailable'));
 
     const result = await getPublicProjects();
 

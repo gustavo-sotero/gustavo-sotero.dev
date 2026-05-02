@@ -1,5 +1,5 @@
 import { type ErrorCode, getErrorTypeForCode } from '@portfolio/shared/constants/errorCodes';
-import type { PaginationMeta } from '@portfolio/shared/types/api';
+import type { PaginationMeta, WindowedPaginationMeta } from '@portfolio/shared/types/api';
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
@@ -14,6 +14,13 @@ export function successResponse<T>(c: Context, data: T, status = 200): Response 
  * Standard paginated response.
  */
 export function paginatedResponse<T>(c: Context, data: T[], meta: PaginationMeta): Response {
+  return c.json({ success: true, data, meta });
+}
+
+/**
+ * Standard list response without total counts.
+ */
+export function windowedResponse<T>(c: Context, data: T[], meta: WindowedPaginationMeta): Response {
   return c.json({ success: true, data, meta });
 }
 

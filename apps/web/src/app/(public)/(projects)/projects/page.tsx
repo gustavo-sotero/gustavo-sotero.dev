@@ -150,11 +150,6 @@ export async function ProjectsContent({ currentPage, skill, sort }: ProjectsCont
         <div className="space-y-2">
           <p className="text-xs font-mono text-emerald-500 uppercase tracking-widest">portfolio</p>
           <h1 className="text-3xl md:text-4xl font-bold text-zinc-100">Projetos</h1>
-          {meta && (
-            <p className="text-zinc-500 text-sm">
-              {meta.total} {meta.total === 1 ? 'projeto encontrado' : 'projetos encontrados'}
-            </p>
-          )}
         </div>
 
         <SortToggle currentSort={sort} skill={skill} />
@@ -214,12 +209,12 @@ export async function ProjectsContent({ currentPage, skill, sort }: ProjectsCont
       )}
 
       {/* ── Pagination ──────────────────────────────────────────── */}
-      {meta && meta.totalPages > 1 && (
+      {meta && (meta.hasPreviousPage || meta.hasNextPage) && (
         <nav
           aria-label="Paginação de projetos"
           className="mt-12 flex items-center justify-center gap-2"
         >
-          {currentPage > 1 && (
+          {meta.hasPreviousPage && (
             <Link
               href={`/projects${buildProjectsQs({ skill, sort, page: currentPage - 1 })}`}
               className="px-4 py-2 rounded-md text-sm border border-zinc-800 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-100 transition-colors"
@@ -227,23 +222,8 @@ export async function ProjectsContent({ currentPage, skill, sort }: ProjectsCont
               ← Anterior
             </Link>
           )}
-          {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
-            .filter((p) => Math.abs(p - currentPage) <= 2)
-            .map((p) => (
-              <Link
-                key={p}
-                href={`/projects${buildProjectsQs({ skill, sort, page: p })}`}
-                aria-current={p === currentPage ? 'page' : undefined}
-                className={`px-4 py-2 rounded-md text-sm transition-colors ${
-                  p === currentPage
-                    ? 'bg-emerald-500 text-zinc-950 font-semibold'
-                    : 'border border-zinc-800 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-100'
-                }`}
-              >
-                {p}
-              </Link>
-            ))}
-          {currentPage < meta.totalPages && (
+          <span className="px-4 py-2 text-sm font-mono text-zinc-500">Página {currentPage}</span>
+          {meta.hasNextPage && (
             <Link
               href={`/projects${buildProjectsQs({ skill, sort, page: currentPage + 1 })}`}
               className="px-4 py-2 rounded-md text-sm border border-zinc-800 text-zinc-400 hover:border-emerald-500/40 hover:text-zinc-100 transition-colors"

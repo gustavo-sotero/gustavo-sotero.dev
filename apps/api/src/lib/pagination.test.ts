@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildPaginationMeta, parsePagination } from './pagination';
+import {
+  buildPaginationMeta,
+  buildWindowedPaginationMeta,
+  buildWindowedResult,
+  parsePagination,
+} from './pagination';
 
 describe('parsePagination', () => {
   it('applies defaults when params are missing', () => {
@@ -45,6 +50,49 @@ describe('buildPaginationMeta', () => {
       perPage: 20,
       total: 42,
       totalPages: 3,
+    });
+  });
+});
+
+describe('buildWindowedPaginationMeta', () => {
+  it('builds next/previous navigation metadata without totals', () => {
+    const result = buildWindowedPaginationMeta(3, 20, true);
+
+    expect(result).toEqual({
+      page: 3,
+      perPage: 20,
+      hasNextPage: true,
+      hasPreviousPage: true,
+    });
+  });
+});
+
+describe('buildWindowedResult', () => {
+  it('trims the probe row and reports hasNextPage when more results exist', () => {
+    const result = buildWindowedResult([1, 2, 3], 1, 2);
+
+    expect(result).toEqual({
+      data: [1, 2],
+      meta: {
+        page: 1,
+        perPage: 2,
+        hasNextPage: true,
+        hasPreviousPage: false,
+      },
+    });
+  });
+
+  it('keeps the current page rows when there is no next page', () => {
+    const result = buildWindowedResult([1, 2], 2, 2);
+
+    expect(result).toEqual({
+      data: [1, 2],
+      meta: {
+        page: 2,
+        perPage: 2,
+        hasNextPage: false,
+        hasPreviousPage: true,
+      },
     });
   });
 });

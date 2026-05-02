@@ -45,6 +45,7 @@ const {
   innerJoinMock,
   parsePaginationMock,
   buildPaginationMetaMock,
+  buildWindowedResultMock,
 } = vi.hoisted(() => ({
   selectWhereMock: vi.fn(),
   selectFromMock: vi.fn(),
@@ -54,6 +55,7 @@ const {
   innerJoinMock: vi.fn(),
   parsePaginationMock: vi.fn(),
   buildPaginationMetaMock: vi.fn(),
+  buildWindowedResultMock: vi.fn(),
 }));
 
 vi.mock('drizzle-orm', () => ({
@@ -74,6 +76,7 @@ vi.mock('@portfolio/shared/db/schema', () => ({
 vi.mock('../lib/pagination', () => ({
   parsePagination: parsePaginationMock,
   buildPaginationMeta: buildPaginationMetaMock,
+  buildWindowedResult: buildWindowedResultMock,
 }));
 
 vi.mock('../config/db', () => ({
@@ -95,6 +98,10 @@ beforeEach(() => {
 
   parsePaginationMock.mockReturnValue({ page: 1, perPage: 20, offset: 0, limit: 20 });
   buildPaginationMetaMock.mockReturnValue({ page: 1, perPage: 20, total: 1, totalPages: 1 });
+  buildWindowedResultMock.mockReturnValue({
+    data: [{ id: 1 }, { id: 2 }, { id: 3 }],
+    meta: { page: 1, perPage: 20, hasNextPage: false, hasPreviousPage: false },
+  });
 
   selectWhereMock.mockResolvedValue([{ total: 1 }]);
   innerJoinMock.mockReturnValue({ where: selectWhereMock });
@@ -226,11 +233,16 @@ describe('projects repository — findProjectBySlug', () => {
   });
 
   it('skips total count when includeTotal=false', async () => {
-    findManyMock.mockResolvedValueOnce([{ id: 1 }, { id: 2 }, { id: 3 }]);
+    findManyMock.mockResolvedValueOnce([{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }]);
 
     await findManyProjects({ page: 1, perPage: 20 }, false, { includeTotal: false });
 
     expect(countMock).not.toHaveBeenCalled();
-    expect(buildPaginationMetaMock).toHaveBeenCalledWith(3, 1, 20);
+    expect(findManyMock).toHaveBeenCalledWith(expect.objectContaining({ limit: 21, offset: 0 }));
+    expect(buildWindowedResultMock).toHaveBeenCalledWith(
+      [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }],
+      1,
+      20
+    );
   });
 });

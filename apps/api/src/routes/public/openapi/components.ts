@@ -68,6 +68,16 @@ export const openApiComponents = {
         totalPages: { type: 'integer', example: 3 },
       },
     },
+    WindowedPaginationMeta: {
+      type: 'object',
+      required: ['page', 'perPage', 'hasNextPage', 'hasPreviousPage'],
+      properties: {
+        page: { type: 'integer', example: 1 },
+        perPage: { type: 'integer', example: 20 },
+        hasNextPage: { type: 'boolean', example: true },
+        hasPreviousPage: { type: 'boolean', example: false },
+      },
+    },
     Tag: {
       type: 'object',
       properties: {

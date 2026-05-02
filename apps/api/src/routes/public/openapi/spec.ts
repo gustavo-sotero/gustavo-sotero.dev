@@ -22,7 +22,7 @@ export const OPENAPI_SPEC = {
       'Demonstrates: Hono + Bun + Drizzle ORM + PostgreSQL + BullMQ + Redis.\n\n' +
       '**Standard response format:**\n\n' +
       '```json\n{ "success": true, "data": { ... } }\n```\n\n' +
-      'Paginated responses include a `meta` object with `page`, `perPage`, `total`, `totalPages`.',
+      'Count-based paginated responses include `total` and `totalPages`. Public high-traffic list endpoints may instead expose `hasNextPage` and `hasPreviousPage` to avoid `COUNT(*)` queries.',
     contact: {
       name: 'Portfolio Author',
     },

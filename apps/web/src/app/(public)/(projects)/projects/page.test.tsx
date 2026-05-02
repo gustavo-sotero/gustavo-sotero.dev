@@ -83,7 +83,7 @@ describe('ProjectsPage', () => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-const defaultMeta = { page: 1, perPage: 9, total: 2, totalPages: 1 };
+const defaultMeta = { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false };
 
 describe('ProjectsContent', () => {
   beforeEach(() => {
@@ -164,7 +164,7 @@ describe('ProjectsContent', () => {
     mockGetPublicProjects.mockResolvedValue({
       state: 'empty',
       data: [],
-      meta: { page: 1, perPage: 9, total: 0, totalPages: 0 },
+      meta: { page: 1, perPage: 9, hasNextPage: false, hasPreviousPage: false },
     });
     mockGetHomeProjectSkills.mockResolvedValue({ state: 'empty', data: [] });
 
@@ -173,6 +173,27 @@ describe('ProjectsContent', () => {
 
     expect(screen.getByText(/nenhum projeto encontrado/i)).toBeDefined();
     expect(screen.queryByTestId('project-card')).toBeNull();
+  });
+
+  it('renders previous/next navigation from windowed metadata', async () => {
+    const projects = [{ id: 1, title: 'Project Alpha', slug: 'project-alpha' }];
+    mockGetPublicProjects.mockResolvedValue({
+      state: 'ok',
+      data: projects,
+      meta: { page: 2, perPage: 9, hasNextPage: true, hasPreviousPage: true },
+    });
+    mockGetHomeProjectSkills.mockResolvedValue({ state: 'ok', data: [] });
+
+    const element = await ProjectsContent({ currentPage: 2, sort: 'relevancia' });
+    render(element as React.ReactElement);
+
+    expect(screen.getByRole('navigation', { name: /paginação de projetos/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /anterior/i })).toHaveAttribute('href', '/projects');
+    expect(screen.getByRole('link', { name: /próxima/i })).toHaveAttribute(
+      'href',
+      '/projects?page=3'
+    );
+    expect(screen.getByText(/página 2/i)).toBeInTheDocument();
   });
 
   it('does not throw when API is unavailable (simulates build-time API offline)', async () => {
