@@ -19,8 +19,10 @@ RUN bun install --frozen-lockfile
 FROM oven/bun:slim AS runtime
 WORKDIR /app
 
-# Create a non-root runtime user
-RUN groupadd --system --gid 1001 appgroup \
+# Install curl (required by the Docker health check) and create a non-root runtime user
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/* \
+  && groupadd --system --gid 1001 appgroup \
   && useradd --system --uid 1001 --gid appgroup --no-create-home appuser
 
 # Preserve the Bun workspace manifest/lockfile context used to materialize
