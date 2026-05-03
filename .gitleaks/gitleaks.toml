@@ -1,0 +1,6 @@
+title = "gustavo-sotero.dev gitleaks config"
+
+# Override the action's bundled UDM config, which can drift out of sync with the
+# gitleaks binary version it downloads.
+[extend]
+useDefault = true
