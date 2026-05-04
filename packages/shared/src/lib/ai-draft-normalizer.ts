@@ -72,7 +72,48 @@ export function containsDisallowedInlineHtml(content: string): boolean {
  * Text is in PT-BR to align with the editorial language of the blog.
  */
 export function buildFallbackImagePrompt(title: string): string {
-  return `Ilustração simples, minimalista e elegante em fundo escuro representando "${title}", estética técnica em flat design, composição para thumb em formato 1:1 ou 4:3, com texto opcional apenas se reforçar a ideia central.`;
+  const shortTitle = compactPromptText(title, 'Tema técnico', 70);
+  return `Crie uma imagem de capa para blog em formato 4:3, com estilo minimalista, elegante e profissional, usando fundo neutro (off-white, cinza claro, bege suave ou tons similares).
+
+A composição deve ser limpa, equilibrada e sofisticada, com poucos elementos visuais e aparência editorial premium. O tema central é ${shortTitle}, representado de forma sutil por elementos gráficos discretos relacionados ao assunto.
+
+Incluir pouco texto, com tipografia moderna, legível e bem organizada.
+
+Texto principal: "${shortTitle}"
+Texto de apoio opcional: "Leitura técnica direta, sem hype."
+
+O layout deve transmitir clareza, autoridade e sofisticação, sem poluição visual. Sem logos e sem marca d'água.`;
+}
+
+/**
+ * Builds a LinkedIn image prompt fallback when the provider returns an empty one.
+ */
+export function buildFallbackLinkedInImagePrompt(title: string, excerpt: string): string {
+  const shortTitle = compactPromptText(title, 'Tema técnico', 80);
+  const supportPhrase = compactPromptText(
+    excerpt,
+    'Uma decisão técnica explicada com clareza.',
+    120
+  );
+
+  return `Crie uma imagem para post no LinkedIn em formato 4:5, com estilo minimalista, elegante e profissional, usando fundo neutro (off-white, cinza claro, bege suave ou tons similares).
+
+A composição deve ser limpa, moderna e sofisticada, com aparência premium e boa hierarquia visual. O tema central é ${shortTitle}, representado de forma clara e sutil com poucos elementos gráficos de apoio relacionados ao assunto.
+
+A imagem pode conter mais texto do que a thumb, mas sem exagero, funcionando como um card explicativo curto.
+
+Incluir:
+Título: "${shortTitle}"
+Frase de apoio: "${supportPhrase}"
+Complemento: "Leia o post completo para entender o trade-off e aplicar a decisão com mais segurança."
+
+Usar tipografia moderna, bem legível e layout sóbrio, equilibrado e sem poluição visual. Sem logos e sem marca d'água.`;
+}
+
+function compactPromptText(value: string, fallback: string, maxLength: number): string {
+  const normalized = value.replace(/\s+/g, ' ').trim() || fallback;
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength - 3).trimEnd()}...`;
 }
 
 /**
@@ -228,6 +269,8 @@ export function normalizeDraftResponse(
     persistedTags
   ).slice(0, AI_POST_MAX_DRAFT_TAG_NAMES);
   const imagePrompt = raw.imagePrompt.trim() || buildFallbackImagePrompt(title);
+  const linkedinImagePrompt =
+    raw.linkedinImagePrompt?.trim() || buildFallbackLinkedInImagePrompt(title, excerpt);
   const notes = raw.notes?.trim() ?? null;
   const linkedinPost = normalizeLinkedInPost(
     raw.linkedinPost?.trim() ?? '',
@@ -242,6 +285,7 @@ export function normalizeDraftResponse(
     content,
     suggestedTagNames,
     imagePrompt,
+    linkedinImagePrompt,
     linkedinPost,
     notes,
   });

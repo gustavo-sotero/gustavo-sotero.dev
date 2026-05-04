@@ -13,7 +13,10 @@ import { AI_POST_DRAFT_RUN_INITIAL_POLL_MS } from '@portfolio/shared/constants/a
 import { OutboxEventType } from '@portfolio/shared/constants/enums';
 import type { AiPostDraftRun } from '@portfolio/shared/db/schema';
 import { aiPostDraftRuns, outbox, tags } from '@portfolio/shared/db/schema';
-import { normalizeDraftRequest } from '@portfolio/shared/lib/ai-draft-normalizer';
+import {
+  buildFallbackLinkedInImagePrompt,
+  normalizeDraftRequest,
+} from '@portfolio/shared/lib/ai-draft-normalizer';
 import type { PersistedTagForNormalization } from '@portfolio/shared/lib/aiTagNormalizer';
 import type {
   CreateDraftRunRequest,
@@ -145,11 +148,32 @@ function formatDraftRunStatus(run: AiPostDraftRun): DraftRunStatusResponse {
 /**
  * Revalidates the persisted result payload against the current draft schema.
  * Returns null for missing, invalid, or historically incomplete payloads
- * (e.g. rows written before the linkedinPost field was introduced).
+ * (e.g. rows written before the LinkedIn copy/image fields were introduced).
  */
 function resolveResult(rawPayload: unknown): DraftRunStatusResponse['result'] {
   if (rawPayload == null) return null;
   const parsed = generateDraftResponseSchema.safeParse(rawPayload);
-  if (!parsed.success) return null;
-  return parsed.data;
+  if (parsed.success) return parsed.data;
+
+  const hydratedLegacyPayload = hydrateLegacyDraftResult(rawPayload);
+  if (!hydratedLegacyPayload) return null;
+
+  const hydratedParsed = generateDraftResponseSchema.safeParse(hydratedLegacyPayload);
+  if (!hydratedParsed.success) return null;
+  return hydratedParsed.data;
+}
+
+function hydrateLegacyDraftResult(rawPayload: unknown): Record<string, unknown> | null {
+  if (!rawPayload || typeof rawPayload !== 'object' || Array.isArray(rawPayload)) return null;
+
+  const payload = rawPayload as Record<string, unknown>;
+  if ('linkedinImagePrompt' in payload) return null;
+  if (typeof payload.title !== 'string') return null;
+  if (typeof payload.excerpt !== 'string') return null;
+  if (typeof payload.linkedinPost !== 'string') return null;
+
+  return {
+    ...payload,
+    linkedinImagePrompt: buildFallbackLinkedInImagePrompt(payload.title, payload.excerpt),
+  };
 }

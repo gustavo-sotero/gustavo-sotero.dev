@@ -59,7 +59,7 @@ export function MarkdownEditor({
               'min-h-0 resize-none rounded-none border-0 bg-transparent',
               'font-mono text-sm text-zinc-300 placeholder:text-zinc-600',
               'focus-visible:ring-0 focus-visible:ring-offset-0',
-              'p-4 leading-relaxed overflow-y-auto field-sizing-fixed'
+              'p-4 leading-relaxed overflow-y-auto [field-sizing:fixed]'
             )}
             style={{ minHeight, maxHeight }}
           />

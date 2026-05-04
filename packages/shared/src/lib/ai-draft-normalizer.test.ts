@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCanonicalPostUrl,
   buildFallbackImagePrompt,
+  buildFallbackLinkedInImagePrompt,
   normalizeLinkedInPost,
 } from './ai-draft-normalizer';
 import { AiGenerationError } from './ai-error';
@@ -26,12 +27,31 @@ describe('buildFallbackImagePrompt', () => {
   it('returns a PT-BR prompt that includes the post title and all editorial constraints', () => {
     const prompt = buildFallbackImagePrompt('TypeScript na Prática');
     expect(prompt).toContain('TypeScript na Prática');
-    expect(prompt).toMatch(/simples/i);
     expect(prompt).toMatch(/minimalista/i);
     expect(prompt).toMatch(/elegante/i);
-    expect(prompt).toMatch(/1:1|4:3/);
-    expect(prompt).toMatch(/thumb/i);
-    expect(prompt).toMatch(/texto opcional/i);
+    expect(prompt).toMatch(/4:3/);
+    expect(prompt).toMatch(/fundo neutro|off-white|cinza claro|bege suave/i);
+    expect(prompt).toMatch(/capa para blog/i);
+    expect(prompt).toMatch(/Texto principal/i);
+  });
+});
+
+// ── buildFallbackLinkedInImagePrompt ─────────────────────────────────────────
+
+describe('buildFallbackLinkedInImagePrompt', () => {
+  it('returns a PT-BR LinkedIn image prompt with 4:5 card structure', () => {
+    const prompt = buildFallbackLinkedInImagePrompt(
+      'TypeScript na Prática',
+      'Como evitar decisões frágeis em código de produção.'
+    );
+
+    expect(prompt).toContain('TypeScript na Prática');
+    expect(prompt).toMatch(/LinkedIn/i);
+    expect(prompt).toMatch(/4:5/);
+    expect(prompt).toMatch(/Título/i);
+    expect(prompt).toMatch(/Frase de apoio/i);
+    expect(prompt).toMatch(/Complemento/i);
+    expect(prompt).toMatch(/fundo neutro|off-white|cinza claro|bege suave/i);
   });
 });
 

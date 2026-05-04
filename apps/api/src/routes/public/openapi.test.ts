@@ -802,7 +802,13 @@ describe('openapi routes', () => {
     ).toBe(6);
     expect(Array.isArray(draftSuccess?.data?.suggestedTagNames)).toBe(true);
     expect(typeof draftSuccess?.data?.imagePrompt).toBe('string');
-    expect(String(draftSuccess?.data?.imagePrompt)).toMatch(/ilustra|minimalista|thumb|1:1|4:3/i);
+    expect(String(draftSuccess?.data?.imagePrompt)).toMatch(
+      /capa para blog|minimalista|fundo neutro|4:3/i
+    );
+    expect(typeof draftSuccess?.data?.linkedinImagePrompt).toBe('string');
+    expect(String(draftSuccess?.data?.linkedinImagePrompt)).toMatch(
+      /LinkedIn|4:5|Título|Complemento/i
+    );
     expect(typeof draftSuccess?.data?.content).toBe('string');
     expect(typeof draftSuccess?.data?.linkedinPost).toBe('string');
     expect(String(draftSuccess?.data?.linkedinPost)).toContain('https://gustavo-sotero.dev/blog/');
@@ -825,7 +831,11 @@ describe('openapi routes', () => {
     expect(Array.isArray(draftRunCompletedResult?.suggestedTagNames)).toBe(true);
     expect(typeof draftRunCompletedResult?.imagePrompt).toBe('string');
     expect(String(draftRunCompletedResult?.imagePrompt)).toMatch(
-      /ilustra|minimalista|thumb|1:1|4:3/i
+      /capa para blog|minimalista|fundo neutro|4:3/i
+    );
+    expect(typeof draftRunCompletedResult?.linkedinImagePrompt).toBe('string');
+    expect(String(draftRunCompletedResult?.linkedinImagePrompt)).toMatch(
+      /LinkedIn|4:5|Título|Complemento/i
     );
     expect(typeof draftRunCompletedResult?.linkedinPost).toBe('string');
     expect(String(draftRunCompletedResult?.linkedinPost)).toContain(

@@ -686,7 +686,9 @@ export const adminPaths = {
                     "## O custo não desaparece\n\nQuando você empurra trabalho para uma fila, troca simplicidade síncrona por complexidade operacional.\n\n## Quando faz sentido\n\nUse fila quando o tempo de resposta ao usuário realmente importa e o processamento pode ser refeito com segurança.\n\n```typescript\nawait queue.add('send-email', payload);\n```",
                   suggestedTagNames: ['BullMQ', 'Redis', 'Arquitetura', 'Consistência'],
                   imagePrompt:
-                    'Ilustração simples, minimalista e elegante em fundo escuro representando filas assíncronas e trade-offs, estética técnica em flat design, composição para thumb em formato 1:1 ou 4:3, com texto opcional apenas se reforçar a ideia central.',
+                    'Crie uma imagem de capa para blog em formato 4:3, com estilo minimalista, elegante e profissional, usando fundo neutro em off-white ou cinza claro. O tema central é filas assíncronas e trade-offs operacionais, representado de forma sutil com filas, setas discretas e contexto técnico. Texto principal: "Fila é troca". Texto de apoio: "O custo não some". Sem logos e sem marca d\'água.',
+                  linkedinImagePrompt:
+                    'Crie uma imagem para post no LinkedIn em formato 4:5, com estilo minimalista, elegante e profissional, usando fundo neutro em off-white, cinza claro ou bege suave. O tema central é o custo operacional de filas assíncronas. Incluir: Título: "Fila não elimina complexidade". Frase de apoio: "Ela redistribui o custo". Complemento: "Antes de adicionar BullMQ, valide se o fluxo síncrono realmente não resolve." Sem logos e sem marca d\'água.',
                   linkedinPost:
                     'Filas não eliminam complexidade — elas a redistribuem. Antes de adicionar BullMQ ao stack, vale perguntar: o processamento síncrono realmente não resolve?\n\nNovo post no blog: https://gustavo-sotero.dev/blog/fila-nao-e-solucao-magica-e-troca\n\n#BullMQ #Redis #Arquitetura #BackendDev',
                   notes:
@@ -925,7 +927,9 @@ export const adminPaths = {
                         content: '## Introdução\n...',
                         suggestedTagNames: ['BullMQ', 'Redis', 'Node.js'],
                         imagePrompt:
-                          'Ilustra\u00e7\u00e3o simples, minimalista e elegante em fundo escuro representando filas ass\u00edncronas e chamadas diretas, est\u00e9tica t\u00e9cnica em flat design, composi\u00e7\u00e3o para thumb em formato 1:1 ou 4:3, com texto opcional apenas se refor\u00e7ar a ideia central.',
+                          'Crie uma imagem de capa para blog em formato 4:3, com estilo minimalista, elegante e profissional, usando fundo neutro em off-white ou cinza claro. O tema central é filas assíncronas versus chamadas diretas, representado de forma sutil com setas, blocos de fluxo e contexto técnico. Texto principal: "Filas vs. RPC". Texto de apoio: "Escolha pelo trade-off". Sem logos e sem marca d\'água.',
+                        linkedinImagePrompt:
+                          'Crie uma imagem para post no LinkedIn em formato 4:5, com estilo minimalista, elegante e profissional, usando fundo neutro em off-white, cinza claro ou bege suave. O tema central é a escolha entre filas assíncronas e chamadas síncronas. Incluir: Título: "Filas vs. RPC". Frase de apoio: "Não é sobre ferramenta. É sobre trade-off." Complemento: "Use fila quando retry, latência e consistência eventual forem aceitáveis." Sem logos e sem marca d\'água.',
                         linkedinPost:
                           'Filas vs. chamadas s\u00edncronas \u2014 a escolha certa depende do tradeoff que voc\u00ea est\u00e1 disposto a aceitar.\n\nNovo post no blog: https://gustavo-sotero.dev/blog/filas-vs-chamadas-sincronas\n\n#BullMQ #Redis #Nodejs',
                         notes: null,

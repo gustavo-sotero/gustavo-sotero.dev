@@ -5,6 +5,7 @@ import {
   createTopicRunRequestSchema,
   createTopicRunResponseSchema,
   draftRunStatusResponseSchema,
+  generateDraftOutputSchema,
   generateDraftRequestSchema,
   generateDraftResponseSchema,
   generateTopicsRequestSchema,
@@ -170,6 +171,7 @@ describe('ai-post-generation schemas', () => {
           'Conteúdo longo o suficiente para não cair na validação de tamanho mínimo, mas com título e slug inválidos.',
         suggestedTagNames: ['TypeScript'],
         imagePrompt: '',
+        linkedinImagePrompt: '',
         linkedinPost: '',
         notes: null,
       });
@@ -186,11 +188,50 @@ describe('ai-post-generation schemas', () => {
           'Conteúdo longo o suficiente para não cair na validação de tamanho mínimo e verificar que linkedinPost é obrigatório.',
         suggestedTagNames: ['TypeScript'],
         imagePrompt: 'Ilustração minimalista',
+        linkedinImagePrompt: 'Card minimalista para LinkedIn',
         notes: null,
         // linkedinPost deliberately omitted
       });
 
       expect(result.success).toBe(false);
+    });
+
+    it('rejects draft responses without linkedinImagePrompt field', () => {
+      const result = generateDraftResponseSchema.safeParse({
+        title: 'Título válido',
+        slug: 'titulo-valido',
+        excerpt: 'Resumo válido',
+        content:
+          'Conteúdo longo o suficiente para não cair na validação de tamanho mínimo e verificar que linkedinImagePrompt é obrigatório.',
+        suggestedTagNames: ['TypeScript'],
+        imagePrompt: 'Ilustração minimalista',
+        linkedinPost: 'Post para LinkedIn com hashtags.\n\n#TypeScript #Backend #Nodejs',
+        notes: null,
+        // linkedinImagePrompt deliberately omitted
+      });
+
+      expect(result.success).toBe(false);
+    });
+  });
+
+  // ── generateDraftOutputSchema ──────────────────────────────────────────────
+
+  describe('generateDraftOutputSchema', () => {
+    it('allows empty image prompt fields so normalizer fallbacks can run', () => {
+      const result = generateDraftOutputSchema.safeParse({
+        title: 'Título válido',
+        slug: 'titulo-valido',
+        excerpt: 'Resumo válido',
+        content:
+          'Conteúdo longo o suficiente para não cair na validação de tamanho mínimo e validar o contrato de saída bruto.',
+        suggestedTagNames: ['TypeScript'],
+        imagePrompt: '',
+        linkedinImagePrompt: '',
+        linkedinPost: 'Post para LinkedIn com hashtags.\n\n#TypeScript #Backend #Nodejs',
+        notes: null,
+      });
+
+      expect(result.success).toBe(true);
     });
   });
 
@@ -324,7 +365,8 @@ describe('ai-post-generation schemas', () => {
           content:
             '## Intro\n\nSome content here that is long enough to meet the minimum character requirement for blog post content.',
           suggestedTagNames: ['TypeScript'],
-          imagePrompt: 'Ilustração técnica minimalista em fundo escuro',
+          imagePrompt: 'Prompt de capa para blog em formato 4:3 com fundo neutro',
+          linkedinImagePrompt: 'Card 4:5 minimalista para LinkedIn sobre TypeScript',
           linkedinPost:
             'Post sobre TypeScript e arquitetura backend.\n\nhttps://gustavo-sotero.dev/blog/post-title\n\n#TypeScript #Backend #Nodejs',
           notes: null,
@@ -351,7 +393,36 @@ describe('ai-post-generation schemas', () => {
           content:
             '## Intro\n\nSome content here that is long enough to meet the minimum character requirement for blog post content.',
           suggestedTagNames: ['TypeScript'],
-          imagePrompt: 'Ilustração técnica minimalista em fundo escuro',
+          imagePrompt: 'Prompt de capa para blog em formato 4:3 com fundo neutro',
+          linkedinImagePrompt: 'Card 4:5 minimalista para LinkedIn sobre TypeScript',
+          notes: null,
+        },
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects completed state when result payload is missing linkedinImagePrompt', () => {
+      const result = draftRunStatusResponseSchema.safeParse({
+        ...base,
+        status: 'completed',
+        stage: 'completed',
+        selectedSuggestionCategory: 'backend-arquitetura',
+        concreteCategory: 'backend-arquitetura',
+        modelId: 'openai/gpt-4o',
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: 4200,
+        result: {
+          title: 'Post Title',
+          slug: 'post-title',
+          excerpt: 'Short summary of the post.',
+          content:
+            '## Intro\n\nSome content here that is long enough to meet the minimum character requirement for blog post content.',
+          suggestedTagNames: ['TypeScript'],
+          imagePrompt: 'Ilustração técnica minimalista em fundo neutro',
+          linkedinPost:
+            'Post sobre TypeScript e arquitetura backend.\n\nhttps://gustavo-sotero.dev/blog/post-title\n\n#TypeScript #Backend #Nodejs',
           notes: null,
         },
       });

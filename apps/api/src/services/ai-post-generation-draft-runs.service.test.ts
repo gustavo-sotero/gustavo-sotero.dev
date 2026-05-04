@@ -97,7 +97,9 @@ function makeRun(overrides: Record<string, unknown> = {}) {
         '## Intro\n\nConteudo suficientemente longo para satisfazer a validacao minima do draft gerado no polling assíncrono.',
       suggestedTagNames: ['TypeScript', 'BullMQ', 'Node.js'],
       imagePrompt:
-        'Ilustracao simples, minimalista e elegante em fundo escuro representando filas assincronas, composicao para thumb em formato 1:1.',
+        'Prompt de capa para blog em formato 4:3 com fundo neutro representando filas assincronas.',
+      linkedinImagePrompt:
+        'Prompt de imagem para LinkedIn em formato 4:5 com titulo, frase de apoio e complemento sobre filas assincronas.',
       linkedinPost:
         'Novo post: https://gustavo-sotero.dev/blog/fila-nao-e-arquitetura\n\n#TypeScript #BullMQ #Nodejs',
       notes: null,
@@ -185,6 +187,31 @@ describe('ai-post-generation-draft-runs.service', () => {
     expect(status?.result).toBeNull();
   });
 
+  it('hydrates historical completed runs missing only linkedinImagePrompt', async () => {
+    draftRunFindFirstMock.mockResolvedValueOnce(
+      makeRun({
+        resultPayload: {
+          title: 'Fila nao e arquitetura',
+          slug: 'fila-nao-e-arquitetura',
+          excerpt: 'Resumo curto sobre trade-offs de filas.',
+          content:
+            '## Intro\n\nConteudo suficientemente longo para satisfazer a validacao minima do draft historico com texto de LinkedIn, mas sem prompt visual do LinkedIn.',
+          suggestedTagNames: ['TypeScript', 'BullMQ'],
+          imagePrompt: 'Prompt de capa para blog em formato 4:3 com fundo neutro.',
+          linkedinPost:
+            'Novo post: https://gustavo-sotero.dev/blog/fila-nao-e-arquitetura\n\n#TypeScript #BullMQ #Nodejs',
+          notes: null,
+        },
+      })
+    );
+
+    const status = await getDraftRunStatus(RUN_ID);
+
+    expect(status?.result?.linkedinImagePrompt).toContain('LinkedIn');
+    expect(status?.result?.linkedinImagePrompt).toContain('4:5');
+    expect(status?.result?.linkedinImagePrompt).toContain('Fila nao e arquitetura');
+  });
+
   it('returns the validated result for completed runs with the current schema', async () => {
     draftRunFindFirstMock.mockResolvedValueOnce(makeRun());
 
@@ -195,6 +222,7 @@ describe('ai-post-generation-draft-runs.service', () => {
     expect(status?.result?.linkedinPost).toContain(
       'https://gustavo-sotero.dev/blog/fila-nao-e-arquitetura'
     );
+    expect(status?.result?.linkedinImagePrompt).toContain('LinkedIn');
     expect(status?.result?.suggestedTagNames).toEqual(['TypeScript', 'BullMQ', 'Node.js']);
   });
 });

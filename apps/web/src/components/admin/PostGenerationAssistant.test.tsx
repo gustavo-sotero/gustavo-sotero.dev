@@ -217,7 +217,8 @@ const DRAFT_FIXTURE = {
   excerpt: 'Resumo curto.',
   content: '## Intro\n\nConteúdo.',
   suggestedTagNames: ['TypeScript'],
-  imagePrompt: 'Ilustração minimalista representando o tema do post, flat design, formato quadrado',
+  imagePrompt: 'Prompt de capa para blog em formato 4:3 com fundo neutro.',
+  linkedinImagePrompt: 'Prompt de imagem para LinkedIn em formato 4:5 com card explicativo.',
   linkedinPost:
     'Novo post no blog sobre TypeScript.\n\nhttps://gustavo-sotero.dev/blog/post-gerado\n\n#TypeScript #Backend #NodeJs',
   notes: null,

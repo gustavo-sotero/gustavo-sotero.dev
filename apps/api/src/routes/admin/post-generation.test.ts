@@ -527,7 +527,8 @@ describe('admin post-generation routes', () => {
         excerpt: 'Resumo curto.',
         content: '## Intro\n\nConteúdo.',
         suggestedTagNames: ['TypeScript'],
-        imagePrompt: 'dark illustration',
+        imagePrompt: 'Prompt de capa para blog em formato 4:3 com fundo neutro.',
+        linkedinImagePrompt: 'Prompt de imagem para LinkedIn em formato 4:5 com card explicativo.',
         linkedinPost:
           'Post sobre TypeScript. https://gustavo-sotero.dev/blog/post-gerado\n\n#TypeScript #Backend #Nodejs',
         notes: null,
@@ -749,8 +750,9 @@ describe('admin post-generation routes', () => {
           excerpt: 'Short summary.',
           content: '## Intro\n\nContent.',
           suggestedTagNames: ['TypeScript'],
-          imagePrompt:
-            'Ilustração minimalista de fundo escuro representando TypeScript, flat design, formato quadrado',
+          imagePrompt: 'Prompt de capa para blog em formato 4:3 com fundo neutro sobre TypeScript.',
+          linkedinImagePrompt:
+            'Prompt de imagem para LinkedIn em formato 4:5 com card explicativo sobre TypeScript.',
           linkedinPost:
             'Post sobre TypeScript. https://gustavo-sotero.dev/blog/post-title\n\n#TypeScript #Backend #Nodejs',
           notes: null,

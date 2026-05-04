@@ -106,13 +106,41 @@ Cada sugestão ou draft gerado DEVE ser atribuído a uma categoria concreta (nun
  * Formatting rules for the imagePrompt output field.
  */
 export const IMAGE_PROMPT_RULES = `Regras para o campo imagePrompt:
-- Texto em português (PT-BR)
-- Imagem simples, minimalista e elegante
-- Formato quadrado 1:1 ou 4:3, adequada para uso como thumb
-- Texto na imagem é opcional; use apenas quando fizer sentido visual e reforçar a ideia central da composição
-- Sem excesso de elementos
-- Estilo: flat design, técnico/digital, fundo escuro
-- Exemplo de estrutura: "Ilustração minimalista de fundo escuro representando [conceito], flat design, estética técnica, formato quadrado"`;
+- Retorne um prompt completo em português (PT-BR) para gerar a thumb do blog em formato 4:3
+- Comece orientando: "Crie uma imagem de capa para blog em formato 4:3"
+- Estilo minimalista, elegante e profissional, com fundo neutro (off-white, cinza claro, bege suave ou tons similares)
+- Composição limpa, equilibrada e sofisticada, com poucos elementos visuais e aparência editorial premium
+- O tema central deve ser o tema do draft, representado de forma sutil por elementos gráficos discretos relacionados ao assunto
+- Incluir pouco texto, com tipografia moderna, legível e bem organizada
+- Preencha texto principal e texto de apoio curto de acordo com o post; não deixe placeholders literais
+- Estrutura esperada:
+  Crie uma imagem de capa para blog em formato 4:3, com estilo minimalista, elegante e profissional, usando fundo neutro (off-white, cinza claro, bege suave ou tons similares).
+  A composição deve ser limpa, equilibrada e sofisticada, com poucos elementos visuais e aparência editorial premium. O tema central é [TEMA], representado de forma sutil por elementos gráficos discretos relacionados ao assunto.
+  Incluir pouco texto, com tipografia moderna, legível e bem organizada.
+  Texto principal: "[TÍTULO CURTO]"
+  Texto de apoio opcional: "[SUBTÍTULO CURTO]"
+  O layout deve transmitir clareza, autoridade e sofisticação, sem poluição visual. Sem logos e sem marca d'água.`;
+
+/**
+ * Formatting rules for the linkedinImagePrompt output field.
+ */
+export const LINKEDIN_IMAGE_PROMPT_RULES = `Regras para o campo linkedinImagePrompt:
+- Retorne um prompt completo em português (PT-BR) para gerar uma imagem de post do LinkedIn em formato 4:5
+- Comece orientando: "Crie uma imagem para post no LinkedIn em formato 4:5"
+- Estilo minimalista, elegante e profissional, com fundo neutro (off-white, cinza claro, bege suave ou tons similares)
+- Composição limpa, moderna e sofisticada, com aparência premium e boa hierarquia visual
+- O tema central deve ser o tema do draft, representado de forma clara e sutil com poucos elementos gráficos de apoio relacionados ao assunto
+- A imagem pode conter mais texto do que a thumb, mas sem exagero, funcionando como um card explicativo curto
+- Preencha título, frase de apoio e complemento de acordo com o post; não deixe placeholders literais
+- Estrutura esperada:
+  Crie uma imagem para post no LinkedIn em formato 4:5, com estilo minimalista, elegante e profissional, usando fundo neutro (off-white, cinza claro, bege suave ou tons similares).
+  A composição deve ser limpa, moderna e sofisticada, com aparência premium e boa hierarquia visual. O tema central é [TEMA], representado de forma clara e sutil com poucos elementos gráficos de apoio relacionados ao assunto.
+  A imagem pode conter mais texto do que a thumb, mas sem exagero, funcionando como um card explicativo curto.
+  Incluir:
+  Título: "[TÍTULO PRINCIPAL]"
+  Frase de apoio: "[FRASE DE IMPACTO]"
+  Complemento: "[EXPLICAÇÃO CURTA OU RECOMENDAÇÃO]"
+  Usar tipografia moderna, bem legível e layout sóbrio, equilibrado e sem poluição visual. Sem logos e sem marca d'água.`;
 
 /**
  * Editorial rules for the linkedinPost output field.
@@ -142,6 +170,8 @@ Exemplos do estilo editorial esperado (use para calibrar tom e densidade, não p
 ${exemplarsBlock}
 
 ${IMAGE_PROMPT_RULES}
+
+${LINKEDIN_IMAGE_PROMPT_RULES}
 
 ${LINKEDIN_POST_RULES}
 
@@ -194,7 +224,7 @@ Tags sugeridas: ${s.suggestedTagNames.join(', ')}`
   }
 
   parts.push(
-    `Produza o draft completo com os campos: title, slug (URL-safe, PT-BR), excerpt (máx 500 caracteres), content (Markdown), suggestedTagNames (máx 8, nomes naturais com maiúsculas/espaços, somente tags diretamente relevantes ao tema — sem tags genéricas), imagePrompt (PT-BR, veja regras acima), linkedinPost (PT-BR, veja regras acima — use exatamente o placeholder {{POST_URL}} para o link do blog, com hashtags obrigatórias no final), notes (nullable — use para qualquer aviso editorial).`
+    `Produza o draft completo com os campos: title, slug (URL-safe, PT-BR), excerpt (máx 500 caracteres), content (Markdown), suggestedTagNames (máx 8, nomes naturais com maiúsculas/espaços, somente tags diretamente relevantes ao tema — sem tags genéricas), imagePrompt (PT-BR, prompt de imagem para thumb do blog 4:3, veja regras acima), linkedinImagePrompt (PT-BR, prompt de imagem para post do LinkedIn 4:5, veja regras acima), linkedinPost (PT-BR, veja regras acima — use exatamente o placeholder {{POST_URL}} para o link do blog, com hashtags obrigatórias no final), notes (nullable — use para qualquer aviso editorial).`
   );
 
   return parts.join('\n\n');

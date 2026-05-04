@@ -181,6 +181,7 @@ export function PostDraftReview({
 }: PostDraftReviewProps) {
   const [applied, setApplied] = useState<Partial<Record<ApplyableField | 'all', true>>>({});
   const [imageCopied, setImageCopied] = useState(false);
+  const [linkedinImageCopied, setLinkedinImageCopied] = useState(false);
   const [linkedinCopied, setLinkedinCopied] = useState(false);
   const [isResolvingTags, setIsResolvingTags] = useState(false);
 
@@ -258,8 +259,19 @@ export function PostDraftReview({
     try {
       await navigator.clipboard.writeText(draft.imagePrompt);
       setImageCopied(true);
-      toast.success('Prompt de imagem copiado');
+      toast.success('Prompt da thumb copiado');
       setTimeout(() => setImageCopied(false), 2000);
+    } catch {
+      toast.error('Não foi possível copiar');
+    }
+  }
+
+  async function copyLinkedinImagePrompt() {
+    try {
+      await navigator.clipboard.writeText(draft.linkedinImagePrompt);
+      setLinkedinImageCopied(true);
+      toast.success('Prompt de imagem do LinkedIn copiado');
+      setTimeout(() => setLinkedinImageCopied(false), 2000);
     } catch {
       toast.error('Não foi possível copiar');
     }
@@ -455,12 +467,13 @@ export function PostDraftReview({
       {/* Image prompt */}
       <div className="rounded-md border border-zinc-800 bg-zinc-900/60 p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-zinc-400">Prompt de imagem</span>
+          <span className="text-xs font-medium text-zinc-400">Prompt da thumb do blog</span>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={copyImagePrompt}
+            aria-label={imageCopied ? 'Prompt da thumb copiado' : 'Copiar prompt da thumb'}
             className="text-xs text-zinc-500 hover:text-zinc-300 h-6 px-2 gap-1.5"
           >
             {imageCopied ? (
@@ -473,8 +486,39 @@ export function PostDraftReview({
         </div>
         <p className="text-xs text-zinc-500 leading-relaxed">{draft.imagePrompt}</p>
         <p className="text-xs text-zinc-600 leading-relaxed">
-          Use este prompt em um gerador externo. Ele não preenche a capa automaticamente nem altera
-          o coverUrl do post.
+          Use este prompt em um gerador externo para criar a capa 4:3. Ele não preenche a capa
+          automaticamente nem altera o coverUrl do post.
+        </p>
+      </div>
+
+      {/* LinkedIn image prompt */}
+      <div className="rounded-md border border-zinc-800 bg-zinc-900/60 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium text-zinc-400">Prompt de imagem para LinkedIn</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={copyLinkedinImagePrompt}
+            aria-label={
+              linkedinImageCopied
+                ? 'Prompt de imagem do LinkedIn copiado'
+                : 'Copiar prompt de imagem do LinkedIn'
+            }
+            className="text-xs text-zinc-500 hover:text-zinc-300 h-6 px-2 gap-1.5"
+          >
+            {linkedinImageCopied ? (
+              <ClipboardCheck className="h-3 w-3 text-emerald-400" />
+            ) : (
+              <Clipboard className="h-3 w-3" />
+            )}
+            {linkedinImageCopied ? 'Copiado' : 'Copiar'}
+          </Button>
+        </div>
+        <p className="text-xs text-zinc-500 leading-relaxed">{draft.linkedinImagePrompt}</p>
+        <p className="text-xs text-zinc-600 leading-relaxed">
+          Use este prompt em um gerador externo para criar o card 4:5 do LinkedIn. Não altera nenhum
+          campo do formulário do post.
         </p>
       </div>
 
@@ -487,6 +531,9 @@ export function PostDraftReview({
             variant="ghost"
             size="sm"
             onClick={copyLinkedinPost}
+            aria-label={
+              linkedinCopied ? 'Texto para LinkedIn copiado' : 'Copiar texto para LinkedIn'
+            }
             className="text-xs text-zinc-500 hover:text-zinc-300 h-6 px-2 gap-1.5"
           >
             {linkedinCopied ? (

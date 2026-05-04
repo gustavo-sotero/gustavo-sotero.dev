@@ -93,7 +93,8 @@ const DRAFT_RESPONSE = {
   excerpt: 'Resumo curto.',
   content: '## Intro\n\nConteúdo.',
   suggestedTagNames: ['BullMQ'],
-  imagePrompt: 'dark illustration',
+  imagePrompt: 'Prompt de capa para blog em formato 4:3 com fundo neutro.',
+  linkedinImagePrompt: 'Prompt de imagem para LinkedIn em formato 4:5 com card explicativo.',
   linkedinPost:
     'Post sobre BullMQ e filas. https://gustavo-sotero.dev/blog/fila-nao-e-solucao-magica\n\n#BullMQ #Redis #Nodejs',
   notes: null,

@@ -58,7 +58,8 @@ const DRAFT = {
   content:
     '## Introdução\n\nConteúdo suficientemente longo para renderizar o preview com contexto real no review do draft.',
   suggestedTagNames: ['TypeScript', 'Redis'],
-  imagePrompt: 'Minimalist dark illustration',
+  imagePrompt: 'Prompt de capa para blog em formato 4:3 com fundo neutro.',
+  linkedinImagePrompt: 'Prompt de imagem para LinkedIn em formato 4:5 com card explicativo.',
   linkedinPost:
     'Post sobre TypeScript e Redis. https://gustavo-sotero.dev/blog/post-gerado\n\n#TypeScript #Redis #Nodejs',
   notes: null,
@@ -335,20 +336,53 @@ describe('PostDraftReview', () => {
       />
     );
 
-    // Two 'Copiar' buttons: index 0 = image prompt, index 1 = LinkedIn
-    const copyButtons = screen.getAllByRole('button', { name: /^Copiar$/i });
-    const imagePromptBtn = copyButtons.at(0);
-    if (!imagePromptBtn) throw new Error('Expected image prompt copy button');
-    fireEvent.click(imagePromptBtn);
+    fireEvent.click(screen.getByRole('button', { name: /Copiar prompt da thumb/i }));
 
     await waitFor(() => {
       expect(writeTextMock).toHaveBeenCalledWith(DRAFT.imagePrompt);
     });
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Prompt de imagem copiado');
-    expect(screen.getByRole('button', { name: /^Copiado$/i })).toBeInTheDocument();
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Prompt da thumb copiado');
+    expect(screen.getByRole('button', { name: /Prompt da thumb copiado/i })).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Use este prompt em um gerador externo\. Ele não preenche a capa automaticamente nem altera o coverUrl do post\./i
+        /Use este prompt em um gerador externo para criar a capa 4:3\. Ele não preenche a capa automaticamente nem altera o coverUrl do post\./i
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('copies the LinkedIn image prompt to the clipboard and shows feedback', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(global.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextMock },
+    });
+
+    render(
+      <PostDraftReview
+        draft={DRAFT}
+        allTags={TAGS}
+        currentValues={{}}
+        onApplyAll={vi.fn()}
+        onApplyField={vi.fn()}
+        onRegenerate={vi.fn()}
+        onBackToTopics={vi.fn()}
+        onDiscard={vi.fn()}
+        isRegenerating={false}
+      />
+    );
+
+    expect(screen.getAllByText(/Prompt de imagem para LinkedIn/i).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: /Copiar prompt de imagem do LinkedIn/i }));
+
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith(DRAFT.linkedinImagePrompt);
+    });
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Prompt de imagem do LinkedIn copiado');
+    expect(
+      screen.getByText(
+        /Use este prompt em um gerador externo para criar o card 4:5 do LinkedIn\. Não altera nenhum campo do formulário do post\./i
       )
     ).toBeInTheDocument();
   });
@@ -377,11 +411,7 @@ describe('PostDraftReview', () => {
 
     expect(screen.getByText(/Texto para LinkedIn/i)).toBeInTheDocument();
 
-    // Two 'Copiar' buttons: index 0 = image prompt, index 1 = LinkedIn
-    const copyButtons = screen.getAllByRole('button', { name: /^Copiar$/i });
-    const linkedinBtn = copyButtons.at(1);
-    if (!linkedinBtn) throw new Error('Expected LinkedIn copy button');
-    fireEvent.click(linkedinBtn);
+    fireEvent.click(screen.getByRole('button', { name: /Copiar texto para LinkedIn/i }));
 
     await waitFor(() => {
       expect(writeTextMock).toHaveBeenCalledWith(DRAFT.linkedinPost);

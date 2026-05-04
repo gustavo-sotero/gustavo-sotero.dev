@@ -56,6 +56,7 @@ function makeDraftResult(
     content: string;
     suggestedTagNames: string[];
     imagePrompt: string;
+    linkedinImagePrompt: string;
     linkedinPost: string;
     notes: string | null;
   }> = {}
@@ -68,7 +69,10 @@ function makeDraftResult(
       content:
         '## Introducao\n\nFila nao e solucao magica.\n\n```typescript\nconst queue = new Queue();\n```\n\nTexto longo o suficiente para passar a validacao minima de 100 chars.',
       suggestedTagNames: ['BullMQ', 'Redis', 'bullmq'],
-      imagePrompt: 'Minimalist dark illustration of a queue data structure',
+      imagePrompt:
+        'Crie uma imagem de capa para blog em formato 4:3, minimalista, com fundo neutro e texto curto sobre filas.',
+      linkedinImagePrompt:
+        'Crie uma imagem para post no LinkedIn em formato 4:5, minimalista, com título, frase de apoio e complemento sobre filas.',
       linkedinPost: '{{POST_URL}}',
       notes: null,
       ...overrides,
@@ -306,6 +310,7 @@ describe('post-generation.service', () => {
       expect(result.slug).toBe('fila-nao-e-solucao-magica');
       expect(result.suggestedTagNames).toHaveLength(2);
       expect(result.imagePrompt).toBeTruthy();
+      expect(result.linkedinImagePrompt).toBeTruthy();
       expect(result.linkedinPost).toContain(
         'https://gustavo-sotero.dev/blog/fila-nao-e-solucao-magica'
       );
@@ -330,6 +335,8 @@ describe('post-generation.service', () => {
         | { system?: string }
         | undefined;
       expect(callArg?.system).toContain('não force diagramas');
+      expect(callArg?.system).toContain('linkedinImagePrompt');
+      expect(callArg?.system).toContain('formato 4:5');
     });
 
     it('normalizes slug from title when provider returns an empty slug', async () => {
@@ -576,7 +583,8 @@ describe('post-generation.service', () => {
         | undefined;
 
       expect(callArg?.system).toMatch(/PT-BR|portugues/i);
-      expect(callArg?.system).toMatch(/minimalista|elegante|1:1|4:3|thumb/i);
+      expect(callArg?.system).toMatch(/minimalista|elegante|4:3|fundo neutro|thumb/i);
+      expect(callArg?.system).toMatch(/LinkedIn|4:5|card explicativo/i);
       expect(callArg?.system).toContain('{{POST_URL}}');
       expect(callArg?.system).toMatch(/hashtag/i);
       expect(callArg?.system).toContain("nunca retorne 'misto' como categoria do item");

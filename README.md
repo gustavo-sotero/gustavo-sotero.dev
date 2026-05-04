@@ -293,7 +293,8 @@ O payload de draft gerado contém:
 
 - `title`, `slug`, `excerpt`, `content` — aplicáveis diretamente ao formulário.
 - `suggestedTagNames` — lista de nomes de tags canonicalizados antes de chegar ao review. Tags já existentes no catálogo são exibidas em destaque; tags desconhecidas aparecem riscadas e são **criadas automaticamente** (com categoria inferida do catálogo compartilhado, fallback `other`) quando o admin aceita o draft — nunca durante a geração ou o polling.
-- `imagePrompt` — texto em **PT-BR** descrevendo a imagem a ser gerada (simples, minimalista, elegante, formato 1:1 ou 4:3, uso como thumb). Exibido como **copy-only** na review; não preenche `coverUrl` automaticamente.
+- `imagePrompt` — prompt em **PT-BR** para gerar a thumb do blog em formato 4:3, com estilo minimalista, editorial, fundo neutro e pouco texto. Exibido como **copy-only** na review; não preenche `coverUrl` automaticamente.
+- `linkedinImagePrompt` — prompt em **PT-BR** para gerar um card de imagem para LinkedIn em formato 4:5, com título, frase de apoio e complemento curto. Exibido como **copy-only** na review; não altera nenhum campo do formulário.
 - `linkedinPost` — texto curto em PT-BR pronto para publicar no LinkedIn, com gancho inicial, link canônico obrigatório para o post no blog (`https://gustavo-sotero.dev/blog/{slug}`) e 3–5 hashtags temáticas ao final. Exibido como **copy-only** na review; não preenche nenhum campo do formulário automaticamente.
 - `notes` — avisos editoriais opcionais da IA (nullable).
 

@@ -110,6 +110,7 @@ export const generateDraftResponseSchema = z.object({
   content: requiredString.min(AI_POST_MIN_DRAFT_CONTENT_CHARS),
   suggestedTagNames: z.array(requiredString).max(AI_POST_MAX_DRAFT_TAG_NAMES),
   imagePrompt: requiredString,
+  linkedinImagePrompt: requiredString,
   linkedinPost: requiredString,
   notes: requiredString.nullable(),
 });
@@ -145,7 +146,8 @@ export const generateDraftOutputSchema = z.object({
   excerpt: plainRequiredString.max(AI_POST_MAX_EXCERPT_CHARS),
   content: plainRequiredString.min(AI_POST_MIN_DRAFT_CONTENT_CHARS),
   suggestedTagNames: z.array(plainRequiredString).max(AI_POST_MAX_DRAFT_TAG_NAMES),
-  imagePrompt: plainRequiredString,
+  imagePrompt: z.string(),
+  linkedinImagePrompt: z.string(),
   linkedinPost: plainRequiredString,
   notes: plainRequiredString.nullable(),
 });

@@ -11,5 +11,6 @@ export {
   buildTopicsSystemPrompt,
   CATEGORY_INSTRUCTIONS,
   IMAGE_PROMPT_RULES,
+  LINKEDIN_IMAGE_PROMPT_RULES,
   STYLE_EXEMPLARS,
 } from '@portfolio/shared/lib/ai-post-prompts';
