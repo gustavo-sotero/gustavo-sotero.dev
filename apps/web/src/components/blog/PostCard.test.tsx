@@ -8,7 +8,7 @@
  *  - Title and date are rendered
  */
 import type { Post } from '@portfolio/shared/types/posts';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -32,6 +32,7 @@ vi.mock('next/link', () => ({
 
 vi.mock('lucide-react', () => ({
   CalendarDays: () => <span data-testid="icon-calendar" />,
+  ChevronDown: () => <span data-testid="icon-chevron-down" />,
 }));
 
 vi.mock('@/components/ui/border-beam', () => ({
@@ -44,6 +45,11 @@ vi.mock('@/lib/utils', () => ({
 }));
 
 import { PostCard } from './PostCard';
+
+const originalScrollHeightDescriptor = Object.getOwnPropertyDescriptor(
+  HTMLElement.prototype,
+  'scrollHeight'
+);
 
 // ── Factory ────────────────────────────────────────────────────────────────────
 
@@ -84,6 +90,15 @@ function makePost(overrides: Partial<Post> = {}): Post {
 
 afterEach(cleanup);
 
+afterEach(() => {
+  if (originalScrollHeightDescriptor) {
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', originalScrollHeightDescriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(HTMLElement.prototype, 'scrollHeight');
+});
+
 describe('PostCard — tag rendering', () => {
   it('renders all tags when the post has exactly 3', () => {
     const tags = [makeTag(1, 'TypeScript'), makeTag(2, 'Docker'), makeTag(3, 'Redis')];
@@ -118,5 +133,18 @@ describe('PostCard — tag rendering', () => {
   it('renders the post title', () => {
     render(<PostCard post={makePost({ title: 'My Great Post' })} />);
     expect(screen.getByText('My Great Post')).toBeInTheDocument();
+  });
+
+  it('shows the expand control when the card actually overflows, even with a short excerpt', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get: () => 520,
+    });
+
+    render(<PostCard post={makePost({ excerpt: 'Texto curto, mas o card continua alto.' })} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /mostrar mais/i })).toBeInTheDocument();
+    });
   });
 });

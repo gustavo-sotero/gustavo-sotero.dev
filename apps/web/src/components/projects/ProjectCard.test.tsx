@@ -11,7 +11,7 @@
  */
 import type { Project } from '@portfolio/shared/types/projects';
 import type { Skill } from '@portfolio/shared/types/skills';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
@@ -34,7 +34,9 @@ vi.mock('next/link', () => ({
 }));
 
 vi.mock('lucide-react', () => ({
+  ChevronDown: () => <span data-testid="icon-chevron-down" />,
   ExternalLink: () => <span data-testid="icon-external-link" />,
+  Globe: () => <span data-testid="icon-globe" />,
   Star: () => <span data-testid="icon-star" />,
 }));
 
@@ -43,6 +45,11 @@ vi.mock('@/components/ui/border-beam', () => ({
 }));
 
 import { ProjectCard } from './ProjectCard';
+
+const originalScrollHeightDescriptor = Object.getOwnPropertyDescriptor(
+  HTMLElement.prototype,
+  'scrollHeight'
+);
 
 // ── Factory ────────────────────────────────────────────────────────────────────
 
@@ -85,6 +92,15 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 afterEach(cleanup);
+
+afterEach(() => {
+  if (originalScrollHeightDescriptor) {
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', originalScrollHeightDescriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(HTMLElement.prototype, 'scrollHeight');
+});
 
 describe('ProjectCard — skill rendering', () => {
   it('renders all skills when the project has exactly 3', () => {
@@ -155,5 +171,26 @@ describe('ProjectCard — impactFacts rendering', () => {
     render(<ProjectCard project={makeProject({ impactFacts: [] })} />);
     // Facts section should not be present (nothing to assert against since there is no semantic container)
     expect(screen.queryByRole('list')).toBeNull();
+  });
+
+  it('shows the expand control when the card actually overflows, even without impact facts', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get: () => 620,
+    });
+
+    render(
+      <ProjectCard
+        project={makeProject({
+          impactFacts: [],
+          description:
+            'Descricao longa o suficiente para justificar overflow sem depender da presenca de fatos de impacto.',
+        })}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /mostrar mais/i })).toBeInTheDocument();
+    });
   });
 });

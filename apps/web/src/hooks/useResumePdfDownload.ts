@@ -3,7 +3,13 @@
 import { type MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { RESUME_PDF_FILENAME, RESUME_PDF_PATH } from '@/lib/resume/pdf';
 
-let pendingResumePdfUrlPromise: Promise<string> | null = null;
+export const RESUME_PDF_REQUEST_TIMEOUT_MS = 15_000;
+
+let pendingResumePdfRequest: {
+  promise: Promise<string>;
+  abortController: AbortController;
+  timeoutId: ReturnType<typeof setTimeout>;
+} | null = null;
 
 function downloadResumePdf(url: string) {
   const anchor = document.createElement('a');
@@ -13,11 +19,19 @@ function downloadResumePdf(url: string) {
 }
 
 async function getResumePdfUrl(): Promise<string> {
-  if (pendingResumePdfUrlPromise) {
-    return pendingResumePdfUrlPromise;
+  if (pendingResumePdfRequest) {
+    return pendingResumePdfRequest.promise;
   }
 
-  pendingResumePdfUrlPromise = fetch(RESUME_PDF_PATH)
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    abortController.abort();
+  }, RESUME_PDF_REQUEST_TIMEOUT_MS);
+
+  const promise = fetch(RESUME_PDF_PATH, {
+    cache: 'no-cache',
+    signal: abortController.signal,
+  })
     .then(async (response) => {
       if (!response.ok) {
         throw new Error(`Resume PDF request failed with status ${response.status}`);
@@ -27,14 +41,30 @@ async function getResumePdfUrl(): Promise<string> {
       return URL.createObjectURL(blob);
     })
     .finally(() => {
-      pendingResumePdfUrlPromise = null;
+      clearTimeout(timeoutId);
+
+      if (pendingResumePdfRequest?.promise === promise) {
+        pendingResumePdfRequest = null;
+      }
     });
 
-  return pendingResumePdfUrlPromise;
+  pendingResumePdfRequest = {
+    promise,
+    abortController,
+    timeoutId,
+  };
+
+  return promise;
 }
 
 export function clearResumePdfDownloadCache() {
-  pendingResumePdfUrlPromise = null;
+  if (!pendingResumePdfRequest) {
+    return;
+  }
+
+  clearTimeout(pendingResumePdfRequest.timeoutId);
+  pendingResumePdfRequest.abortController.abort();
+  pendingResumePdfRequest = null;
 }
 
 export function useResumePdfDownload() {

@@ -9,22 +9,42 @@ import { useState } from 'react';
 import { GitHubIcon } from '@/components/shared/BrandIcons';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
+import { useExpandableCard } from '@/hooks/useExpandableCard';
 
 interface ProjectCardProps {
   project: Project;
 }
 
-const FACTS_COLLAPSED_HEIGHT = 44;
+const CARD_COLLAPSED_HEIGHT = 460;
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const skills = project.skills ?? [];
   const impactFacts = project.impactFacts ?? [];
   const [expanded, setExpanded] = useState(false);
-
-  const needsExpand = impactFacts.length >= 2;
+  const measurementKey = [
+    project.id,
+    project.title,
+    project.description ?? '',
+    impactFacts.join('|'),
+    skills.map((skill) => `${skill.id}:${skill.name}`).join('|'),
+    project.repositoryUrl ?? '',
+    project.liveUrl ?? '',
+  ].join('::');
+  const { cardRef, hasOverflow } = useExpandableCard<HTMLDivElement>(
+    CARD_COLLAPSED_HEIGHT,
+    measurementKey
+  );
+  const needsExpand = hasOverflow;
+  const isCollapsed = needsExpand && !expanded;
 
   return (
-    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-all duration-300 min-h-115">
+    <motion.div
+      ref={cardRef}
+      className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-[box-shadow,border-color] duration-300"
+      initial={false}
+      animate={{ height: isCollapsed ? CARD_COLLAPSED_HEIGHT : 'auto' }}
+      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+    >
       {/* Stretched link — covers entire card, above image/content but below action buttons (z-10) */}
       <Link
         href={`/projects/${project.slug}`}
@@ -65,7 +85,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       {/* Content */}
-      <div className="flex flex-col flex-1 p-5 gap-3">
+      <div className="flex flex-col flex-1 p-5 gap-3 pb-12">
         {/* Title */}
         <h3 className="font-semibold text-zinc-100 group-hover:text-emerald-400 transition-colors duration-200 leading-snug">
           {project.title}
@@ -76,60 +96,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <p className="text-sm text-zinc-500 leading-relaxed">{project.description}</p>
         )}
 
-        {/* Impact facts — height-based collapse, shows at least 1 fact naturally */}
+        {/* Impact facts — all rendered; card-level overflow clips them when collapsed */}
         {impactFacts.length > 0 && (
-          <div className="relative">
-            <motion.div
-              initial={false}
-              animate={{ height: expanded ? 'auto' : FACTS_COLLAPSED_HEIGHT }}
-              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-              style={{ overflow: 'hidden' }}
-            >
-              <ul className="space-y-1">
-                {impactFacts.map((fact) => (
-                  <li
-                    key={fact}
-                    className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
-                  >
-                    <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
-                    {fact}
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-
-            {/* Gradient fade — visible only when collapsed and there's overflow */}
-            {needsExpand && (
-              <motion.div
-                initial={false}
-                animate={{ opacity: expanded ? 0 : 1 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="absolute bottom-0 left-0 right-0 h-10 bg-linear-to-t from-zinc-950 via-zinc-950/70 to-transparent pointer-events-none"
-              />
-            )}
-          </div>
-        )}
-
-        {/* Expand / collapse toggle */}
-        {needsExpand && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setExpanded((v) => !v);
-            }}
-            className="relative z-10 flex items-center gap-1 self-start text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors"
-          >
-            <motion.span
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="flex"
-            >
-              <ChevronDown className="h-3 w-3" />
-            </motion.span>
-            Mostrar {expanded ? 'menos' : 'mais'}
-          </button>
+          <ul className="space-y-1">
+            {impactFacts.map((fact) => (
+              <li
+                key={fact}
+                className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
+              >
+                <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                {fact}
+              </li>
+            ))}
+          </ul>
         )}
 
         {/* Skills + Links — pinned to bottom */}
@@ -182,6 +161,36 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
         )}
       </div>
-    </div>
+
+      {/* Gradient fade + expand button — absolutely anchored at card bottom */}
+      {needsExpand && (
+        <>
+          <motion.div
+            initial={false}
+            animate={{ opacity: isCollapsed ? 1 : 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-zinc-950 via-zinc-950/60 to-transparent pointer-events-none z-5"
+          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors bg-zinc-950/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-zinc-800/60 hover:border-emerald-500/30 whitespace-nowrap"
+          >
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="flex"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </motion.span>
+            Mostrar {expanded ? 'menos' : 'mais'}
+          </button>
+        </>
+      )}
+    </motion.div>
   );
 }

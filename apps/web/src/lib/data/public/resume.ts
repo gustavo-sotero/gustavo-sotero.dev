@@ -31,12 +31,7 @@ const EMPTY_RESUME_DATA: ResumeDataPayload = {
   projects: [],
 };
 
-/** All data needed to build the resume view-model, fetched in parallel. */
-export async function getResumeData(): Promise<ResumeLoaderResult> {
-  'use cache';
-  cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
-  cacheTag(TAG_EXPERIENCE_LIST, TAG_EDUCATION_LIST, TAG_PROJECTS_LIST, TAG_SKILLS_LIST);
-
+async function loadResumeData(): Promise<ResumeLoaderResult> {
   let degraded = false;
 
   const [experienceRes, educationRes, skillsRes, projectsRes] = await Promise.all([
@@ -84,4 +79,18 @@ export async function getResumeData(): Promise<ResumeLoaderResult> {
   }
 
   return { state: 'ok', data };
+}
+
+/** All data needed to build the resume view-model, fetched in parallel. */
+export async function getResumeData(): Promise<ResumeLoaderResult> {
+  'use cache';
+  cacheLife({ stale: 300, revalidate: 300, expire: 3600 });
+  cacheTag(TAG_EXPERIENCE_LIST, TAG_EDUCATION_LIST, TAG_PROJECTS_LIST, TAG_SKILLS_LIST);
+
+  return loadResumeData();
+}
+
+/** Download routes should bypass cache so the generated PDF always reflects the latest resume. */
+export async function getResumeDataUncached(): Promise<ResumeLoaderResult> {
+  return loadResumeData();
 }

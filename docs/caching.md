@@ -46,13 +46,14 @@ Any write operation that touches a section visible on the home page should call 
 
 `POST /_internal/revalidate` accepts `{ tag: string, secret: string }` and calls `revalidateTag(tag)`. The `REVALIDATE_SECRET` environment variable guards this endpoint. The API calls it after content writes (posts, projects, skills, tags, etc.).
 
-## Resume PDF Caching
+## Resume PDF Delivery
 
-`GET /curriculo.pdf` is cacheable because the generated PDF is public and contains no per-user state.
+`GET /curriculo.pdf` keeps a stable public URL and filename, but uses validator-based caching instead of a blind TTL.
 
-- Success responses return `Cache-Control: public, s-maxage=600, stale-while-revalidate=300`.
-- Failure responses remain `no-store` so error pages are never cached.
-- The PDF route still renders server-side from current resume data; caching only avoids regenerating the same public artifact on every request.
+- Success responses return `Cache-Control: public, no-cache, must-revalidate` plus an `ETag` derived from the current resume payload and an explicit PDF template version.
+- Repeated downloads can reuse the browser cache, but every reuse must revalidate against the route before serving, so the stable `/curriculo.pdf` URL does not drift stale.
+- The PDF route still bypasses the cached resume loader used by the HTML page, so validator checks always run against fresh public data.
+- Error responses remain `no-store` so failure bodies are never cached.
 
 ## Cache Lifetime Config
 

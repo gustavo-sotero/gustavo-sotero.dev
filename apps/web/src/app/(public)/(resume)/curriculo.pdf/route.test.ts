@@ -2,16 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   renderToBufferMock,
-  getResumeDataMock,
+  getResumeDataUncachedMock,
   buildResumeViewModelMock,
   logServerErrorMock,
   resumePdfDocumentMock,
+  unstableRethrowMock,
 } = vi.hoisted(() => ({
   renderToBufferMock: vi.fn(),
-  getResumeDataMock: vi.fn(),
+  getResumeDataUncachedMock: vi.fn(),
   buildResumeViewModelMock: vi.fn(),
   logServerErrorMock: vi.fn(),
   resumePdfDocumentMock: vi.fn((props) => ({ props })),
+  unstableRethrowMock: vi.fn(),
 }));
 
 vi.mock('@react-pdf/renderer', () => ({
@@ -23,7 +25,7 @@ vi.mock('@/components/resume/ResumePdfDocument', () => ({
 }));
 
 vi.mock('@/lib/data/public/resume', () => ({
-  getResumeData: getResumeDataMock,
+  getResumeDataUncached: getResumeDataUncachedMock,
 }));
 
 vi.mock('@/lib/resume/mapper', () => ({
@@ -34,7 +36,15 @@ vi.mock('@/lib/server-logger', () => ({
   logServerError: logServerErrorMock,
 }));
 
+vi.mock('next/navigation', () => ({
+  unstable_rethrow: unstableRethrowMock,
+}));
+
 const { GET } = await import('./route');
+
+function buildRequest(headers?: HeadersInit) {
+  return new Request('https://gustavo-sotero.dev/curriculo.pdf', { headers });
+}
 
 const FIXED_NOW = new Date('2026-04-24T12:34:56.000Z');
 
@@ -58,7 +68,7 @@ describe('GET /curriculo.pdf', () => {
     vi.clearAllMocks();
     vi.stubGlobal('Date', FixedDate as unknown as DateConstructor);
 
-    getResumeDataMock.mockResolvedValue({
+    getResumeDataUncachedMock.mockResolvedValue({
       state: 'ok',
       data: {
         experience: [],
@@ -76,18 +86,17 @@ describe('GET /curriculo.pdf', () => {
   });
 
   it('returns a downloadable PDF response generated from the server-side resume data', async () => {
-    const response = await GET();
+    const response = await GET(buildRequest());
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('application/pdf');
     expect(response.headers.get('Content-Disposition')).toContain(
       'attachment; filename="curriculo-gustavo-sotero.pdf"'
     );
-    expect(response.headers.get('Cache-Control')).toBe(
-      'public, s-maxage=600, stale-while-revalidate=300'
-    );
+    expect(response.headers.get('Cache-Control')).toBe('public, no-cache, must-revalidate');
+    expect(response.headers.get('ETag')).toMatch(/^"resume-pdf-/);
 
-    expect(getResumeDataMock).toHaveBeenCalledTimes(1);
+    expect(getResumeDataUncachedMock).toHaveBeenCalledTimes(1);
     expect(buildResumeViewModelMock).toHaveBeenCalledWith({
       experience: [],
       education: [],
@@ -106,15 +115,43 @@ describe('GET /curriculo.pdf', () => {
   it('logs and returns a 500 response when PDF generation fails', async () => {
     renderToBufferMock.mockRejectedValue(new Error('pdf failed'));
 
-    const response = await GET();
+    const response = await GET(buildRequest());
 
     expect(response.status).toBe(500);
     expect(await response.text()).toBe('Nao foi possivel gerar o PDF do curriculo.');
     expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(unstableRethrowMock).toHaveBeenCalledWith(expect.any(Error));
     expect(logServerErrorMock).toHaveBeenCalledWith(
       '/curriculo.pdf',
       'Failed to generate resume PDF',
       expect.objectContaining({ error: 'pdf failed' })
     );
+  });
+
+  it('returns 304 and skips PDF rendering when the request ETag still matches', async () => {
+    const firstResponse = await GET(buildRequest());
+    const etag = firstResponse.headers.get('ETag');
+
+    expect(etag).toBeTruthy();
+
+    if (!etag) {
+      throw new Error('Expected the first PDF response to include an ETag.');
+    }
+
+    renderToBufferMock.mockClear();
+
+    const response = await GET(
+      buildRequest({
+        'If-None-Match': etag,
+      })
+    );
+
+    expect(response.status).toBe(304);
+    expect(response.headers.get('Cache-Control')).toBe('public, no-cache, must-revalidate');
+    expect(response.headers.get('Content-Disposition')).toContain(
+      'attachment; filename="curriculo-gustavo-sotero.pdf"'
+    );
+    expect(response.headers.get('ETag')).toBe(etag);
+    expect(renderToBufferMock).not.toHaveBeenCalled();
   });
 });

@@ -2,7 +2,10 @@
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearResumePdfDownloadCache } from '@/hooks/useResumePdfDownload';
+import {
+  clearResumePdfDownloadCache,
+  RESUME_PDF_REQUEST_TIMEOUT_MS,
+} from '@/hooks/useResumePdfDownload';
 
 vi.mock('lucide-react', () => ({
   Download: () => <span data-testid="icon-download" />,
@@ -59,6 +62,7 @@ describe('ResumeDownloadButton', () => {
 
   afterEach(() => {
     clearResumePdfDownloadCache();
+    vi.useRealTimers();
 
     if (originalFetch) {
       Object.defineProperty(globalThis, 'fetch', {
@@ -118,7 +122,13 @@ describe('ResumeDownloadButton', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Baixar currículo em PDF' }));
 
-    expect(fetchMock).toHaveBeenCalledWith('/curriculo.pdf');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/curriculo.pdf',
+      expect.objectContaining({
+        cache: 'no-cache',
+        signal: expect.any(AbortSignal),
+      })
+    );
     expect(screen.getByText('Gerando PDF...')).toBeInTheDocument();
 
     response.resolve(new Response('resume-pdf', { status: 200 }));
@@ -157,5 +167,42 @@ describe('ResumeDownloadButton', () => {
     });
 
     expect(screen.queryByText('Gerando PDF...')).not.toBeInTheDocument();
+  });
+
+  it('returns to idle and allows retry when PDF generation hangs past the timeout', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation((_input, init?: RequestInit) => {
+      const signal = init?.signal;
+
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener(
+          'abort',
+          () => {
+            reject(signal.reason ?? new DOMException('The operation was aborted.', 'AbortError'));
+          },
+          { once: true }
+        );
+      });
+    });
+
+    render(<ResumeDownloadButton />);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Baixar currículo em PDF' }));
+
+    expect(screen.getByText('Gerando PDF...')).toBeInTheDocument();
+
+    await vi.advanceTimersByTimeAsync(RESUME_PDF_REQUEST_TIMEOUT_MS);
+    await Promise.resolve();
+    vi.useRealTimers();
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Baixar currículo em PDF' })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Gerando PDF...')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Baixar currículo em PDF' }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
