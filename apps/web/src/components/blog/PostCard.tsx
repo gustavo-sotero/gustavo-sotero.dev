@@ -8,11 +8,13 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
-import { cn, formatDateBR } from '@/lib/utils';
+import { formatDateBR } from '@/lib/utils';
 
 interface PostCardProps {
   post: Post;
 }
+
+const EXCERPT_COLLAPSED_H = 64;
 
 export function PostCard({ post }: PostCardProps) {
   const tags = post.tags ?? [];
@@ -27,7 +29,7 @@ export function PostCard({ post }: PostCardProps) {
     const el = excerptRef.current;
     if (!el) return;
     const check = () => {
-      if (!expandedRef.current) setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+      if (!expandedRef.current) setIsOverflowing(el.scrollHeight > EXCERPT_COLLAPSED_H + 1);
     };
     const ro = new ResizeObserver(check);
     ro.observe(el);
@@ -38,10 +40,7 @@ export function PostCard({ post }: PostCardProps) {
   const showButton = expanded || isOverflowing;
 
   return (
-    <motion.div
-      layoutRoot
-      className="group relative flex h-full flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-[box-shadow,border-color] duration-300"
-    >
+    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-[box-shadow,border-color] duration-300">
       {/* Stretched link — below interactive elements (z-10) */}
       <Link
         href={`/blog/${post.slug}`}
@@ -71,7 +70,7 @@ export function PostCard({ post }: PostCardProps) {
       </div>
 
       {/* ── Content — tags, title, excerpt, date ─────────────────────────────── */}
-      <div className="flex flex-col flex-1 p-5 gap-3">
+      <div className="flex flex-col p-5 gap-3">
         {/* Tags — always visible */}
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -96,9 +95,11 @@ export function PostCard({ post }: PostCardProps) {
         {post.excerpt && (
           <motion.div
             ref={excerptRef}
-            layout
+            initial={false}
+            animate={{ height: expanded ? 'auto' : EXCERPT_COLLAPSED_H }}
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            className={cn('relative overflow-hidden', !expanded && 'max-h-16')}
+            style={{ overflow: 'hidden' }}
+            className="relative"
           >
             <p className="text-sm text-zinc-500 leading-relaxed">{post.excerpt}</p>
 
@@ -141,6 +142,6 @@ export function PostCard({ post }: PostCardProps) {
           <time dateTime={post.publishedAt ?? post.createdAt ?? undefined}>{dateStr}</time>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -9,26 +9,27 @@ import { useEffect, useRef, useState } from 'react';
 import { GitHubIcon } from '@/components/shared/BrandIcons';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
-import { cn } from '@/lib/utils';
 
 interface ProjectCardProps {
   project: Project;
 }
 
+const COLLAPSED_H = 112;
+
 export function ProjectCard({ project }: ProjectCardProps) {
   const skills = project.skills ?? [];
   const impactFacts = project.impactFacts ?? [];
   const [expanded, setExpanded] = useState(false);
-  const factsRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   const expandedRef = useRef(false);
   expandedRef.current = expanded;
 
   useEffect(() => {
-    const el = factsRef.current;
+    const el = contentRef.current;
     if (!el) return;
     const check = () => {
-      if (!expandedRef.current) setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+      if (!expandedRef.current) setIsOverflowing(el.scrollHeight > COLLAPSED_H + 1);
     };
     const ro = new ResizeObserver(check);
     ro.observe(el);
@@ -39,10 +40,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const showButton = expanded || isOverflowing;
 
   return (
-    <motion.div
-      layoutRoot
-      className="group relative flex h-full flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300"
-    >
+    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300">
       {/* Stretched link — covers entire card; below action buttons (z-10) */}
       <Link
         href={`/projects/${project.slug}`}
@@ -83,36 +81,38 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       {/* ── Always-visible content ────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col p-5 gap-3">
+      <div className="flex flex-col p-5 gap-3">
         {/* Title */}
         <h3 className="font-semibold text-zinc-100 group-hover:text-emerald-400 transition-colors duration-200 leading-snug">
           {project.title}
         </h3>
 
-        {/* Description — always fully visible */}
-        {project.description && (
-          <p className="text-sm text-zinc-500 leading-relaxed">{project.description}</p>
-        )}
-
-        {/* ── Impact facts — ONLY this section collapses ───────────────────── */}
-        {impactFacts.length > 0 && (
+        {/* ── Description + impactFacts — one collapsible block ────────────── */}
+        {(project.description || impactFacts.length > 0) && (
           <motion.div
-            ref={factsRef}
-            layout
+            ref={contentRef}
+            initial={false}
+            animate={{ height: expanded ? 'auto' : COLLAPSED_H }}
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            className={cn('relative overflow-hidden', !expanded && 'max-h-28')}
+            style={{ overflow: 'hidden' }}
+            className="relative"
           >
-            <ul className="space-y-1">
-              {impactFacts.map((fact) => (
-                <li
-                  key={fact}
-                  className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
-                >
-                  <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
-                  {fact}
-                </li>
-              ))}
-            </ul>
+            {project.description && (
+              <p className="text-sm text-zinc-500 leading-relaxed mb-2">{project.description}</p>
+            )}
+            {impactFacts.length > 0 && (
+              <ul className="space-y-1">
+                {impactFacts.map((fact) => (
+                  <li
+                    key={fact}
+                    className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
+                  >
+                    <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                    {fact}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {/* Gradient fade — visible only when collapsed and there's more to show */}
             {isOverflowing && (
@@ -150,7 +150,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
         {/* ── Skills + Links — always fully visible ─────────────────────────── */}
         {(skills.length > 0 || project.repositoryUrl || project.liveUrl) && (
-          <div className="mt-auto flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             {skills.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-2 border-t border-zinc-800/60">
                 {skills.map((skill) => (
@@ -196,6 +196,6 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

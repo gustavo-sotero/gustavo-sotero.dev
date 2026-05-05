@@ -40,7 +40,7 @@ export function FeaturedProjects({ projects }: FeaturedProjectsProps) {
           posicionados em -left-12/-right-12, mantendo-os fora da área dos cards. */}
       <div className="overflow-hidden sm:overflow-visible sm:px-12">
         <Carousel opts={{ align: 'start', loop: false }} aria-label="Projetos" className="w-full">
-          <CarouselContent>
+          <CarouselContent className="items-start">
             {projects.map((project) => (
               <CarouselItem key={project.id} className="pl-4 basis-[88%] sm:basis-1/2 lg:basis-1/3">
                 <ProjectCard project={project} />

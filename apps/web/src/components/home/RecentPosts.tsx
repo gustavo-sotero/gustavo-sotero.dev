@@ -46,7 +46,7 @@ export function RecentPosts({ posts }: RecentPostsProps) {
           aria-label="Posts em destaque"
           className="w-full"
         >
-          <CarouselContent>
+          <CarouselContent className="items-start">
             {posts.map((post) => (
               <CarouselItem key={post.id} className="pl-4 basis-[88%] sm:basis-1/2 lg:basis-1/3">
                 <PostCard post={post} />
