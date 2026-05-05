@@ -9,42 +9,22 @@ import { useState } from 'react';
 import { GitHubIcon } from '@/components/shared/BrandIcons';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
-import { useExpandableCard } from '@/hooks/useExpandableCard';
 
 interface ProjectCardProps {
   project: Project;
 }
 
-const CARD_COLLAPSED_HEIGHT = 460;
+const CONTENT_COLLAPSED_HEIGHT = 200;
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const skills = project.skills ?? [];
   const impactFacts = project.impactFacts ?? [];
   const [expanded, setExpanded] = useState(false);
-  const measurementKey = [
-    project.id,
-    project.title,
-    project.description ?? '',
-    impactFacts.join('|'),
-    skills.map((skill) => `${skill.id}:${skill.name}`).join('|'),
-    project.repositoryUrl ?? '',
-    project.liveUrl ?? '',
-  ].join('::');
-  const { cardRef, hasOverflow } = useExpandableCard<HTMLDivElement>(
-    CARD_COLLAPSED_HEIGHT,
-    measurementKey
-  );
-  const needsExpand = hasOverflow;
-  const isCollapsed = needsExpand && !expanded;
+
+  const needsExpand = impactFacts.length > 0;
 
   return (
-    <motion.div
-      ref={cardRef}
-      className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-[box-shadow,border-color] duration-300"
-      initial={false}
-      animate={{ height: isCollapsed ? CARD_COLLAPSED_HEIGHT : 'auto' }}
-      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-    >
+    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-[box-shadow,border-color] duration-300">
       {/* Stretched link — covers entire card, above image/content but below action buttons (z-10) */}
       <Link
         href={`/projects/${project.slug}`}
@@ -84,8 +64,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex flex-col flex-1 p-5 gap-3 pb-12">
+      {/* Content — animated height; image above is never clipped */}
+      <motion.div
+        className="relative"
+        initial={false}
+        animate={{ height: expanded ? 'auto' : CONTENT_COLLAPSED_HEIGHT }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        style={{ overflow: 'hidden' }}
+      >
+      <div className="flex flex-col p-5 gap-3 pb-12">
         {/* Title */}
         <h3 className="font-semibold text-zinc-100 group-hover:text-emerald-400 transition-colors duration-200 leading-snug">
           {project.title}
@@ -167,7 +154,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <>
           <motion.div
             initial={false}
-            animate={{ opacity: isCollapsed ? 1 : 0 }}
+            animate={{ opacity: expanded ? 0 : 1 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-zinc-950 via-zinc-950/60 to-transparent pointer-events-none z-5"
           />
@@ -191,6 +178,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </button>
         </>
       )}
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }

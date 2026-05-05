@@ -8,41 +8,23 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
-import { useExpandableCard } from '@/hooks/useExpandableCard';
 import { formatDateBR } from '@/lib/utils';
 
 interface PostCardProps {
   post: Post;
 }
 
-const CARD_COLLAPSED_HEIGHT = 380;
+const CONTENT_COLLAPSED_HEIGHT = 180;
 
 export function PostCard({ post }: PostCardProps) {
   const tags = post.tags ?? [];
   const dateStr = formatDateBR(post.publishedAt ?? post.createdAt);
   const [expanded, setExpanded] = useState(false);
-  const measurementKey = [
-    post.id,
-    post.title,
-    post.excerpt ?? '',
-    tags.map((tag) => `${tag.id}:${tag.name}`).join('|'),
-    dateStr,
-  ].join('::');
-  const { cardRef, hasOverflow } = useExpandableCard<HTMLDivElement>(
-    CARD_COLLAPSED_HEIGHT,
-    measurementKey
-  );
-  const needsExpand = hasOverflow;
-  const isCollapsed = needsExpand && !expanded;
+
+  const needsExpand = !!post.excerpt && post.excerpt.length > 150;
 
   return (
-    <motion.div
-      ref={cardRef}
-      className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-[box-shadow,border-color] duration-300"
-      initial={false}
-      animate={{ height: isCollapsed ? CARD_COLLAPSED_HEIGHT : 'auto' }}
-      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-    >
+    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-[box-shadow,border-color] duration-300">
       {/* Stretched link — covers entire card, below action buttons (z-10) */}
       <Link
         href={`/blog/${post.slug}`}
@@ -70,7 +52,14 @@ export function PostCard({ post }: PostCardProps) {
         <div className="absolute inset-0 bg-linear-to-t from-zinc-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
-      {/* Content */}
+      {/* Content — animated height; image above is never clipped */}
+      <motion.div
+        className="relative"
+        initial={false}
+        animate={{ height: expanded ? 'auto' : CONTENT_COLLAPSED_HEIGHT }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        style={{ overflow: 'hidden' }}
+      >
       <div className="flex flex-col flex-1 p-5 gap-3 pb-12">
         {/* Tags */}
         {tags.length > 0 && (
@@ -93,7 +82,9 @@ export function PostCard({ post }: PostCardProps) {
         </h3>
 
         {/* Excerpt — full text; card-level overflow clips when collapsed */}
-        {post.excerpt && <p className="text-sm text-zinc-500 leading-relaxed">{post.excerpt}</p>}
+        {post.excerpt && (
+          <p className="text-sm text-zinc-500 leading-relaxed">{post.excerpt}</p>
+        )}
 
         {/* Footer - date */}
         <div className="flex items-center gap-1.5 text-xs text-zinc-600 mt-auto pt-2 border-t border-zinc-800/60">
@@ -107,7 +98,7 @@ export function PostCard({ post }: PostCardProps) {
         <>
           <motion.div
             initial={false}
-            animate={{ opacity: isCollapsed ? 1 : 0 }}
+            animate={{ opacity: expanded ? 0 : 1 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-zinc-950 via-zinc-950/60 to-transparent pointer-events-none z-5"
           />
@@ -131,6 +122,7 @@ export function PostCard({ post }: PostCardProps) {
           </button>
         </>
       )}
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }
