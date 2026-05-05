@@ -98,7 +98,7 @@ export function PostCard({ post }: PostCardProps) {
             ref={excerptRef}
             layout
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            className={cn('relative', !expanded && 'flex-1 min-h-0 overflow-hidden')}
+            className={cn('relative overflow-hidden', !expanded && 'max-h-16')}
           >
             <p className="text-sm text-zinc-500 leading-relaxed">{post.excerpt}</p>
 

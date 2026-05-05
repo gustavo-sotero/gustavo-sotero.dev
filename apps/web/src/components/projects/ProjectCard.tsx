@@ -41,7 +41,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <motion.div
       layoutRoot
-      className="group relative flex h-full max-h-160 flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300"
+      className="group relative flex h-full flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300"
     >
       {/* Stretched link — covers entire card; below action buttons (z-10) */}
       <Link
@@ -100,7 +100,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             ref={factsRef}
             layout
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            className={cn('relative', !expanded && 'flex-1 min-h-0 overflow-hidden')}
+            className={cn('relative overflow-hidden', !expanded && 'max-h-28')}
           >
             <ul className="space-y-1">
               {impactFacts.map((fact) => (
