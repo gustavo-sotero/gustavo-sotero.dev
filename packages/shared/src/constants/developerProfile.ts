@@ -5,13 +5,13 @@ export const DEVELOPER_PUBLIC_PROFILE = {
    * Full bio — displayed in the Hero section after the experience label.
    * Deliberately does NOT repeat the role (already shown above as AnimatedGradientText).
    */
-  bio: 'Especialista em TypeScript moderno — construo APIs de alta performance, orquestro filas assíncronas e entrego sistemas completos para produção, com testes, observabilidade e deploy confiável.',
+  bio: 'Desenvolvo sistemas web completos com TypeScript — APIs robustas, processamento assíncrono e frontend dinâmico, com testes automatizados, observabilidade e deploy confiável em produção.',
   /**
    * Short bio for SEO meta description — ≤ 155 chars to avoid Google truncation.
    * Must contain the strongest selling point before the cut.
    */
   bioShort:
-    'Desenvolvedor backend especializado em TypeScript moderno. APIs de alta performance, filas, cache e deploy containerizado — sistemas prontos para produção.',
+    'Desenvolvedor Full Stack TypeScript. Sistemas web completos para produção: API, testes, CI/CD e deploy containerizado — com qualidade e consistência.',
   /** ISO 8601 YYYY-MM-DD — used to calculate age dynamically */
   birthDate: '2004-05-29',
   /** ISO 8601 YYYY-MM-DD — used to calculate years of experience dynamically */
@@ -22,7 +22,7 @@ export const DEVELOPER_PUBLIC_PROFILE = {
     focus: 'TypeScript ponta a ponta — APIs performáticas, filas, cache e deploy containerizado',
   },
   objective:
-    'Especialista TypeScript — entrego backend ponta a ponta: modelagem de dados, APIs documentadas com OpenAPI 3.1, testes com Vitest, observabilidade e deploy containerizado. Ideal para times que priorizam qualidade e velocidade de entrega.',
+    'Desenvolvedor Full Stack com foco em TypeScript e backend robusto. Entrego sistemas completos para produção — APIs REST documentadas, processamento assíncrono, testes automatizados e deploy containerizado. Comprometido com qualidade de código, prazos e colaboração eficiente com o time.',
   location: 'Brasil',
   city: 'Aracaju',
   state: 'SE',
@@ -45,11 +45,11 @@ export const DEVELOPER_PUBLIC_PROFILE = {
   ] as const,
   additionalInfo: [
     // What was built
-    'Monorepo fullstack em produção: API REST, worker de filas, frontend SSR, CI/CD e deploy containerizado — arquitetura pensada para escalar',
+    'Projeto fullstack autoral em produção — backend, frontend, filas de processamento e infraestrutura containerizada, desenvolvido e mantido de forma independente',
     // Code quality signal
-    'APIs com OpenAPI 3.1, testes de integração e CI/CD — código que sobrevive à revisão do tech lead',
+    'Código documentado, testado automaticamente e validado via pipeline de CI/CD — pronto para integrar um time sem fricção',
     // Security depth signal (distinct from the two above)
-    'Rate limiting, CSRF, Turnstile e sanitização markdown — segurança implementada na fundação, não como afterthought',
+    'Segurança implementada desde a fundação: autenticação, proteção contra ataques comuns e validação rigorosa de entrada de dados',
   ] as const,
 } as const;
 

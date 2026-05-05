@@ -409,15 +409,9 @@ export function ResumePage({ resume }: ResumePageProps) {
 
       {/* ── Objective ───────────────────────────────────────────────────── */}
       {identity.objective && (
-        <section className="mb-10">
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-xs font-mono font-bold text-emerald-500 uppercase tracking-widest shrink-0">
-              Objetivo
-            </h2>
-            <div className="flex-1 h-px bg-zinc-800" />
-          </div>
+        <Section title="Resumo Profissional">
           <p className="text-zinc-400 leading-relaxed">{identity.objective}</p>
-        </section>
+        </Section>
       )}
 
       {/* ── Dynamic sections ────────────────────────────────────────────── */}

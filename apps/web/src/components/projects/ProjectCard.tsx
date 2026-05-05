@@ -1,9 +1,10 @@
 'use client';
 
 import type { Project } from '@portfolio/shared/types/projects';
-import { ExternalLink, Globe, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, ExternalLink, Globe, Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState } from 'react';
 import { GitHubIcon } from '@/components/shared/BrandIcons';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
@@ -12,15 +13,26 @@ interface ProjectCardProps {
   project: Project;
 }
 
+const VISIBLE_FACTS = 2;
+const DESCRIPTION_THRESHOLD = 100;
+
 export function ProjectCard({ project }: ProjectCardProps) {
   const skills = project.skills ?? [];
+  const impactFacts = project.impactFacts ?? [];
+  const [expanded, setExpanded] = useState(false);
+
+  const needsExpand =
+    (!!project.description && project.description.length > DESCRIPTION_THRESHOLD) ||
+    impactFacts.length > VISIBLE_FACTS;
+
+  const visibleFacts = expanded ? impactFacts : impactFacts.slice(0, VISIBLE_FACTS);
 
   return (
-    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-all duration-300">
+    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-all duration-300 min-h-115">
       {/* Stretched link — covers entire card, above image/content but below action buttons (z-10) */}
       <Link
         href={`/projects/${project.slug}`}
-        className="absolute inset-0 z-[1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-xl"
+        className="absolute inset-0 z-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-xl"
         aria-label={`Ver projeto ${project.title}`}
       />
       <BorderBeam colorFrom="#34d399" colorTo="#22d3ee" duration={4} size={120} />
@@ -33,7 +45,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       )}
 
       {/* Cover image */}
-      <div className="relative aspect-[4/3] w-full bg-zinc-800/60 overflow-hidden">
+      <div className="relative aspect-4/3 w-full bg-zinc-800/60 overflow-hidden">
         {project.coverUrl ? (
           <Image
             src={project.coverUrl}
@@ -65,15 +77,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
         {/* Description */}
         {project.description && (
-          <p className="text-sm text-zinc-500 line-clamp-2 leading-relaxed flex-1">
+          <p className={`text-sm text-zinc-500 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
             {project.description}
           </p>
         )}
 
         {/* Impact Facts */}
-        {project.impactFacts && project.impactFacts.length > 0 && (
+        {visibleFacts.length > 0 && (
           <ul className="space-y-1 mt-1">
-            {project.impactFacts.map((fact) => (
+            {visibleFacts.map((fact) => (
               <li
                 key={fact}
                 className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
@@ -83,6 +95,31 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </li>
             ))}
           </ul>
+        )}
+
+        {/* Expand / collapse toggle */}
+        {needsExpand && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
+            className="relative z-10 flex items-center gap-1 self-start text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors"
+          >
+            {expanded ? (
+              <>
+                <ChevronUp className="h-3 w-3" />
+                Mostrar menos
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3 w-3" />
+                Mostrar mais
+              </>
+            )}
+          </button>
         )}
 
         {/* Skills + Links — pinned to bottom */}

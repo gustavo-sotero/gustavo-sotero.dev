@@ -652,7 +652,7 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
         {/* ── Objetivo ────────────────────────────────────────────────────── */}
         {identity.objective ? (
           <View style={s.section}>
-            <SectionTitle>Objetivo</SectionTitle>
+            <SectionTitle>Resumo Profissional</SectionTitle>
             <Text style={s.objectiveText}>{identity.objective}</Text>
           </View>
         ) : null}
