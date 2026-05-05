@@ -14,24 +14,28 @@ interface ProjectCardProps {
   project: Project;
 }
 
-const CONTENT_COLLAPSED_HEIGHT = 200;
+// Height of the collapsed facts region — shows ~1 line of the first fact
+const FACTS_COLLAPSED_HEIGHT = 36;
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const skills = project.skills ?? [];
   const impactFacts = project.impactFacts ?? [];
   const [expanded, setExpanded] = useState(false);
 
-  const needsExpand = impactFacts.length > 0;
+  // Show expand when there's more than 1 fact, or the single fact is long enough to wrap
+  const needsExpand =
+    impactFacts.length > 1 || (impactFacts.length === 1 && impactFacts[0].length > 80);
 
   return (
-    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-[box-shadow,border-color] duration-300">
-      {/* Stretched link — covers entire card, above image/content but below action buttons (z-10) */}
+    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300">
+      {/* Stretched link — covers entire card; below action buttons (z-10) */}
       <Link
         href={`/projects/${project.slug}`}
         className="absolute inset-0 z-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 rounded-xl"
         aria-label={`Ver projeto ${project.title}`}
       />
       <BorderBeam colorFrom="#34d399" colorTo="#22d3ee" duration={4} size={120} />
+
       {/* Featured badge */}
       {project.featured && (
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-medium px-2 py-0.5 rounded-full backdrop-blur-sm">
@@ -40,7 +44,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         </div>
       )}
 
-      {/* Cover image */}
+      {/* ── Image — always fully visible ───────────────────────────────────── */}
       <div className="relative aspect-4/3 w-full bg-zinc-800/60 overflow-hidden">
         {project.coverUrl ? (
           <Image
@@ -51,28 +55,20 @@ export function ProjectCard({ project }: ProjectCardProps) {
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         ) : (
-          <div className="h-full w-full bg-linear-to-br from-zinc-800 via-zinc-850 to-zinc-900 flex items-center justify-center">
+          <div className="h-full w-full bg-linear-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
             <div className="font-mono text-zinc-700 text-xs opacity-50 select-none text-center px-4">
               <div>{'{ project }'}</div>
               <div className="mt-1 text-zinc-800">{project.slug}</div>
             </div>
           </div>
         )}
-        {/* Overlay on hover */}
         <div className="absolute inset-0 bg-linear-to-t from-zinc-950/90 via-zinc-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-end p-3">
           <ExternalLink className="h-5 w-5 text-emerald-400" />
         </div>
       </div>
 
-      {/* Content — animated height; image above is never clipped */}
-      <motion.div
-        className="relative"
-        initial={false}
-        animate={{ height: expanded ? 'auto' : CONTENT_COLLAPSED_HEIGHT }}
-        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        style={{ overflow: 'hidden' }}
-      >
-      <div className="flex flex-col p-5 gap-3 pb-12">
+      {/* ── Always-visible content ────────────────────────────────────────── */}
+      <div className="flex flex-col p-5 gap-3">
         {/* Title */}
         <h3 className="font-semibold text-zinc-100 group-hover:text-emerald-400 transition-colors duration-200 leading-snug">
           {project.title}
@@ -83,25 +79,65 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <p className="text-sm text-zinc-500 leading-relaxed">{project.description}</p>
         )}
 
-        {/* Impact facts — all rendered; card-level overflow clips them when collapsed */}
+        {/* ── Impact facts — ONLY this section collapses ───────────────────── */}
         {impactFacts.length > 0 && (
-          <ul className="space-y-1">
-            {impactFacts.map((fact) => (
-              <li
-                key={fact}
-                className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
-              >
-                <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
-                {fact}
-              </li>
-            ))}
-          </ul>
+          <div className="relative">
+            <motion.div
+              initial={false}
+              animate={{ height: expanded ? 'auto' : FACTS_COLLAPSED_HEIGHT }}
+              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <ul className="space-y-1">
+                {impactFacts.map((fact) => (
+                  <li
+                    key={fact}
+                    className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
+                  >
+                    <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                    {fact}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            {/* Gradient fade over the facts region */}
+            {needsExpand && (
+              <motion.div
+                initial={false}
+                animate={{ opacity: expanded ? 0 : 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="absolute bottom-0 left-0 right-0 h-8 bg-linear-to-t from-zinc-950 via-zinc-950/70 to-transparent pointer-events-none"
+              />
+            )}
+          </div>
         )}
 
-        {/* Skills + Links — pinned to bottom */}
+        {/* Expand / collapse button */}
+        {needsExpand && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
+            className="relative z-10 flex items-center gap-1 self-start text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors"
+          >
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="flex"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </motion.span>
+            Mostrar {expanded ? 'menos' : 'mais'}
+          </button>
+        )}
+
+        {/* ── Skills + Links — always fully visible ─────────────────────────── */}
         {(skills.length > 0 || project.repositoryUrl || project.liveUrl) && (
-          <div className="flex flex-col gap-2 mt-auto">
-            {/* Skills */}
+          <div className="flex flex-col gap-2">
             {skills.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-2 border-t border-zinc-800/60">
                 {skills.map((skill) => (
@@ -116,7 +152,6 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </div>
             )}
 
-            {/* Repo & Live links */}
             {(project.repositoryUrl || project.liveUrl) && (
               <div className="relative z-10 flex items-center gap-2 pt-2 border-t border-zinc-800/60">
                 {project.repositoryUrl && (
@@ -148,37 +183,6 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
         )}
       </div>
-
-      {/* Gradient fade + expand button — absolutely anchored at card bottom */}
-      {needsExpand && (
-        <>
-          <motion.div
-            initial={false}
-            animate={{ opacity: expanded ? 0 : 1 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-zinc-950 via-zinc-950/60 to-transparent pointer-events-none z-5"
-          />
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setExpanded((v) => !v);
-            }}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors bg-zinc-950/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-zinc-800/60 hover:border-emerald-500/30 whitespace-nowrap"
-          >
-            <motion.span
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="flex"
-            >
-              <ChevronDown className="h-3 w-3" />
-            </motion.span>
-            Mostrar {expanded ? 'menos' : 'mais'}
-          </button>
-        </>
-      )}
-      </motion.div>
     </div>
   );
 }
