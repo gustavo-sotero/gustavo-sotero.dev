@@ -1,7 +1,8 @@
 'use client';
 
 import type { Post } from '@portfolio/shared/types/posts';
-import { CalendarDays, ChevronDown, ChevronUp } from 'lucide-react';
+import { CalendarDays, ChevronDown } from 'lucide-react';
+import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -14,6 +15,7 @@ interface PostCardProps {
 }
 
 const EXCERPT_THRESHOLD = 150;
+const COLLAPSED_HEIGHT = 72;
 
 export function PostCard({ post }: PostCardProps) {
   const tags = post.tags ?? [];
@@ -73,13 +75,28 @@ export function PostCard({ post }: PostCardProps) {
           {post.title}
         </h3>
 
-        {/* Excerpt */}
+        {/* Collapsible excerpt */}
         {post.excerpt && (
-          <p
-            className={`text-sm text-zinc-500 leading-relaxed flex-1 ${expanded ? '' : 'line-clamp-3'}`}
-          >
-            {post.excerpt}
-          </p>
+          <div className="relative">
+            <motion.div
+              initial={false}
+              animate={{ height: expanded ? 'auto' : COLLAPSED_HEIGHT }}
+              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <p className="text-sm text-zinc-500 leading-relaxed">{post.excerpt}</p>
+            </motion.div>
+
+            {/* Gradient fade — visible when collapsed */}
+            {needsExpand && (
+              <motion.div
+                initial={false}
+                animate={{ opacity: expanded ? 0 : 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="absolute bottom-0 left-0 right-0 h-10 bg-linear-to-t from-zinc-950 via-zinc-950/70 to-transparent pointer-events-none"
+              />
+            )}
+          </div>
         )}
 
         {/* Expand / collapse toggle */}
@@ -93,17 +110,14 @@ export function PostCard({ post }: PostCardProps) {
             }}
             className="relative z-10 flex items-center gap-1 self-start text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors"
           >
-            {expanded ? (
-              <>
-                <ChevronUp className="h-3 w-3" />
-                Mostrar menos
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-3 w-3" />
-                Mostrar mais
-              </>
-            )}
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="flex"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </motion.span>
+            Mostrar {expanded ? 'menos' : 'mais'}
           </button>
         )}
 

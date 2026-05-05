@@ -1,7 +1,8 @@
 'use client';
 
 import type { Project } from '@portfolio/shared/types/projects';
-import { ChevronDown, ChevronUp, ExternalLink, Globe, Star } from 'lucide-react';
+import { ChevronDown, ExternalLink, Globe, Star } from 'lucide-react';
+import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -13,19 +14,14 @@ interface ProjectCardProps {
   project: Project;
 }
 
-const VISIBLE_FACTS = 2;
-const DESCRIPTION_THRESHOLD = 100;
+const FACTS_COLLAPSED_HEIGHT = 44;
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const skills = project.skills ?? [];
   const impactFacts = project.impactFacts ?? [];
   const [expanded, setExpanded] = useState(false);
 
-  const needsExpand =
-    (!!project.description && project.description.length > DESCRIPTION_THRESHOLD) ||
-    impactFacts.length > VISIBLE_FACTS;
-
-  const visibleFacts = expanded ? impactFacts : impactFacts.slice(0, VISIBLE_FACTS);
+  const needsExpand = impactFacts.length >= 2;
 
   return (
     <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/8 transition-all duration-300 min-h-115">
@@ -75,26 +71,43 @@ export function ProjectCard({ project }: ProjectCardProps) {
           {project.title}
         </h3>
 
-        {/* Description */}
+        {/* Description — always fully visible */}
         {project.description && (
-          <p className={`text-sm text-zinc-500 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
-            {project.description}
-          </p>
+          <p className="text-sm text-zinc-500 leading-relaxed">{project.description}</p>
         )}
 
-        {/* Impact Facts */}
-        {visibleFacts.length > 0 && (
-          <ul className="space-y-1 mt-1">
-            {visibleFacts.map((fact) => (
-              <li
-                key={fact}
-                className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
-              >
-                <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
-                {fact}
-              </li>
-            ))}
-          </ul>
+        {/* Impact facts — height-based collapse, shows at least 1 fact naturally */}
+        {impactFacts.length > 0 && (
+          <div className="relative">
+            <motion.div
+              initial={false}
+              animate={{ height: expanded ? 'auto' : FACTS_COLLAPSED_HEIGHT }}
+              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <ul className="space-y-1">
+                {impactFacts.map((fact) => (
+                  <li
+                    key={fact}
+                    className="flex items-start gap-1.5 text-xs text-zinc-400 leading-snug"
+                  >
+                    <span className="text-emerald-500 mt-0.5 shrink-0">▸</span>
+                    {fact}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            {/* Gradient fade — visible only when collapsed and there's overflow */}
+            {needsExpand && (
+              <motion.div
+                initial={false}
+                animate={{ opacity: expanded ? 0 : 1 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="absolute bottom-0 left-0 right-0 h-10 bg-linear-to-t from-zinc-950 via-zinc-950/70 to-transparent pointer-events-none"
+              />
+            )}
+          </div>
         )}
 
         {/* Expand / collapse toggle */}
@@ -108,17 +121,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
             }}
             className="relative z-10 flex items-center gap-1 self-start text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors"
           >
-            {expanded ? (
-              <>
-                <ChevronUp className="h-3 w-3" />
-                Mostrar menos
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-3 w-3" />
-                Mostrar mais
-              </>
-            )}
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="flex"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </motion.span>
+            Mostrar {expanded ? 'menos' : 'mais'}
           </button>
         )}
 
