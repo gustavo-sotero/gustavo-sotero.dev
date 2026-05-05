@@ -26,7 +26,7 @@ export function PostCard({ post }: PostCardProps) {
   const needsExpand = !!post.excerpt && post.excerpt.length > 80;
 
   return (
-    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-[box-shadow,border-color] duration-300">
+    <div className="group relative flex h-full flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 transition-[box-shadow,border-color] duration-300">
       {/* Stretched link — below interactive elements (z-10) */}
       <Link
         href={`/blog/${post.slug}`}

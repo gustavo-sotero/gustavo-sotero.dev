@@ -27,7 +27,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
     impactFacts.length > 1 || (impactFacts.length === 1 && impactFacts[0].length > 80);
 
   return (
-    <div className="group relative flex flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300">
+    <div className="group relative flex h-full flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300">
       {/* Stretched link — covers entire card; below action buttons (z-10) */}
       <Link
         href={`/projects/${project.slug}`}
@@ -68,7 +68,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       {/* ── Always-visible content ────────────────────────────────────────── */}
-      <div className="flex flex-col p-5 gap-3">
+      <div className="flex flex-1 flex-col p-5 gap-3">
         {/* Title */}
         <h3 className="font-semibold text-zinc-100 group-hover:text-emerald-400 transition-colors duration-200 leading-snug">
           {project.title}
