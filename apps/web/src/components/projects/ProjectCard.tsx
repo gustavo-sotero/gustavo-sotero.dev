@@ -5,7 +5,7 @@ import { ChevronDown, ExternalLink, Globe, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GitHubIcon } from '@/components/shared/BrandIcons';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
@@ -19,15 +19,29 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const skills = project.skills ?? [];
   const impactFacts = project.impactFacts ?? [];
   const [expanded, setExpanded] = useState(false);
+  const factsRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const expandedRef = useRef(false);
+  expandedRef.current = expanded;
 
-  // Show expand when there's more than 1 fact, or the single fact is long enough to wrap
-  const needsExpand =
-    impactFacts.length > 1 || (impactFacts.length === 1 && impactFacts[0].length > 80);
+  useEffect(() => {
+    const el = factsRef.current;
+    if (!el) return;
+    const check = () => {
+      if (!expandedRef.current) setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+    };
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    check();
+    return () => ro.disconnect();
+  }, []);
+
+  const showButton = expanded || isOverflowing;
 
   return (
     <motion.div
       layoutRoot
-      className="group relative flex h-full flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300"
+      className="group relative flex h-full max-h-160 flex-col glass-card rounded-xl overflow-hidden hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 transition-[box-shadow,border-color] duration-300"
     >
       {/* Stretched link — covers entire card; below action buttons (z-10) */}
       <Link
@@ -83,6 +97,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         {/* ── Impact facts — ONLY this section collapses ───────────────────── */}
         {impactFacts.length > 0 && (
           <motion.div
+            ref={factsRef}
             layout
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
             className={cn('relative', !expanded && 'flex-1 min-h-0 overflow-hidden')}
@@ -100,7 +115,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </ul>
 
             {/* Gradient fade — visible only when collapsed and there's more to show */}
-            {needsExpand && (
+            {isOverflowing && (
               <motion.div
                 initial={false}
                 animate={{ opacity: expanded ? 0 : 1 }}
@@ -112,7 +127,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         )}
 
         {/* Expand / collapse button */}
-        {needsExpand && (
+        {showButton && (
           <button
             type="button"
             onClick={(e) => {

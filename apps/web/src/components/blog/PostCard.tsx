@@ -5,7 +5,7 @@ import { CalendarDays, ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { BorderBeam } from '@/components/ui/border-beam';
 import { cn, formatDateBR } from '@/lib/utils';
@@ -18,9 +18,24 @@ export function PostCard({ post }: PostCardProps) {
   const tags = post.tags ?? [];
   const dateStr = formatDateBR(post.publishedAt ?? post.createdAt);
   const [expanded, setExpanded] = useState(false);
+  const excerptRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const expandedRef = useRef(false);
+  expandedRef.current = expanded;
 
-  // Collapse only when the excerpt is long enough to wrap beyond one line
-  const needsExpand = !!post.excerpt && post.excerpt.length > 80;
+  useEffect(() => {
+    const el = excerptRef.current;
+    if (!el) return;
+    const check = () => {
+      if (!expandedRef.current) setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+    };
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    check();
+    return () => ro.disconnect();
+  }, []);
+
+  const showButton = expanded || isOverflowing;
 
   return (
     <motion.div
@@ -80,13 +95,14 @@ export function PostCard({ post }: PostCardProps) {
         {/* Excerpt — fills remaining space when collapsed, fully visible when expanded */}
         {post.excerpt && (
           <motion.div
+            ref={excerptRef}
             layout
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
             className={cn('relative', !expanded && 'flex-1 min-h-0 overflow-hidden')}
           >
             <p className="text-sm text-zinc-500 leading-relaxed">{post.excerpt}</p>
 
-            {needsExpand && (
+            {isOverflowing && (
               <motion.div
                 initial={false}
                 animate={{ opacity: expanded ? 0 : 1 }}
@@ -98,7 +114,7 @@ export function PostCard({ post }: PostCardProps) {
         )}
 
         {/* Expand / collapse button */}
-        {needsExpand && (
+        {showButton && (
           <button
             type="button"
             onClick={(e) => {
