@@ -73,16 +73,16 @@ export function containsDisallowedInlineHtml(content: string): boolean {
  */
 export function buildFallbackImagePrompt(title: string): string {
   const shortTitle = compactPromptText(title, 'Tema técnico', 70);
-  return `Crie uma imagem de capa para blog em formato 4:3, com estilo minimalista, elegante e profissional, usando fundo neutro (off-white, cinza claro, bege suave ou tons similares).
+  return `Crie uma imagem de capa para blog em formato 4:3, estilo dark editorial, minimalista e elegante.
 
-A composição deve ser limpa, equilibrada e sofisticada, com poucos elementos visuais e aparência editorial premium. O tema central é ${shortTitle}, representado de forma sutil por elementos gráficos discretos relacionados ao assunto.
+Fundo escuro profundo, quase preto (zinc-950, próximo a #09090b). Destaques e acentos em verde-esmeralda (próximo a #4ade80). Texto em branco ou branco-gelo, tipografia geométrica moderna sem serifa.
 
-Incluir pouco texto, com tipografia moderna, legível e bem organizada.
+Composição limpa, equilibrada e profissional, com poucos elementos visuais. O tema central é ${shortTitle}, representado de forma sutil por elementos gráficos discretos relacionados ao assunto.
 
 Texto principal: "${shortTitle}"
-Texto de apoio opcional: "Leitura técnica direta, sem hype."
+Texto de apoio: "Leitura técnica direta, sem hype."
 
-O layout deve transmitir clareza, autoridade e sofisticação, sem poluição visual. Sem logos e sem marca d'água.`;
+Sem logos, sem marca d'água, sem fundos claros ou quentes.`;
 }
 
 /**
@@ -96,18 +96,20 @@ export function buildFallbackLinkedInImagePrompt(title: string, excerpt: string)
     120
   );
 
-  return `Crie uma imagem para post no LinkedIn em formato 4:5, com estilo minimalista, elegante e profissional, usando fundo neutro (off-white, cinza claro, bege suave ou tons similares).
+  return `Crie uma imagem para post no LinkedIn em formato 4:5, estilo dark editorial, minimalista e elegante.
 
-A composição deve ser limpa, moderna e sofisticada, com aparência premium e boa hierarquia visual. O tema central é ${shortTitle}, representado de forma clara e sutil com poucos elementos gráficos de apoio relacionados ao assunto.
+Fundo escuro profundo, quase preto (zinc-950, próximo a #09090b). Destaques e acentos em verde-esmeralda (próximo a #4ade80). Texto em branco ou branco-gelo, tipografia geométrica moderna sem serifa.
 
-A imagem pode conter mais texto do que a thumb, mas sem exagero, funcionando como um card explicativo curto.
+Composição limpa, com boa hierarquia visual e aparência técnica-editorial premium. O tema central é ${shortTitle}, representado de forma clara e sutil com poucos elementos gráficos de apoio.
+
+A imagem funciona como um card explicativo curto, com mais texto do que a thumb mas sem exagero.
 
 Incluir:
 Título: "${shortTitle}"
 Frase de apoio: "${supportPhrase}"
 Complemento: "Leia o post completo para entender o trade-off e aplicar a decisão com mais segurança."
 
-Usar tipografia moderna, bem legível e layout sóbrio, equilibrado e sem poluição visual. Sem logos e sem marca d'água.`;
+Sem logos, sem marca d'água, sem fundos claros ou quentes.`;
 }
 
 function compactPromptText(value: string, fallback: string, maxLength: number): string {

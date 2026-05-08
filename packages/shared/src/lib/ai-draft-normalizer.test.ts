@@ -30,7 +30,7 @@ describe('buildFallbackImagePrompt', () => {
     expect(prompt).toMatch(/minimalista/i);
     expect(prompt).toMatch(/elegante/i);
     expect(prompt).toMatch(/4:3/);
-    expect(prompt).toMatch(/fundo neutro|off-white|cinza claro|bege suave/i);
+    expect(prompt).toMatch(/fundo escuro|esmeralda|zinc-950|dark editorial/i);
     expect(prompt).toMatch(/capa para blog/i);
     expect(prompt).toMatch(/Texto principal/i);
   });
@@ -51,7 +51,7 @@ describe('buildFallbackLinkedInImagePrompt', () => {
     expect(prompt).toMatch(/Título/i);
     expect(prompt).toMatch(/Frase de apoio/i);
     expect(prompt).toMatch(/Complemento/i);
-    expect(prompt).toMatch(/fundo neutro|off-white|cinza claro|bege suave/i);
+    expect(prompt).toMatch(/fundo escuro|esmeralda|zinc-950|dark editorial/i);
   });
 });
 

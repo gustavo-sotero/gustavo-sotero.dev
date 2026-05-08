@@ -108,18 +108,23 @@ Cada sugestão ou draft gerado DEVE ser atribuído a uma categoria concreta (nun
 export const IMAGE_PROMPT_RULES = `Regras para o campo imagePrompt:
 - Retorne um prompt completo em português (PT-BR) para gerar a thumb do blog em formato 4:3
 - Comece orientando: "Crie uma imagem de capa para blog em formato 4:3"
-- Estilo minimalista, elegante e profissional, com fundo neutro (off-white, cinza claro, bege suave ou tons similares)
-- Composição limpa, equilibrada e sofisticada, com poucos elementos visuais e aparência editorial premium
-- O tema central deve ser o tema do draft, representado de forma sutil por elementos gráficos discretos relacionados ao assunto
-- Incluir pouco texto, com tipografia moderna, legível e bem organizada
+- Estilo dark editorial: fundo escuro profundo (zinc-950 / quase preto, próximo a #09090b ou similar)
+- Destaque e elementos decorativos em verde-esmeralda (emerald-400/500, próximo a #4ade80 ou #10b981)
+- Texto principal em branco ou branco-gelo sobre o fundo escuro
+- Tipografia geométrica moderna, clean, sem serifa — estilo Sora ou similar
+- Composição minimalista com hierarquia visual clara e aparência técnica-editorial premium
+- Pode incluir linhas, bordas ou ícones discretos em esmeralda como acento decorativo
+- Poucos elementos visuais; o tema deve ser representado de forma sutil e inteligente
 - Preencha texto principal e texto de apoio curto de acordo com o post; não deixe placeholders literais
 - Estrutura esperada:
-  Crie uma imagem de capa para blog em formato 4:3, com estilo minimalista, elegante e profissional, usando fundo neutro (off-white, cinza claro, bege suave ou tons similares).
-  A composição deve ser limpa, equilibrada e sofisticada, com poucos elementos visuais e aparência editorial premium. O tema central é [TEMA], representado de forma sutil por elementos gráficos discretos relacionados ao assunto.
-  Incluir pouco texto, com tipografia moderna, legível e bem organizada.
+  Crie uma imagem de capa para blog em formato 4:3, estilo dark editorial.
+  Fundo escuro profundo, quase preto (próximo a #09090b ou zinc-950).
+  Destaques e acentos em verde-esmeralda (próximo a #4ade80).
+  Texto em branco ou branco-gelo, tipografia geométrica moderna sem serifa.
+  Composição limpa, mínima e profissional com poucos elementos visuais. O tema central é [TEMA].
   Texto principal: "[TÍTULO CURTO]"
-  Texto de apoio opcional: "[SUBTÍTULO CURTO]"
-  O layout deve transmitir clareza, autoridade e sofisticação, sem poluição visual. Sem logos e sem marca d'água.`;
+  Texto de apoio: "[SUBTÍTULO CURTO]"
+  Sem logos, sem marca d'água, sem fundos claros ou quentes.`;
 
 /**
  * Formatting rules for the linkedinImagePrompt output field.
@@ -127,20 +132,24 @@ export const IMAGE_PROMPT_RULES = `Regras para o campo imagePrompt:
 export const LINKEDIN_IMAGE_PROMPT_RULES = `Regras para o campo linkedinImagePrompt:
 - Retorne um prompt completo em português (PT-BR) para gerar uma imagem de post do LinkedIn em formato 4:5
 - Comece orientando: "Crie uma imagem para post no LinkedIn em formato 4:5"
-- Estilo minimalista, elegante e profissional, com fundo neutro (off-white, cinza claro, bege suave ou tons similares)
-- Composição limpa, moderna e sofisticada, com aparência premium e boa hierarquia visual
-- O tema central deve ser o tema do draft, representado de forma clara e sutil com poucos elementos gráficos de apoio relacionados ao assunto
-- A imagem pode conter mais texto do que a thumb, mas sem exagero, funcionando como um card explicativo curto
+- Estilo dark editorial: fundo escuro profundo (zinc-950 / quase preto, próximo a #09090b ou similar)
+- Destaque e elementos decorativos em verde-esmeralda (emerald-400/500, próximo a #4ade80 ou #10b981)
+- Texto em branco ou branco-gelo sobre o fundo escuro
+- Tipografia geométrica moderna, clean, sem serifa — estilo Sora ou similar; pode usar monospace para snippets técnicos
+- Composição limpa, moderna e sofisticada, com boa hierarquia visual e aparência técnica-editorial premium
+- O tema central deve ser representado de forma clara e sutil com poucos elementos gráficos de apoio
+- A imagem pode conter mais texto do que a thumb, funcionando como um card explicativo curto — mas sem exagero
 - Preencha título, frase de apoio e complemento de acordo com o post; não deixe placeholders literais
 - Estrutura esperada:
-  Crie uma imagem para post no LinkedIn em formato 4:5, com estilo minimalista, elegante e profissional, usando fundo neutro (off-white, cinza claro, bege suave ou tons similares).
-  A composição deve ser limpa, moderna e sofisticada, com aparência premium e boa hierarquia visual. O tema central é [TEMA], representado de forma clara e sutil com poucos elementos gráficos de apoio relacionados ao assunto.
-  A imagem pode conter mais texto do que a thumb, mas sem exagero, funcionando como um card explicativo curto.
-  Incluir:
+  Crie uma imagem para post no LinkedIn em formato 4:5, estilo dark editorial.
+  Fundo escuro profundo, quase preto (próximo a #09090b ou zinc-950).
+  Destaques e acentos em verde-esmeralda (próximo a #4ade80).
+  Texto em branco ou branco-gelo, tipografia geométrica moderna sem serifa.
+  Composição limpa, com boa hierarquia visual e aparência técnica-editorial premium. O tema central é [TEMA].
   Título: "[TÍTULO PRINCIPAL]"
   Frase de apoio: "[FRASE DE IMPACTO]"
   Complemento: "[EXPLICAÇÃO CURTA OU RECOMENDAÇÃO]"
-  Usar tipografia moderna, bem legível e layout sóbrio, equilibrado e sem poluição visual. Sem logos e sem marca d'água.`;
+  Sem logos, sem marca d'água, sem fundos claros ou quentes.`;
 
 /**
  * Editorial rules for the linkedinPost output field.
