@@ -24,10 +24,10 @@ export type PublicNavHref = '/' | '/projects' | '/blog' | '/curriculo' | '/conta
 
 /**
  * All public-route hrefs the PublicShell can represent as an `activeHref`.
- * Pages that are not nav items (e.g. `/recrutadores`) pass `null` so the shell
- * renders with no active nav item and no fake highlight.
+ * Non-nav public pages keep their real route value here so the shell remains
+ * route-aware without forcing a visible nav item or fake active highlight.
  */
-export type PublicShellHref = PublicNavHref | null;
+export type PublicShellHref = PublicNavHref | '/recrutadores';
 
 export interface ResolvedNavLinkItem extends NavLinkItem {
   readonly isActive: boolean;
@@ -52,7 +52,6 @@ export const NAV_LINKS: ReadonlyArray<NavLinkItem> = [
 ];
 
 export function isPublicNavLinkActive(link: NavLinkItem, activeHref: PublicShellHref): boolean {
-  if (activeHref === null) return false;
   switch (link.matchStrategy ?? 'section-root') {
     case 'section-root':
       return link.href === activeHref;

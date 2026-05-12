@@ -153,6 +153,21 @@ describe('PublicShell', () => {
     }
   });
 
+  it('keeps nav links inactive for non-nav public routes', () => {
+    render(
+      <PublicShell activeHref="/recrutadores">
+        <div>recruiter content</div>
+      </PublicShell>
+    );
+
+    const navLabels = ['Home', 'Projetos', 'Blog', 'Currículo', 'Contato'] as const;
+
+    for (const label of navLabels) {
+      const links = screen.getAllByRole('link', { name: label });
+      expect(links.every((link) => !link.hasAttribute('aria-current'))).toBe(true);
+    }
+  });
+
   it('renders header before main and main before footer in DOM order', () => {
     render(
       <PublicShell activeHref="/">

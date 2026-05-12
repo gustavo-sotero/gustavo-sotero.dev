@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import type React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -80,6 +80,20 @@ describe('ContactPage', () => {
     render(<ContactPage />);
 
     expect(screen.getByText('Disponível — CLT ou PJ, remoto no Brasil')).toBeInTheDocument();
+  });
+
+  it('shows the 24-hour response commitment in the header status block', () => {
+    render(<ContactPage />);
+
+    const availabilityText = screen.getByText('Disponível — CLT ou PJ, remoto no Brasil');
+    const availabilityBlock = availabilityText.parentElement;
+
+    expect(availabilityBlock).not.toBeNull();
+    if (!availabilityBlock) {
+      throw new Error('availability block not found');
+    }
+
+    expect(within(availabilityBlock).getByText('Resposta em até 24h')).toBeInTheDocument();
   });
 
   it('includes CLT/PJ messaging in the description copy', () => {

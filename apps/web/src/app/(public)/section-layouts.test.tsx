@@ -5,17 +5,8 @@ import type React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/components/layout/PublicShell', () => ({
-  PublicShell: ({
-    activeHref,
-    children,
-  }: {
-    activeHref: string | null;
-    children: React.ReactNode;
-  }) => (
-    <div
-      data-testid="public-shell"
-      {...(activeHref !== null ? { 'data-active-href': activeHref } : {})}
-    >
+  PublicShell: ({ activeHref, children }: { activeHref: string; children: React.ReactNode }) => (
+    <div data-testid="public-shell" data-active-href={activeHref}>
       {children}
     </div>
   ),
@@ -39,6 +30,11 @@ describe('public section layouts', () => {
     { Layout: BlogLayout, activeHref: '/blog', child: 'blog child' },
     { Layout: ResumeLayout, activeHref: '/curriculo', child: 'resume child' },
     { Layout: ContactLayout, activeHref: '/contact', child: 'contact child' },
+    {
+      Layout: RecrutadoresLayout,
+      activeHref: '/recrutadores',
+      child: 'recruiter child',
+    },
   ])('wraps children with PublicShell for $activeHref', ({ Layout, activeHref, child }) => {
     render(
       <Layout>
@@ -48,17 +44,5 @@ describe('public section layouts', () => {
 
     expect(screen.getByTestId('public-shell')).toHaveAttribute('data-active-href', activeHref);
     expect(screen.getByText(child)).toBeInTheDocument();
-  });
-
-  it('renders RecrutadoresLayout with no active nav item (null activeHref)', () => {
-    render(
-      <RecrutadoresLayout>
-        <div>recruiter child</div>
-      </RecrutadoresLayout>
-    );
-
-    const shell = screen.getByTestId('public-shell');
-    expect(shell).not.toHaveAttribute('data-active-href');
-    expect(screen.getByText('recruiter child')).toBeInTheDocument();
   });
 });
