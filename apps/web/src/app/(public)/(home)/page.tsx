@@ -1,3 +1,4 @@
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { ContactSection } from '@/components/home/ContactSection';
@@ -14,6 +15,7 @@ import {
   RecentPostsSkeleton,
   SkillsSkeleton,
 } from '@/components/home/skeletons';
+import { JsonLdScript } from '@/components/shared/JsonLdScript';
 import { SITE_METADATA } from '@/lib/constants';
 import { getHomeAggregate } from '@/lib/data/public/home';
 
@@ -29,8 +31,27 @@ export const metadata: Metadata = {
 export default function HomePage() {
   const aggregatePromise = getHomeAggregate();
 
+  const personJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: DEVELOPER_PUBLIC_PROFILE.name,
+    url: SITE_METADATA.url,
+    jobTitle: DEVELOPER_PUBLIC_PROFILE.role,
+    description: DEVELOPER_PUBLIC_PROFILE.bioShort,
+    sameAs: [DEVELOPER_PUBLIC_PROFILE.links.github, DEVELOPER_PUBLIC_PROFILE.links.linkedin],
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: DEVELOPER_PUBLIC_PROFILE.city,
+      addressRegion: DEVELOPER_PUBLIC_PROFILE.state,
+      addressCountry: 'BR',
+    },
+    email: DEVELOPER_PUBLIC_PROFILE.contacts.email,
+  };
+
   return (
     <>
+      <JsonLdScript data={personJsonLd} />
+
       {/* Hero is pre-rendered synchronously — data fetching functions use
           'use cache' so on warm requests the data is instantly available.
           No Suspense boundary here intentionally: the hero must appear without

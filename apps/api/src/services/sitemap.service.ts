@@ -58,7 +58,9 @@ export async function buildSitemapXml(): Promise<string> {
       { loc: `${siteUrl}/`, lastmod: today },
       { loc: `${siteUrl}/projects`, lastmod: today },
       { loc: `${siteUrl}/blog`, lastmod: today },
+      { loc: `${siteUrl}/curriculo`, lastmod: today },
       { loc: `${siteUrl}/contact`, lastmod: today },
+      { loc: `${siteUrl}/recrutadores`, lastmod: today },
       { loc: `${apiUrl}/doc`, lastmod: today },
     ];
 

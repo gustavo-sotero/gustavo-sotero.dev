@@ -1,9 +1,9 @@
-import type { PublicNavHref } from '@/lib/constants';
+import type { PublicShellHref } from '@/lib/constants';
 import { Footer } from './Footer';
 import { Header } from './Header';
 
 interface PublicShellProps {
-  activeHref: PublicNavHref;
+  activeHref: PublicShellHref;
   children: React.ReactNode;
 }
 

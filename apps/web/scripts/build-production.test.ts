@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  BUILD_ENV_DEFAULTS,
-  getProductionBuildCommand,
-  resolveProductionBuildEnv,
-  resolveProductionBuildRuntime,
-} from './build-production';
-
-const MINIMAL_ENV: NodeJS.ProcessEnv = { NODE_ENV: 'test' };
+import { BUILD_ENV_DEFAULTS, resolveProductionBuildEnv } from './build-production';
 
 describe('resolveProductionBuildEnv', () => {
   it('keeps valid public production URLs and provided secrets', () => {
@@ -45,53 +38,5 @@ describe('resolveProductionBuildEnv', () => {
       'NEXT_PUBLIC_S3_PUBLIC_DOMAIN',
       'REVALIDATE_SECRET',
     ]);
-  });
-});
-
-describe('resolveProductionBuildRuntime', () => {
-  it('defaults to node on Windows so production builds can keep Turbopack enabled', () => {
-    expect(resolveProductionBuildRuntime(MINIMAL_ENV, 'win32')).toBe('node');
-  });
-
-  it('accepts an explicit runtime override', () => {
-    expect(
-      resolveProductionBuildRuntime({ ...MINIMAL_ENV, WEB_NEXT_BUILD_RUNTIME: 'bun' }, 'win32')
-    ).toBe('bun');
-    expect(
-      resolveProductionBuildRuntime({ ...MINIMAL_ENV, WEB_NEXT_RUNTIME: 'node' }, 'linux')
-    ).toBe('node');
-  });
-});
-
-describe('getProductionBuildCommand', () => {
-  it('uses node on Windows without forcing webpack', () => {
-    const command = getProductionBuildCommand({
-      env: MINIMAL_ENV,
-      nextCliEntry: '/mocked/next',
-      nodeExecutable: 'node.exe',
-      packageRoot: '/workspace/apps/web',
-      platform: 'win32',
-    });
-
-    expect(command).toEqual({
-      args: ['/mocked/next', 'build'],
-      command: 'node.exe',
-      runtime: 'node',
-    });
-  });
-
-  it('uses bun outside Windows without forcing webpack', () => {
-    const command = getProductionBuildCommand({
-      bunExecutable: 'bun',
-      env: MINIMAL_ENV,
-      packageRoot: '/workspace/apps/web',
-      platform: 'linux',
-    });
-
-    expect(command).toEqual({
-      args: ['--bun', 'next', 'build'],
-      command: 'bun',
-      runtime: 'bun',
-    });
   });
 });

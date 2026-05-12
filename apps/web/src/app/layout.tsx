@@ -1,7 +1,13 @@
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { SITE_METADATA } from '@/lib/constants';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { jetbrainsMono, sora } from './fonts';
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_METADATA.url),
+};
 
 /**
  * Root layout — owns the single HTML/body shell for the entire app.

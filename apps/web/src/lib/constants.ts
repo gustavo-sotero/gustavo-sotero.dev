@@ -19,7 +19,15 @@ export interface NavLinkItem {
   readonly matchStrategy?: 'section-root';
 }
 
+/** Hrefs that correspond to a visible nav item and drive the active indicator. */
 export type PublicNavHref = '/' | '/projects' | '/blog' | '/curriculo' | '/contact';
+
+/**
+ * All public-route hrefs the PublicShell can represent as an `activeHref`.
+ * Pages that are not nav items (e.g. `/recrutadores`) pass `null` so the shell
+ * renders with no active nav item and no fake highlight.
+ */
+export type PublicShellHref = PublicNavHref | null;
 
 export interface ResolvedNavLinkItem extends NavLinkItem {
   readonly isActive: boolean;
@@ -43,7 +51,8 @@ export const NAV_LINKS: ReadonlyArray<NavLinkItem> = [
   { label: 'Contato', href: '/contact', icon: Mail, matchStrategy: 'section-root' },
 ];
 
-export function isPublicNavLinkActive(link: NavLinkItem, activeHref: PublicNavHref): boolean {
+export function isPublicNavLinkActive(link: NavLinkItem, activeHref: PublicShellHref): boolean {
+  if (activeHref === null) return false;
   switch (link.matchStrategy ?? 'section-root') {
     case 'section-root':
       return link.href === activeHref;
@@ -51,7 +60,7 @@ export function isPublicNavLinkActive(link: NavLinkItem, activeHref: PublicNavHr
 }
 
 export function resolvePublicNavLinks(
-  activeHref: PublicNavHref
+  activeHref: PublicShellHref
 ): ReadonlyArray<ResolvedNavLinkItem> {
   return NAV_LINKS.map((link) => ({
     ...link,

@@ -238,4 +238,18 @@ describe('HeroSection', () => {
     expect(badge).toBeInTheDocument();
     expect(badge.querySelector('[data-expertise-level]')).toBeNull();
   });
+
+  it('renders the recruiter CTA linking to /recrutadores', () => {
+    render(<HeroSection skills={[]} experienceLabel="3+ anos" />);
+
+    const recruiterLink = screen.getByRole('link', { name: /sou recrutador/i });
+    expect(recruiterLink).toBeInTheDocument();
+    expect(recruiterLink).toHaveAttribute('href', '/recrutadores');
+  });
+
+  it('reflects the updated availability copy from DEVELOPER_PUBLIC_PROFILE', () => {
+    render(<HeroSection skills={[]} experienceLabel="3+ anos" />);
+
+    expect(screen.getByText('Disponivel para novos projetos')).toBeInTheDocument();
+  });
 });

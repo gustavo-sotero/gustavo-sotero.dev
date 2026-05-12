@@ -12,7 +12,7 @@ type IconComponent = ComponentType<{ size?: number; className?: string }>;
 
 export const metadata: Metadata = {
   title: 'Contato',
-  description: `Entre em contato com ${SITE_BRAND_NAME} — disponível para projetos freelance, oportunidades e colaborações.`,
+  description: `Entre em contato com ${SITE_BRAND_NAME} — disponível para CLT ou PJ, 100% remoto. Projetos, oportunidades e colaborações.`,
 };
 
 const contactChannels: Array<{
@@ -74,8 +74,8 @@ export default function ContactPage() {
         <p className="text-xs font-mono text-emerald-500 uppercase tracking-widest">contato</p>
         <h1 className="text-3xl md:text-4xl font-bold text-zinc-100">Vamos conversar?</h1>
         <p className="text-zinc-400 leading-relaxed">
-          Disponível para projetos freelance, oportunidades de trabalho e colaborações. Mande uma
-          mensagem — respondo em breve.
+          Disponível para oportunidades CLT ou PJ, 100% remoto. Projetos freelance e colaborações
+          também são bem-vindos — mande uma mensagem e respondo em breve.
         </p>
 
         {/* Status indicator */}

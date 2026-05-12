@@ -141,6 +141,12 @@ export function HeroSection({ skills = [], experienceLabel }: HeroSectionProps) 
               >
                 Ler Blog
               </Link>
+              <Link
+                href="/recrutadores"
+                className="inline-flex h-11 items-center px-2 text-sm font-medium text-emerald-500 underline underline-offset-4 transition-colors hover:text-emerald-300"
+              >
+                Sou recrutador →
+              </Link>
             </div>
 
             {/* Tech stack mini badges — Marquee with reduced-motion fallback */}

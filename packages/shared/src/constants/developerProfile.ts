@@ -22,12 +22,12 @@ export const DEVELOPER_PUBLIC_PROFILE = {
     focus: 'TypeScript ponta a ponta — APIs performáticas, filas, cache e deploy containerizado',
   },
   objective:
-    'Desenvolvedor Full Stack com foco em TypeScript e backend robusto. Entrego sistemas completos para produção — APIs REST documentadas, processamento assíncrono, testes automatizados e deploy containerizado. Comprometido com qualidade de código, prazos e colaboração eficiente com o time.',
+    'Desenvolvedor Full Stack com foco em TypeScript e backend robusto. Entrego sistemas completos para produção — APIs REST documentadas, processamento assíncrono, testes automatizados e deploy containerizado. Disponível para contratação CLT ou PJ, 100% remoto. Comprometido com qualidade de código, prazos e colaboração eficiente com o time.',
   location: 'Brasil',
   city: 'Aracaju',
   state: 'SE',
   citizenship: 'Brasileiro',
-  availability: 'Disponível para novos projetos',
+  availability: 'Disponível — CLT ou PJ, remoto no Brasil',
   links: {
     github: 'https://github.com/gustavo-sotero',
     linkedin: 'https://linkedin.com/in/gustavo-sotero',
@@ -41,15 +41,17 @@ export const DEVELOPER_PUBLIC_PROFILE = {
   },
   languages: [
     { name: 'Português', level: 'Nativo' },
-    { name: 'Inglês', level: 'Básico (leitura e escrita básica)' },
+    { name: 'Inglês', level: 'Intermediário (leitura técnica e escrita profissional)' },
   ] as const,
   additionalInfo: [
     // What was built
     'Projeto fullstack autoral em produção — backend, frontend, filas de processamento e infraestrutura containerizada, desenvolvido e mantido de forma independente',
     // Code quality signal
     'Código documentado, testado automaticamente e validado via pipeline de CI/CD — pronto para integrar um time sem fricção',
-    // Security depth signal (distinct from the two above)
+    // Security depth signal
     'Segurança implementada desde a fundação: autenticação, proteção contra ataques comuns e validação rigorosa de entrada de dados',
+    // Hiring modality
+    'Disponível para contratação CLT ou PJ — 100% remoto, com experiência em trabalho assíncrono e entregas independentes',
   ] as const,
 } as const;
 

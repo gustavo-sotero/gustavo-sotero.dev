@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { type PublicNavHref, resolvePublicNavLinks } from '@/lib/constants';
+import { type PublicShellHref, resolvePublicNavLinks } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface MobileNavProps {
-  activeHref: PublicNavHref;
+  activeHref: PublicShellHref;
 }
 
 /**

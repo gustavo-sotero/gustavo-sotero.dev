@@ -3,6 +3,7 @@ import { SITE_METADATA } from '@/lib/constants';
 import { env } from '@/lib/env';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_METADATA.url),
   title: {
     default: SITE_METADATA.title,
     template: `%s — ${SITE_METADATA.author}`,
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
     siteName: SITE_METADATA.author,
     title: SITE_METADATA.title,
     description: SITE_METADATA.description,
+    url: SITE_METADATA.url,
   },
   twitter: {
     card: 'summary_large_image',

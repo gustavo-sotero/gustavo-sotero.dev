@@ -71,7 +71,9 @@ describe('sitemap route', () => {
     expect(xml).toContain('<loc>https://site.example.com/</loc>');
     expect(xml).toContain('<loc>https://site.example.com/projects</loc>');
     expect(xml).toContain('<loc>https://site.example.com/blog</loc>');
+    expect(xml).toContain('<loc>https://site.example.com/curriculo</loc>');
     expect(xml).toContain('<loc>https://site.example.com/contact</loc>');
+    expect(xml).toContain('<loc>https://site.example.com/recrutadores</loc>');
     // /doc lives under the API public URL — path-based topology: https://example.com/api/doc
     expect(xml).toContain('<loc>https://example.com/api/doc</loc>');
     expect(xml).toContain('<loc>https://site.example.com/blog/post-1</loc>');

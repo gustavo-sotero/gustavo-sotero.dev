@@ -4,6 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
+vi.mock('@/components/shared/JsonLdScript', () => ({
+  JsonLdScript: ({ data }: { data: Record<string, unknown> }) => (
+    <script type="application/ld+json" data-testid="json-ld" data-type={data['@type'] as string} />
+  ),
+}));
+
 const { getHomeAggregateMock } = vi.hoisted(() => ({
   getHomeAggregateMock: vi.fn(() =>
     Promise.resolve({
@@ -94,7 +100,8 @@ describe('HomePage composition', () => {
 
     const root = tree as ReactElement<{ children: ReactElement[] }>;
     const children = Children.toArray(root.props.children) as ReactElement[];
-    const heroNode = children[0];
+    // children[0] is JsonLdScript, children[1] is HeroSectionWrapper
+    const heroNode = children[1];
 
     expect(heroNode?.type).toBe(HeroSectionWrapperMock);
     expect(heroNode?.type).not.toBe(Suspense);
@@ -106,8 +113,9 @@ describe('HomePage composition', () => {
 
     const root = tree as ReactElement<{ children: ReactElement[] }>;
     const children = Children.toArray(root.props.children) as ReactElement[];
-    const heroNode = children[0] as ReactElement<{ aggregatePromise?: Promise<unknown> }>;
-    const sectionsContainer = children[1] as ReactElement<{ children: ReactElement[] }>;
+    // children[0] is JsonLdScript, children[1] is HeroSectionWrapper, children[2] is the sections container
+    const heroNode = children[1] as ReactElement<{ aggregatePromise?: Promise<unknown> }>;
+    const sectionsContainer = children[2] as ReactElement<{ children: ReactElement[] }>;
     const sections = Children.toArray(sectionsContainer.props.children) as ReactElement[];
     const sharedPromise = heroNode.props.aggregatePromise;
 
@@ -128,5 +136,13 @@ describe('HomePage composition', () => {
 
     expect(screen.getByRole('region', { name: 'Posts em destaque' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Posts recentes' })).not.toBeInTheDocument();
+  });
+
+  it('emits a Person JSON-LD script tag in the page output', () => {
+    render(HomePage() as ReactElement);
+
+    const script = screen.getByTestId('json-ld');
+    expect(script).toBeInTheDocument();
+    expect(script).toHaveAttribute('data-type', 'Person');
   });
 });

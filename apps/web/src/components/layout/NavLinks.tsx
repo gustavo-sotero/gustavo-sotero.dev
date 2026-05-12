@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { type PublicNavHref, resolvePublicNavLinks } from '@/lib/constants';
+import { type PublicShellHref, resolvePublicNavLinks } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface NavLinksProps {
-  activeHref: PublicNavHref;
+  activeHref: PublicShellHref;
 }
 
 /**
