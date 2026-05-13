@@ -263,10 +263,12 @@ Para `apps/web`, as variáveis são divididas entre build-time e runtime:
 **Runtime** (`docker-compose.yml` serviço web):
 - `REVALIDATE_SECRET`
 - `API_INTERNAL_URL` (recomendado no Docker: `http://api:3000`)
+- `API_PUBLIC_URL` (opcional, fallback server-side fora da rede Docker)
 
 Chamadas server-side resolvem a URL base com a seguinte precedência:
 1. `API_INTERNAL_URL` (rede interna, preferencial)
-2. `NEXT_PUBLIC_API_URL` (fallback público)
+2. `API_PUBLIC_URL` (origem pública da API para SSR)
+3. `NEXT_PUBLIC_API_URL` (fallback compatível com o browser)
 
 Em produção, URLs públicas expostas ao browser ou ao proxy (`ALLOWED_ORIGIN`, `API_PUBLIC_URL`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_S3_PUBLIC_DOMAIN`) devem usar `https://`. A exceção intencional é `API_INTERNAL_URL=http://api:3000` dentro da rede Docker.
 

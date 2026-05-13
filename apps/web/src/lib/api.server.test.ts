@@ -121,6 +121,28 @@ describe('api.server', () => {
     await expect(apiServerGetPaginated('/posts')).resolves.toEqual(payload);
   });
 
+  it('throws a descriptive error when a 2xx response is HTML instead of JSON', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response('<!DOCTYPE html><html><body>wrong origin</body></html>', {
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      })
+    );
+
+    const promise = apiServerGet('/home');
+
+    await expect(promise).rejects.toMatchObject({
+      status: 200,
+      code: 'INTERNAL_ERROR',
+      type: 'internal',
+    });
+
+    await expect(promise).rejects.toThrow(
+      'Expected JSON response from API for /home, received text/html; charset=utf-8.'
+    );
+  });
+
   it('returns windowed payloads unchanged on success', async () => {
     const payload = {
       success: true,

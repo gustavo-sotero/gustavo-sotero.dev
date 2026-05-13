@@ -27,7 +27,6 @@ export async function ProtectedAdminGate({ children }: { children: ReactNode }) 
 
   return <AdminShell>{children}</AdminShell>;
 }
-
 function AdminRoutePendingState() {
   return <div className="min-h-screen" aria-hidden />;
 }

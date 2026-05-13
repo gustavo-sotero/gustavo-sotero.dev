@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { BUILD_ENV_DEFAULTS, resolveProductionBuildEnv } from './build-production';
+import {
+  BUILD_ENV_DEFAULTS,
+  resolveProductionBuildCommand,
+  resolveProductionBuildEnv,
+} from './build-production';
 
 describe('resolveProductionBuildEnv', () => {
   it('keeps valid public production URLs and provided secrets', () => {
@@ -37,6 +41,26 @@ describe('resolveProductionBuildEnv', () => {
       'NEXT_PUBLIC_TURNSTILE_SITE_KEY',
       'NEXT_PUBLIC_S3_PUBLIC_DOMAIN',
       'REVALIDATE_SECRET',
+    ]);
+  });
+});
+
+describe('resolveProductionBuildCommand', () => {
+  it('reuses the current Bun executable when already running under Bun', () => {
+    expect(resolveProductionBuildCommand('C:/tools/bun.exe')).toEqual([
+      'C:/tools/bun.exe',
+      '--bun',
+      'next',
+      'build',
+    ]);
+  });
+
+  it('falls back to the bun binary name when execPath is not Bun', () => {
+    expect(resolveProductionBuildCommand('C:/Program Files/nodejs/node.exe')).toEqual([
+      'bun',
+      '--bun',
+      'next',
+      'build',
     ]);
   });
 });

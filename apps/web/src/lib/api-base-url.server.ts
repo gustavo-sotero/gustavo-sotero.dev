@@ -4,6 +4,7 @@ import { z } from 'zod';
 const apiBaseEnvSchema = z
   .object({
     API_INTERNAL_URL: z.string().url().optional(),
+    API_PUBLIC_URL: z.string().url().optional(),
     NEXT_PUBLIC_API_URL: z.string().url(),
     NODE_ENV: z.string().optional(),
   })
@@ -20,11 +21,13 @@ const apiBaseEnvSchema = z
 /**
  * Resolve the server-side API base URL with a deterministic precedence:
  * 1) API_INTERNAL_URL (container-to-container network)
- * 2) NEXT_PUBLIC_API_URL (public fallback)
+ * 2) API_PUBLIC_URL (server-facing public API origin)
+ * 3) NEXT_PUBLIC_API_URL (browser-facing fallback)
  */
 export function resolveServerApiBaseUrl(): string {
   const parsed = apiBaseEnvSchema.safeParse({
     API_INTERNAL_URL: process.env.API_INTERNAL_URL,
+    API_PUBLIC_URL: process.env.API_PUBLIC_URL,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NODE_ENV: process.env.NODE_ENV,
   });
@@ -37,5 +40,9 @@ export function resolveServerApiBaseUrl(): string {
     throw new Error('Invalid API base URL environment variables');
   }
 
-  return (parsed.data.API_INTERNAL_URL ?? parsed.data.NEXT_PUBLIC_API_URL).replace(/\/+$/, '');
+  return (
+    parsed.data.API_INTERNAL_URL ??
+    parsed.data.API_PUBLIC_URL ??
+    parsed.data.NEXT_PUBLIC_API_URL
+  ).replace(/\/+$/, '');
 }

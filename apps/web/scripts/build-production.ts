@@ -1,4 +1,5 @@
-import { dirname, resolve } from 'node:path';
+import { spawn } from 'node:child_process';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const BUILD_ENV_DEFAULTS = {
@@ -48,6 +49,11 @@ export function resolveProductionBuildEnv(source: NodeJS.ProcessEnv): {
   return { env, overriddenKeys };
 }
 
+export function resolveProductionBuildCommand(execPath = process.execPath) {
+  const runtimeBinary = /^bun(?:\.exe)?$/i.test(basename(execPath)) ? execPath : 'bun';
+  return [runtimeBinary, '--bun', 'next', 'build'] as const;
+}
+
 if (import.meta.main) {
   const { env, overriddenKeys } = resolveProductionBuildEnv(process.env);
 
@@ -55,20 +61,33 @@ if (import.meta.main) {
     console.warn(`[build-production] Using smoke-build defaults for: ${overriddenKeys.join(', ')}`);
   }
 
-  // Apply the resolved env to the current process so Next.js picks it up at build time.
-  Object.assign(process.env, env);
-
   const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const buildCommand = resolveProductionBuildCommand();
 
-  // Call the Next.js build function directly in the current Bun process instead of
-  // spawning a child subprocess. Bun v1.x crashes on Windows when spawned as a child
-  // process that loads the next-swc native addon — a Bun runtime bug, not a code bug.
-  // Running in-process avoids this entirely. Next.js 16 defaults to Turbopack when
-  // `turbopack: {}` is present in next.config.ts, so no extra flags are needed.
+  // Drive the same Bun/Next CLI path that succeeds in local and CI validation.
+  // Importing Next's build internals in-process has drifted from the supported
+  // CLI path and can abort on Windows without surfacing the underlying error.
   try {
-    const { default: nextBuild } = await import('next/dist/build/index.js');
-    await (nextBuild as unknown as (dir: string) => Promise<void>)(packageRoot);
-    process.exit(0);
+    const [command, ...args] = buildCommand;
+    const buildProcess = spawn(command, args, {
+      cwd: packageRoot,
+      env,
+      stdio: 'inherit',
+    });
+
+    const exitCode = await new Promise<number>((resolveExit, rejectExit) => {
+      buildProcess.once('error', rejectExit);
+      buildProcess.once('exit', (code, signal) => {
+        if (signal) {
+          rejectExit(new Error(`Build terminated by signal ${signal}`));
+          return;
+        }
+
+        resolveExit(code ?? 1);
+      });
+    });
+
+    process.exit(exitCode);
   } catch (error) {
     console.error('[build-production] Build failed:', error);
     process.exit(1);

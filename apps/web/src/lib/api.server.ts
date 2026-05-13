@@ -78,6 +78,26 @@ export class ApiTimeoutError extends ApiResponseError {
  */
 const DEFAULT_SERVER_TIMEOUT_MS = 10_000;
 
+function isJsonContentType(contentType: string | null): boolean {
+  if (!contentType) return false;
+  const normalized = contentType.toLowerCase();
+  return normalized.includes('application/json') || normalized.includes('+json');
+}
+
+async function readBodyPreview(res: Response): Promise<string | undefined> {
+  const text = (await res.text()).trim();
+  if (!text) return undefined;
+  return text.replace(/\s+/g, ' ').slice(0, 160);
+}
+
+function withJsonAcceptHeader(headersInit?: HeadersInit): Headers {
+  const headers = new Headers(headersInit);
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json');
+  }
+  return headers;
+}
+
 /**
  * Wraps `fetch` with an `AbortController`-based timeout.
  * Throws `ApiTimeoutError` when the deadline is exceeded.
@@ -102,12 +122,24 @@ async function fetchWithTimeout(
 }
 
 async function parseResponse<T>(res: Response, path: string): Promise<T> {
+  const contentType = res.headers.get('content-type');
+  const isJson = isJsonContentType(contentType);
+
   if (res.status === 404) throw new ApiNotFoundError(path);
   if (!res.ok) {
     let message = `API error ${res.status}: ${res.statusText}`;
     let code: ErrorCode = ERROR_CODES.INTERNAL_ERROR;
     let type = getErrorTypeForCode(ERROR_CODES.INTERNAL_ERROR);
     let details: ApiError['error']['details'];
+
+    if (!isJson) {
+      const preview = await readBodyPreview(res);
+      if (preview) {
+        message = `${message} - ${preview}`;
+      }
+      throw new ApiResponseError(res.status, code, type, message, details);
+    }
+
     try {
       const body = (await res.json()) as {
         error?: {
@@ -134,6 +166,18 @@ async function parseResponse<T>(res: Response, path: string): Promise<T> {
     }
     throw new ApiResponseError(res.status, code, type, message, details);
   }
+
+  if (!isJson) {
+    const preview = await readBodyPreview(res);
+    const bodyDescription = preview ? ` Body preview: ${preview}` : '';
+    throw new ApiResponseError(
+      res.status,
+      ERROR_CODES.INTERNAL_ERROR,
+      getErrorTypeForCode(ERROR_CODES.INTERNAL_ERROR),
+      `Expected JSON response from API for ${path}, received ${contentType ?? 'unknown content type'}.${bodyDescription} Check API_INTERNAL_URL, API_PUBLIC_URL, and NEXT_PUBLIC_API_URL.`
+    );
+  }
+
   return res.json() as Promise<T>;
 }
 
@@ -148,7 +192,15 @@ export async function apiServerGet<T>(
 ): Promise<T> {
   const { timeoutMs = DEFAULT_SERVER_TIMEOUT_MS, ...fetchInit } = init ?? {};
   const url = `${resolveServerApiBaseUrl()}${path}`;
-  const res = await fetchWithTimeout(url, { ...fetchInit, method: 'GET' }, timeoutMs);
+  const res = await fetchWithTimeout(
+    url,
+    {
+      ...fetchInit,
+      headers: withJsonAcceptHeader(fetchInit.headers),
+      method: 'GET',
+    },
+    timeoutMs
+  );
   const payload = await parseResponse<ApiResponse<T>>(res, path);
   return payload.data;
 }
@@ -164,7 +216,15 @@ export async function apiServerGetPaginated<T>(
 ): Promise<PaginatedResponse<T>> {
   const { timeoutMs = DEFAULT_SERVER_TIMEOUT_MS, ...fetchInit } = init ?? {};
   const url = `${resolveServerApiBaseUrl()}${path}`;
-  const res = await fetchWithTimeout(url, { ...fetchInit, method: 'GET' }, timeoutMs);
+  const res = await fetchWithTimeout(
+    url,
+    {
+      ...fetchInit,
+      headers: withJsonAcceptHeader(fetchInit.headers),
+      method: 'GET',
+    },
+    timeoutMs
+  );
   return parseResponse<PaginatedResponse<T>>(res, path);
 }
 
@@ -177,6 +237,14 @@ export async function apiServerGetWindowed<T>(
 ): Promise<WindowedResponse<T>> {
   const { timeoutMs = DEFAULT_SERVER_TIMEOUT_MS, ...fetchInit } = init ?? {};
   const url = `${resolveServerApiBaseUrl()}${path}`;
-  const res = await fetchWithTimeout(url, { ...fetchInit, method: 'GET' }, timeoutMs);
+  const res = await fetchWithTimeout(
+    url,
+    {
+      ...fetchInit,
+      headers: withJsonAcceptHeader(fetchInit.headers),
+      method: 'GET',
+    },
+    timeoutMs
+  );
   return parseResponse<WindowedResponse<T>>(res, path);
 }
