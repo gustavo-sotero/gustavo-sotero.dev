@@ -5,29 +5,38 @@ import { render, screen } from '@testing-library/react';
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@portfolio/shared/constants/developerProfile', () => ({
-  DEVELOPER_PUBLIC_PROFILE: {
-    name: 'Gustavo Sotero',
-    role: 'Desenvolvedor Fullstack',
-    bio: 'Construo APIs robustas.',
-    bioShort: 'Especialista em backend TypeScript.',
-    availability: 'Disponivel para novos projetos',
-    hero: {
-      greeting: 'Ola',
-      focus: 'Backend e arquitetura',
+vi.mock('@portfolio/shared/constants/developerProfile', async () => {
+  const actual = await vi.importActual<
+    typeof import('@portfolio/shared/constants/developerProfile')
+  >('@portfolio/shared/constants/developerProfile');
+
+  return {
+    ...actual,
+    DEVELOPER_PUBLIC_PROFILE: {
+      ...actual.DEVELOPER_PUBLIC_PROFILE,
+      name: 'Gustavo Sotero',
+      role: 'Desenvolvedor Fullstack',
+      bio: 'Construo APIs robustas.',
+      bioShort: 'Especialista em backend TypeScript.',
+      hero: {
+        greeting: 'Ola',
+        focus: 'Backend e arquitetura',
+      },
+      links: {
+        ...actual.DEVELOPER_PUBLIC_PROFILE.links,
+        website: 'https://gustavo-sotero.dev',
+        github: 'https://github.com/gustavo-sotero',
+        linkedin: 'https://linkedin.com/in/gustavo-sotero',
+        telegram: 'https://t.me/gustavo',
+        whatsapp: 'https://wa.me/5511999999999',
+      },
+      contacts: {
+        ...actual.DEVELOPER_PUBLIC_PROFILE.contacts,
+        email: 'gustavo@example.com',
+      },
     },
-    links: {
-      website: 'https://gustavo-sotero.dev',
-      github: 'https://github.com/gustavo-sotero',
-      linkedin: 'https://linkedin.com/in/gustavo-sotero',
-      telegram: 'https://t.me/gustavo',
-      whatsapp: 'https://wa.me/5511999999999',
-    },
-    contacts: {
-      email: 'gustavo@example.com',
-    },
-  },
-}));
+  };
+});
 
 vi.mock('next/link', () => ({
   default: ({
@@ -112,6 +121,7 @@ vi.mock('./HeroBackground', () => ({
   HeroBackground: () => <div data-testid="hero-background" />,
 }));
 
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { HeroSection } from './HeroSection';
 
 function makeSkill(overrides: Partial<Skill> & Pick<Skill, 'id' | 'name' | 'category'>): Skill {
@@ -160,7 +170,7 @@ describe('HeroSection', () => {
     expect(screen.getByText('Backend e arquitetura')).toBeInTheDocument();
 
     // Availability status must be visible (pulse indicator + label).
-    expect(screen.getByText('Disponivel para novos projetos')).toBeInTheDocument();
+    expect(screen.getByText(DEVELOPER_PUBLIC_PROFILE.availability)).toBeInTheDocument();
 
     // Bio text must be present — the full static bio.
     expect(screen.getByText(/Construo APIs robustas/)).toBeInTheDocument();
@@ -250,6 +260,6 @@ describe('HeroSection', () => {
   it('reflects the updated availability copy from DEVELOPER_PUBLIC_PROFILE', () => {
     render(<HeroSection skills={[]} experienceLabel="3+ anos" />);
 
-    expect(screen.getByText('Disponivel para novos projetos')).toBeInTheDocument();
+    expect(screen.getByText(DEVELOPER_PUBLIC_PROFILE.availability)).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ export const DEVELOPER_PUBLIC_PROFILE = {
    * Full bio — displayed in the Hero section after the experience label.
    * Deliberately does NOT repeat the role (already shown above as AnimatedGradientText).
    */
-  bio: 'Desenvolvo sistemas web completos com TypeScript — APIs robustas, processamento assíncrono e frontend dinâmico, com testes automatizados, observabilidade e deploy confiável em produção.',
+  bio: 'Desenvolvo sistemas web completos em TypeScript: APIs REST documentadas com OpenAPI, processamento assíncrono com filas e worker dedicado, frontend com Next.js e React, testes automatizados e deploy containerizado com Docker e GitHub Actions.',
   /**
    * Short bio for SEO meta description — ≤ 155 chars to avoid Google truncation.
    * Must contain the strongest selling point before the cut.
@@ -22,11 +22,10 @@ export const DEVELOPER_PUBLIC_PROFILE = {
     focus: 'TypeScript ponta a ponta — APIs performáticas, filas, cache e deploy containerizado',
   },
   objective:
-    'Desenvolvedor Full Stack com foco em TypeScript e backend robusto. Entrego sistemas completos para produção — APIs REST documentadas, processamento assíncrono, testes automatizados e deploy containerizado. Disponível para contratação CLT ou PJ, 100% remoto. Comprometido com qualidade de código, prazos e colaboração eficiente com o time.',
+    'Desenvolvedor Full Stack especializado em TypeScript, com foco em sistemas web completos e prontos para produção. Projeto e entrego API REST documentada com OpenAPI, processamento assíncrono com BullMQ e Redis, frontend com Next.js e React, observabilidade com logs estruturados e deploy containerizado com Docker e GitHub Actions. Testes automatizados com Vitest em todas as camadas e pipeline de CI validando lint, tipagem e cobertura antes de cada merge.',
   location: 'Brasil',
   city: 'Aracaju',
   state: 'SE',
-  citizenship: 'Brasileiro',
   availability: 'Disponível — CLT ou PJ, remoto no Brasil',
   links: {
     github: 'https://github.com/gustavo-sotero',
@@ -44,14 +43,14 @@ export const DEVELOPER_PUBLIC_PROFILE = {
     { name: 'Inglês', level: 'Intermediário (leitura técnica e escrita profissional)' },
   ] as const,
   additionalInfo: [
-    // What was built
-    'Projeto fullstack autoral em produção — backend, frontend, filas de processamento e infraestrutura containerizada, desenvolvido e mantido de forma independente',
+    // Tech stack specificity
+    'Projeto fullstack autoral em produção com TypeScript ponta a ponta: API REST com Hono, filas com BullMQ, frontend com Next.js e deploy com Docker + GitHub Actions',
     // Code quality signal
-    'Código documentado, testado automaticamente e validado via pipeline de CI/CD — pronto para integrar um time sem fricção',
+    'Testes automatizados com Vitest em todas as camadas; pipeline de CI que valida lint, tipagem e cobertura antes de qualquer merge',
     // Security depth signal
-    'Segurança implementada desde a fundação: autenticação, proteção contra ataques comuns e validação rigorosa de entrada de dados',
-    // Hiring modality
-    'Disponível para contratação CLT ou PJ — 100% remoto, com experiência em trabalho assíncrono e entregas independentes',
+    'Segurança desde a fundação: autenticação com JWT e refresh tokens, rate limiting, sanitização de entrada, CORS configurado e proteção CSRF',
+    // Work style signal
+    'Trabalho de forma assíncrona e independente — entrego funcionalidades completas com documentação técnica, sem supervisão próxima',
   ] as const,
 } as const;
 

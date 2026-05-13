@@ -15,7 +15,6 @@ export interface ResumeIdentity {
   city: string;
   state: string;
   country: string;
-  citizenship: string;
   objective: string;
   bio: string;
 }
@@ -99,16 +98,6 @@ export interface ResumeViewModel {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function calculateAge(birthDateIso: string, now: Date): number {
-  const birth = new Date(birthDateIso);
-  let age = now.getFullYear() - birth.getFullYear();
-  const monthDiff = now.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
-    age -= 1;
-  }
-  return age;
-}
-
 const MONTH_ABBR = [
   'jan',
   'fev',
@@ -123,6 +112,16 @@ const MONTH_ABBR = [
   'nov',
   'dez',
 ];
+
+function calculateAge(birthDate: string): number {
+  const birth = new Date(birthDate);
+  const now = new Date();
+  const age = now.getFullYear() - birth.getFullYear();
+  const hasHadBirthdayThisYear =
+    now.getMonth() > birth.getMonth() ||
+    (now.getMonth() === birth.getMonth() && now.getDate() >= birth.getDate());
+  return hasHadBirthdayThisYear ? age : age - 1;
+}
 
 function formatDateYYYYMM(dateStr: string): string {
   const [year, month] = dateStr.split('-');
@@ -141,18 +140,112 @@ function formatPeriod(
   return start;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  language: 'Linguagens',
-  framework: 'Frameworks',
-  tool: 'Ferramentas',
-  db: 'Bancos de Dados',
-  infra: 'Infraestrutura',
-  cloud: 'Cloud',
-  other: 'Outras',
+// ---------------------------------------------------------------------------
+// Recruiter-friendly skill grouping (presentation layer only)
+// The internal taxonomy (language, framework, etc.) is preserved in the DB.
+// ---------------------------------------------------------------------------
+
+type RecruiterGroup =
+  | 'linguagens'
+  | 'backend'
+  | 'frontend'
+  | 'dados'
+  | 'devops'
+  | 'testes'
+  | 'seguranca';
+
+const RECRUITER_GROUP_LABELS: Record<RecruiterGroup, string> = {
+  linguagens: 'Linguagens',
+  backend: 'Backend',
+  frontend: 'Frontend',
+  dados: 'Dados',
+  devops: 'DevOps',
+  testes: 'Testes',
+  seguranca: 'Segurança',
 };
 
-/** Max skills shown per category in the PDF — keeps it concise */
-const MAX_SKILLS_PER_CATEGORY = 10;
+/**
+ * Name-based lookup that overrides the default category-to-group fallback.
+ * Covers the most common skills in this codebase; unknown skills fall back
+ * to CATEGORY_TO_RECRUITER_GROUP.
+ */
+const SKILL_GROUP_BY_NAME: Record<string, RecruiterGroup> = {
+  // Linguagens
+  TypeScript: 'linguagens',
+  JavaScript: 'linguagens',
+  SQL: 'linguagens',
+  Python: 'linguagens',
+  Bash: 'linguagens',
+  Shell: 'linguagens',
+  // Frontend
+  React: 'frontend',
+  'Next.js': 'frontend',
+  'Tailwind CSS': 'frontend',
+  Tailwind: 'frontend',
+  HTML: 'frontend',
+  CSS: 'frontend',
+  'shadcn/ui': 'frontend',
+  Radix: 'frontend',
+  // Backend
+  'Node.js': 'backend',
+  Bun: 'backend',
+  Hono: 'backend',
+  Express: 'backend',
+  Fastify: 'backend',
+  BullMQ: 'backend',
+  REST: 'backend',
+  OpenAPI: 'backend',
+  // Dados
+  PostgreSQL: 'dados',
+  Redis: 'dados',
+  'Drizzle ORM': 'dados',
+  Drizzle: 'dados',
+  SQLite: 'dados',
+  // DevOps
+  Docker: 'devops',
+  'Docker Compose': 'devops',
+  'GitHub Actions': 'devops',
+  Linux: 'devops',
+  Nginx: 'devops',
+  Git: 'devops',
+  CI: 'devops',
+  'CI/CD': 'devops',
+  // Testes
+  Vitest: 'testes',
+  Jest: 'testes',
+  Playwright: 'testes',
+  Supertest: 'testes',
+  Testing: 'testes',
+  // Segurança
+  JWT: 'seguranca',
+  OWASP: 'seguranca',
+  OAuth: 'seguranca',
+  CORS: 'seguranca',
+  CSRF: 'seguranca',
+};
+
+/** Fallback: map internal category key → recruiter group */
+const CATEGORY_TO_RECRUITER_GROUP: Record<string, RecruiterGroup> = {
+  language: 'linguagens',
+  framework: 'backend',
+  tool: 'devops',
+  db: 'dados',
+  infra: 'devops',
+  cloud: 'devops',
+};
+
+const RECRUITER_GROUP_ORDER: RecruiterGroup[] = [
+  'linguagens',
+  'backend',
+  'frontend',
+  'dados',
+  'devops',
+  'testes',
+  'seguranca',
+];
+
+/** Max skills shown per recruiter group in the resume — keeps it concise */
+const MAX_SKILLS_PER_GROUP = 12;
 
 // ---------------------------------------------------------------------------
 // Main mapper
@@ -163,7 +256,6 @@ export function buildResumeViewModel(opts: {
   education: Education[];
   skills?: Skill[];
   projects: Project[];
-  now: Date;
 }): ResumeViewModel {
   const profile = DEVELOPER_PUBLIC_PROFILE;
 
@@ -171,11 +263,10 @@ export function buildResumeViewModel(opts: {
   const identity: ResumeIdentity = {
     name: profile.name,
     role: profile.role,
-    age: calculateAge(profile.birthDate, opts.now),
+    age: calculateAge(profile.birthDate),
     city: profile.city,
     state: profile.state,
     country: 'Brasil',
-    citizenship: profile.citizenship,
     objective: profile.objective,
     bio: profile.bio,
   };
@@ -234,9 +325,8 @@ export function buildResumeViewModel(opts: {
     formattedPeriod: formatPeriod(e.startDate ?? null, e.endDate ?? null, e.isCurrent),
   }));
 
-  // Skills — group by category from Skill catalog, dedupe names, limit per category
-  const categoryOrder = ['language', 'framework', 'db', 'tool', 'infra', 'cloud'];
-  const grouped = new Map<string, ResumeSkillItem[]>();
+  // Skills — group by recruiter-friendly groups (presentation layer only)
+  const grouped = new Map<RecruiterGroup, ResumeSkillItem[]>();
   const sortedSkills = [...(opts.skills ?? [])].sort(
     (a, b) =>
       Number(b.isHighlighted) - Number(a.isHighlighted) ||
@@ -245,9 +335,10 @@ export function buildResumeViewModel(opts: {
   );
 
   for (const skill of sortedSkills) {
-    const cat = skill.category ?? 'tool';
-    if (!grouped.has(cat)) grouped.set(cat, []);
-    const list = grouped.get(cat);
+    const group: RecruiterGroup =
+      SKILL_GROUP_BY_NAME[skill.name] ?? CATEGORY_TO_RECRUITER_GROUP[skill.category] ?? 'devops';
+    if (!grouped.has(group)) grouped.set(group, []);
+    const list = grouped.get(group);
     if (list && !list.some((item) => item.name === skill.name)) {
       list.push({
         name: skill.name,
@@ -256,13 +347,13 @@ export function buildResumeViewModel(opts: {
     }
   }
 
-  const skills: ResumeSkillGroup[] = categoryOrder
-    .filter((cat) => grouped.has(cat))
-    .map((cat) => ({
-      category: cat,
-      label: CATEGORY_LABELS[cat] ?? cat,
-      skills: (grouped.get(cat) ?? []).slice(0, MAX_SKILLS_PER_CATEGORY),
-    }));
+  const skills: ResumeSkillGroup[] = RECRUITER_GROUP_ORDER.filter((g) => grouped.has(g)).map(
+    (g) => ({
+      category: g,
+      label: RECRUITER_GROUP_LABELS[g],
+      skills: (grouped.get(g) ?? []).slice(0, MAX_SKILLS_PER_GROUP),
+    })
+  );
 
   // Projects — published ones, featured first
   const sortedProjects = [...opts.projects]

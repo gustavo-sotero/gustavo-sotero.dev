@@ -1,13 +1,19 @@
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { render, screen } from '@testing-library/react';
 import { Children, isValidElement, type ReactElement, Suspense } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { SITE_METADATA } from '@/lib/constants';
 
 vi.mock('server-only', () => ({}));
 
-vi.mock('@/components/shared/JsonLdScript', () => ({
-  JsonLdScript: ({ data }: { data: Record<string, unknown> }) => (
+const { JsonLdScriptMock } = vi.hoisted(() => ({
+  JsonLdScriptMock: vi.fn(({ data }: { data: Record<string, unknown> }) => (
     <script type="application/ld+json" data-testid="json-ld" data-type={data['@type'] as string} />
-  ),
+  )),
+}));
+
+vi.mock('@/components/shared/JsonLdScript', () => ({
+  JsonLdScript: JsonLdScriptMock,
 }));
 
 const { getHomeAggregateMock } = vi.hoisted(() => ({
@@ -144,5 +150,31 @@ describe('HomePage composition', () => {
     const script = screen.getByTestId('json-ld');
     expect(script).toBeInTheDocument();
     expect(script).toHaveAttribute('data-type', 'Person');
+
+    const lastCall = JsonLdScriptMock.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+
+    const data = lastCall?.[0]?.data as Record<string, unknown>;
+    expect(data).toEqual(
+      expect.objectContaining({
+        '@context': 'https://schema.org',
+        '@type': 'Person',
+        name: DEVELOPER_PUBLIC_PROFILE.name,
+        url: SITE_METADATA.url,
+        jobTitle: DEVELOPER_PUBLIC_PROFILE.role,
+        description: DEVELOPER_PUBLIC_PROFILE.bioShort,
+        email: DEVELOPER_PUBLIC_PROFILE.contacts.email,
+        sameAs: expect.arrayContaining([
+          DEVELOPER_PUBLIC_PROFILE.links.github,
+          DEVELOPER_PUBLIC_PROFILE.links.linkedin,
+        ]),
+        address: expect.objectContaining({
+          '@type': 'PostalAddress',
+          addressLocality: DEVELOPER_PUBLIC_PROFILE.city,
+          addressRegion: DEVELOPER_PUBLIC_PROFILE.state,
+          addressCountry: 'BR',
+        }),
+      })
+    );
   });
 });

@@ -1,5 +1,3 @@
-import { JetBrains_Mono, Sora } from 'next/font/google';
-
 /**
  * Shared font declarations for the web app.
  *
@@ -7,19 +5,17 @@ import { JetBrains_Mono, Sora } from 'next/font/google';
  * outside the root layout and must supply its own <html>/<body> shell —
  * can apply identical typography without duplicating the configuration.
  *
- * Both exports are initialised at module scope (not inside a React component),
- * which is the required pattern for next/font.
+ * These are local-first CSS variable tokens instead of `next/font/google` so
+ * production builds remain resilient when external font downloads are
+ * unavailable. If Sora or JetBrains Mono are installed locally they are used;
+ * otherwise the declared fallback stacks take over.
  */
-export const sora = Sora({
-  variable: '--font-sora',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-});
+export const sora = {
+  variable: 'font-sora-variable',
+  className: 'font-sora-local',
+} as const;
 
-export const jetbrainsMono = JetBrains_Mono({
-  variable: '--font-mono-jetbrains',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-});
+export const jetbrainsMono = {
+  variable: 'font-mono-jetbrains-variable',
+  className: 'font-mono-jetbrains-local',
+} as const;

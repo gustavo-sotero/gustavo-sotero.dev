@@ -92,49 +92,22 @@ function createSkill(overrides: Partial<Skill> & Pick<Skill, 'id' | 'name' | 'ca
 }
 
 // ---------------------------------------------------------------------------
-// Explicit timestamp contract — now is always supplied by the caller
+// identity fields
 // ---------------------------------------------------------------------------
 
-describe('resume mapper timestamp contract', () => {
-  it('calculates age deterministically from the provided now value', () => {
-    // Two different reference dates must produce two different ages for the
-    // same birthDate — proving that now controls the output, not new Date().
-    const base = {
+describe('resume mapper identity', () => {
+  it('exposes age computed from birthDate and omits citizenship', () => {
+    const resume = buildResumeViewModel({
       experience: [],
       education: [],
       skills: [],
       projects: [],
-    };
-
-    const resumeAt2026 = buildResumeViewModel({
-      ...base,
-      now: new Date('2026-01-01T00:00:00.000Z'),
     });
 
-    const resumeAt2030 = buildResumeViewModel({
-      ...base,
-      now: new Date('2030-01-01T00:00:00.000Z'),
-    });
-
-    // The identity.age field is derived from now — different years → different ages.
-    expect(typeof resumeAt2026.identity.age).toBe('number');
-    expect(typeof resumeAt2030.identity.age).toBe('number');
-    expect(resumeAt2030.identity.age).toBeGreaterThan(resumeAt2026.identity.age);
-  });
-
-  it('produces identical output for the same now value across two calls', () => {
-    const opts = {
-      experience: [],
-      education: [],
-      skills: [],
-      projects: [],
-      now: new Date('2026-06-15T12:00:00.000Z'),
-    };
-
-    const first = buildResumeViewModel(opts);
-    const second = buildResumeViewModel(opts);
-
-    expect(first.identity.age).toBe(second.identity.age);
+    expect(resume.identity.age).toBeTypeOf('number');
+    expect(resume.identity.age).toBeGreaterThan(0);
+    expect(resume.identity).not.toHaveProperty('citizenship');
+    expect(resume.identity.name).toBe('Gustavo Sotero');
   });
 });
 
@@ -151,7 +124,6 @@ describe('resume mapper experience skills', () => {
       education: [createEducation()],
       skills: [],
       projects: [createProject()],
-      now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     expect(resume.experience[0]?.skills).toEqual(['TypeScript', 'Hono']);
@@ -162,7 +134,6 @@ describe('resume mapper experience skills', () => {
       experience: [createExperience({ skills: undefined })],
       education: [],
       projects: [],
-      now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     expect(resume.experience[0]?.skills).toEqual([]);
@@ -176,7 +147,6 @@ describe('resume mapper impactFacts', () => {
       experience: [createExperience({ impactFacts: facts })],
       education: [],
       projects: [],
-      now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     expect(resume.experience[0]?.impactFacts).toEqual(facts);
@@ -187,7 +157,6 @@ describe('resume mapper impactFacts', () => {
       experience: [createExperience({ impactFacts: undefined })],
       education: [],
       projects: [],
-      now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     expect(resume.experience[0]?.impactFacts).toEqual([]);
@@ -199,7 +168,6 @@ describe('resume mapper impactFacts', () => {
       experience: [],
       education: [],
       projects: [createProject({ impactFacts: facts })],
-      now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     expect(resume.projects[0]?.impactFacts).toEqual(facts);
@@ -210,15 +178,14 @@ describe('resume mapper impactFacts', () => {
       experience: [],
       education: [],
       projects: [createProject({ impactFacts: undefined })],
-      now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     expect(resume.projects[0]?.impactFacts).toEqual([]);
   });
 });
 
-describe('resume mapper skill expertise', () => {
-  it('keeps expertiseLevel in grouped skills and orders highlighted skills first', () => {
+describe('resume mapper skill grouping', () => {
+  it('groups skills into recruiter-friendly categories', () => {
     const resume = buildResumeViewModel({
       experience: [],
       education: [],
@@ -234,12 +201,11 @@ describe('resume mapper skill expertise', () => {
         }),
         createSkill({ id: 3, name: 'JavaScript', category: 'language', expertiseLevel: 2 }),
       ],
-      now: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     expect(resume.skills).toEqual([
       {
-        category: 'language',
+        category: 'linguagens',
         label: 'Linguagens',
         skills: [
           { name: 'TypeScript', expertiseLevel: 3 },
@@ -247,8 +213,8 @@ describe('resume mapper skill expertise', () => {
         ],
       },
       {
-        category: 'tool',
-        label: 'Ferramentas',
+        category: 'backend',
+        label: 'Backend',
         skills: [{ name: 'Node.js', expertiseLevel: 2 }],
       },
     ]);

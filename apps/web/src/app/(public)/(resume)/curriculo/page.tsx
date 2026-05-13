@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 
 export async function CurriculoContent() {
   await connection();
-  const [resumeResult, now] = await Promise.all([getResumeData(), Promise.resolve(new Date())]);
-  const resume = buildResumeViewModel({ ...resumeResult.data, now });
+  const resumeResult = await getResumeData();
+  const resume = buildResumeViewModel(resumeResult.data);
   const isDegraded = resumeResult.state === 'degraded';
 
   return (

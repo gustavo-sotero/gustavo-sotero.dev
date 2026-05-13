@@ -1,27 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import type React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('@portfolio/shared/constants/developerProfile', () => ({
-  DEVELOPER_PUBLIC_PROFILE: {
-    name: 'Gustavo Sotero',
-    role: 'Desenvolvedor Full Stack',
-    objective: 'Desenvolvedor Full Stack com foco em TypeScript.',
-    availability: 'Disponível — CLT ou PJ, remoto no Brasil',
-    city: 'Aracaju',
-    state: 'SE',
-    contacts: { email: 'contato@gustavo-sotero.dev' },
-    links: {
-      website: 'https://gustavo-sotero.dev',
-      github: 'https://github.com/gustavo-sotero',
-      linkedin: 'https://linkedin.com/in/gustavo-sotero',
-      telegram: 'https://t.me/gustavo_sotero',
-      whatsapp: 'https://wa.me/5579996423943',
-    },
-  },
-}));
 
 vi.mock('@/lib/constants', () => ({
   SITE_BRAND_NAME: 'Gustavo Sotero',
@@ -80,7 +62,7 @@ describe('RecrutadoresPage', () => {
     render(<RecrutadoresPage />);
 
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    expect(screen.getByText(/Disponível — CLT ou PJ/)).toBeInTheDocument();
+    expect(screen.getByText(DEVELOPER_PUBLIC_PROFILE.availability)).toBeInTheDocument();
   });
 
   it('shows the CLT/PJ regime availability detail', () => {
@@ -107,18 +89,26 @@ describe('RecrutadoresPage', () => {
   it('exposes the developer email as a contact link', () => {
     render(<RecrutadoresPage />);
 
-    const emailLink = screen.getByRole('link', { name: /contato@gustavo-sotero\.dev/i });
-    expect(emailLink).toHaveAttribute('href', 'mailto:contato@gustavo-sotero.dev');
+    const emailLink = screen.getByRole('link', { name: DEVELOPER_PUBLIC_PROFILE.contacts.email });
+    expect(emailLink).toHaveAttribute('href', `mailto:${DEVELOPER_PUBLIC_PROFILE.contacts.email}`);
   });
 
   it('shows all six technical highlights', () => {
     render(<RecrutadoresPage />);
 
-    expect(screen.getByText(/TypeScript ponta a ponta/)).toBeInTheDocument();
-    expect(screen.getByText(/APIs REST documentadas/)).toBeInTheDocument();
-    expect(screen.getByText(/Processamento ass\u00edncrono com filas/)).toBeInTheDocument();
-    expect(screen.getByText(/Testes automatizados/)).toBeInTheDocument();
-    expect(screen.getByText(/Deploy containerizado/)).toBeInTheDocument();
-    expect(screen.getByText(/Projeto autoral completo/)).toBeInTheDocument();
+    const highlightsSection = screen.getByRole('region', { name: 'Diferenciais técnicos' });
+
+    expect(within(highlightsSection).getByText(/TypeScript ponta a ponta/)).toBeInTheDocument();
+    expect(within(highlightsSection).getByText(/APIs REST documentadas/)).toBeInTheDocument();
+    expect(
+      within(highlightsSection).getByText(/Processamento ass\u00edncrono com filas/)
+    ).toBeInTheDocument();
+    expect(
+      within(highlightsSection).getByText(
+        /Testes automatizados \(Vitest\) e pipeline de CI\/CD com GitHub Actions/
+      )
+    ).toBeInTheDocument();
+    expect(within(highlightsSection).getByText(/Deploy containerizado/)).toBeInTheDocument();
+    expect(within(highlightsSection).getByText(/Projeto autoral completo/)).toBeInTheDocument();
   });
 });

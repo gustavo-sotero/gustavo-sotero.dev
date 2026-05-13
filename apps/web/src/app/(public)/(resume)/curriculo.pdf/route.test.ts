@@ -102,7 +102,6 @@ describe('GET /curriculo.pdf', () => {
       education: [],
       skills: [],
       projects: [],
-      now: expect.any(Date),
     });
     expect(resumePdfDocumentMock).toHaveBeenCalledWith({
       resume: { id: 'resume-vm' },

@@ -1,23 +1,9 @@
 // @vitest-environment jsdom
 
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import type React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('@portfolio/shared/constants/developerProfile', () => ({
-  DEVELOPER_PUBLIC_PROFILE: {
-    availability: 'Disponível — CLT ou PJ, remoto no Brasil',
-    contacts: { email: 'contato@gustavo-sotero.dev', phone: '+55 79 99642-3943' },
-    location: 'Brasil',
-    links: {
-      website: 'https://gustavo-sotero.dev',
-      github: 'https://github.com/gustavo-sotero',
-      linkedin: 'https://linkedin.com/in/gustavo-sotero',
-      telegram: 'https://t.me/gustavo_sotero',
-      whatsapp: 'https://wa.me/5579996423943',
-    },
-  },
-}));
 
 vi.mock('@/lib/constants', () => ({
   SITE_BRAND_NAME: 'Gustavo Sotero',
@@ -79,13 +65,13 @@ describe('ContactPage', () => {
   it('shows the current availability status', () => {
     render(<ContactPage />);
 
-    expect(screen.getByText('Disponível — CLT ou PJ, remoto no Brasil')).toBeInTheDocument();
+    expect(screen.getByText(DEVELOPER_PUBLIC_PROFILE.availability)).toBeInTheDocument();
   });
 
   it('shows the 24-hour response commitment in the header status block', () => {
     render(<ContactPage />);
 
-    const availabilityText = screen.getByText('Disponível — CLT ou PJ, remoto no Brasil');
+    const availabilityText = screen.getByText(DEVELOPER_PUBLIC_PROFILE.availability);
     const availabilityBlock = availabilityText.parentElement;
 
     expect(availabilityBlock).not.toBeNull();

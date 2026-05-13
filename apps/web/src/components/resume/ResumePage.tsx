@@ -1,13 +1,4 @@
-import {
-  Briefcase,
-  ExternalLink,
-  Globe,
-  GraduationCap,
-  Mail,
-  MapPin,
-  Phone,
-  Star,
-} from 'lucide-react';
+import { Briefcase, ExternalLink, Globe, GraduationCap, Mail, MapPin, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { GitHubIcon, LinkedInIcon } from '@/components/shared/BrandIcons';
 import type { ResumeViewModel } from '@/lib/resume/mapper';
@@ -189,31 +180,12 @@ function SkillsSection({ skills }: { skills: ResumeViewModel['skills'] }) {
             </p>
             <div className="flex flex-wrap gap-2">
               {group.skills.map((skill) => (
-                <div
+                <span
                   key={skill.name}
-                  className="inline-flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full"
+                  className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full"
                 >
-                  <span>{skill.name}</span>
-                  <span
-                    className="inline-flex items-center gap-0.5"
-                    role="img"
-                    aria-label={`${skill.name}: ${skill.expertiseLevel} de 3 estrelas`}
-                  >
-                    {([1, 2, 3] as const).map((starNumber) => {
-                      const filled = starNumber <= skill.expertiseLevel;
-                      return (
-                        <Star
-                          key={`${skill.name}-star-${starNumber}`}
-                          className={
-                            filled
-                              ? 'h-3 w-3 fill-emerald-400 text-emerald-400'
-                              : 'h-3 w-3 text-emerald-900/60'
-                          }
-                        />
-                      );
-                    })}
-                  </span>
-                </div>
+                  {skill.name}
+                </span>
               ))}
             </div>
           </div>
@@ -357,9 +329,7 @@ export function ResumePage({ resume }: ResumePageProps) {
             <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
             {locationStr}
           </span>
-          <span className="text-zinc-500">
-            {identity.age} anos · {identity.citizenship}
-          </span>
+          <span className="text-zinc-400">{identity.age} anos</span>
           <span className="flex items-center gap-1.5">
             <Mail className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
             <a

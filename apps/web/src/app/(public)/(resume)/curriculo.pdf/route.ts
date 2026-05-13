@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   try {
     const resumeResult = await getResumeDataUncached();
-    const resume = buildResumeViewModel({ ...resumeResult.data, now });
+    const resume = buildResumeViewModel(resumeResult.data);
     const generatedAt = formatResumeGeneratedAt(now);
     const etag = createResumePdfEtag(resume, generatedAt);
 
