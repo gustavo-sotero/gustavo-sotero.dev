@@ -252,7 +252,7 @@ describe('HeroSection', () => {
   it('renders the recruiter CTA linking to /recrutadores', () => {
     render(<HeroSection skills={[]} experienceLabel="3+ anos" />);
 
-    const recruiterLink = screen.getByRole('link', { name: /sou recrutador/i });
+    const recruiterLink = screen.getByRole('link', { name: /para recrutadores/i });
     expect(recruiterLink).toBeInTheDocument();
     expect(recruiterLink).toHaveAttribute('href', '/recrutadores');
   });
