@@ -39,7 +39,12 @@ export function resolvePublicEnvInput(source: NodeJS.ProcessEnv): {
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: string | undefined;
     NEXT_PUBLIC_S3_PUBLIC_DOMAIN: string | undefined;
   };
-  overriddenKeys: Array<keyof Pick<typeof BUILD_ENV_DEFAULTS, 'NEXT_PUBLIC_API_URL' | 'NEXT_PUBLIC_TURNSTILE_SITE_KEY' | 'NEXT_PUBLIC_S3_PUBLIC_DOMAIN'>>;
+  overriddenKeys: Array<
+    keyof Pick<
+      typeof BUILD_ENV_DEFAULTS,
+      'NEXT_PUBLIC_API_URL' | 'NEXT_PUBLIC_TURNSTILE_SITE_KEY' | 'NEXT_PUBLIC_S3_PUBLIC_DOMAIN'
+    >
+  >;
 } {
   const env = {
     NEXT_PUBLIC_API_URL: source.NEXT_PUBLIC_API_URL,

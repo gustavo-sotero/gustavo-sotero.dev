@@ -21,7 +21,6 @@ describe('server env validation', () => {
   });
 
   it('uses a smoke-build fallback secret during the Next production build phase', async () => {
-    process.env.NODE_ENV = 'production';
     process.env.NEXT_PHASE = 'phase-production-build';
     delete process.env.REVALIDATE_SECRET;
 
@@ -34,4 +33,4 @@ describe('server env validation', () => {
       '[build-env] Using smoke-build defaults for: REVALIDATE_SECRET'
     );
   });
-}
+});

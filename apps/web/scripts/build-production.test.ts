@@ -3,6 +3,8 @@ import {
   BUILD_ENV_DEFAULTS,
   resolveProductionBuildCommand,
   resolveProductionBuildEnv,
+  resolveProductionBuildMaxAttempts,
+  shouldRetryProductionBuild,
 } from './build-production';
 
 describe('resolveProductionBuildEnv', () => {
@@ -66,5 +68,28 @@ describe('resolveProductionBuildCommand', () => {
       'next',
       'build',
     ]);
+  });
+});
+
+describe('production build retry policy', () => {
+  it('retries once on Windows for transient Bun build exit codes', () => {
+    expect(resolveProductionBuildMaxAttempts('win32')).toBe(2);
+    expect(shouldRetryProductionBuild({ exitCode: 3, success: false }, 1, 2, 'win32')).toBe(true);
+    expect(shouldRetryProductionBuild({ exitCode: 1, success: false }, 1, 2, 'win32')).toBe(true);
+  });
+
+  it('does not retry on non-Windows platforms or after the final attempt', () => {
+    expect(resolveProductionBuildMaxAttempts('linux')).toBe(1);
+    expect(shouldRetryProductionBuild({ exitCode: 3, success: false }, 1, 1, 'linux')).toBe(false);
+    expect(shouldRetryProductionBuild({ exitCode: 3, success: false }, 2, 2, 'win32')).toBe(false);
+    expect(shouldRetryProductionBuild({ exitCode: 2, success: false }, 1, 2, 'win32')).toBe(false);
+    expect(
+      shouldRetryProductionBuild(
+        { exitCode: 3, success: false, signalCode: 'SIGSEGV' },
+        1,
+        2,
+        'win32'
+      )
+    ).toBe(false);
   });
 });

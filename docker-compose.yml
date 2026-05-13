@@ -64,7 +64,7 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       AI_POSTS_TIMEOUT_MS: ${AI_POSTS_TIMEOUT_MS:-30000}
     healthcheck:
-      test: ['CMD-SHELL', 'pgrep -f "apps/worker/src/index.ts" > /dev/null || exit 1']
+      test: ['CMD-SHELL', 'pgrep -f "apps/worker/dist/index.js" > /dev/null || exit 1']
       interval: 30s
       timeout: 5s
       retries: 3

@@ -5,17 +5,21 @@
  * outside the root layout and must supply its own <html>/<body> shell —
  * can apply identical typography without duplicating the configuration.
  *
- * These are local-first CSS variable tokens instead of `next/font/google` so
- * production builds remain resilient when external font downloads are
- * unavailable. If Sora or JetBrains Mono are installed locally they are used;
- * otherwise the declared fallback stacks take over.
+ * Both fonts are loaded via next/font/google, which downloads and self-hosts
+ * them at build time. No CDN requests occur at runtime.
+ * The `variable` property is applied to <body> so globals.css can pick up
+ * `--font-sora` and `--font-mono-jetbrains` through Tailwind's @theme inline.
  */
-export const sora = {
-  variable: 'font-sora-variable',
-  className: 'font-sora-local',
-} as const;
+import { JetBrains_Mono, Sora } from 'next/font/google';
 
-export const jetbrainsMono = {
-  variable: 'font-mono-jetbrains-variable',
-  className: 'font-mono-jetbrains-local',
-} as const;
+export const sora = Sora({
+  subsets: ['latin'],
+  variable: '--font-sora',
+  display: 'swap',
+});
+
+export const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono-jetbrains',
+  display: 'swap',
+});

@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun --env-file ../../.env --watch src/index.ts",
-    "start": "bun run --env-file ../../.env src/index.ts",
-    "build": "bunx tsc --noEmit -p tsconfig.json",
+    "start": "bun run --env-file ../../.env dist/index.js",
+    "build": "bunx tsc --noEmit -p tsconfig.json && bun ../../scripts/build-service-runtime.ts apps/worker",
     "test": "vitest run",
     "test:watch": "vitest"
   },

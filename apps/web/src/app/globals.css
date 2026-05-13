@@ -5,14 +5,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-.font-sora-variable {
-  --font-sora: "Sora", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-}
-
-.font-mono-jetbrains-variable {
-  --font-mono-jetbrains: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

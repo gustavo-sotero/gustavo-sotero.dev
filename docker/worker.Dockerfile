@@ -24,7 +24,17 @@ COPY packages/shared/package.json ./packages/shared/
 # Install all dependencies
 RUN bun install --frozen-lockfile
 
-# Stage 2: Runtime
+# Stage 2: Build runtime JS
+FROM deps AS build
+WORKDIR /app
+
+COPY scripts ./scripts
+COPY packages/shared ./packages/shared
+COPY apps/worker ./apps/worker
+
+RUN bun run --filter @portfolio/worker build
+
+# Stage 3: Runtime
 FROM oven/bun:slim AS runtime
 WORKDIR /app
 
@@ -48,16 +58,14 @@ COPY packages/shared/package.json ./packages/shared/
 # Copy installed node_modules
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/worker/node_modules ./apps/worker/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
-# Copy source files
-COPY tsconfig.base.json ./
-COPY packages/shared ./packages/shared
-COPY apps/worker ./apps/worker
+# Copy runtime files
+COPY apps/worker/package.json ./apps/worker/
+COPY --from=build /app/apps/worker/dist ./apps/worker/dist
 
 # Ensure the log directory is writable by the runtime user
 RUN mkdir -p /app/apps/worker/logs && chown -R appuser:appgroup /app/apps/worker/logs
 
 USER appuser
 
-CMD ["bun", "run", "apps/worker/src/index.ts"]
+CMD ["bun", "apps/worker/dist/index.js"]

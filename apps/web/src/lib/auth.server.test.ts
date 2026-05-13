@@ -22,6 +22,25 @@ function makeResponse(status: number, body: unknown): Response {
   });
 }
 
+function expectSessionValidationRequest(url: string, token: string): void {
+  expect(fetchMock).toHaveBeenCalledWith(
+    url,
+    expect.objectContaining({
+      method: 'GET',
+      cache: 'no-store',
+      signal: expect.any(AbortSignal),
+      headers: expect.any(Headers),
+    })
+  );
+
+  const requestInit = fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined;
+  expect(requestInit?.headers).toBeInstanceOf(Headers);
+
+  const headers = requestInit?.headers as Headers;
+  expect(headers.get('Cookie')).toBe(`admin_token=${token}`);
+  expect(headers.get('Accept')).toBe('application/json');
+}
+
 describe('validateAdminSession', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -63,17 +82,7 @@ describe('validateAdminSession', () => {
     const result = await validateAdminSession();
 
     expect(result).toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://example.com/api/auth/session',
-      expect.objectContaining({
-        method: 'GET',
-        headers: {
-          Cookie: 'admin_token=valid-token',
-        },
-        cache: 'no-store',
-        signal: expect.any(AbortSignal),
-      })
-    );
+    expectSessionValidationRequest('https://example.com/api/auth/session', 'valid-token');
   });
 
   it('returns false when /auth/session responds with non-2xx', async () => {
@@ -136,17 +145,7 @@ describe('validateAdminSession', () => {
     const result = await validateAdminSession();
 
     expect(result).toBe(true);
-    // resolveServerApiBaseUrl returns the path-based URL as-is (trailing slash stripped);
-    // the fetch target must include /api before /auth/session.
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://example.com/api/auth/session',
-      expect.objectContaining({
-        method: 'GET',
-        headers: { Cookie: 'admin_token=path-based-token' },
-        cache: 'no-store',
-        signal: expect.any(AbortSignal),
-      })
-    );
+    expectSessionValidationRequest('https://example.com/api/auth/session', 'path-based-token');
   });
 
   it('prefers API_INTERNAL_URL over path-based NEXT_PUBLIC_API_URL', async () => {
@@ -162,15 +161,6 @@ describe('validateAdminSession', () => {
     const result = await validateAdminSession();
 
     expect(result).toBe(true);
-    // The internal URL wins — no /api prefix in the SSR request path.
-    expect(fetchMock).toHaveBeenCalledWith(
-      'http://api:3000/auth/session',
-      expect.objectContaining({
-        method: 'GET',
-        headers: { Cookie: 'admin_token=internal-token' },
-        cache: 'no-store',
-        signal: expect.any(AbortSignal),
-      })
-    );
+    expectSessionValidationRequest('http://api:3000/auth/session', 'internal-token');
   });
 });
