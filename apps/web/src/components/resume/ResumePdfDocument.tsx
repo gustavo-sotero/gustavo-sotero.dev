@@ -422,7 +422,10 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
       : null,
     contacts.linkedin
       ? {
-          label: contacts.linkedin.replace('https://www.linkedin.com/in/', 'linkedin.com/in/'),
+          label: contacts.linkedin.replace(
+            /^https?:\/\/(www\.)?linkedin\.com\/in\//,
+            'linkedin.com/in/'
+          ),
           href: contacts.linkedin,
         }
       : null,
