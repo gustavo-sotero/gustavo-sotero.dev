@@ -1,52 +1,37 @@
-import { spawn } from 'node:child_process';
+/// <reference types="bun" />
+
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  BUILD_ENV_DEFAULTS,
+  resolvePublicEnvInput,
+  resolveServerEnvInput,
+} from '../src/lib/build-env-defaults';
 
-export const BUILD_ENV_DEFAULTS = {
-  NEXT_PUBLIC_API_URL: 'https://api.example.invalid',
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'build-only-turnstile-site-key',
-  NEXT_PUBLIC_S3_PUBLIC_DOMAIN: 'https://media.example.invalid',
-  REVALIDATE_SECRET: 'build-only-revalidate-secret',
-} as const;
+const NEXT_PRODUCTION_BUILD_PHASE = 'phase-production-build';
 
-function isValidHttpsUrl(value: string | undefined): boolean {
-  if (!value) return false;
-
-  try {
-    return new URL(value).protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
+export { BUILD_ENV_DEFAULTS };
 
 export function resolveProductionBuildEnv(source: NodeJS.ProcessEnv): {
   env: NodeJS.ProcessEnv;
   overriddenKeys: string[];
 } {
-  const env: NodeJS.ProcessEnv = { ...source, NODE_ENV: 'production' };
-  const overriddenKeys: string[] = [];
+  const buildEnv: NodeJS.ProcessEnv = {
+    ...source,
+    NODE_ENV: 'production',
+    NEXT_PHASE: NEXT_PRODUCTION_BUILD_PHASE,
+  };
+  const { env: publicEnv, overriddenKeys: publicOverriddenKeys } = resolvePublicEnvInput(buildEnv);
+  const { env: serverEnv, overriddenKeys: serverOverriddenKeys } = resolveServerEnvInput(buildEnv);
 
-  if (!isValidHttpsUrl(env.NEXT_PUBLIC_API_URL)) {
-    env.NEXT_PUBLIC_API_URL = BUILD_ENV_DEFAULTS.NEXT_PUBLIC_API_URL;
-    overriddenKeys.push('NEXT_PUBLIC_API_URL');
-  }
-
-  if (!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
-    env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = BUILD_ENV_DEFAULTS.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-    overriddenKeys.push('NEXT_PUBLIC_TURNSTILE_SITE_KEY');
-  }
-
-  if (!isValidHttpsUrl(env.NEXT_PUBLIC_S3_PUBLIC_DOMAIN)) {
-    env.NEXT_PUBLIC_S3_PUBLIC_DOMAIN = BUILD_ENV_DEFAULTS.NEXT_PUBLIC_S3_PUBLIC_DOMAIN;
-    overriddenKeys.push('NEXT_PUBLIC_S3_PUBLIC_DOMAIN');
-  }
-
-  if (!env.REVALIDATE_SECRET) {
-    env.REVALIDATE_SECRET = BUILD_ENV_DEFAULTS.REVALIDATE_SECRET;
-    overriddenKeys.push('REVALIDATE_SECRET');
-  }
-
-  return { env, overriddenKeys };
+  return {
+    env: {
+      ...buildEnv,
+      ...publicEnv,
+      ...serverEnv,
+    },
+    overriddenKeys: [...publicOverriddenKeys, ...serverOverriddenKeys],
+  };
 }
 
 export function resolveProductionBuildCommand(execPath = process.execPath) {
@@ -55,39 +40,23 @@ export function resolveProductionBuildCommand(execPath = process.execPath) {
 }
 
 if (import.meta.main) {
-  const { env, overriddenKeys } = resolveProductionBuildEnv(process.env);
-
-  if (overriddenKeys.length > 0) {
-    console.warn(`[build-production] Using smoke-build defaults for: ${overriddenKeys.join(', ')}`);
-  }
+  const { env } = resolveProductionBuildEnv(process.env);
 
   const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const buildCommand = resolveProductionBuildCommand();
 
-  // Drive the same Bun/Next CLI path that succeeds in local and CI validation.
-  // Importing Next's build internals in-process has drifted from the supported
-  // CLI path and can abort on Windows without surfacing the underlying error.
+  // Drive the Bun/Next CLI path directly through Bun's own subprocess API.
+  // Spawning a Bun child via node:child_process from a Bun-launched wrapper
+  // can crash on Windows even when `bun --bun next build` succeeds directly.
   try {
-    const [command, ...args] = buildCommand;
-    const buildProcess = spawn(command, args, {
+    const buildProcess = Bun.spawnSync([...buildCommand], {
       cwd: packageRoot,
       env,
-      stdio: 'inherit',
+      stdout: 'inherit',
+      stderr: 'inherit',
     });
 
-    const exitCode = await new Promise<number>((resolveExit, rejectExit) => {
-      buildProcess.once('error', rejectExit);
-      buildProcess.once('exit', (code, signal) => {
-        if (signal) {
-          rejectExit(new Error(`Build terminated by signal ${signal}`));
-          return;
-        }
-
-        resolveExit(code ?? 1);
-      });
-    });
-
-    process.exit(exitCode);
+    process.exit(buildProcess.exitCode);
   } catch (error) {
     console.error('[build-production] Build failed:', error);
     process.exit(1);

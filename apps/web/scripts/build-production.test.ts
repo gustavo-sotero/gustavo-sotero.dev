@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   BUILD_ENV_DEFAULTS,
   resolveProductionBuildCommand,
@@ -16,6 +16,7 @@ describe('resolveProductionBuildEnv', () => {
     });
 
     expect(env.NODE_ENV).toBe('production');
+    expect(env.NEXT_PHASE).toBe('phase-production-build');
     expect(env.NEXT_PUBLIC_API_URL).toBe('https://api.example.com');
     expect(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY).toBe('site-key');
     expect(env.NEXT_PUBLIC_S3_PUBLIC_DOMAIN).toBe('https://cdn.example.com');
@@ -24,12 +25,15 @@ describe('resolveProductionBuildEnv', () => {
   });
 
   it('replaces insecure or missing public values with smoke-build defaults', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     const { env, overriddenKeys } = resolveProductionBuildEnv({
       NODE_ENV: 'development',
       NEXT_PUBLIC_API_URL: 'http://localhost:3000',
       NEXT_PUBLIC_S3_PUBLIC_DOMAIN: 'http://localhost:9000',
     });
 
+    expect(env.NEXT_PHASE).toBe('phase-production-build');
     expect(env.NEXT_PUBLIC_API_URL).toBe(BUILD_ENV_DEFAULTS.NEXT_PUBLIC_API_URL);
     expect(env.NEXT_PUBLIC_S3_PUBLIC_DOMAIN).toBe(BUILD_ENV_DEFAULTS.NEXT_PUBLIC_S3_PUBLIC_DOMAIN);
     expect(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY).toBe(
