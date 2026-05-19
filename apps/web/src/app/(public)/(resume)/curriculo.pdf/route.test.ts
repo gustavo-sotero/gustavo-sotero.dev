@@ -1,3 +1,4 @@
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
@@ -71,6 +72,7 @@ describe('GET /curriculo.pdf', () => {
     getResumeDataUncachedMock.mockResolvedValue({
       state: 'ok',
       data: {
+        profile: DEVELOPER_PUBLIC_PROFILE,
         experience: [],
         education: [],
         skills: [],
@@ -98,6 +100,7 @@ describe('GET /curriculo.pdf', () => {
 
     expect(getResumeDataUncachedMock).toHaveBeenCalledTimes(1);
     expect(buildResumeViewModelMock).toHaveBeenCalledWith({
+      profile: DEVELOPER_PUBLIC_PROFILE,
       experience: [],
       education: [],
       skills: [],

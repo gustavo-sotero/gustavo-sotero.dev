@@ -1,5 +1,5 @@
 # Stage 1: Build Next.js app
-FROM oven/bun:1 AS builder
+FROM oven/bun:slim AS builder
 WORKDIR /app
 
 # NEXT_PUBLIC_* vars are baked into the Next.js bundle at build time.

@@ -23,6 +23,7 @@ describe('openapi routes', () => {
     expect(body.info.title).toBe('Portfolio API');
     expect(body.paths).toHaveProperty('/posts');
     expect(body.paths).toHaveProperty('/projects');
+    expect(body.paths).toHaveProperty('/resume');
     expect(body.paths).toHaveProperty('/skills');
     expect(body.paths).toHaveProperty('/admin/skills');
     expect(body.paths).toHaveProperty('/auth/github/start');
@@ -75,6 +76,7 @@ describe('openapi routes', () => {
       '/posts/{slug}',
       '/projects',
       '/projects/{slug}',
+      '/resume',
       '/comments',
       '/contact',
       '/tags',
@@ -125,6 +127,70 @@ describe('openapi routes', () => {
     for (const path of expectedPaths) {
       expect(Object.hasOwn(body.paths, path)).toBe(true);
     }
+  });
+
+  it('GET /doc/spec documents the dedicated /resume aggregate contract without pagination metadata', async () => {
+    const app = new Hono();
+    app.route('/', openApiRouter);
+
+    const response = await app.request('/doc/spec');
+    const body = (await response.json()) as {
+      paths: Record<
+        string,
+        {
+          get?: {
+            operationId?: string;
+            description?: string;
+            responses?: Record<
+              string,
+              {
+                content?: {
+                  'application/json'?: {
+                    schema?: {
+                      properties?: {
+                        data?: {
+                          properties?: Record<
+                            string,
+                            {
+                              items?: { $ref?: string };
+                              properties?: Record<string, unknown>;
+                            }
+                          >;
+                        };
+                        meta?: unknown;
+                      };
+                    };
+                  };
+                };
+              }
+            >;
+          };
+        }
+      >;
+    };
+
+    const resumeGet = body.paths['/resume']?.get;
+    const dataProps =
+      resumeGet?.responses?.['200']?.content?.['application/json']?.schema?.properties?.data
+        ?.properties ?? {};
+    const profileProps = dataProps.profile?.properties ?? {};
+
+    expect(resumeGet?.operationId).toBe('getResumeAggregate');
+    expect(resumeGet?.description).toContain('/curriculo');
+    expect(dataProps).toHaveProperty('profile');
+    expect(dataProps).toHaveProperty('experience');
+    expect(dataProps).toHaveProperty('education');
+    expect(dataProps).toHaveProperty('skills');
+    expect(dataProps).toHaveProperty('projects');
+    expect(
+      resumeGet?.responses?.['200']?.content?.['application/json']?.schema?.properties
+    ).not.toHaveProperty('meta');
+    expect(dataProps.experience?.items?.$ref).toBe('#/components/schemas/Experience');
+    expect(dataProps.education?.items?.$ref).toBe('#/components/schemas/Education');
+    expect(dataProps.skills?.items?.$ref).toBe('#/components/schemas/Skill');
+    expect(dataProps.projects?.items?.$ref).toBe('#/components/schemas/Project');
+    expect(profileProps).toHaveProperty('languages');
+    expect(profileProps).toHaveProperty('additionalInfo');
   });
 
   it('GET /doc/spec documents /tags source filter and default union semantics', async () => {

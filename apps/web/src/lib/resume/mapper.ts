@@ -1,8 +1,4 @@
-import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
-import type { Education } from '@portfolio/shared/types/education';
-import type { Experience } from '@portfolio/shared/types/experience';
-import type { Project } from '@portfolio/shared/types/projects';
-import type { Skill } from '@portfolio/shared/types/skills';
+import type { ResumeAggregateDTO } from '@portfolio/shared/types/resume';
 
 // ---------------------------------------------------------------------------
 // ResumeViewModel — unified shape consumed by both the web view and PDF doc
@@ -251,13 +247,8 @@ const MAX_SKILLS_PER_GROUP = 12;
 // Main mapper
 // ---------------------------------------------------------------------------
 
-export function buildResumeViewModel(opts: {
-  experience: Experience[];
-  education: Education[];
-  skills?: Skill[];
-  projects: Project[];
-}): ResumeViewModel {
-  const profile = DEVELOPER_PUBLIC_PROFILE;
+export function buildResumeViewModel(aggregate: ResumeAggregateDTO): ResumeViewModel {
+  const profile = aggregate.profile;
 
   // Identity
   const identity: ResumeIdentity = {
@@ -281,7 +272,7 @@ export function buildResumeViewModel(opts: {
   };
 
   // Experience — ordered by isCurrent desc, then startDate desc
-  const sortedExperience = [...opts.experience]
+  const sortedExperience = [...aggregate.experience]
     .filter((e) => e.status === 'published' || !('status' in e))
     .sort((a, b) => {
       if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
@@ -304,7 +295,7 @@ export function buildResumeViewModel(opts: {
   }));
 
   // Education — ordered by isCurrent desc, then endDate desc
-  const sortedEducation = [...opts.education].sort((a, b) => {
+  const sortedEducation = [...aggregate.education].sort((a, b) => {
     if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
     const aDate = a.endDate ?? a.startDate ?? '';
     const bDate = b.endDate ?? b.startDate ?? '';
@@ -327,7 +318,7 @@ export function buildResumeViewModel(opts: {
 
   // Skills — group by recruiter-friendly groups (presentation layer only)
   const grouped = new Map<RecruiterGroup, ResumeSkillItem[]>();
-  const sortedSkills = [...(opts.skills ?? [])].sort(
+  const sortedSkills = [...(aggregate.skills ?? [])].sort(
     (a, b) =>
       Number(b.isHighlighted) - Number(a.isHighlighted) ||
       b.expertiseLevel - a.expertiseLevel ||
@@ -356,7 +347,7 @@ export function buildResumeViewModel(opts: {
   );
 
   // Projects — published ones, featured first
-  const sortedProjects = [...opts.projects]
+  const sortedProjects = [...aggregate.projects]
     .filter((p) => p.status === 'published')
     .sort((a, b) => {
       if (a.featured !== b.featured) return a.featured ? -1 : 1;

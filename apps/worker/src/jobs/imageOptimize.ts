@@ -1,19 +1,24 @@
 /**
  * BullMQ job handler: imageOptimize
  *
- * Processes an uploaded image using `sharp`:
+ * Processes an uploaded image:
  *  1. Validate S3 object metadata (size, MIME) before loading bytes
  *  2. Download original from S3
- *  3. Detect animated GIF (preserve format)
- *  4. Generate thumbnail (400w WebP) and medium (800w WebP)
+ *  3. Detect animated GIF (sharp required — Bun.Image does not support GIF encode on Linux)
+ *  4. Generate thumbnail (400w) and medium (800w) variants
  *  5. Upload variants to S3
  *  6. Update `uploads` record → status='processed' + variant URLs + dimensions
+ *
+ * Engine selection:
+ *  - JPEG / PNG / WebP → Bun.Image (zero native addon, portable across Linux/macOS/Windows)
+ *  - GIF (all frames) → sharp (Bun.Image lists GIF only under decode on Linux; no encode path)
  *
  * On error: update status='failed' and rethrow for BullMQ retry/DLQ.
  */
 
 import { MAX_UPLOAD_BYTES } from '@portfolio/shared/constants/uploads';
 import { uploads } from '@portfolio/shared/db/schema';
+import { buildPortableWebpVariants } from '@portfolio/shared/lib/image-variants';
 import type { Job } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
@@ -82,15 +87,8 @@ export async function processImageOptimize(job: Job<ImageOptimizePayload>): Prom
 
     const originalBytes = await s3.file(key).bytes();
 
-    // 3. Load into buffer for sharp processing
+    // 3. Build a buffer once — consumed by both the metadata read and variant encode steps.
     const buffer = Buffer.from(originalBytes);
-
-    // 4. Read metadata
-    const metadata = await sharp(buffer).metadata();
-    const { width, height, pages } = metadata;
-
-    // 5. Detect animated GIF — skip WebP conversion, preserve original format
-    const isAnimatedGif = record.mime === 'image/gif' && (pages ?? 0) > 1;
 
     const now = new Date();
     const yyyy = now.getUTCFullYear();
@@ -101,63 +99,99 @@ export async function processImageOptimize(job: Job<ImageOptimizePayload>): Prom
         .pop()
         ?.replace(/\.[^.]+$/, '') ?? crypto.randomUUID();
 
+    let width: number | undefined;
+    let height: number | undefined;
     let thumbUrl: string;
     let mediumUrl: string;
+    let isAnimatedGif = false;
 
-    if (isAnimatedGif) {
-      // Preserve GIF format for animated variants while still generating 400w/800w sizes
-      const thumbKey = `${yyyy}/${mm}/${baseName}_thumb.gif`;
-      const mediumKey = `${yyyy}/${mm}/${baseName}_medium.gif`;
+    if (record.mime === 'image/gif') {
+      // 4a. GIF path — use sharp.
+      //     Bun.Image lists GIF only under decode on Linux; there is no GIF encode path,
+      //     so sharp must stay for all GIF frames (animated or static).
+      const metadata = await sharp(buffer).metadata();
+      width = metadata.width;
+      height = metadata.height;
+      const pages = metadata.pages ?? 0;
+      isAnimatedGif = pages > 1;
 
-      const [thumbBuffer, mediumBuffer] = await Promise.all([
-        sharp(buffer, { animated: true })
-          .resize(400, undefined, { withoutEnlargement: true })
-          .gif()
-          .toBuffer(),
-        sharp(buffer, { animated: true })
-          .resize(800, undefined, { withoutEnlargement: true })
-          .gif()
-          .toBuffer(),
-      ]);
+      if (isAnimatedGif) {
+        // Preserve GIF format for animated variants
+        const thumbKey = `${yyyy}/${mm}/${baseName}_thumb.gif`;
+        const mediumKey = `${yyyy}/${mm}/${baseName}_medium.gif`;
 
-      await Promise.all([
-        s3.file(thumbKey).write(thumbBuffer, { type: 'image/gif' }),
-        s3.file(mediumKey).write(mediumBuffer, { type: 'image/gif' }),
-      ]);
+        const [thumbBuffer, mediumBuffer] = await Promise.all([
+          sharp(buffer, { animated: true })
+            .resize(400, undefined, { withoutEnlargement: true })
+            .gif()
+            .toBuffer(),
+          sharp(buffer, { animated: true })
+            .resize(800, undefined, { withoutEnlargement: true })
+            .gif()
+            .toBuffer(),
+        ]);
 
-      thumbUrl = getPublicUrl(thumbKey);
-      mediumUrl = getPublicUrl(mediumKey);
+        await Promise.all([
+          s3.file(thumbKey).write(thumbBuffer, { type: 'image/gif' }),
+          s3.file(mediumKey).write(mediumBuffer, { type: 'image/gif' }),
+        ]);
 
-      logger.debug('Animated GIF detected — variants preserved as GIF', {
-        uploadId,
-        thumbKey,
-        mediumKey,
-      });
+        thumbUrl = getPublicUrl(thumbKey);
+        mediumUrl = getPublicUrl(mediumKey);
+
+        logger.debug('Animated GIF detected — variants preserved as GIF', {
+          uploadId,
+          thumbKey,
+          mediumKey,
+        });
+      } else {
+        // Static GIF → convert to WebP
+        const thumbKey = `${yyyy}/${mm}/${baseName}_thumb.webp`;
+        const mediumKey = `${yyyy}/${mm}/${baseName}_medium.webp`;
+
+        const [thumbBuffer, mediumBuffer] = await Promise.all([
+          sharp(buffer)
+            .resize(400, undefined, { withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer(),
+          sharp(buffer)
+            .resize(800, undefined, { withoutEnlargement: true })
+            .webp({ quality: 85 })
+            .toBuffer(),
+        ]);
+
+        await Promise.all([
+          s3.file(thumbKey).write(thumbBuffer, { type: 'image/webp' }),
+          s3.file(mediumKey).write(mediumBuffer, { type: 'image/webp' }),
+        ]);
+
+        thumbUrl = getPublicUrl(thumbKey);
+        mediumUrl = getPublicUrl(mediumKey);
+
+        logger.debug('Static GIF — converted to WebP variants', { uploadId, thumbKey, mediumKey });
+      }
     } else {
-      // 6. Generate WebP variants
+      // 4b. JPEG / PNG / WebP path - use the shared Bun.Image helper.
       const thumbKey = `${yyyy}/${mm}/${baseName}_thumb.webp`;
       const mediumKey = `${yyyy}/${mm}/${baseName}_medium.webp`;
 
-      const [thumbBuffer, mediumBuffer] = await Promise.all([
-        sharp(buffer)
-          .resize(400, undefined, { withoutEnlargement: true })
-          .webp({ quality: 80 })
-          .toBuffer(),
-        sharp(buffer)
-          .resize(800, undefined, { withoutEnlargement: true })
-          .webp({ quality: 85 })
-          .toBuffer(),
-      ]);
+      const { metadata, variants } = await buildPortableWebpVariants(buffer, [
+        { key: 'thumb', maxWidth: 400, quality: 80 },
+        { key: 'medium', maxWidth: 800, quality: 85 },
+      ] as const);
+
+      width = metadata.width;
+      height = metadata.height;
 
       await Promise.all([
-        s3.file(thumbKey).write(thumbBuffer, { type: 'image/webp' }),
-        s3.file(mediumKey).write(mediumBuffer, { type: 'image/webp' }),
+        s3.file(thumbKey).write(variants.thumb.bytes, { type: variants.thumb.mime }),
+        s3.file(mediumKey).write(variants.medium.bytes, { type: variants.medium.mime }),
       ]);
 
       thumbUrl = getPublicUrl(thumbKey);
       mediumUrl = getPublicUrl(mediumKey);
 
-      logger.debug('WebP variants generated', { uploadId, thumbKey, mediumKey });
+      logger.debug('WebP variants generated via Bun.Image', { uploadId, thumbKey, mediumKey });
     }
 
     // 7. Update DB record

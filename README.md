@@ -97,6 +97,7 @@ Todos os caminhos abaixo são **internos** (o que o Hono recebe após o proxy re
 | `/comments`         | Envio de comentários anônimos                      |
 | `/contact`          | Envio de formulário de contato                     |
 | `/developer/profile` | Dados do perfil (bio, disponibilidade)            |
+| `GET /resume`        | **Agregado do currículo**: profile estático + experience, education, skills e projects em um único round-trip (sem contagens; consumido pela página `/curriculo` e pela rota `/curriculo.pdf`) |
 | `/experience`       | Experiências profissionais                         |
 | `/education`        | Formação acadêmica                                 |
 | `GET /feed.xml`     | RSS 2.0 (posts publicados)                         |

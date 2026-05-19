@@ -359,7 +359,7 @@ function EducationEntry({ item }: { item: ResumeViewModel['education'][number] }
 
 function ProjectEntry({ item }: { item: ResumeViewModel['projects'][number] }) {
   return (
-    <View style={s.projectEntry} wrap={false}>
+    <View style={s.projectEntry}>
       <View style={s.projectHeader}>
         <Text style={s.projectTitle}>{item.title}</Text>
         <View style={s.projectLinks}>
@@ -505,20 +505,17 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
         ) : null}
 
         {/* ── Habilidades ─────────────────────────────────────────────────── */}
-        {/* ── Habilidades ─────────────────────────────────────────────────── */}
-        {skills.length > 0
-          ? skills.map((group, i) => (
-              <View
-                key={group.category}
-                wrap={false}
-                style={{ marginBottom: i === skills.length - 1 ? 16 : 5 }}
-              >
-                {i === 0 ? <SectionTitle>Habilidades Técnicas</SectionTitle> : null}
+        {skills.length > 0 ? (
+          <View style={s.section}>
+            <SectionTitle>Habilidades Técnicas</SectionTitle>
+            {skills.map((group) => (
+              <View key={group.category} style={s.skillGroup}>
                 <Text style={s.skillGroupLabel}>{group.label}</Text>
                 <Text style={s.skillsText}>{group.skills.map((sk) => sk.name).join(', ')}</Text>
               </View>
-            ))
-          : null}
+            ))}
+          </View>
+        ) : null}
 
         {/* ── Projetos ────────────────────────────────────────────────────── */}
         {projects.length > 0 ? (

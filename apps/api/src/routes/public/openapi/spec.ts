@@ -53,6 +53,10 @@ export const OPENAPI_SPEC = {
     { name: 'Contact', description: 'Contact form submission' },
     { name: 'Feed', description: 'RSS and sitemap syndication' },
     { name: 'Auth', description: 'GitHub OAuth authentication' },
+    {
+      name: 'Resume',
+      description: 'Single-request resume aggregate for public HTML and PDF surfaces',
+    },
     { name: 'Admin - Posts', description: 'Admin post management (JWT required)' },
     { name: 'Admin - Projects', description: 'Admin project management (JWT required)' },
     { name: 'Admin - Skills', description: 'Admin skill catalog management (JWT required)' },

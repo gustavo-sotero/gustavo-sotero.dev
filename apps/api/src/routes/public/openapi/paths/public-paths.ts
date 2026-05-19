@@ -1,7 +1,8 @@
 /**
  * OpenAPI path definitions for all public (unauthenticated) routes.
- * Includes: developer profile, documentation, health, posts, projects, skills,
- * tags, comments, contact, feed/sitemap, auth, experience, education.
+ * Includes: developer profile, resume aggregate, documentation, health, posts,
+ * projects, skills, tags, comments, contact, feed/sitemap, auth, experience,
+ * education.
  */
 
 export const publicPaths = {
@@ -761,6 +762,133 @@ export const publicPaths = {
           },
         },
         '404': { $ref: '#/components/responses/NotFound' },
+      },
+    },
+  },
+
+  // ── Resume ─────────────────────────────────────────────────────────────────
+  '/resume': {
+    get: {
+      tags: ['Resume'],
+      summary: 'Get the aggregated resume payload',
+      description:
+        'Returns the dedicated resume aggregate consumed by the public `/curriculo` page and `/curriculo.pdf` route.\n\n' +
+        'Includes static profile data plus the complete experience, education, skills, and projects sections in a single response.\n\n' +
+        'No pagination metadata or COUNT-derived totals are included.',
+      operationId: 'getResumeAggregate',
+      responses: {
+        '200': {
+          description: 'Aggregated resume payload',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['success', 'data'],
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  data: {
+                    type: 'object',
+                    required: ['profile', 'experience', 'education', 'skills', 'projects'],
+                    properties: {
+                      profile: {
+                        type: 'object',
+                        required: [
+                          'name',
+                          'role',
+                          'bio',
+                          'bioShort',
+                          'birthDate',
+                          'careerStartDate',
+                          'hero',
+                          'objective',
+                          'location',
+                          'city',
+                          'state',
+                          'availability',
+                          'links',
+                          'contacts',
+                          'languages',
+                          'additionalInfo',
+                        ],
+                        properties: {
+                          name: { type: 'string', example: 'Gustavo Sotero' },
+                          role: { type: 'string', example: 'Desenvolvedor Fullstack' },
+                          bio: { type: 'string' },
+                          bioShort: { type: 'string' },
+                          birthDate: { type: 'string', format: 'date' },
+                          careerStartDate: { type: 'string', format: 'date' },
+                          hero: {
+                            type: 'object',
+                            required: ['greeting', 'focus'],
+                            properties: {
+                              greeting: { type: 'string' },
+                              focus: { type: 'string' },
+                            },
+                          },
+                          objective: { type: 'string' },
+                          location: { type: 'string' },
+                          city: { type: 'string' },
+                          state: { type: 'string' },
+                          availability: { type: 'string' },
+                          links: {
+                            type: 'object',
+                            required: ['github', 'linkedin', 'website', 'telegram', 'whatsapp'],
+                            properties: {
+                              github: { type: 'string', format: 'uri' },
+                              linkedin: { type: 'string', format: 'uri' },
+                              website: { type: 'string', format: 'uri' },
+                              telegram: { type: 'string', format: 'uri' },
+                              whatsapp: { type: 'string', format: 'uri' },
+                            },
+                          },
+                          contacts: {
+                            type: 'object',
+                            required: ['email', 'phone'],
+                            properties: {
+                              email: { type: 'string', format: 'email' },
+                              phone: { type: 'string' },
+                            },
+                          },
+                          languages: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              required: ['name', 'level'],
+                              properties: {
+                                name: { type: 'string' },
+                                level: { type: 'string' },
+                              },
+                            },
+                          },
+                          additionalInfo: {
+                            type: 'array',
+                            items: { type: 'string' },
+                          },
+                        },
+                      },
+                      experience: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/Experience' },
+                      },
+                      education: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/Education' },
+                      },
+                      skills: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/Skill' },
+                      },
+                      projects: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/Project' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
   },

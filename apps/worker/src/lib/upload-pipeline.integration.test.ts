@@ -19,7 +19,7 @@
 import { OutboxEventType } from '@portfolio/shared/constants/enums';
 import { imageOptimizeJobId } from '@portfolio/shared/lib/jobIds';
 import type { Job } from 'bullmq';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Hoisted mock functions ────────────────────────────────────────────────────
 
@@ -33,6 +33,8 @@ const {
   s3WriteMock,
   sharpMetadataMock,
   sharpToBufferMock,
+  bunImageMetadataMock,
+  bunImageBufferMock,
 } = vi.hoisted(() => ({
   dbSelectMock: vi.fn(),
   dbUpdateSetMock: vi.fn(),
@@ -43,6 +45,8 @@ const {
   s3WriteMock: vi.fn(),
   sharpMetadataMock: vi.fn(),
   sharpToBufferMock: vi.fn(),
+  bunImageMetadataMock: vi.fn(),
+  bunImageBufferMock: vi.fn(),
 }));
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
@@ -203,9 +207,30 @@ describe('upload pipeline: relay → imageOptimize state transition', () => {
     s3BytesMock.mockResolvedValue(Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
     s3WriteMock.mockResolvedValue(undefined);
 
-    // sharp metadata: 800×600 JPEG (no animated GIF)
+    // sharp metadata — only reached for the GIF path
     sharpMetadataMock.mockResolvedValue({ width: 800, height: 600, pages: undefined });
     sharpToBufferMock.mockResolvedValue(Buffer.from('webp-bytes'));
+
+    // Bun.Image stub — JPEG/PNG/WebP path uses Bun.Image instead of sharp.
+    // Stubbing the global prevents real image decoding of the 4-byte test buffer
+    // and provides deterministic dimension values for the DB update assertion.
+    bunImageMetadataMock.mockResolvedValue({ width: 800, height: 600, format: 'jpeg' });
+    bunImageBufferMock.mockResolvedValue(Buffer.from('webp-bytes'));
+    function BunImageMock() {
+      return {
+        metadata: bunImageMetadataMock,
+        resize: vi.fn(() => ({
+          webp: vi.fn(() => ({
+            buffer: bunImageBufferMock,
+          })),
+        })),
+      };
+    }
+    vi.stubGlobal('Bun', { ...globalThis.Bun, Image: BunImageMock });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('stage 1 → stage 2: relay publishes uploadId and imageOptimize transitions upload to processed', async () => {

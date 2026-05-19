@@ -1,4 +1,6 @@
+import { join } from 'node:path';
 import {
+  education,
   experience,
   experienceSkills,
   posts,
@@ -8,508 +10,108 @@ import {
   skills,
   tags,
 } from '@portfolio/shared/db/schema';
-import { resolveTagIcon } from '@portfolio/shared/lib/iconResolver';
-import { and, eq, isNull, ne, or } from 'drizzle-orm';
+import { buildPortableWebpVariants } from '@portfolio/shared/lib/image-variants';
+import { eq, inArray } from 'drizzle-orm';
 import { db, pgClient } from '../config/db';
 import { getLogger } from '../config/logger';
+import { getPublicUrl, s3 } from '../config/s3';
+import { renderMarkdown } from '../lib/markdown';
+import { SEED_POSTS } from './seed-data/posts';
+import { SEED_EDUCATION, SEED_EXPERIENCE } from './seed-data/profile';
+import { SEED_PROJECTS } from './seed-data/projects';
+import { SEED_SKILLS, SEED_TAGS } from './seed-data/taxonomy';
 
 const logger = getLogger('db', 'seed');
 
-// Raw definitions without iconKey — resolver assigns it automatically.
-const _RAW_SEED_TAGS = [
-  { name: 'TypeScript', slug: 'typescript', category: 'language' as const },
-  { name: 'JavaScript', slug: 'javascript', category: 'language' as const },
-  { name: 'Node.js', slug: 'nodejs', category: 'tool' as const },
-  { name: 'React', slug: 'react', category: 'framework' as const },
-  { name: 'Next.js', slug: 'nextjs', category: 'framework' as const },
-  { name: 'Hono', slug: 'hono', category: 'framework' as const },
-  { name: 'Tailwind CSS', slug: 'tailwind', category: 'framework' as const },
-  { name: 'PostgreSQL', slug: 'postgresql', category: 'db' as const },
-  { name: 'Redis', slug: 'redis', category: 'db' as const },
-  { name: 'Docker', slug: 'docker', category: 'infra' as const },
-  { name: 'Bun', slug: 'bun', category: 'tool' as const },
-  { name: 'Drizzle ORM', slug: 'drizzle', category: 'tool' as const },
-  { name: 'Vitest', slug: 'vitest', category: 'tool' as const },
-  { name: 'AWS', slug: 'aws', category: 'cloud' as const },
-  { name: 'Cloudflare', slug: 'cloudflare', category: 'cloud' as const },
-  { name: 'Kubernetes', slug: 'kubernetes', category: 'infra' as const },
-  { name: 'Prometheus', slug: 'prometheus', category: 'infra' as const },
+const LEGACY_PLACEHOLDER_POST_SLUGS = [
+  'building-fullstack-portfolio',
+  'drizzle-orm-guide',
+  'bullmq-background-jobs',
 ];
 
-/**
- * Exported for testing — iconKey is auto-resolved via the resolver.
- * All entries will always have a non-empty iconKey.
- */
-export const SEED_TAGS = _RAW_SEED_TAGS.map((t) => ({
-  ...t,
-  iconKey: resolveTagIcon(t.name, t.category).iconKey,
-}));
+const LEGACY_PLACEHOLDER_PROJECT_SLUGS = ['open-source-contributions'];
 
-// ── Canonical Skills ──────────────────────────────────────────────────────────
-// These are the developer's personal skill catalog entries.
-// expertiseLevel: 1=familiar, 2=proficient, 3=expert
-// isHighlighted: top skills shown in the Bento Box (max 2 per category)
-const _RAW_SEED_SKILLS = [
-  // Languages
-  {
-    name: 'TypeScript',
-    slug: 'typescript',
-    category: 'language' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'JavaScript',
-    slug: 'javascript',
-    category: 'language' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'Python',
-    slug: 'python',
-    category: 'language' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'PHP',
-    slug: 'php',
-    category: 'language' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'Java',
-    slug: 'java',
-    category: 'language' as const,
-    expertiseLevel: 1 as const,
-    isHighlighted: 0 as const,
-  },
-  // Frameworks
-  {
-    name: 'Hono',
-    slug: 'hono',
-    category: 'framework' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'Next.js',
-    slug: 'nextjs',
-    category: 'framework' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'React',
-    slug: 'react',
-    category: 'framework' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'NestJS',
-    slug: 'nestjs',
-    category: 'framework' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'Fastify',
-    slug: 'fastify',
-    category: 'framework' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'Django',
-    slug: 'django',
-    category: 'framework' as const,
-    expertiseLevel: 1 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'Laravel',
-    slug: 'laravel',
-    category: 'framework' as const,
-    expertiseLevel: 1 as const,
-    isHighlighted: 0 as const,
-  },
-  // Tools
-  {
-    name: 'Bun',
-    slug: 'bun',
-    category: 'tool' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'Drizzle ORM',
-    slug: 'drizzle',
-    category: 'tool' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'Zod',
-    slug: 'zod',
-    category: 'tool' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'TanStack Query',
-    slug: 'tanstack-query',
-    category: 'tool' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'Node.js',
-    slug: 'nodejs',
-    category: 'tool' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'Prisma',
-    slug: 'prisma',
-    category: 'tool' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'BullMQ',
-    slug: 'bullmq',
-    category: 'tool' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'Vitest',
-    slug: 'vitest',
-    category: 'tool' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  // Databases
-  {
-    name: 'PostgreSQL',
-    slug: 'postgresql',
-    category: 'db' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'Redis',
-    slug: 'redis',
-    category: 'db' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'MySQL',
-    slug: 'mysql',
-    category: 'db' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 0 as const,
-  },
-  {
-    name: 'MongoDB',
-    slug: 'mongodb',
-    category: 'db' as const,
-    expertiseLevel: 1 as const,
-    isHighlighted: 0 as const,
-  },
-  // Cloud
-  {
-    name: 'AWS',
-    slug: 'aws',
-    category: 'cloud' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'Cloudflare',
-    slug: 'cloudflare',
-    category: 'cloud' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'GCP',
-    slug: 'gcp',
-    category: 'cloud' as const,
-    expertiseLevel: 1 as const,
-    isHighlighted: 0 as const,
-  },
-  // Infra
-  {
-    name: 'Docker',
-    slug: 'docker',
-    category: 'infra' as const,
-    expertiseLevel: 3 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'GitHub Actions',
-    slug: 'github-actions',
-    category: 'infra' as const,
-    expertiseLevel: 2 as const,
-    isHighlighted: 1 as const,
-  },
-  {
-    name: 'Kubernetes',
-    slug: 'kubernetes',
-    category: 'infra' as const,
-    expertiseLevel: 1 as const,
-    isHighlighted: 0 as const,
-  },
+const LEGACY_PLACEHOLDER_EXPERIENCE_SLUGS = [
+  'backend-engineer-saas-platform',
+  'fullstack-developer-independent-products',
 ];
 
-export const SEED_SKILLS = _RAW_SEED_SKILLS.map((s) => ({
-  ...s,
-  iconKey: resolveTagIcon(s.name, s.category).iconKey,
-}));
+function buildIdMap(rows: Array<{ id: number; slug: string }>) {
+  return Object.fromEntries(rows.map((row) => [row.slug, row.id]));
+}
 
-const SEED_POSTS = [
-  {
-    slug: 'building-fullstack-portfolio',
-    title: 'Building a Fullstack Portfolio with Bun and Hono',
-    excerpt:
-      'A deep dive into building a production-ready portfolio API with Bun, Hono, Drizzle ORM and BullMQ.',
-    content: `# Building a Fullstack Portfolio with Bun and Hono
+function resolveRelationIds(
+  slugs: string[],
+  idBySlug: Record<string, number>,
+  relationName: string,
+  ownerSlug: string
+) {
+  const missingSlugs = slugs.filter((slug) => idBySlug[slug] === undefined);
 
-## Overview
+  if (missingSlugs.length > 0) {
+    logger.warn(`Missing ${relationName} for ${ownerSlug}: ${missingSlugs.join(', ')}`);
+  }
 
-This post covers the architecture decisions behind building a modern fullstack portfolio.
+  return slugs.map((slug) => idBySlug[slug]).filter((id): id is number => id !== undefined);
+}
 
-## Tech Stack
+async function archiveLegacyPlaceholders() {
+  const now = new Date();
+  const activePostSlugs = new Set(SEED_POSTS.map((seedPost) => seedPost.slug));
+  const postSlugsToArchive = LEGACY_PLACEHOLDER_POST_SLUGS.filter(
+    (slug) => !activePostSlugs.has(slug)
+  );
 
-We chose the following stack:
+  if (postSlugsToArchive.length > 0) {
+    const archivedPosts = await db
+      .update(posts)
+      .set({ status: 'draft', deletedAt: now, updatedAt: now })
+      .where(inArray(posts.slug, postSlugsToArchive))
+      .returning({ id: posts.id });
 
-- **Bun** — fast JavaScript runtime
-- **Hono** — lightweight web framework
-- **Drizzle ORM** — type-safe SQL ORM
-- **PostgreSQL** — reliable relational DB
-- **BullMQ** — queue-based background jobs
-- **Redis** — caching and rate limiting
+    if (archivedPosts.length > 0) {
+      logger.info(`Archived ${archivedPosts.length} legacy post(s)`);
+    }
+  }
 
-## Code Example
+  const activeProjectSlugs = new Set(SEED_PROJECTS.map((seedProject) => seedProject.slug));
+  const projectSlugsToArchive = LEGACY_PLACEHOLDER_PROJECT_SLUGS.filter(
+    (slug) => !activeProjectSlugs.has(slug)
+  );
 
-\`\`\`typescript
-const app = new Hono()
+  if (projectSlugsToArchive.length > 0) {
+    const archivedProjects = await db
+      .update(projects)
+      .set({ status: 'draft', deletedAt: now, updatedAt: now })
+      .where(inArray(projects.slug, projectSlugsToArchive))
+      .returning({ id: projects.id });
 
-app.get('/health', (c) => {
-  return c.json({ status: 'ok' })
-})
-\`\`\`
+    if (archivedProjects.length > 0) {
+      logger.info(`Archived ${archivedProjects.length} legacy project(s)`);
+    }
+  }
 
-## Architecture
+  const activeExperienceSlugs = new Set(
+    SEED_EXPERIENCE.map((seedExperience) => seedExperience.slug)
+  );
+  const experienceSlugsToArchive = LEGACY_PLACEHOLDER_EXPERIENCE_SLUGS.filter(
+    (slug) => !activeExperienceSlugs.has(slug)
+  );
 
-\`\`\`mermaid
-graph TD
-  Client --> API
-  API --> DB[(PostgreSQL)]
-  API --> Cache[(Redis)]
-  API --> Queue[BullMQ]
-  Queue --> Worker
-\`\`\`
+  if (experienceSlugsToArchive.length > 0) {
+    const archivedExperience = await db
+      .update(experience)
+      .set({ status: 'draft', deletedAt: now, updatedAt: now })
+      .where(inArray(experience.slug, experienceSlugsToArchive))
+      .returning({ id: experience.id });
 
-## Conclusion
+    if (archivedExperience.length > 0) {
+      logger.info(`Archived ${archivedExperience.length} legacy experience item(s)`);
+    }
+  }
+}
 
-This stack provides an excellent developer experience with strong type safety throughout.
-`,
-    status: 'published' as const,
-    publishedAt: new Date('2026-01-15'),
-    tagSlugs: ['typescript', 'bun', 'hono', 'postgresql'],
-  },
-  {
-    slug: 'drizzle-orm-guide',
-    title: 'Drizzle ORM: A Practical Guide',
-    excerpt:
-      'Everything you need to know about Drizzle ORM for building type-safe database queries.',
-    content: `# Drizzle ORM: A Practical Guide
-
-## Introduction
-
-Drizzle ORM is a TypeScript-first ORM that provides excellent type safety.
-
-## Schema Definition
-
-\`\`\`typescript
-import { pgTable, serial, varchar } from 'drizzle-orm/pg-core'
-
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 255 }).notNull(),
-})
-\`\`\`
-
-## Querying
-
-\`\`\`typescript
-const result = await db.select().from(users).where(eq(users.id, 1))
-\`\`\`
-`,
-    status: 'draft' as const,
-    publishedAt: null,
-    tagSlugs: ['typescript', 'drizzle', 'postgresql'],
-  },
-  {
-    slug: 'bullmq-background-jobs',
-    title: 'Background Jobs with BullMQ',
-    excerpt: 'How to implement reliable background job processing with BullMQ and Redis.',
-    content: `# Background Jobs with BullMQ
-
-## Why queues?
-
-Decoupling slow operations from the HTTP request cycle improves reliability.
-
-## Example
-
-\`\`\`typescript
-const queue = new Queue('email', { connection })
-await queue.add('send', { to: 'user@example.com' })
-\`\`\`
-`,
-    status: 'draft' as const,
-    publishedAt: null,
-    tagSlugs: ['typescript', 'redis', 'nodejs'],
-  },
-];
-
-export const SEED_PROJECTS = [
-  {
-    slug: 'fullstack-portfolio',
-    title: 'Fullstack Portfolio',
-    description:
-      'A production-ready fullstack portfolio built with Bun, Hono, Drizzle, and Next.js.',
-    content: `# Fullstack Portfolio
-
-## Overview
-
-A backend-centric portfolio demonstrating advanced architectural patterns including:
-
-- Queue-based background jobs
-- Redis caching strategies
-- S3 image upload pipeline
-- GitHub OAuth authentication
-- CSRF protection
-
-## Stack
-
-| Layer     | Technology     |
-| --------- | -------------- |
-| API       | Bun + Hono     |
-| ORM       | Drizzle + PG   |
-| Queues    | BullMQ + Redis |
-| Frontend  | Next.js 16     |
-| Deploy    | Docker + Dokploy |
-`,
-    status: 'published' as const,
-    repositoryUrl: 'https://github.com/example/portfolio',
-    liveUrl: 'https://portfolio.example.com',
-    featured: true,
-    order: 1,
-    impactFacts: [
-      'API documentada com OpenAPI/Swagger acessível em /doc',
-      'Pipeline de imagens com sharp — thumbnail, medium e WebP automáticos',
-      'Autenticação via GitHub OAuth + JWT em cookie httpOnly com CSRF',
-      'SSR com cache Redis em duas camadas — 5 min para listagens, 1h para detalhes',
-      'Jobs BullMQ com dead letter queue e retry com backoff exponencial',
-    ],
-    tagSlugs: ['typescript', 'bun', 'hono', 'nextjs', 'postgresql', 'redis', 'docker'],
-    skillSlugs: [
-      'typescript',
-      'bun',
-      'hono',
-      'nextjs',
-      'postgresql',
-      'redis',
-      'docker',
-      'drizzle',
-      'zod',
-    ],
-  },
-  {
-    slug: 'open-source-contributions',
-    title: 'Open Source Contributions',
-    description: 'Various open source contributions and experiments.',
-    content: `# Open Source Contributions
-
-A collection of open source work and experiments.
-
-## Projects
-
-- Various TypeScript utilities
-- React components
-- Developer tooling
-`,
-    status: 'draft' as const,
-    repositoryUrl: null,
-    liveUrl: null,
-    featured: false,
-    order: 2,
-    impactFacts: ['Contribuições com foco em DX — tipagem, ergonomia de API e documentação'],
-    tagSlugs: ['typescript', 'react'],
-    skillSlugs: ['typescript', 'react'],
-  },
-];
-
-export const SEED_EXPERIENCE = [
-  {
-    slug: 'backend-engineer-saas-platform',
-    role: 'Backend Engineer',
-    company: 'SaaS Platform',
-    description:
-      'Responsável por APIs críticas, filas assíncronas e evolução da observabilidade de produtos internos.',
-    location: 'Remoto',
-    employmentType: 'Tempo integral',
-    startDate: '2024-01-01',
-    endDate: null,
-    isCurrent: true,
-    order: 0,
-    status: 'published' as const,
-    logoUrl: null,
-    credentialUrl: null,
-    impactFacts: [
-      'Reduziu tempo médio de deploy em 60% com pipeline CI/CD padronizado',
-      'Diminuiu incidentes recorrentes em produção em 35% com observabilidade e alertas melhores',
-      'Acelerou integrações internas ao transformar fluxos manuais de horas em minutos',
-    ],
-    tagSlugs: ['typescript', 'hono', 'postgresql', 'redis', 'docker'],
-    skillSlugs: ['typescript', 'hono', 'postgresql', 'redis', 'docker', 'nodejs', 'bullmq'],
-  },
-  {
-    slug: 'fullstack-developer-independent-products',
-    role: 'Fullstack Developer',
-    company: 'Produtos Independentes',
-    description:
-      'Construção de produtos próprios com foco em backend, automação operacional e entrega rápida de novas funcionalidades.',
-    location: 'Brasil',
-    employmentType: 'Autônomo',
-    startDate: '2022-01-01',
-    endDate: '2023-12-31',
-    isCurrent: false,
-    order: 1,
-    status: 'published' as const,
-    logoUrl: null,
-    credentialUrl: null,
-    impactFacts: [
-      'Lançou MVPs de ponta a ponta com stack TypeScript moderna e operação em VPS própria',
-      'Automatizou rotinas críticas de moderação e atendimento para sustentar crescimento com baixa sobrecarga manual',
-    ],
-    tagSlugs: ['typescript', 'nextjs', 'postgresql', 'redis', 'bun'],
-    skillSlugs: ['typescript', 'nextjs', 'postgresql', 'redis', 'bun', 'react'],
-  },
-];
-
-async function seed() {
-  logger.info('Starting seed...');
-
-  // ── Tags ─────────────────────────────────────────────────────────────────────
+async function seedTags() {
   logger.info('Seeding tags...');
   const insertedTags = await db
     .insert(tags)
@@ -517,36 +119,24 @@ async function seed() {
     .onConflictDoNothing({ target: tags.slug })
     .returning({ id: tags.id, slug: tags.slug });
 
-  // Keep predefined tags canonical across reruns.
-  // This heals legacy environments that already have a seed tag with a stale
-  // category or iconKey from older catalog definitions.
-  let canonicalizedCount = 0;
-  for (const tag of SEED_TAGS) {
-    if (tag.iconKey) {
-      const updated = await db
-        .update(tags)
-        .set({ category: tag.category, iconKey: tag.iconKey })
-        .where(
-          and(
-            eq(tags.slug, tag.slug),
-            or(ne(tags.category, tag.category), isNull(tags.iconKey), ne(tags.iconKey, tag.iconKey))
-          )
-        )
-        .returning({ id: tags.id });
-      canonicalizedCount += updated.length;
-    }
-  }
-  if (canonicalizedCount > 0) {
-    logger.info(`Canonicalized ${canonicalizedCount} predefined tag(s)`);
+  for (const seedTag of SEED_TAGS) {
+    await db
+      .update(tags)
+      .set({
+        name: seedTag.name,
+        category: seedTag.category,
+        iconKey: seedTag.iconKey,
+        isHighlighted: seedTag.isHighlighted,
+      })
+      .where(eq(tags.slug, seedTag.slug));
   }
 
-  // Fetch all tags to get IDs (including pre-existing ones)
   const allTags = await db.select({ id: tags.id, slug: tags.slug }).from(tags);
-
-  const tagIdBySlug = Object.fromEntries(allTags.map((t) => [t.slug, t.id]));
   logger.info(`Tags ready: ${allTags.length} total, ${insertedTags.length} newly inserted`);
+  return buildIdMap(allTags);
+}
 
-  // ── Skills ────────────────────────────────────────────────────────────────────
+async function seedSkills() {
   logger.info('Seeding skills...');
   const insertedSkills = await db
     .insert(skills)
@@ -554,140 +144,259 @@ async function seed() {
     .onConflictDoNothing({ target: skills.slug })
     .returning({ id: skills.id, slug: skills.slug });
 
-  // Canonicalize predefined skills across reruns (same pattern as tags)
-  let canonicalizedSkillCount = 0;
-  for (const skill of SEED_SKILLS) {
-    const updated = await db
+  for (const seedSkill of SEED_SKILLS) {
+    await db
       .update(skills)
       .set({
-        category: skill.category,
-        iconKey: skill.iconKey,
-        expertiseLevel: skill.expertiseLevel,
-        isHighlighted: skill.isHighlighted,
+        name: seedSkill.name,
+        category: seedSkill.category,
+        iconKey: seedSkill.iconKey,
+        expertiseLevel: seedSkill.expertiseLevel,
+        isHighlighted: seedSkill.isHighlighted,
       })
-      .where(eq(skills.slug, skill.slug))
-      .returning({ id: skills.id });
-    canonicalizedSkillCount += updated.length;
-  }
-  if (canonicalizedSkillCount > 0) {
-    logger.info(`Canonicalized ${canonicalizedSkillCount} predefined skill(s)`);
+      .where(eq(skills.slug, seedSkill.slug));
   }
 
   const allSkills = await db.select({ id: skills.id, slug: skills.slug }).from(skills);
-  const skillIdBySlug = Object.fromEntries(allSkills.map((s) => [s.slug, s.id]));
   logger.info(`Skills ready: ${allSkills.length} total, ${insertedSkills.length} newly inserted`);
+  return buildIdMap(allSkills);
+}
 
-  // ── Posts ─────────────────────────────────────────────────────────────────────
+async function seedPosts(tagIdBySlug: Record<string, number>) {
   logger.info('Seeding posts...');
-  for (const post of SEED_POSTS) {
-    const { tagSlugs, ...postData } = post;
+
+  for (const seedPost of SEED_POSTS) {
+    const { tagSlugs, ...postData } = seedPost;
+    const renderedContent = await renderMarkdown(postData.content);
+    const values = { ...postData, renderedContent, deletedAt: null };
 
     const [inserted] = await db
       .insert(posts)
-      .values(postData)
+      .values(values)
       .onConflictDoNothing({ target: posts.slug })
       .returning({ id: posts.id, slug: posts.slug });
 
-    const postRecord =
-      inserted ?? (await db.query.posts.findFirst({ where: eq(posts.slug, postData.slug) }));
+    const [postRecord] = inserted
+      ? [inserted]
+      : await db
+          .update(posts)
+          .set({ ...values, updatedAt: new Date() })
+          .where(eq(posts.slug, postData.slug))
+          .returning({ id: posts.id, slug: posts.slug });
 
     if (!postRecord) {
       logger.warn(`Post not found after upsert attempt: ${postData.slug}`);
       continue;
     }
 
-    if (inserted) {
-      logger.info(`Post inserted: ${inserted.slug}`);
-    } else {
-      logger.info(`Post already exists: ${postData.slug}`);
+    await db.delete(postTags).where(eq(postTags.postId, postRecord.id));
+
+    const tagPivots = resolveRelationIds(tagSlugs, tagIdBySlug, 'tag(s)', postRecord.slug).map(
+      (tagId) => ({ postId: postRecord.id, tagId })
+    );
+
+    if (tagPivots.length > 0) {
+      await db.insert(postTags).values(tagPivots).onConflictDoNothing();
     }
 
-    const pivots = tagSlugs
-      .map((s) => tagIdBySlug[s])
-      .filter((id): id is number => id !== undefined)
-      .map((tagId) => ({ postId: postRecord.id, tagId }));
-
-    if (pivots.length > 0) {
-      await db.insert(postTags).values(pivots).onConflictDoNothing();
-    }
+    logger.info(`${inserted ? 'Post inserted' : 'Post updated'}: ${postRecord.slug}`);
   }
+}
 
-  // ── Projects ─────────────────────────────────────────────────────────────────
+async function seedProjects(skillIdBySlug: Record<string, number>) {
   logger.info('Seeding projects...');
-  for (const project of SEED_PROJECTS) {
-    const { tagSlugs: _tagSlugs, skillSlugs, ...projectData } = project;
+
+  for (const seedProject of SEED_PROJECTS) {
+    const { skillSlugs, ...projectData } = seedProject;
+    const renderedContent = projectData.content ? await renderMarkdown(projectData.content) : null;
+    const values = { ...projectData, renderedContent, deletedAt: null };
 
     const [inserted] = await db
       .insert(projects)
-      .values(projectData)
+      .values(values)
       .onConflictDoNothing({ target: projects.slug })
       .returning({ id: projects.id, slug: projects.slug });
 
-    const projectRecord =
-      inserted ??
-      (await db.query.projects.findFirst({ where: eq(projects.slug, projectData.slug) }));
+    const [projectRecord] = inserted
+      ? [inserted]
+      : await db
+          .update(projects)
+          .set({ ...values, updatedAt: new Date() })
+          .where(eq(projects.slug, projectData.slug))
+          .returning({ id: projects.id, slug: projects.slug });
 
     if (!projectRecord) {
       logger.warn(`Project not found after upsert attempt: ${projectData.slug}`);
       continue;
     }
 
-    if (inserted) {
-      logger.info(`Project inserted: ${inserted.slug}`);
-    } else {
-      logger.info(`Project already exists: ${projectData.slug}`);
-    }
+    await db.delete(projectSkills).where(eq(projectSkills.projectId, projectRecord.id));
 
-    const skillPivots = (skillSlugs ?? [])
-      .map((s) => skillIdBySlug[s])
-      .filter((id): id is number => id !== undefined)
-      .map((skillId) => ({ projectId: projectRecord.id, skillId }));
+    const skillPivots = resolveRelationIds(
+      skillSlugs,
+      skillIdBySlug,
+      'skill(s)',
+      projectRecord.slug
+    ).map((skillId) => ({ projectId: projectRecord.id, skillId }));
 
     if (skillPivots.length > 0) {
       await db.insert(projectSkills).values(skillPivots).onConflictDoNothing();
     }
-  }
 
-  // ── Experience ───────────────────────────────────────────────────────────────
+    logger.info(`${inserted ? 'Project inserted' : 'Project updated'}: ${projectRecord.slug}`);
+  }
+}
+
+async function seedExperience(skillIdBySlug: Record<string, number>) {
   logger.info('Seeding experience...');
-  for (const entry of SEED_EXPERIENCE) {
-    const { tagSlugs: _tagSlugs2, skillSlugs, ...experienceData } = entry;
+
+  for (const seedExperience of SEED_EXPERIENCE) {
+    const { skillSlugs, ...experienceData } = seedExperience;
+    const values = { ...experienceData, deletedAt: null };
 
     const [inserted] = await db
       .insert(experience)
-      .values(experienceData)
+      .values(values)
       .onConflictDoNothing({ target: experience.slug })
       .returning({ id: experience.id, slug: experience.slug });
 
-    const experienceRecord =
-      inserted ??
-      (await db.query.experience.findFirst({ where: eq(experience.slug, experienceData.slug) }));
+    const [experienceRecord] = inserted
+      ? [inserted]
+      : await db
+          .update(experience)
+          .set({ ...values, updatedAt: new Date() })
+          .where(eq(experience.slug, experienceData.slug))
+          .returning({ id: experience.id, slug: experience.slug });
 
     if (!experienceRecord) {
       logger.warn(`Experience not found after upsert attempt: ${experienceData.slug}`);
       continue;
     }
 
-    if (inserted) {
-      logger.info(`Experience inserted: ${inserted.slug}`);
-    } else {
-      logger.info(`Experience already exists: ${experienceData.slug}`);
-    }
+    await db.delete(experienceSkills).where(eq(experienceSkills.experienceId, experienceRecord.id));
 
-    const skillPivots = (skillSlugs ?? [])
-      .map((slug) => skillIdBySlug[slug])
-      .filter((id): id is number => id !== undefined)
-      .map((skillId) => ({ experienceId: experienceRecord.id, skillId }));
+    const skillPivots = resolveRelationIds(
+      skillSlugs,
+      skillIdBySlug,
+      'skill(s)',
+      experienceRecord.slug
+    ).map((skillId) => ({ experienceId: experienceRecord.id, skillId }));
 
     if (skillPivots.length > 0) {
       await db.insert(experienceSkills).values(skillPivots).onConflictDoNothing();
     }
+
+    logger.info(
+      `${inserted ? 'Experience inserted' : 'Experience updated'}: ${experienceRecord.slug}`
+    );
   }
+}
+
+async function uploadOptimizedCover(filePath: string, key: string): Promise<string> {
+  const raw = await Bun.file(filePath).arrayBuffer();
+  const { variants } = await buildPortableWebpVariants(raw, [
+    { key: 'cover', maxWidth: 1200, maxHeight: 1200, quality: 85 },
+  ] as const);
+
+  await s3.file(key).write(variants.cover.bytes, { type: variants.cover.mime });
+  return getPublicUrl(key);
+}
+
+async function seedCovers(
+  items: Array<{ slug: string; coverImage?: string }>,
+  subdirectory: 'projects' | 'posts',
+  updateFn: (slug: string, coverUrl: string) => Promise<boolean>
+) {
+  const coversDir = join(import.meta.dirname, 'seed-data', 'covers');
+  const withCover = items.filter((item) => item.coverImage);
+  if (withCover.length === 0) return;
+
+  logger.info(`Seeding ${subdirectory} covers: ${withCover.length} item(s)`);
+
+  for (const item of withCover) {
+    const filename = item.coverImage as string;
+    const filePath = join(coversDir, filename);
+
+    if (!(await Bun.file(filePath).exists())) {
+      logger.warn(`Cover file not found: ${filename} — skipping ${item.slug}`);
+      continue;
+    }
+
+    const coverUrl = await uploadOptimizedCover(
+      filePath,
+      `covers/${subdirectory}/${item.slug}.webp`
+    );
+    const found = await updateFn(item.slug, coverUrl);
+    const entity = subdirectory === 'projects' ? 'project' : 'post';
+    if (found) {
+      logger.info(`Cover seeded: ${subdirectory}/${item.slug} → ${coverUrl}`);
+    } else {
+      logger.warn(`No ${entity} found with slug '${item.slug}' — skipping cover`);
+    }
+  }
+}
+
+async function seedEducation() {
+  logger.info('Seeding education...');
+
+  for (const educationData of SEED_EDUCATION) {
+    const values = { ...educationData, deletedAt: null };
+
+    const [inserted] = await db
+      .insert(education)
+      .values(values)
+      .onConflictDoNothing({ target: education.slug })
+      .returning({ id: education.id, slug: education.slug });
+
+    const [educationRecord] = inserted
+      ? [inserted]
+      : await db
+          .update(education)
+          .set({ ...values, updatedAt: new Date() })
+          .where(eq(education.slug, educationData.slug))
+          .returning({ id: education.id, slug: education.slug });
+
+    if (!educationRecord) {
+      logger.warn(`Education not found after upsert attempt: ${educationData.slug}`);
+      continue;
+    }
+
+    logger.info(
+      `${inserted ? 'Education inserted' : 'Education updated'}: ${educationRecord.slug}`
+    );
+  }
+}
+
+async function seed() {
+  logger.info('Starting seed...');
+
+  const tagIdBySlug = await seedTags();
+  const skillIdBySlug = await seedSkills();
+  await archiveLegacyPlaceholders();
+  await seedPosts(tagIdBySlug);
+  await seedProjects(skillIdBySlug);
+  await seedCovers(SEED_PROJECTS, 'projects', async (slug, coverUrl) => {
+    const [updated] = await db
+      .update(projects)
+      .set({ coverUrl, updatedAt: new Date() })
+      .where(eq(projects.slug, slug))
+      .returning({ id: projects.id });
+    return !!updated;
+  });
+  await seedCovers(SEED_POSTS, 'posts', async (slug, coverUrl) => {
+    const [updated] = await db
+      .update(posts)
+      .set({ coverUrl, updatedAt: new Date() })
+      .where(eq(posts.slug, slug))
+      .returning({ id: posts.id });
+    return !!updated;
+  });
+  await seedExperience(skillIdBySlug);
+  await seedEducation();
 
   logger.info('Seed complete.');
 }
 
-// Allow running directly: bun run src/db/seed.ts
 if (import.meta.main) {
   const { setupLogger } = await import('../config/logger');
   await setupLogger();
@@ -696,4 +405,4 @@ if (import.meta.main) {
   process.exit(0);
 }
 
-export { seed };
+export { SEED_EDUCATION, SEED_EXPERIENCE, SEED_POSTS, SEED_PROJECTS, SEED_SKILLS, SEED_TAGS, seed };

@@ -36,6 +36,7 @@ import { publicHomeRouter } from './routes/public/home';
 import { openApiRouter } from './routes/public/openapi';
 import { publicPostsRouter } from './routes/public/posts';
 import { publicProjectsRouter } from './routes/public/projects';
+import { publicResumeRouter } from './routes/public/resume';
 import { sitemapRouter } from './routes/public/sitemap';
 import { publicSkillsRouter } from './routes/public/skills';
 import { publicTagsRouter } from './routes/public/tags';
@@ -171,6 +172,7 @@ app.route('/experience', publicExperienceRouter);
 app.route('/home', publicHomeRouter);
 app.route('/posts', publicPostsRouter);
 app.route('/projects', publicProjectsRouter);
+app.route('/resume', publicResumeRouter);
 app.route('/skills', publicSkillsRouter);
 app.route('/tags', publicTagsRouter);
 

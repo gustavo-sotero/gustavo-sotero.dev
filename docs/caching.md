@@ -62,4 +62,5 @@ Any write operation that touches a section visible on the home page should call 
 | Section | `stale` | `revalidate` | `expire` |
 |---------|---------|--------------|---------|
 | Posts/Experience/Education/Home aggregate | 300 s | 300 s | 3600 s |
+| Resume aggregate | 300 s | 300 s | 3600 s |
 | Skills/Tags | 3600 s | 3600 s | 86400 s |

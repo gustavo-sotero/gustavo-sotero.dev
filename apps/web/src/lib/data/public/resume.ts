@@ -1,10 +1,7 @@
 import 'server-only';
-import type { Education } from '@portfolio/shared/types/education';
-import type { Experience } from '@portfolio/shared/types/experience';
-import type { Project } from '@portfolio/shared/types/projects';
-import type { Skill } from '@portfolio/shared/types/skills';
+import type { ResumeAggregateDTO } from '@portfolio/shared/types/resume';
 import { cacheLife, cacheTag } from 'next/cache';
-import { apiServerGetPaginated } from '@/lib/api.server';
+import { apiServerGet } from '@/lib/api.server';
 import { logServerError } from '@/lib/server-logger';
 import {
   TAG_EDUCATION_LIST,
@@ -13,75 +10,36 @@ import {
   TAG_SKILLS_LIST,
 } from './cache-tags';
 
-export interface ResumeDataPayload {
-  experience: Experience[];
-  education: Education[];
-  skills: Skill[];
-  projects: Project[];
-}
-
 export type ResumeLoaderResult =
-  | { state: 'ok'; data: ResumeDataPayload }
-  | { state: 'degraded'; data: ResumeDataPayload };
-
-const EMPTY_RESUME_DATA: ResumeDataPayload = {
-  experience: [],
-  education: [],
-  skills: [],
-  projects: [],
-};
+  | { state: 'ok'; data: ResumeAggregateDTO }
+  | { state: 'degraded'; data: ResumeAggregateDTO };
 
 async function loadResumeData(): Promise<ResumeLoaderResult> {
-  let degraded = false;
+  const result = await apiServerGet<ResumeAggregateDTO>('/resume').catch((err) => {
+    logServerError('data:resume', 'Failed to fetch resume aggregate', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  });
 
-  const [experienceRes, educationRes, skillsRes, projectsRes] = await Promise.all([
-    apiServerGetPaginated<Experience>('/experience?status=published&perPage=20').catch((err) => {
-      degraded = true;
-      logServerError('data:resume', 'Failed to fetch experience', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return { data: [] as Experience[] };
-    }),
-    apiServerGetPaginated<Education>('/education?status=published&perPage=20').catch((err) => {
-      degraded = true;
-      logServerError('data:resume', 'Failed to fetch education', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return { data: [] as Education[] };
-    }),
-    apiServerGetPaginated<Skill>('/skills?perPage=100').catch((err) => {
-      degraded = true;
-      logServerError('data:resume', 'Failed to fetch skills', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return { data: [] as Skill[] };
-    }),
-    apiServerGetPaginated<Project>('/projects?status=published&featured=true&perPage=20').catch(
-      (err) => {
-        degraded = true;
-        logServerError('data:resume', 'Failed to fetch projects', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        return { data: [] as Project[] };
-      }
-    ),
-  ]);
-
-  const data: ResumeDataPayload = {
-    experience: experienceRes.data,
-    education: educationRes.data,
-    skills: Array.isArray(skillsRes.data) ? skillsRes.data : [],
-    projects: projectsRes.data,
-  };
-
-  if (degraded) {
-    return { state: 'degraded', data: { ...EMPTY_RESUME_DATA, ...data } };
+  if (!result) {
+    return {
+      state: 'degraded',
+      data: {
+        profile: (await import('@portfolio/shared/constants/developerProfile'))
+          .DEVELOPER_PUBLIC_PROFILE,
+        experience: [],
+        education: [],
+        skills: [],
+        projects: [],
+      },
+    };
   }
 
-  return { state: 'ok', data };
+  return { state: 'ok', data: result };
 }
 
-/** All data needed to build the resume view-model, fetched in parallel. */
+/** All data needed to build the resume view-model, fetched as a single aggregate. */
 export async function getResumeData(): Promise<ResumeLoaderResult> {
   'use cache';
   cacheLife({ stale: 300, revalidate: 300, expire: 3600 });

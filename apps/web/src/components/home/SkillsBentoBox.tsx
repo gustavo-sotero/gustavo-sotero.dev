@@ -19,8 +19,8 @@ interface SkillsBentoBoxProps {
 
 const EXPERTISE_LABELS: Record<Skill['expertiseLevel'], string> = {
   1: 'Base solida',
-  2: 'Intermediario',
-  3: 'Avancado',
+  2: 'Intermediário',
+  3: 'Avançado',
 };
 
 function getExpertiseLabel(skill: Skill) {

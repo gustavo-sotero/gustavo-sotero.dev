@@ -1,6 +1,6 @@
 import { MAX_UPLOAD_BYTES } from '@portfolio/shared/constants/uploads';
 import type { Job } from 'bullmq';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   selectLimitMock,
@@ -11,11 +11,15 @@ const {
   statMock,
   bytesMock,
   writeMock,
+  // sharp mocks — used only for the GIF path
   metadataMock,
   resizeMock,
   webpMock,
   toBufferMock,
   gifMock,
+  // Bun.Image mocks — used for JPEG/PNG/WebP path
+  bunImageMetadataMock,
+  bunImageBufferMock,
 } = vi.hoisted(() => ({
   selectLimitMock: vi.fn(),
   updateSetMock: vi.fn(),
@@ -30,6 +34,8 @@ const {
   webpMock: vi.fn(),
   gifMock: vi.fn(),
   toBufferMock: vi.fn(),
+  bunImageMetadataMock: vi.fn(),
+  bunImageBufferMock: vi.fn(),
 }));
 
 dbSelectMock.mockImplementation(() => ({
@@ -85,6 +91,7 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn(() => Symbol('eq')),
 }));
 
+// sharp mock — only exercised for the GIF path in imageOptimize.ts
 vi.mock('sharp', () => ({
   default: vi.fn(() => ({
     metadata: metadataMock,
@@ -124,6 +131,7 @@ function buildJob(
 describe('imageOptimize job', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
     updateSetMock.mockImplementation(() => ({
       where: updateWhereMock,
     }));
@@ -132,9 +140,29 @@ describe('imageOptimize job', () => {
     gifMock.mockImplementation(() => ({ toBuffer: toBufferMock }));
     statMock.mockResolvedValue({ size: 1024, type: 'image/png' });
     updateWhereMock.mockResolvedValue(undefined);
+
+    // Stub Bun.Image globally for the non-GIF path, preserving all other Bun globals.
+    // Use a plain function (not vi.fn + arrow) so it works as a `new`-able constructor in Bun.
+    bunImageMetadataMock.mockResolvedValue({ width: 1200, height: 800, format: 'png' });
+    bunImageBufferMock.mockResolvedValue(Buffer.from('webp-data'));
+    function BunImageMock() {
+      return {
+        metadata: bunImageMetadataMock,
+        resize: vi.fn(() => ({
+          webp: vi.fn(() => ({
+            buffer: bunImageBufferMock,
+          })),
+        })),
+      };
+    }
+    vi.stubGlobal('Bun', { ...globalThis.Bun, Image: BunImageMock });
   });
 
-  it('processes image and updates upload as processed with variants', async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('processes image via Bun.Image and updates upload as processed with WebP variants', async () => {
     selectLimitMock.mockResolvedValue([
       {
         id: 'upload-1',
@@ -144,10 +172,6 @@ describe('imageOptimize job', () => {
       },
     ]);
     bytesMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
-    metadataMock.mockResolvedValue({ width: 1200, height: 800, pages: 1 });
-    toBufferMock
-      .mockResolvedValueOnce(Buffer.from('thumb'))
-      .mockResolvedValueOnce(Buffer.from('medium'));
 
     await processImageOptimize(buildJob({ uploadId: 'upload-1' }));
 
@@ -204,7 +228,7 @@ describe('imageOptimize job', () => {
     expect(updateSetMock).not.toHaveBeenCalledWith({ status: 'failed' });
   });
 
-  it('generates GIF thumbnail and medium variants for animated GIF uploads', async () => {
+  it('generates GIF thumbnail and medium variants for animated GIF uploads (sharp path)', async () => {
     selectLimitMock.mockResolvedValue([
       {
         id: 'upload-gif-1',
@@ -228,6 +252,36 @@ describe('imageOptimize job', () => {
         variants: expect.objectContaining({
           thumbnail: expect.stringContaining('_thumb.gif'),
           medium: expect.stringContaining('_medium.gif'),
+        }),
+      })
+    );
+  });
+
+  it('converts static GIF (pages <= 1) to WebP variants via sharp', async () => {
+    selectLimitMock.mockResolvedValue([
+      {
+        id: 'upload-gif-static',
+        storageKey: 'uploads/2026/02/static.gif',
+        originalUrl: 'https://cdn.example.com/uploads/2026/02/static.gif',
+        mime: 'image/gif',
+      },
+    ]);
+    statMock.mockResolvedValue({ size: 512, type: 'image/gif' });
+    bytesMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    // pages === 1 → static GIF branch
+    metadataMock.mockResolvedValue({ width: 640, height: 480, pages: 1 });
+    toBufferMock.mockResolvedValue(Buffer.from('webp-converted'));
+
+    await processImageOptimize(buildJob({ uploadId: 'upload-gif-static' }));
+
+    expect(writeMock).toHaveBeenCalledTimes(2);
+    expect(updateSetMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'processed',
+        optimizedUrl: expect.stringContaining('_medium.webp'),
+        variants: expect.objectContaining({
+          thumbnail: expect.stringContaining('_thumb.webp'),
+          medium: expect.stringContaining('_medium.webp'),
         }),
       })
     );
@@ -305,10 +359,6 @@ describe('imageOptimize job', () => {
       },
     ]);
     bytesMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
-    metadataMock.mockResolvedValue({ width: 800, height: 600, pages: 1 });
-    toBufferMock
-      .mockResolvedValueOnce(Buffer.from('thumb'))
-      .mockResolvedValueOnce(Buffer.from('medium'));
 
     await processImageOptimize(buildJob({ uploadId: 'upload-with-key' }));
 

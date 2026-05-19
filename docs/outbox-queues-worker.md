@@ -72,7 +72,21 @@ Production Compose uses a lightweight worker healthcheck instead of a deep queue
 - API readiness (`GET /ready`) remains the deeper dependency check for PostgreSQL, Redis, and schema parity.
 - This split keeps recurring health probes cheap while still surfacing real dependency failures through startup and API readiness.
 
-## Schema Ownership
+## Image Optimization Engine
+
+The `image-optimize` worker job uses two processing paths depending on MIME type:
+
+| MIME Type | Engine | Output |
+|-----------|--------|--------|
+| `image/jpeg`, `image/png`, `image/webp` | **`Bun.Image`** (native, no addon) | WebP variants at 400 px and 800 px |
+| `image/gif` (animated, pages > 1) | **`sharp`** | GIF variants at 400 px and 800 px — format preserved |
+| `image/gif` (static) | **`sharp`** | WebP variants at 400 px and 800 px |
+
+**Why `sharp` is retained for GIF:** `Bun.Image` does not support GIF encode on Linux (only GIF decode). All GIF paths therefore go through `sharp`. This is a platform limitation, not a preference. The worker Dockerfile keeps `libvips` and native build tools to support the GIF path.
+
+The worker JPEG/PNG/WebP path and the seed cover pipeline both reuse the shared helper `buildPortableWebpVariants` from `packages/shared/src/lib/image-variants.ts`, which wraps `Bun.Image` with the same `fit: inside` and `withoutEnlargement` contract. `sharp` is no longer a `devDependency` of `apps/api`.
+
+
 
 | Artifact | Location |
 |----------|---------|

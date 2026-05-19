@@ -1,9 +1,25 @@
+import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerProfile';
 import type { Education } from '@portfolio/shared/types/education';
 import type { Experience } from '@portfolio/shared/types/experience';
 import type { Project } from '@portfolio/shared/types/projects';
+import type { ResumeAggregateDTO } from '@portfolio/shared/types/resume';
 import type { Skill } from '@portfolio/shared/types/skills';
 import { describe, expect, it } from 'vitest';
 import { buildResumeViewModel } from './mapper';
+
+/** Minimal aggregate stub — override only the fields under test. */
+function createAggregate(
+  overrides: Partial<Omit<ResumeAggregateDTO, 'profile'>> = {}
+): ResumeAggregateDTO {
+  return {
+    profile: DEVELOPER_PUBLIC_PROFILE,
+    experience: [],
+    education: [],
+    skills: [],
+    projects: [],
+    ...overrides,
+  };
+}
 
 function createExperience(overrides: Partial<Experience> = {}): Experience {
   return {
@@ -97,12 +113,7 @@ function createSkill(overrides: Partial<Skill> & Pick<Skill, 'id' | 'name' | 'ca
 
 describe('resume mapper identity', () => {
   it('exposes age computed from birthDate and omits citizenship', () => {
-    const resume = buildResumeViewModel({
-      experience: [],
-      education: [],
-      skills: [],
-      projects: [],
-    });
+    const resume = buildResumeViewModel(createAggregate());
 
     expect(resume.identity.age).toBeTypeOf('number');
     expect(resume.identity.age).toBeGreaterThan(0);
@@ -119,22 +130,26 @@ describe('resume mapper experience skills', () => {
     ];
     const experience = [createExperience({ skills })];
 
-    const resume = buildResumeViewModel({
-      experience,
-      education: [createEducation()],
-      skills: [],
-      projects: [createProject()],
-    });
+    const resume = buildResumeViewModel(
+      createAggregate({
+        experience,
+        education: [createEducation()],
+        skills: [],
+        projects: [createProject()],
+      })
+    );
 
     expect(resume.experience[0]?.skills).toEqual(['TypeScript', 'Hono']);
   });
 
   it('keeps experience skills empty when payload has no skills', () => {
-    const resume = buildResumeViewModel({
-      experience: [createExperience({ skills: undefined })],
-      education: [],
-      projects: [],
-    });
+    const resume = buildResumeViewModel(
+      createAggregate({
+        experience: [createExperience({ skills: undefined })],
+        education: [],
+        projects: [],
+      })
+    );
 
     expect(resume.experience[0]?.skills).toEqual([]);
   });
@@ -143,42 +158,53 @@ describe('resume mapper experience skills', () => {
 describe('resume mapper impactFacts', () => {
   it('projects experience impactFacts into the view model', () => {
     const facts = ['Reduziu latência em 40%', 'Implementou CI/CD completo'];
-    const resume = buildResumeViewModel({
-      experience: [createExperience({ impactFacts: facts })],
-      education: [],
-      projects: [],
-    });
+    const resume = buildResumeViewModel(
+      createAggregate({
+        experience: [createExperience({ impactFacts: facts })],
+        education: [],
+        projects: [],
+      })
+    );
 
     expect(resume.experience[0]?.impactFacts).toEqual(facts);
   });
 
   it('defaults experience impactFacts to [] when undefined', () => {
-    const resume = buildResumeViewModel({
-      experience: [createExperience({ impactFacts: undefined })],
-      education: [],
-      projects: [],
-    });
+    const resume = buildResumeViewModel(
+      createAggregate({
+        experience: [createExperience({ impactFacts: undefined })],
+        education: [],
+        projects: [],
+      })
+    );
 
     expect(resume.experience[0]?.impactFacts).toEqual([]);
   });
 
   it('projects project impactFacts into the view model', () => {
-    const facts = ['API documentada via OpenAPI', 'Pipeline de imagens com sharp'];
-    const resume = buildResumeViewModel({
-      experience: [],
-      education: [],
-      projects: [createProject({ impactFacts: facts })],
-    });
+    const facts = [
+      'API documentada via OpenAPI',
+      'Pipeline de imagens com Bun.Image e exceção de GIF',
+    ];
+    const resume = buildResumeViewModel(
+      createAggregate({
+        experience: [],
+        education: [],
+        projects: [createProject({ impactFacts: facts })],
+      })
+    );
 
     expect(resume.projects[0]?.impactFacts).toEqual(facts);
   });
 
   it('defaults project impactFacts to [] when undefined', () => {
-    const resume = buildResumeViewModel({
-      experience: [],
-      education: [],
-      projects: [createProject({ impactFacts: undefined })],
-    });
+    const resume = buildResumeViewModel(
+      createAggregate({
+        experience: [],
+        education: [],
+        projects: [createProject({ impactFacts: undefined })],
+      })
+    );
 
     expect(resume.projects[0]?.impactFacts).toEqual([]);
   });
@@ -186,22 +212,24 @@ describe('resume mapper impactFacts', () => {
 
 describe('resume mapper skill grouping', () => {
   it('groups skills into recruiter-friendly categories', () => {
-    const resume = buildResumeViewModel({
-      experience: [],
-      education: [],
-      projects: [],
-      skills: [
-        createSkill({ id: 1, name: 'Node.js', category: 'tool', expertiseLevel: 2 }),
-        createSkill({
-          id: 2,
-          name: 'TypeScript',
-          category: 'language',
-          expertiseLevel: 3,
-          isHighlighted: true,
-        }),
-        createSkill({ id: 3, name: 'JavaScript', category: 'language', expertiseLevel: 2 }),
-      ],
-    });
+    const resume = buildResumeViewModel(
+      createAggregate({
+        experience: [],
+        education: [],
+        projects: [],
+        skills: [
+          createSkill({ id: 1, name: 'Node.js', category: 'tool', expertiseLevel: 2 }),
+          createSkill({
+            id: 2,
+            name: 'TypeScript',
+            category: 'language',
+            expertiseLevel: 3,
+            isHighlighted: true,
+          }),
+          createSkill({ id: 3, name: 'JavaScript', category: 'language', expertiseLevel: 2 }),
+        ],
+      })
+    );
 
     expect(resume.skills).toEqual([
       {

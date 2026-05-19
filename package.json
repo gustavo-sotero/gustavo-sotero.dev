@@ -14,6 +14,7 @@
     "dev:worker": "bun --env-file .env --watch apps/worker/src/index.ts",
     "dev:web": "bun run --env-file .env --filter @portfolio/web dev",
     "db:migrate": "bun run --env-file .env apps/api/src/db/migrate.ts",
+    "db:reset": "bun run --env-file .env apps/api/src/db/reset.ts",
     "db:seed": "bun run --env-file .env apps/api/src/db/seed.ts",
     "db:audit:schema": "bun run --env-file .env apps/api/src/db/audit-schema-parity.ts",
     "db:backfill:comments": "bun run --env-file .env apps/api/src/db/backfill-comment-rendered-content.ts",
@@ -33,7 +34,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
-    "@types/bun": "^1.3.13",
+    "@types/bun": "^1.3.14",
     "concurrently": "^9.2.1",
     "path-to-regexp": "^8.4.2",
     "typescript": "^6.0.3"

@@ -76,6 +76,9 @@ vi.mock('./routes/public/tags', () => ({
 vi.mock('./routes/public/developer', () => ({
   publicDeveloperRouter: makeRouter([{ method: 'get', path: '/profile' }]),
 }));
+vi.mock('./routes/public/resume', () => ({
+  publicResumeRouter: makeRouter([{ method: 'get', path: '/' }]),
+}));
 vi.mock('./routes/public/comments', () => ({
   commentsRouter: makeRouter([{ method: 'post', path: '/' }]),
 }));
@@ -188,6 +191,7 @@ describe('app route mounting (module 8 smoke)', () => {
       { method: 'POST', path: '/contact' },
       { path: '/tags' },
       { path: '/developer/profile' },
+      { path: '/resume' },
       { path: '/feed.xml' },
       { path: '/sitemap.xml' },
       { path: '/doc/spec' },

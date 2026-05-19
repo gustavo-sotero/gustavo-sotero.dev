@@ -33,6 +33,7 @@ export * from './types/education';
 export * from './types/experience';
 export * from './types/posts';
 export * from './types/projects';
+export * from './types/resume';
 export * from './types/skills';
 export * from './types/tags';
 export * from './types/uploads';
