@@ -34,14 +34,14 @@ const _RAW_SEED_TAGS = [
   {
     name: 'GitHub Actions',
     slug: 'github-actions',
-    category: 'infra' as const,
+    category: 'tool' as const,
     isHighlighted: false,
   },
   { name: 'VPS', slug: 'vps', category: 'infra' as const, isHighlighted: false },
   {
     name: 'OpenTelemetry',
     slug: 'opentelemetry',
-    category: 'infra' as const,
+    category: 'tool' as const,
     isHighlighted: false,
   },
   { name: 'OpenAPI', slug: 'openapi', category: 'tool' as const, isHighlighted: false },
@@ -323,7 +323,7 @@ const _RAW_SEED_SKILLS = [
   {
     name: 'GitHub Actions',
     slug: 'github-actions',
-    category: 'infra' as const,
+    category: 'tool' as const,
     expertiseLevel: 2 as const,
     isHighlighted: 1 as const,
   },
@@ -337,7 +337,7 @@ const _RAW_SEED_SKILLS = [
   {
     name: 'OpenTelemetry',
     slug: 'opentelemetry',
-    category: 'infra' as const,
+    category: 'tool' as const,
     expertiseLevel: 2 as const,
     isHighlighted: 0 as const,
   },
@@ -363,7 +363,7 @@ const _RAW_SEED_SKILLS = [
     isHighlighted: 0 as const,
   },
   {
-    name: 'GCP',
+    name: 'Google Cloud Platform',
     slug: 'gcp',
     category: 'cloud' as const,
     expertiseLevel: 1 as const,
