@@ -1,14 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { existsSyncMock, migrateMock, executeMock, warnMock, infoMock, verifyRequiredSchemaMock } =
-  vi.hoisted(() => ({
-    existsSyncMock: vi.fn(),
-    migrateMock: vi.fn(),
-    executeMock: vi.fn(),
-    warnMock: vi.fn(),
-    infoMock: vi.fn(),
-    verifyRequiredSchemaMock: vi.fn(),
-  }));
+const {
+  existsSyncMock,
+  migrateMock,
+  executeMock,
+  waitForDatabaseReadyMock,
+  warnMock,
+  infoMock,
+  verifyRequiredSchemaMock,
+} = vi.hoisted(() => ({
+  existsSyncMock: vi.fn(),
+  migrateMock: vi.fn(),
+  executeMock: vi.fn(),
+  waitForDatabaseReadyMock: vi.fn(),
+  warnMock: vi.fn(),
+  infoMock: vi.fn(),
+  verifyRequiredSchemaMock: vi.fn(),
+}));
 
 vi.mock('node:fs', () => ({
   existsSync: existsSyncMock,
@@ -25,6 +33,7 @@ vi.mock('../config/db', () => ({
   pgClient: {
     end: vi.fn(),
   },
+  waitForDatabaseReady: waitForDatabaseReadyMock,
 }));
 
 vi.mock('../config/logger', () => ({
@@ -51,6 +60,7 @@ describe('runMigrations', () => {
     existsSyncMock.mockReturnValue(true);
     migrateMock.mockResolvedValue(undefined);
     executeMock.mockResolvedValue([]);
+    waitForDatabaseReadyMock.mockResolvedValue(undefined);
     verifyRequiredSchemaMock.mockResolvedValue({ ok: true, missing: [], unexpected: [] });
   });
 
@@ -59,6 +69,7 @@ describe('runMigrations', () => {
 
     await expect(runMigrations()).rejects.toThrow('Migrations folder not found');
     expect(migrateMock).not.toHaveBeenCalled();
+    expect(waitForDatabaseReadyMock).not.toHaveBeenCalled();
     expect(verifyRequiredSchemaMock).not.toHaveBeenCalled();
   });
 
@@ -69,6 +80,7 @@ describe('runMigrations', () => {
     await expect(runMigrations()).resolves.toBeUndefined();
     expect(warnMock).toHaveBeenCalledTimes(1);
     expect(migrateMock).not.toHaveBeenCalled();
+    expect(waitForDatabaseReadyMock).not.toHaveBeenCalled();
     expect(verifyRequiredSchemaMock).not.toHaveBeenCalled();
   });
 
@@ -80,8 +92,19 @@ describe('runMigrations', () => {
     });
 
     await expect(runMigrations()).rejects.toThrow('Schema parity check failed after migrations');
+    expect(waitForDatabaseReadyMock).toHaveBeenCalledTimes(1);
     expect(migrateMock).toHaveBeenCalledTimes(1);
     expect(verifyRequiredSchemaMock).toHaveBeenCalledTimes(1);
     expect(executeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits for database readiness before locking and migrating', async () => {
+    await expect(runMigrations()).resolves.toBeUndefined();
+
+    expect(waitForDatabaseReadyMock).toHaveBeenCalledTimes(1);
+    expect(migrateMock).toHaveBeenCalledTimes(1);
+    expect(waitForDatabaseReadyMock.mock.invocationCallOrder[0]).toBeLessThan(
+      executeMock.mock.invocationCallOrder[0] as number
+    );
   });
 });

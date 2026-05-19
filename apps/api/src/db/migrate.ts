@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { db, pgClient } from '../config/db';
+import { db, pgClient, waitForDatabaseReady } from '../config/db';
 import { getLogger } from '../config/logger';
 import { formatSchemaParityIssues, verifyRequiredSchema } from './verify-schema';
 
@@ -38,6 +38,8 @@ export async function runMigrations(): Promise<void> {
         'Set ALLOW_MISSING_MIGRATIONS=true to skip (development only).'
     );
   }
+
+  await waitForDatabaseReady();
 
   logger.info('Acquiring advisory lock for migrations...');
 
