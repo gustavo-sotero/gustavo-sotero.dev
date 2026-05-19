@@ -422,7 +422,7 @@ flowchart TD
   repositoryUrl: null,
   liveUrl: 'https://t.me/NotzSMSBot',
   featured: true,
-  order: 2,
+  order: 0,
   impactFacts: [
     'Um único deploy atende múltiplos bots isolados por bot_id com RLS e contexto de tenant até a transação.',
     'Bot, API, workers e painéis compartilham o mesmo núcleo de domínio em Bun e TypeScript.',

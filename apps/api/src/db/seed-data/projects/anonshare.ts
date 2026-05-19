@@ -358,7 +358,7 @@ bun run verify
   repositoryUrl: 'https://github.com/gustavo-sotero/anonshare.dev',
   liveUrl: 'https://anonshare.dev/',
   featured: true,
-  order: 4,
+  order: 2,
   impactFacts: [
     'Uploads de até 256 MB com preview, expiração configurável e links de uso único.',
     'Download único usa compare-and-set no PostgreSQL e rollback de reserva em falha de entrega.',

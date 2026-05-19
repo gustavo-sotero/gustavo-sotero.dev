@@ -87,6 +87,9 @@ const s = StyleSheet.create({
   section: {
     marginBottom: 16,
   },
+  tailSection: {
+    marginBottom: 10,
+  },
   sectionTitle: {
     fontSize: 8,
     fontWeight: 'bold',
@@ -180,7 +183,7 @@ const s = StyleSheet.create({
 
   // ── Skills ───────────────────────────────────────────────────────────────
   skillGroup: {
-    marginBottom: 5,
+    marginBottom: 4,
   },
   skillGroupLabel: {
     fontSize: 8,
@@ -206,7 +209,7 @@ const s = StyleSheet.create({
 
   // ── Projects ─────────────────────────────────────────────────────────────
   projectEntry: {
-    marginBottom: 9,
+    marginBottom: 7,
   },
   projectHeader: {
     flexDirection: 'row',
@@ -264,7 +267,7 @@ const s = StyleSheet.create({
   bulletRow: {
     flexDirection: 'row',
     gap: 6,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   bulletDot: {
     fontSize: 9,
@@ -506,7 +509,7 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
 
         {/* ── Habilidades ─────────────────────────────────────────────────── */}
         {skills.length > 0 ? (
-          <View style={s.section}>
+          <View style={s.tailSection}>
             <SectionTitle>Habilidades Técnicas</SectionTitle>
             {skills.map((group) => (
               <View key={group.category} style={s.skillGroup}>
@@ -519,7 +522,7 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
 
         {/* ── Projetos ────────────────────────────────────────────────────── */}
         {projects.length > 0 ? (
-          <View style={s.section}>
+          <View style={s.tailSection}>
             <SectionTitle>Projetos</SectionTitle>
             {projects.map((item) => (
               <ProjectEntry key={item.id} item={item} />
@@ -529,7 +532,7 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
 
         {/* ── Idiomas ─────────────────────────────────────────────────────── */}
         {languages.length > 0 ? (
-          <View style={s.section}>
+          <View style={s.tailSection}>
             <SectionTitle>Idiomas</SectionTitle>
             <View style={s.langsRow}>
               {languages.map((lang) => (
@@ -544,7 +547,7 @@ export function ResumePdfDocument({ resume, generatedAt }: ResumePdfDocumentProp
 
         {/* ── Informações adicionais ──────────────────────────────────────── */}
         {additionalInfo.length > 0 ? (
-          <View style={s.section}>
+          <View style={s.tailSection}>
             <SectionTitle>Informações Adicionais</SectionTitle>
             {additionalInfo.map((info) => (
               <View key={info} style={s.bulletRow}>

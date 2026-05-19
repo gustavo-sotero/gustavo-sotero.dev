@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { logClientError } from '@/lib/client-logger';
+import { normalizeMermaidSource } from '@/lib/mermaid-source';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Textarea } from '../ui/textarea';
@@ -15,10 +16,12 @@ import { Textarea } from '../ui/textarea';
  */
 function MermaidBlock({ source }: { source: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const normalizedSource = normalizeMermaidSource(source);
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+    if (!normalizedSource) return;
 
     let cancelled = false;
 
@@ -35,7 +38,7 @@ function MermaidBlock({ source }: { source: string }) {
           fontFamily: 'var(--font-mono-jetbrains, monospace)',
         });
         node.removeAttribute('data-processed');
-        node.textContent = source;
+        node.textContent = normalizedSource;
         mermaid.run({ nodes: [node] }).catch((err: unknown) => {
           if (cancelled) return;
           logClientError('MarkdownEditor/MermaidBlock', 'Failed to render diagram', {
@@ -53,7 +56,7 @@ function MermaidBlock({ source }: { source: string }) {
     return () => {
       cancelled = true;
     };
-  }, [source]);
+  }, [normalizedSource]);
 
   return <div ref={ref} className="mermaid my-4" />;
 }
@@ -128,7 +131,7 @@ export function MarkdownEditor({
                   code({ className, children, ...props }) {
                     const language = /language-(\w+)/.exec(className ?? '')?.[1];
                     if (language === 'mermaid') {
-                      return <MermaidBlock source={String(children).replace(/\n$/, '')} />;
+                      return <MermaidBlock source={String(children)} />;
                     }
                     return (
                       <code className={className} {...props}>

@@ -387,7 +387,7 @@ flowchart TD
   repositoryUrl: 'https://github.com/gustavo-sotero/urlfy.cc',
   liveUrl: 'https://urlfy.cc/',
   featured: true,
-  order: 3,
+  order: 1,
   impactFacts: [
     'Redirect resolve no Next.js via pacote compartilhado, sem round-trip HTTP para a API.',
     'Cache-aside com lock distribuído e fallback para PostgreSQL protege o hot path contra stampede.',

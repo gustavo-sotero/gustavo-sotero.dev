@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { logClientError } from '@/lib/client-logger';
+import { normalizeMermaidSource } from '@/lib/mermaid-source';
 
 interface MermaidRendererProps {
   html: string;
@@ -63,6 +64,7 @@ export function MermaidRenderer({ html }: MermaidRendererProps) {
         });
 
         let decodeError = false;
+        const renderableNodes: HTMLDivElement[] = [];
         nodes.forEach((node) => {
           const encoded = node.getAttribute('data-content');
           if (!encoded) return;
@@ -76,9 +78,13 @@ export function MermaidRenderer({ html }: MermaidRendererProps) {
             decodeError = true;
             return;
           }
+          const normalizedSource = normalizeMermaidSource(decoded);
           // Clear previous render artifacts
           node.removeAttribute('data-processed');
-          node.textContent = decoded;
+          node.textContent = normalizedSource;
+          if (normalizedSource) {
+            renderableNodes.push(node);
+          }
         });
 
         if (decodeError) {
@@ -89,11 +95,15 @@ export function MermaidRenderer({ html }: MermaidRendererProps) {
           return;
         }
 
-        mermaid.run({ nodes: Array.from(nodes) }).catch((err: unknown) => {
+        if (renderableNodes.length === 0) {
+          return;
+        }
+
+        mermaid.run({ nodes: renderableNodes }).catch((err: unknown) => {
           if (cancelled) return;
           logClientError('MermaidRenderer', 'Failed to render mermaid diagram', {
             error: err instanceof Error ? err.message : String(err),
-            nodeCount: nodes.length,
+            nodeCount: renderableNodes.length,
           });
           setRenderError(true);
         });

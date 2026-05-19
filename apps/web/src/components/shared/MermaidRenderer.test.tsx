@@ -19,10 +19,23 @@ import { MermaidRenderer } from './MermaidRenderer';
 
 // Minimal HTML that matches what the backend generates: a div with class="mermaid"
 // and a base64-encoded diagram in data-content.
+function encodeDiagram(source: string) {
+  return Buffer.from(source, 'utf8').toString('base64');
+}
+
 const DIAGRAM_SOURCE = 'graph TD; A-->B;';
-const ENCODED = btoa(DIAGRAM_SOURCE);
+const ENCODED = encodeDiagram(DIAGRAM_SOURCE);
 const HTML_WITH_MERMAID = `<div class="mermaid" data-content="${ENCODED}"></div>`;
 const HTML_WITHOUT_MERMAID = '<p>No diagrams here.</p>';
+const RAW_MULTI_TENANT_DIAGRAM = [
+  '\uFEFF',
+  '',
+  'sequenceDiagram',
+  '    participant Bot as grammY Handler',
+  '    participant MW as tenantMiddleware',
+  '    Bot->>MW: mensagem recebida',
+].join('\n');
+const HTML_WITH_UNTRIMMED_MERMAID = `<div class="mermaid" data-content="${encodeDiagram(RAW_MULTI_TENANT_DIAGRAM)}"></div>`;
 
 describe('MermaidRenderer', () => {
   beforeEach(() => {
@@ -62,6 +75,28 @@ describe('MermaidRenderer', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+  });
+
+  it('normalizes decoded mermaid source before mermaid.run', async () => {
+    const seenSources: string[] = [];
+    mermaidRunImpl = async ({ nodes }) => {
+      seenSources.push(nodes.map((node) => node.textContent ?? '').join('\n---\n'));
+    };
+
+    await act(async () => {
+      render(<MermaidRenderer html={HTML_WITH_UNTRIMMED_MERMAID} />);
+    });
+
+    await waitFor(() => {
+      expect(seenSources).toEqual([
+        [
+          'sequenceDiagram',
+          '    participant Bot as grammY Handler',
+          '    participant MW as tenantMiddleware',
+          '    Bot->>MW: mensagem recebida',
+        ].join('\n'),
+      ]);
     });
   });
 

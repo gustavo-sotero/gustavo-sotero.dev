@@ -1,7 +1,7 @@
 export const PORTFOLIO_PROJECT = {
   slug: 'gustavo-sotero-dev',
   coverImage: 'projects/portfolio.png',
-  title: 'gustavo-sotero.dev',
+  title: 'Portfolio - gustavo-sotero.dev',
   description:
     'Portfólio pessoal fullstack backend-centric: API Hono, Next.js 16 App Router, BullMQ, outbox transacional, uploads S3, geração de posts com IA e admin autenticado via GitHub OAuth.',
   content: `
@@ -476,7 +476,7 @@ bun run build       # Build completo (verifica erros de bundle)
   repositoryUrl: 'https://github.com/gustavo-sotero/gustavo-sotero.dev',
   liveUrl: 'https://gustavo-sotero.dev',
   featured: true,
-  order: 1,
+  order: 3,
   impactFacts: [
     'Home aggregate resolve 6 serviços em paralelo em um único round-trip, eliminando N=7 chamadas SSR separadas.',
     'Outbox transacional com job IDs determinísticos garante entrega idempotente de eventos para BullMQ sem perda em crash.',
