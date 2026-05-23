@@ -53,12 +53,20 @@ describe('ai-post-generation schemas', () => {
       expect(result.success).toBe(false);
     });
 
-    it('rejects limit below 3', () => {
+    it('rejects limit below 1', () => {
       const result = generateTopicsRequestSchema.safeParse({
         category: 'backend-arquitetura',
-        limit: 2,
+        limit: 0,
       });
       expect(result.success).toBe(false);
+    });
+
+    it('accepts limit=1 (minimum allowed)', () => {
+      const result = generateTopicsRequestSchema.safeParse({
+        category: 'backend-arquitetura',
+        limit: 1,
+      });
+      expect(result.success).toBe(true);
     });
 
     it('rejects limit above 5', () => {
@@ -133,7 +141,7 @@ describe('ai-post-generation schemas', () => {
   });
 
   describe('response schemas', () => {
-    it('rejects topic responses with fewer than 3 suggestions', () => {
+    it('accepts topic responses with a single suggestion (minimum allowed)', () => {
       const result = generateTopicsResponseSchema.safeParse({
         suggestions: [
           {
@@ -146,17 +154,15 @@ describe('ai-post-generation schemas', () => {
             suggestedTagNames: ['TypeScript'],
             rationale: 'Motivo',
           },
-          {
-            suggestionId: 'abc2',
-            category: 'backend-arquitetura',
-            proposedTitle: 'Outro tema',
-            angle: 'Outro ângulo',
-            summary: 'Outro resumo',
-            targetReader: 'Dev',
-            suggestedTagNames: ['TypeScript'],
-            rationale: 'Outro motivo',
-          },
         ],
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects empty topic responses', () => {
+      const result = generateTopicsResponseSchema.safeParse({
+        suggestions: [],
       });
 
       expect(result.success).toBe(false);

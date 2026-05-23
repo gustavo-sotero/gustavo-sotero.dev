@@ -265,6 +265,25 @@ describe('AI env fields (env.fields.ts)', () => {
     expect(result.AI_POSTS_MAX_SUGGESTIONS).toBe(4);
   });
 
+  it('AI_POSTS_MAX_SUGGESTIONS accepts 1 (operator may cap to a single suggestion)', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.safeParse({ ...FULL_RUNTIME_BASE, AI_POSTS_MAX_SUGGESTIONS: '1' });
+    expect(result.success).toBe(true);
+    expect(result.data?.AI_POSTS_MAX_SUGGESTIONS).toBe(1);
+  });
+
+  it('AI_POSTS_MAX_SUGGESTIONS rejects 0 (must be at least the absolute minimum)', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.safeParse({ ...FULL_RUNTIME_BASE, AI_POSTS_MAX_SUGGESTIONS: '0' });
+    expect(result.success).toBe(false);
+  });
+
+  it('AI_POSTS_MAX_SUGGESTIONS rejects values above the hard cap', () => {
+    const schema = z.object(apiRuntimeFields);
+    const result = schema.safeParse({ ...FULL_RUNTIME_BASE, AI_POSTS_MAX_SUGGESTIONS: '6' });
+    expect(result.success).toBe(false);
+  });
+
   it('AI_POSTS_MODEL_TOPICS is not a runtime env field (removed in OpenRouter migration)', () => {
     expect('AI_POSTS_MODEL_TOPICS' in apiRuntimeFields).toBe(false);
   });

@@ -853,7 +853,7 @@ describe('openapi routes', () => {
     expect(topicsPost?.description).toContain('ephemeral');
     expect(topicsSchema?.properties?.category?.enum).toContain('backend-arquitetura');
     expect(topicsSchema?.properties?.limit?.default).toBe(4);
-    expect(topicsSchema?.properties?.limit?.minimum).toBe(3);
+    expect(topicsSchema?.properties?.limit?.minimum).toBe(1);
     expect(topicsSchema?.properties?.limit?.maximum).toBe(5);
     expect(topicsSchema?.properties?.briefing?.nullable).toBe(true);
     expect(topicsSchema?.properties?.excludedIdeas?.maxItems).toBe(10);
@@ -916,7 +916,7 @@ describe('openapi routes', () => {
     expect(topicRunsPost?.responses && Object.hasOwn(topicRunsPost.responses, '422')).toBe(false);
     expect(topicRunsSchema?.properties?.category?.enum).toContain('backend-arquitetura');
     expect(topicRunsSchema?.properties?.limit?.default).toBe(4);
-    expect(topicRunsSchema?.properties?.limit?.minimum).toBe(3);
+    expect(topicRunsSchema?.properties?.limit?.minimum).toBe(1);
     expect(topicRunsSchema?.properties?.limit?.maximum).toBe(5);
     expect(topicRunsSchema?.properties?.excludedIdeas?.maxItems).toBe(10);
     expect(topicRunsAccepted?.data?.status).toBe('queued');

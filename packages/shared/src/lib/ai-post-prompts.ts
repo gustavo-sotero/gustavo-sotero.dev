@@ -256,8 +256,15 @@ export function buildTopicsUserPrompt(req: GenerateTopicsRequest): string {
     );
   }
 
+  // Use singular form when the user requested a single suggestion to keep
+  // the prompt grammatically natural for the model. "Gere exatamente 1
+  // sugestão" reads better than "Gere exatamente 1 sugestões".
+  const isSingular = req.limit === 1;
+  const noun = isSingular ? 'sugestão' : 'sugestões';
+  const itemNoun = isSingular ? 'A sugestão' : 'Cada sugestão';
+
   parts.push(
-    `Gere exatamente ${req.limit} sugestões de tema para a categoria "${categoryLabel(req.category)}".\nCada sugestão deve ter suggestionId único (string curta), proposedTitle, angle, summary (2-3 frases), targetReader, suggestedTagNames (máx ${AI_POST_MAX_TOPIC_TAG_NAMES}) e rationale (1 frase curta).`
+    `Gere exatamente ${req.limit} ${noun} de tema para a categoria "${categoryLabel(req.category)}".\n${itemNoun} deve ter suggestionId único (string curta), proposedTitle, angle, summary (2-3 frases), targetReader, suggestedTagNames (máx ${AI_POST_MAX_TOPIC_TAG_NAMES}) e rationale (1 frase curta).`
   );
 
   return parts.join('\n\n');

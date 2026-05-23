@@ -173,17 +173,21 @@ describe('post-generation.service', () => {
       expect(result.suggestions).toHaveLength(3);
     });
 
-    it('throws validation when deduplication drops below three items', async () => {
+    it('returns the surviving unique suggestion when deduplication leaves only one item (min contract is 1)', async () => {
       generateStructuredObjectMock.mockResolvedValueOnce({
         object: {
           suggestions: [
             VALID_SUGGESTION,
             {
               ...VALID_SUGGESTION,
-              suggestionId: 'dup',
+              suggestionId: 'dup1',
               proposedTitle: 'Fila Nao E Solucao Magica',
             },
-            { ...VALID_SUGGESTION, suggestionId: 'abc3', proposedTitle: 'Outro tema unico' },
+            {
+              ...VALID_SUGGESTION,
+              suggestionId: 'dup2',
+              proposedTitle: 'fila não e solução magica',
+            },
           ],
         },
         durationMs: 800,
@@ -192,14 +196,15 @@ describe('post-generation.service', () => {
         providerGenerationId: null,
       });
 
-      await expect(
-        generateTopicSuggestions({
-          category: 'backend-arquitetura',
-          briefing: null,
-          limit: 4,
-          excludedIdeas: [],
-        })
-      ).rejects.toMatchObject({ kind: 'validation' });
+      const result = await generateTopicSuggestions({
+        category: 'backend-arquitetura',
+        briefing: null,
+        limit: 4,
+        excludedIdeas: [],
+      });
+
+      expect(result.suggestions).toHaveLength(1);
+      expect(result.suggestions[0]?.suggestionId).toBe(VALID_SUGGESTION.suggestionId);
     });
 
     it('clamps requested suggestion count to the runtime env cap', async () => {
@@ -217,6 +222,30 @@ describe('post-generation.service', () => {
         | { prompt?: string }
         | undefined;
       expect(callArg?.prompt).toContain('Gere exatamente 3 sugestões');
+    });
+
+    it('honors limit=1 in the prompt with singular grammar', async () => {
+      generateStructuredObjectMock.mockResolvedValueOnce({
+        object: { suggestions: [VALID_SUGGESTION] },
+        durationMs: 600,
+        inputTokens: 80,
+        outputTokens: 150,
+        providerGenerationId: null,
+      });
+
+      const result = await generateTopicSuggestions({
+        category: 'backend-arquitetura',
+        briefing: null,
+        limit: 1,
+        excludedIdeas: [],
+      });
+
+      expect(result.suggestions).toHaveLength(1);
+      const callArg = generateStructuredObjectMock.mock.calls[0]?.[0] as
+        | { prompt?: string }
+        | undefined;
+      expect(callArg?.prompt).toContain('Gere exatamente 1 sugestão');
+      expect(callArg?.prompt).not.toContain('1 sugestões');
     });
 
     it('throws timeout errors from the AI helper', async () => {
