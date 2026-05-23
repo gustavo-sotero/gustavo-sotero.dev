@@ -418,8 +418,7 @@ export const adminPaths = {
     post: {
       tags: ['Admin - Posts'],
       summary: 'Generate AI topic suggestions',
-      description:
-        'Generates 3-5 structured topic suggestions for a new post. Admin-only, CSRF-protected, ephemeral, and rate limited to 10 requests per minute.',
+      description: `Generates ${AI_POST_MIN_SUGGESTIONS}-${AI_POST_MAX_SUGGESTIONS} structured topic suggestions for a new post. Admin-only, CSRF-protected, ephemeral, and rate limited to 10 requests per minute.`,
       operationId: 'adminGeneratePostTopics',
       security: [{ cookieAuth: [] }],
       requestBody: {
