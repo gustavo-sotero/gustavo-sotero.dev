@@ -239,6 +239,25 @@ export type AiPostGenerationConfig = z.infer<typeof aiPostGenerationConfigSchema
 
 // ── Config state (returned by GET /admin/posts/generate/config) ───────────────
 
+/**
+ * Operational limits for AI post generation, derived from the API's runtime env.
+ * Exposed to the admin UI so the form can render dynamic min/max for fields
+ * that are gated by env vars (suggestion count, briefing length, etc.) without
+ * the FE having to duplicate or guess the operator's configuration.
+ */
+export const aiPostGenerationLimitsSchema = z.object({
+  /** Smallest number of topic suggestions the user can request. */
+  minSuggestions: z.number().int().positive(),
+  /** Largest number of topic suggestions the user can request (env-capped). */
+  maxSuggestions: z.number().int().positive(),
+  /** Default suggestion count when no explicit value is provided. */
+  defaultSuggestions: z.number().int().positive(),
+  /** Maximum allowed characters in the briefing field (env-driven). */
+  maxBriefingChars: z.number().int().positive(),
+});
+
+export type AiPostGenerationLimits = z.infer<typeof aiPostGenerationLimitsSchema>;
+
 export const aiPostGenerationConfigStateSchema = z.object({
   featureEnabled: z.boolean(),
   status: aiPostGenerationStatusSchema,
@@ -247,6 +266,7 @@ export const aiPostGenerationConfigStateSchema = z.object({
   updatedAt: z.string().datetime().nullable(),
   updatedBy: z.string().nullable(),
   catalogFetchedAt: z.string().datetime().nullable(),
+  limits: aiPostGenerationLimitsSchema,
 });
 
 export type AiPostGenerationConfigState = z.infer<typeof aiPostGenerationConfigStateSchema>;

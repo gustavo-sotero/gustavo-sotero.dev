@@ -1,6 +1,11 @@
+import {
+  AI_POST_DEFAULT_SUGGESTIONS,
+  AI_POST_MIN_SUGGESTIONS,
+} from '@portfolio/shared/constants/ai-posts';
 import type {
   AiPostGenerationConfig,
   AiPostGenerationConfigState,
+  AiPostGenerationLimits,
   ProviderRoutingConfig,
   UpdateAiPostGenerationConfig,
 } from '@portfolio/shared/schemas/ai-post-generation-config';
@@ -15,6 +20,23 @@ import {
 import { validateModelId } from './openrouter-models.service';
 
 const logger = getLogger('services', 'ai-post-generation-settings');
+
+/**
+ * Build the operational limits exposed to the admin UI.
+ *
+ * `defaultSuggestions` is clamped to the env-driven cap so the FE never
+ * displays a default that exceeds what the operator has configured (e.g.,
+ * if the operator caps `AI_POSTS_MAX_SUGGESTIONS=2`, the default surfaces
+ * as 2, not 4).
+ */
+function buildAiPostGenerationLimits(): AiPostGenerationLimits {
+  return {
+    minSuggestions: AI_POST_MIN_SUGGESTIONS,
+    maxSuggestions: env.AI_POSTS_MAX_SUGGESTIONS,
+    defaultSuggestions: Math.min(AI_POST_DEFAULT_SUGGESTIONS, env.AI_POSTS_MAX_SUGGESTIONS),
+    maxBriefingChars: env.AI_POSTS_MAX_BRIEFING_CHARS,
+  };
+}
 
 function parsePersistedRoutingConfig(
   value: unknown,
@@ -49,6 +71,8 @@ function parsePersistedRoutingConfig(
  *  - `catalog-unavailable`— catalog could not be loaded; saved IDs unverified
  */
 export async function getAiPostGenerationConfigState(): Promise<AiPostGenerationConfigState> {
+  const limits = buildAiPostGenerationLimits();
+
   if (!env.AI_POSTS_ENABLED) {
     return {
       featureEnabled: false,
@@ -58,6 +82,7 @@ export async function getAiPostGenerationConfigState(): Promise<AiPostGeneration
       updatedAt: null,
       updatedBy: null,
       catalogFetchedAt: null,
+      limits,
     };
   }
 
@@ -72,6 +97,7 @@ export async function getAiPostGenerationConfigState(): Promise<AiPostGeneration
       updatedAt: row?.updatedAt?.toISOString() ?? null,
       updatedBy: row?.updatedBy ?? null,
       catalogFetchedAt: null,
+      limits,
     };
   }
 
@@ -110,6 +136,7 @@ export async function getAiPostGenerationConfigState(): Promise<AiPostGeneration
         updatedAt: row.updatedAt.toISOString(),
         updatedBy: row.updatedBy ?? null,
         catalogFetchedAt,
+        limits,
       };
     }
 
@@ -121,6 +148,7 @@ export async function getAiPostGenerationConfigState(): Promise<AiPostGeneration
       updatedAt: row.updatedAt.toISOString(),
       updatedBy: row.updatedBy ?? null,
       catalogFetchedAt,
+      limits,
     };
   } catch (err) {
     // Catalog unavailable — cannot confirm validity of saved config
@@ -136,6 +164,7 @@ export async function getAiPostGenerationConfigState(): Promise<AiPostGeneration
       updatedAt: row.updatedAt.toISOString(),
       updatedBy: row.updatedBy ?? null,
       catalogFetchedAt: null,
+      limits,
     };
   }
 }
