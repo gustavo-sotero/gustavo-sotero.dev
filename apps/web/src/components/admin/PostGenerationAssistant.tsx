@@ -4,8 +4,11 @@ import {
   AI_POST_CATEGORY_META,
   AI_POST_DEFAULT_SUGGESTIONS,
   AI_POST_MAX_BRIEFING_CHARS,
+  AI_POST_MAX_SUGGESTIONS,
+  AI_POST_MIN_SUGGESTIONS,
   AI_POST_REQUESTED_CATEGORIES,
 } from '@portfolio/shared/constants/ai-posts';
+import type { AiPostGenerationLimits } from '@portfolio/shared/schemas/ai-post-generation-config';
 import type { createPostSchema } from '@portfolio/shared/schemas/posts';
 import type {
   AiPostRequestedCategory,
@@ -26,7 +29,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { UseFormSetValue } from 'react-hook-form';
 import type { z } from 'zod';
 import { useResolveAiSuggestedTags } from '@/hooks/admin/use-admin-tags';
@@ -37,6 +40,7 @@ import {
 } from '@/hooks/admin/use-post-generation';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Skeleton } from '../ui/skeleton';
@@ -45,6 +49,18 @@ import { PostDraftReview } from './PostDraftReview';
 import { PostTopicSuggestionList } from './PostTopicSuggestionList';
 
 type PostFormValues = z.input<typeof createPostSchema>;
+
+/**
+ * Defensive fallback used while the /config query is loading or when a
+ * test/mocked payload omits the new `limits` field. The server always returns
+ * `limits` in production so this branch is purely a degradation safety net.
+ */
+const DEFAULT_LIMITS: AiPostGenerationLimits = {
+  minSuggestions: AI_POST_MIN_SUGGESTIONS,
+  maxSuggestions: AI_POST_MAX_SUGGESTIONS,
+  defaultSuggestions: AI_POST_DEFAULT_SUGGESTIONS,
+  maxBriefingChars: AI_POST_MAX_BRIEFING_CHARS,
+};
 
 export interface PostGenerationAssistantProps {
   setValue: UseFormSetValue<PostFormValues>;
@@ -149,6 +165,49 @@ export function PostGenerationAssistant({
   const { data: configState, isLoading: isLoadingConfig } = useAiPostGenerationConfig();
   const resolveAiTagsMutation = useResolveAiSuggestedTags();
 
+  // Operational limits surfaced by the server. Falls back to the absolute
+  // shared constants while loading or when a (test) payload omits the field.
+  const limits = configState?.limits ?? DEFAULT_LIMITS;
+
+  // Note: during the regenerate loop (topicsReady → regenerate → topicsReady)
+  // the `limit` stays at the value chosen for the original request. To change
+  // the count, the user clicks "Voltar" and submits again from the idle state.
+  const [suggestionsLimit, setSuggestionsLimit] = useState<number>(limits.defaultSuggestions);
+
+  // Re-clamp the input value whenever the operator's cap changes, so a
+  // previously-valid number doesn't end up out of range silently.
+  useEffect(() => {
+    setSuggestionsLimit((prev) => {
+      if (!Number.isFinite(prev) || prev < limits.minSuggestions || prev > limits.maxSuggestions) {
+        return limits.defaultSuggestions;
+      }
+      return prev;
+    });
+  }, [limits.minSuggestions, limits.maxSuggestions, limits.defaultSuggestions]);
+
+  function handleSuggestionsLimitChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const raw = event.target.value;
+    if (raw === '') {
+      // Allow transient empty state during typing; fixed up on blur.
+      return;
+    }
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed)) return;
+    const clamped = Math.min(
+      Math.max(Math.round(parsed), limits.minSuggestions),
+      limits.maxSuggestions
+    );
+    setSuggestionsLimit(clamped);
+  }
+
+  function handleSuggestionsLimitBlur() {
+    setSuggestionsLimit((prev) =>
+      Number.isFinite(prev) && prev >= limits.minSuggestions && prev <= limits.maxSuggestions
+        ? prev
+        : limits.defaultSuggestions
+    );
+  }
+
   function handleCategoryChange(nextCategory: AiPostRequestedCategory) {
     setCategory((currentCategory) => {
       if (currentCategory && currentCategory !== nextCategory) {
@@ -248,7 +307,7 @@ export function PostGenerationAssistant({
           {
             category: capturedCategory,
             briefing: capturedBriefing || null,
-            limit: AI_POST_DEFAULT_SUGGESTIONS,
+            limit: suggestionsLimit,
             excludedIdeas: effectiveExcluded,
           },
           {
@@ -495,6 +554,32 @@ export function PostGenerationAssistant({
                           {AI_POST_MAX_BRIEFING_CHARS - briefing.length} caracteres restantes
                         </p>
                       )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ai-suggestions-count" className="text-zinc-300 text-sm">
+                        Quantidade de temas
+                      </Label>
+                      <Input
+                        id="ai-suggestions-count"
+                        type="number"
+                        min={limits.minSuggestions}
+                        max={limits.maxSuggestions}
+                        step={1}
+                        value={suggestionsLimit}
+                        onChange={handleSuggestionsLimitChange}
+                        onBlur={handleSuggestionsLimitBlur}
+                        disabled={limits.minSuggestions === limits.maxSuggestions}
+                        aria-describedby="ai-suggestions-count-help"
+                        className="bg-zinc-900 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/60"
+                      />
+                      <p id="ai-suggestions-count-help" className="text-xs text-zinc-500">
+                        {limits.minSuggestions === limits.maxSuggestions
+                          ? `Configurado para sempre gerar ${limits.maxSuggestions} ${
+                              limits.maxSuggestions === 1 ? 'tema' : 'temas'
+                            }.`
+                          : `Entre ${limits.minSuggestions} e ${limits.maxSuggestions} temas por geração.`}
+                      </p>
                     </div>
 
                     {state.step === 'error' && (

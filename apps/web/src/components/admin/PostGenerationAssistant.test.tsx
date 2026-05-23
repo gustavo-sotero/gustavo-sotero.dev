@@ -345,6 +345,12 @@ describe('PostGenerationAssistant', () => {
         updatedAt: null,
         updatedBy: null,
         catalogFetchedAt: null,
+        limits: {
+          minSuggestions: 1,
+          maxSuggestions: 5,
+          defaultSuggestions: 4,
+          maxBriefingChars: 1_000,
+        },
       },
       isLoading: false,
     });
@@ -806,6 +812,152 @@ describe('PostGenerationAssistant', () => {
     await waitFor(() => {
       expect(screen.queryByTestId('draft-review')).not.toBeInTheDocument();
       expect(screen.getByTestId('category-select')).toBeInTheDocument();
+    });
+  });
+
+  // ── Suggestions count input ────────────────────────────────────────────────
+
+  describe('suggestions count input', () => {
+    function getCountInput() {
+      return screen.getByLabelText(/Quantidade de temas/i) as HTMLInputElement;
+    }
+
+    function configWithLimits(limits: {
+      minSuggestions: number;
+      maxSuggestions: number;
+      defaultSuggestions: number;
+      maxBriefingChars?: number;
+    }) {
+      useAiPostGenerationConfigMock.mockReturnValue({
+        data: {
+          status: 'ready',
+          config: { topicsModelId: 'openai/gpt-4o', draftModelId: 'openai/gpt-4o' },
+          featureEnabled: true,
+          issues: [],
+          updatedAt: null,
+          updatedBy: null,
+          catalogFetchedAt: null,
+          limits: {
+            ...limits,
+            maxBriefingChars: limits.maxBriefingChars ?? 1_000,
+          },
+        },
+        isLoading: false,
+      });
+    }
+
+    it('renders the count input with min/max derived from server limits', () => {
+      configWithLimits({ minSuggestions: 1, maxSuggestions: 3, defaultSuggestions: 3 });
+
+      renderAssistant();
+      fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+      const input = getCountInput();
+      expect(input).toBeInTheDocument();
+      expect(input.type).toBe('number');
+      expect(input.min).toBe('1');
+      expect(input.max).toBe('3');
+      expect(input.value).toBe('3'); // default clamped to operator cap
+      expect(screen.getByText(/Entre 1 e 3 temas por geração/i)).toBeInTheDocument();
+    });
+
+    it('initializes to defaultSuggestions when within range', () => {
+      configWithLimits({ minSuggestions: 1, maxSuggestions: 5, defaultSuggestions: 4 });
+
+      renderAssistant();
+      fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+      expect(getCountInput().value).toBe('4');
+    });
+
+    it('submits the chosen limit (not the hardcoded default) when generating topics', async () => {
+      configWithLimits({ minSuggestions: 1, maxSuggestions: 5, defaultSuggestions: 4 });
+      mockTopicRunCompleted([SUGGESTION_FIXTURE]);
+
+      renderAssistant();
+      fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+      fireEvent.change(screen.getByTestId('category-select'), {
+        target: { value: 'backend-arquitetura' },
+      });
+      fireEvent.change(getCountInput(), { target: { value: '2' } });
+      fireEvent.click(screen.getByRole('button', { name: /Sugerir temas/i }));
+
+      await waitFor(() => {
+        expect(startTopicRunMock).toHaveBeenCalledWith(
+          expect.objectContaining({ limit: 2 }),
+          expect.any(Object)
+        );
+      });
+    });
+
+    it('clamps onChange values above max to the operator cap', () => {
+      configWithLimits({ minSuggestions: 1, maxSuggestions: 3, defaultSuggestions: 3 });
+
+      renderAssistant();
+      fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+      const input = getCountInput();
+      fireEvent.change(input, { target: { value: '99' } });
+      expect(input.value).toBe('3');
+    });
+
+    it('clamps onChange values below min to the absolute minimum', () => {
+      configWithLimits({ minSuggestions: 1, maxSuggestions: 5, defaultSuggestions: 4 });
+
+      renderAssistant();
+      fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+      const input = getCountInput();
+      fireEvent.change(input, { target: { value: '0' } });
+      expect(input.value).toBe('1');
+    });
+
+    it('rounds non-integer onChange values to the nearest integer within range', () => {
+      configWithLimits({ minSuggestions: 1, maxSuggestions: 5, defaultSuggestions: 4 });
+
+      renderAssistant();
+      fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+      const input = getCountInput();
+      // parseInt drops the fractional part and the result must remain in range
+      fireEvent.change(input, { target: { value: '3.7' } });
+      expect(input.value).toBe('3');
+    });
+
+    it('disables the input and shows fixed-count helper text when min equals max', () => {
+      configWithLimits({ minSuggestions: 1, maxSuggestions: 1, defaultSuggestions: 1 });
+
+      renderAssistant();
+      fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+      const input = getCountInput();
+      expect(input.disabled).toBe(true);
+      expect(input.value).toBe('1');
+      expect(screen.getByText(/Configurado para sempre gerar 1 tema\./i)).toBeInTheDocument();
+    });
+
+    it('falls back to absolute defaults when configState.limits is missing (back-compat)', () => {
+      // Test the defensive fallback path: server payload without `limits`
+      useAiPostGenerationConfigMock.mockReturnValue({
+        data: {
+          status: 'ready',
+          config: { topicsModelId: 'openai/gpt-4o', draftModelId: 'openai/gpt-4o' },
+          featureEnabled: true,
+          issues: [],
+          updatedAt: null,
+          updatedBy: null,
+          catalogFetchedAt: null,
+        },
+        isLoading: false,
+      });
+
+      renderAssistant();
+      fireEvent.click(screen.getByRole('button', { name: /Assistente de geração/i }));
+
+      const input = getCountInput();
+      expect(input.min).toBe('1');
+      expect(input.max).toBe('5');
+      expect(input.value).toBe('4');
     });
   });
 });
