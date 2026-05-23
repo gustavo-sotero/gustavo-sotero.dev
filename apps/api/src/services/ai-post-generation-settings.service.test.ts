@@ -10,6 +10,8 @@ const {
   envMock: {
     AI_POSTS_ENABLED: true,
     OPENROUTER_API_KEY: 'sk-test',
+    AI_POSTS_MAX_SUGGESTIONS: 4,
+    AI_POSTS_MAX_BRIEFING_CHARS: 1_000,
   },
   findAiPostGenerationSettingsMock: vi.fn(),
   upsertAiPostGenerationSettingsMock: vi.fn(),
@@ -51,6 +53,8 @@ describe('ai-post-generation-settings.service', () => {
     vi.clearAllMocks();
     envMock.AI_POSTS_ENABLED = true;
     envMock.OPENROUTER_API_KEY = 'sk-test';
+    envMock.AI_POSTS_MAX_SUGGESTIONS = 4;
+    envMock.AI_POSTS_MAX_BRIEFING_CHARS = 1_000;
     validateModelIdMock.mockResolvedValue(true);
     findAiPostGenerationSettingsMock.mockResolvedValue(SAVED_ROW);
     upsertAiPostGenerationSettingsMock.mockResolvedValue(undefined);
@@ -127,6 +131,66 @@ describe('ai-post-generation-settings.service', () => {
 
       expect(state.status).toBe('catalog-unavailable');
       expect(state.config).not.toBeNull();
+    });
+
+    it('exposes operational limits derived from env on every status branch', async () => {
+      // disabled
+      envMock.AI_POSTS_ENABLED = false;
+      const disabled = await getAiPostGenerationConfigState();
+      expect(disabled.status).toBe('disabled');
+      expect(disabled.limits).toEqual({
+        minSuggestions: 1,
+        maxSuggestions: 4,
+        defaultSuggestions: 4,
+        maxBriefingChars: 1_000,
+      });
+
+      // not-configured
+      envMock.AI_POSTS_ENABLED = true;
+      findAiPostGenerationSettingsMock.mockResolvedValue(null);
+      const notConfigured = await getAiPostGenerationConfigState();
+      expect(notConfigured.status).toBe('not-configured');
+      expect(notConfigured.limits.maxSuggestions).toBe(4);
+
+      // ready
+      findAiPostGenerationSettingsMock.mockResolvedValue(SAVED_ROW);
+      validateModelIdMock.mockResolvedValue(true);
+      const ready = await getAiPostGenerationConfigState();
+      expect(ready.status).toBe('ready');
+      expect(ready.limits.maxSuggestions).toBe(4);
+
+      // invalid-config
+      validateModelIdMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+      const invalid = await getAiPostGenerationConfigState();
+      expect(invalid.status).toBe('invalid-config');
+      expect(invalid.limits.maxSuggestions).toBe(4);
+
+      // catalog-unavailable
+      validateModelIdMock.mockRejectedValue(new Error('network error'));
+      const catalogUnavailable = await getAiPostGenerationConfigState();
+      expect(catalogUnavailable.status).toBe('catalog-unavailable');
+      expect(catalogUnavailable.limits.maxSuggestions).toBe(4);
+    });
+
+    it('clamps defaultSuggestions to env cap when operator caps below the absolute default', async () => {
+      envMock.AI_POSTS_ENABLED = false;
+      envMock.AI_POSTS_MAX_SUGGESTIONS = 2;
+
+      const state = await getAiPostGenerationConfigState();
+
+      // defaultSuggestions must never exceed the env-driven cap
+      expect(state.limits.maxSuggestions).toBe(2);
+      expect(state.limits.defaultSuggestions).toBe(2);
+      expect(state.limits.minSuggestions).toBe(1);
+    });
+
+    it('reflects custom maxBriefingChars from env', async () => {
+      envMock.AI_POSTS_ENABLED = false;
+      envMock.AI_POSTS_MAX_BRIEFING_CHARS = 500;
+
+      const state = await getAiPostGenerationConfigState();
+
+      expect(state.limits.maxBriefingChars).toBe(500);
     });
   });
 

@@ -309,13 +309,10 @@ describe('processAiPostTopicGeneration', () => {
     }));
     returningMock.mockResolvedValueOnce([makeClaimedRun()]);
 
-    // Only 2 suggestions — below the minimum of 3
+    // Empty suggestions — below the response contract's minimum (>= 1)
     generateStructuredObjectMock.mockResolvedValueOnce({
       object: {
-        suggestions: [
-          VALID_SUGGESTION,
-          { ...VALID_SUGGESTION, suggestionId: 's2', proposedTitle: 'Segundo tema' },
-        ],
+        suggestions: [],
       },
       durationMs: 1500,
       inputTokens: 200,

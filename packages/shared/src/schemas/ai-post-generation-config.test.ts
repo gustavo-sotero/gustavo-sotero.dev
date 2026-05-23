@@ -46,6 +46,13 @@ describe('ai-post-generation-config schemas', () => {
   });
 
   describe('aiPostGenerationConfigStateSchema', () => {
+    const validLimits = {
+      minSuggestions: 1,
+      maxSuggestions: 5,
+      defaultSuggestions: 4,
+      maxBriefingChars: 1000,
+    };
+
     it('accepts a ready config state', () => {
       const result = aiPostGenerationConfigStateSchema.safeParse({
         featureEnabled: true,
@@ -58,6 +65,7 @@ describe('ai-post-generation-config schemas', () => {
         updatedAt: '2026-04-14T12:00:00.000Z',
         updatedBy: '12345678',
         catalogFetchedAt: '2026-04-14T12:00:00.000Z',
+        limits: validLimits,
       });
 
       expect(result.success).toBe(true);
@@ -75,6 +83,36 @@ describe('ai-post-generation-config schemas', () => {
         updatedAt: '14/04/2026 12:00',
         updatedBy: '12345678',
         catalogFetchedAt: null,
+        limits: validLimits,
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects state when limits is missing (server contract requires it)', () => {
+      const result = aiPostGenerationConfigStateSchema.safeParse({
+        featureEnabled: true,
+        status: 'disabled',
+        config: null,
+        issues: [],
+        updatedAt: null,
+        updatedBy: null,
+        catalogFetchedAt: null,
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects non-positive limit values', () => {
+      const result = aiPostGenerationConfigStateSchema.safeParse({
+        featureEnabled: true,
+        status: 'disabled',
+        config: null,
+        issues: [],
+        updatedAt: null,
+        updatedBy: null,
+        catalogFetchedAt: null,
+        limits: { ...validLimits, minSuggestions: 0 },
       });
 
       expect(result.success).toBe(false);

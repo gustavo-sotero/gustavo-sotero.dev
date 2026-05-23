@@ -1,4 +1,5 @@
 import type { ZodSchema } from 'zod';
+import { AI_POST_DEFAULT_SUGGESTIONS } from '../constants/ai-posts';
 import type {
   GenerateDraftRequest,
   GenerateDraftResponse,
@@ -109,7 +110,7 @@ export async function executeTopicsGeneration(
   try {
     response = normalizeTopicsResponse(
       result.object as GenerateTopicsResponse,
-      request.limit ?? 4,
+      request.limit ?? AI_POST_DEFAULT_SUGGESTIONS,
       persistedTags
     );
   } catch (error) {

@@ -43,8 +43,15 @@ export const AI_POST_REQUESTED_CATEGORIES: readonly AiPostRequestedCategory[] = 
 export const AI_POST_CATEGORIES = AI_POST_CONCRETE_CATEGORIES;
 
 export const AI_POST_MAX_BRIEFING_CHARS = 1000;
-export const AI_POST_MIN_SUGGESTIONS = 3;
+/**
+ * Minimum number of topic suggestions in any context (request, response, or
+ * env-driven operational cap). Set to 1 to allow the form to request a single
+ * suggestion when the user prefers a focused result.
+ */
+export const AI_POST_MIN_SUGGESTIONS = 1;
+/** Hard cap (absolute maximum) for topic suggestions per generation. */
 export const AI_POST_MAX_SUGGESTIONS = 5;
+/** Default suggestion count when no explicit limit is provided. */
 export const AI_POST_DEFAULT_SUGGESTIONS = 4;
 export const AI_POST_MAX_TOPIC_TAG_NAMES = 6;
 export const AI_POST_MAX_DRAFT_TAG_NAMES = 8;

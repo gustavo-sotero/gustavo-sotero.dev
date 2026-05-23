@@ -87,18 +87,23 @@ describe('normalizeTopicsResponse', () => {
     expect(result.suggestions).toHaveLength(3);
   });
 
-  it('throws validation when deduplication drops below the minimum contract', () => {
-    expect(() =>
-      normalizeTopicsResponse(
-        {
-          suggestions: [
-            VALID_SUGGESTION,
-            { ...VALID_SUGGESTION, suggestionId: 's2', proposedTitle: 'Filas vs. RPC' },
-            { ...VALID_SUGGESTION, suggestionId: 's3', proposedTitle: 'Filas vs  RPC' },
-          ],
-        },
-        4
-      )
-    ).toThrow(AiGenerationError);
+  it('throws validation when the response is empty (below the minimum contract)', () => {
+    expect(() => normalizeTopicsResponse({ suggestions: [] }, 4)).toThrow(AiGenerationError);
+  });
+
+  it('honors limit=1 and slices to a single suggestion', () => {
+    const result = normalizeTopicsResponse(
+      {
+        suggestions: [
+          VALID_SUGGESTION,
+          { ...VALID_SUGGESTION, suggestionId: 's2', proposedTitle: 'Cache distribuido' },
+          { ...VALID_SUGGESTION, suggestionId: 's3', proposedTitle: 'Rate limiting' },
+        ],
+      },
+      1
+    );
+
+    expect(result.suggestions).toHaveLength(1);
+    expect(result.suggestions[0]?.suggestionId).toBe('s1');
   });
 });
