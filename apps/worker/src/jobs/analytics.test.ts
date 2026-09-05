@@ -172,8 +172,8 @@ describe('processAnalytics', () => {
     const secondCall = dbInsertValuesMock.mock.calls.at(1);
     expect(firstCall).toBeDefined();
     expect(secondCall).toBeDefined();
-    const hash1 = (firstCall?.[0] as { ipHash: string }).ipHash;
-    const hash2 = (secondCall?.[0] as { ipHash: string }).ipHash;
+    const hash1 = (firstCall?.at(0) as { ipHash: string } | undefined)?.ipHash;
+    const hash2 = (secondCall?.at(0) as { ipHash: string } | undefined)?.ipHash;
     expect(hash1).toBe(hash2);
   });
 });

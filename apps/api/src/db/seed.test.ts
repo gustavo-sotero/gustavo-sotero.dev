@@ -5,7 +5,7 @@
  * They validate the static SEED_TAGS data so that regressions
  * are caught immediately if someone adds a seed tag without iconKey.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   SEED_EDUCATION,
   SEED_EXPERIENCE,
@@ -14,6 +14,17 @@ import {
   SEED_SKILLS,
   SEED_TAGS,
 } from './seed';
+
+// seed.ts transitively imports config/s3, which instantiates `new Bun.S3Client()`
+// at module load — a global that does not exist under Vitest's Node runtime.
+// These tests only validate static seed data and never touch S3, so the module
+// is mocked (same convention as services/uploads.service.test.ts).
+vi.mock('../config/s3', () => ({
+  s3: {
+    file: vi.fn(() => ({ write: vi.fn() })),
+  },
+  getPublicUrl: (key: string) => `https://cdn.example.test/${key}`,
+}));
 
 function expectUniqueValues(values: string[]) {
   expect(new Set(values).size).toBe(values.length);
@@ -103,10 +114,10 @@ describe('portfolio restore seed data integrity', () => {
 
   it('contains the requested portfolio projects and LinkedIn-derived posts', () => {
     expect(SEED_PROJECTS.map((seedProject) => seedProject.slug)).toEqual([
-      'notz-sms',
+      'gustavo-sotero-dev',
       'urlfy',
+      'notz-sms',
       'anonshare',
-      'fullstack-portfolio',
     ]);
     expect(SEED_POSTS.map((seedPost) => seedPost.slug)).toEqual([
       'feature-flag-nao-e-deploy-condicional',
@@ -130,7 +141,7 @@ describe('portfolio restore seed data integrity', () => {
     }
   });
 
-  it('keeps mermaid diagrams only in the selected architecture-heavy restored entries', () => {
+  it('keeps mermaid diagrams restricted to the restored project entries (none in posts)', () => {
     const mermaidPostSlugs = SEED_POSTS.filter((seedPost) => hasMermaidFence(seedPost.content)).map(
       (seedPost) => seedPost.slug
     );
@@ -138,7 +149,7 @@ describe('portfolio restore seed data integrity', () => {
       hasMermaidFence(seedProject.content)
     ).map((seedProject) => seedProject.slug);
 
-    expect(mermaidPostSlugs).toEqual(['cache-stampede-redis-postgresql', 'fila-nao-e-gratis']);
-    expect(mermaidProjectSlugs).toEqual(['notz-sms', 'urlfy', 'anonshare', 'fullstack-portfolio']);
+    expect(mermaidPostSlugs).toEqual([]);
+    expect(mermaidProjectSlugs).toEqual(['gustavo-sotero-dev', 'urlfy', 'notz-sms', 'anonshare']);
   });
 });

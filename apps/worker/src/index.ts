@@ -135,8 +135,13 @@ const managedQueues = collectManagedQueues(workerSpecs);
 const observedQueues = collectObservedQueues(workerSpecs);
 
 // ── Register repeatable retention job (daily at 03:00 UTC) ───────────────────
+// BullMQ v6 removed `repeat` from `Queue.add`; repeatable jobs must be
+// registered through `upsertJobScheduler`, which is idempotent (upserts the
+// scheduler definition and creates/stamps-out the next delayed job).
 await retentionQueue
-  .add(QUEUE_CATALOG.DATA_RETENTION.jobName, {}, { repeat: { pattern: '0 3 * * *' } })
+  .upsertJobScheduler(QUEUE_CATALOG.DATA_RETENTION.jobName, {
+    pattern: '0 3 * * *',
+  })
   .catch((err) => {
     logger.error('Failed to register retention repeatable job', {
       error: (err as Error).message,

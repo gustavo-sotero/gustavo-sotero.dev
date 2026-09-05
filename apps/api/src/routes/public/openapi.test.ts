@@ -858,7 +858,8 @@ describe('openapi routes', () => {
     expect(topicsSchema?.properties?.briefing?.nullable).toBe(true);
     expect(topicsSchema?.properties?.excludedIdeas?.maxItems).toBe(10);
     expect(Array.isArray(topicsSuccess?.data?.suggestions)).toBe(true);
-    expect((topicsSuccess?.data?.suggestions as unknown[]).length).toBeGreaterThanOrEqual(3);
+    const topicSuggestions = topicsSuccess?.data?.suggestions as unknown[] | undefined;
+    expect(topicSuggestions?.length).toBeGreaterThanOrEqual(3);
 
     // Legacy sync draft endpoint — description should reference the async runs route
     expect(draftPost?.description).toContain('draft-runs');

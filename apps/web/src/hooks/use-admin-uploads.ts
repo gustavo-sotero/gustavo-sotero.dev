@@ -171,7 +171,11 @@ export function useAdminUpload(options: UseAdminUploadOptions = {}) {
           method: 'POST',
           body: JSON.stringify(presignReq),
         });
-        const { presignedUrl, uploadId } = presignRes?.data as PresignResponse;
+        const presignData = presignRes?.data;
+        if (!presignData?.presignedUrl || !presignData.uploadId) {
+          throw new Error('Resposta de pré-assinatura inválida. Tente reenviar a imagem.');
+        }
+        const { presignedUrl, uploadId } = presignData;
 
         setState({ stage: 'uploading', progress: 0 });
         await putToS3(presignedUrl, file, (pct) => {
