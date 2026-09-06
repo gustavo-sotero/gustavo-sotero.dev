@@ -2,7 +2,6 @@ import { DEVELOPER_PUBLIC_PROFILE } from '@portfolio/shared/constants/developerP
 import { ImageResponse } from 'next/og';
 import { SITE_METADATA } from '@/lib/constants';
 
-export const runtime = 'edge';
 export const alt = `${DEVELOPER_PUBLIC_PROFILE.name} — ${DEVELOPER_PUBLIC_PROFILE.role}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
